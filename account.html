@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account - Shreyas Fitness</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html"><h2>Shreyas Fitness</h2></a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">About Me</a>
+                </li>
+                <li class="nav-item">
+                    <a href="services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="blog.html" class="nav-link">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a href="connect.html" class="nav-link">Connect</a>
+                </li>
+                <li class="nav-item">
+                    <a href="faq.html" class="nav-link">FAQ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="account.html" class="nav-link account-btn active">My Account</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>My Account</h1>
+            <p>Login to access your personalized fitness dashboard</p>
+        </div>
+    </section>
+
+    <!-- Account Section -->
+    <section class="account-section">
+        <div class="container">
+            <div class="account-content">
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form">
+                    <h2>Login to Your Account</h2>
+                    <p class="auth-description">Access your personalized fitness dashboard to view your current plan, track your progress, and manage your training sessions.</p>
+                    
+                    <form class="login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email Address</label>
+                            <input type="email" id="login-email" placeholder="Enter your email address" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" placeholder="Enter your password" required>
+                        </div>
+                        <div class="form-group form-options">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="remember-me">
+                                <label for="remember-me">Remember me</label>
+                            </div>
+                            <a href="#" class="forgot-password">Forgot password?</a>
+                        </div>
+                        <button type="submit" class="btn-primary full-width">Login</button>
+                        <p class="auth-switch">Don't have an account? <a href="#" id="show-register">Sign up here</a></p>
+                    </form>
+                </div>
+
+                <!-- Registration Form -->
+                <div id="register-form" class="auth-form hidden">
+                    <h2>Create an Account</h2>
+                    <p class="auth-description">Join Shreyas Fitness to access your personalized dashboard, track your progress, and get the most out of your training experience.</p>
+                    
+                    <form class="register-form">
+                        <div class="form-group">
+                            <label for="register-name">Full Name</label>
+                            <input type="text" id="register-name" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-email">Email Address</label>
+                            <input type="email" id="register-email" placeholder="Enter your email address" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" placeholder="Create a password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-confirm">Confirm Password</label>
+                            <input type="password" id="register-confirm" placeholder="Confirm your password" required>
+                        </div>
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="terms" required>
+                                <label for="terms">I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Privacy Policy</a></label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary full-width">Create Account</button>
+                        <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login here</a></p>
+                    </form>
+                </div>
+
+                <!-- Dashboard (Hidden by default) -->
+                <div id="dashboard" class="dashboard hidden">
+                    <div class="dashboard-header">
+                        <div class="user-greeting">
+                            <h2>Welcome back, <span id="user-name">Client</span>!</h2>
+                            <p>Here's an overview of your fitness journey</p>
+                        </div>
+                        <button id="logout-btn" class="btn-secondary">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    
+                    <div class="dashboard-overview">
+                        <div class="overview-card">
+                            <div class="overview-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="overview-details">
+                                <h3>12</h3>
+                                <p>Sessions Completed</p>
+                            </div>
+                        </div>
+                        <div class="overview-card">
+                            <div class="overview-icon">
+                                <i class="fas fa-fire"></i>
+                            </div>
+                            <div class="overview-details">
+                                <h3>8</h3>
+                                <p>Weeks Active</p>
+                            </div>
+                        </div>
+                        <div class="overview-card">
+                            <div class="overview-icon">
+                                <i class="fas fa-dumbbell"></i>
+                            </div>
+                            <div class="overview-details">
+                                <h3>15lb</h3>
+                                <p>Strength Gained</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-grid">
+                        <!-- Current Plan -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-clipboard-list"></i> Current Plan</h3>
+                            </div>
+                            <div class="plan-info">
+                                <h4>Strength Building Program</h4>
+                                <p>4 weeks remaining</p>
+                                <div class="plan-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">Focus:</span>
+                                        <span class="detail-value">Building Strength & Endurance</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Frequency:</span>
+                                        <span class="detail-value">3 sessions per week</span>
+                                    </div>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-label">
+                                        <span>Program Progress</span>
+                                        <span>60%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: 60%"></div>
+                                    </div>
+                                </div>
+                                <a href="#" class="btn-secondary">View Full Program</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Tracking -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-line"></i> Progress Tracking</h3>
+                            </div>
+                            <div class="progress-tracking">
+                                <div class="metrics-grid">
+                                    <div class="metric">
+                                        <h4>Weight</h4>
+                                        <div class="metric-chart placeholder-chart">
+                                            <i class="fas fa-chart-line"></i>
+                                        </div>
+                                        <div class="metric-summary">
+                                            <div class="metric-value">165 lbs</div>
+                                            <div class="metric-change positive">-5 lbs</div>
+                                        </div>
+                                    </div>
+                                    <div class="metric">
+                                        <h4>Body Fat %</h4>
+                                        <div class="metric-chart placeholder-chart">
+                                            <i class="fas fa-chart-line"></i>
+                                        </div>
+                                        <div class="metric-summary">
+                                            <div class="metric-value">18%</div>
+                                            <div class="metric-change positive">-2%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <a href="#" class="btn-secondary">View All Metrics</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Upcoming Sessions -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-calendar"></i> Upcoming Sessions</h3>
+                            </div>
+                            <div class="session-list">
+                                <div class="session-item">
+                                    <div class="session-date">
+                                        <div class="date-day">15</div>
+                                        <div class="date-month">Jul</div>
+                                    </div>
+                                    <div class="session-info">
+                                        <h4>Upper Body Strength</h4>
+                                        <p>2:00 PM - 3:00 PM</p>
+                                        <span class="session-type">In-Person</span>
+                                    </div>
+                                    <div class="session-actions">
+                                        <button class="icon-button" title="Reschedule Session">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </button>
+                                        <button class="icon-button" title="Cancel Session">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="session-item">
+                                    <div class="session-date">
+                                        <div class="date-day">17</div>
+                                        <div class="date-month">Jul</div>
+                                    </div>
+                                    <div class="session-info">
+                                        <h4>Full Body HIIT</h4>
+                                        <p>10:00 AM - 11:00 AM</p>
+                                        <span class="session-type">Remote</span>
+                                    </div>
+                                    <div class="session-actions">
+                                        <button class="icon-button" title="Reschedule Session">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </button>
+                                        <button class="icon-button" title="Cancel Session">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="session-item">
+                                    <div class="session-date">
+                                        <div class="date-day">19</div>
+                                        <div class="date-month">Jul</div>
+                                    </div>
+                                    <div class="session-info">
+                                        <h4>Lower Body Focus</h4>
+                                        <p>3:30 PM - 4:30 PM</p>
+                                        <span class="session-type">In-Person</span>
+                                    </div>
+                                    <div class="session-actions">
+                                        <button class="icon-button" title="Reschedule Session">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </button>
+                                        <button class="icon-button" title="Cancel Session">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <a href="#" class="btn-secondary">Schedule New Session</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Completed Sessions -->
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-history"></i> Completed Sessions</h3>
+                            </div>
+                            <div class="session-history">
+                                <div class="history-item">
+                                    <span class="date">Jul 12</span>
+                                    <span class="workout">Lower Body Power</span>
+                                    <span class="duration">60 min</span>
+                                </div>
+                                <div class="history-item">
+                                    <span class="date">Jul 10</span>
+                                    <span class="workout">Cardio & Core</span>
+                                    <span class="duration">45 min</span>
+                                </div>
+                                <div class="history-item">
+                                    <span class="date">Jul 8</span>
+                                    <span class="workout">Upper Body Strength</span>
+                                    <span class="duration">60 min</span>
+                                </div>
+                                <div class="history-item">
+                                    <span class="date">Jul 5</span>
+                                    <span class="workout">Full Body HIIT</span>
+                                    <span class="duration">45 min</span>
+                                </div>
+                                <div class="history-item">
+                                    <span class="date">Jul 3</span>
+                                    <span class="workout">Active Recovery</span>
+                                    <span class="duration">30 min</span>
+                                </div>
+                                <a href="#" class="btn-secondary">View All History</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section (Visible only to non-logged in users) -->
+    <section id="account-features" class="account-features alt-background">
+        <div class="container">
+            <div class="section-header">
+                <h2>Client Portal Features</h2>
+                <p>Everything you need to track your fitness journey in one place</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <h3>Track Your Progress</h3>
+                    <p>Monitor your fitness metrics, track weights, measurements, and see your improvement over time with visual charts and progress reports.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h3>Session Management</h3>
+                    <p>View your scheduled training sessions, book new appointments, and manage your fitness calendar all in one place.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3>Workout Plans</h3>
+                    <p>Access your personalized workout plans anytime, with detailed instructions, videos, and progress tracking for each exercise.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Direct Communication</h3>
+                    <p>Stay connected with your trainer, ask questions, receive feedback, and get support between sessions through secure messaging.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Shreyas Fitness</h3>
+                    <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="services.html#personal">Personal Training</a></li>
+                        <li><a href="services.html#group">Group Training</a></li>
+                        <li><a href="services.html#online">Online Coaching</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="about.html">About Me</a></li>
+                        <li><a href="blog.html">Blog</a></li>
+                        <li><a href="connect.html">Contact</a></li>
+                        <li><a href="account.html">My Account</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Shreyas Fitness. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
