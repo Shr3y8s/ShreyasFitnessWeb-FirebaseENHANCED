@@ -554,17 +554,246 @@ img {
     color: var(--primary-dark);
 }
 
+/* Motivational Banner - Two-Tone Design */
+.motivational-banner {
+    margin-top: 0;
+    margin-bottom: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    color: var(--white);
+    position: relative;
+    z-index: 10;
+}
+
+/* Top Section - Bold Statement */
+.motivation-top {
+    background: linear-gradient(135deg, var(--primary-dark), #2c6b2f);
+    padding: 50px 0;
+    text-align: center;
+}
+
+.motivation-headline {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.4;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Bottom Section - Supporting Text */
+.motivation-bottom {
+  background: linear-gradient(135deg, #f8f8f8, #e8f5e9);
+    padding: 30px 0;
+}
+
+.motivation-content {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 0 20px;
+    color: var(--secondary);
+}
+
+.motivation-content p {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+
+.motivation-cta {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: 25px 0;
+    color: var(--primary-dark);
+}
+
+.motivation-button {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--white);
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-top: 10px;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+}
+
+.motivation-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    color: var(--white);
+}
+
+@media (max-width: 768px) {
+    .motivation-top,
+    .motivation-bottom {
+        padding: 40px 0;
+    }
+    
+    .motivation-headline {
+        font-size: 1.8rem;
+    }
+    
+    .motivation-content p {
+        font-size: 1rem;
+    }
+    
+    .motivation-cta {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .motivation-headline {
+        font-size: 1.5rem;
+    }
+    
+    .motivation-button {
+        padding: 12px 25px;
+        font-size: 1rem;
+    }
+}
+
 /* Connect Section */
 .connect {
     background-color: var(--light-gray);
+    padding: 80px 0;
 }
 
-/* New Connect page layout */
+.connect-page {
+    padding-top: 40px;
+    margin-top: 0;
+    position: relative;
+    z-index: 5;
+}
+
+/* Connection Cards Layout */
+.connection-cards {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 40px;
+    margin-top: 0;
+}
+
+.connection-card {
+    flex: 1;
+    background-color: var(--white);
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: var(--box-shadow);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.connection-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.connection-card:hover {
+    transform: translateY(-5px);
+}
+
+.connection-card.active {
+    border-color: var(--primary);
+}
+
+.connection-card.active::before {
+    opacity: 1;
+}
+
+.card-icon {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.card-icon i {
+    font-size: 30px;
+    color: var(--white);
+}
+
+.connection-card h3 {
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+}
+
+.connection-card p {
+    color: var(--dark-gray);
+    margin-bottom: 20px;
+}
+
+.card-cta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+    font-weight: 500;
+    margin-top: auto;
+}
+
+.card-cta i {
+    transition: transform 0.3s ease;
+}
+
+.connection-card:hover .card-cta i {
+    transform: translateX(5px);
+}
+
+.connection-card.active .card-cta {
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+/* Connection Content Area */
+.connection-content-area {
+    margin-bottom: 60px;
+}
+
+.connection-content {
+    display: none;
+    background-color: var(--white);
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    padding: 0;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.connection-content.active {
+    display: block;
+}
+
+/* Original Connect Grid (now used inside connection content) */
 .connect-grid-top {
     display: grid;
-    grid-template-columns: 35% 65%;
+    grid-template-columns: 100%;
     gap: 40px;
-    margin-bottom: 60px;
+    margin-bottom: 0;
 }
 
 .schedule-panel,
@@ -837,6 +1066,53 @@ img {
     box-shadow: var(--box-shadow);
     display: flex;
     align-items: flex-start;
+}
+
+.contact-method-enhanced {
+    background-color: var(--white);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.contact-method-enhanced:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.contact-method-enhanced .header-icon {
+    margin-bottom: 15px;
+}
+
+.contact-method-enhanced h3 {
+    margin: 10px 0;
+    color: var(--secondary);
+}
+
+.contact-method-enhanced p {
+    color: var(--dark-gray);
+    margin-bottom: 5px;
+}
+
+.contact-method-enhanced a {
+    color: var(--primary);
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.contact-method-enhanced a:hover {
+    color: var(--primary-dark);
+}
+
+.contact-method-enhanced .detail-note {
+    font-size: 0.85rem;
+    color: var(--dark-gray);
+    margin-top: 5px;
 }
 
 .map-cell {
@@ -1178,6 +1454,11 @@ img {
     margin-right: 5px;
 }
 
+.scheduling-note-enhanced {
+    margin-top: 20px;
+    text-align: center;
+}
+
 .tab-navigation {
     display: flex;
     justify-content: center;
@@ -1212,6 +1493,41 @@ img {
 /* Message Section */
 .message-section {
     padding: 80px 0;
+}
+
+/* Enhanced Map Placeholder */
+.map-placeholder.enhanced {
+    background-color: var(--white);
+    border-radius: 10px;
+    padding: 40px;
+    margin-top: 30px;
+    box-shadow: var(--box-shadow);
+    text-align: center;
+    transition: var(--transition);
+}
+
+.map-placeholder.enhanced i {
+    font-size: 60px;
+    color: var(--primary);
+    margin-bottom: 20px;
+}
+
+.map-placeholder.enhanced p {
+    color: var(--dark-gray);
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+}
+
+.map-placeholder.enhanced .map-note {
+    font-size: 0.85rem;
+    color: var(--dark-gray);
+    font-style: italic;
+}
+
+/* Questions Content Enhancements */
+.questions-content .btn-primary-enhanced {
+    margin: 30px auto 0;
+    max-width: 200px;
 }
 
 /* Have Questions Section */
