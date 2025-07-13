@@ -169,8 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // Add initial CSS class for animation
-    document.querySelectorAll('section').forEach(section => {
+    // Add initial CSS class for animation - exclude CTA section
+    document.querySelectorAll('section:not(.cta)').forEach(section => {
         section.classList.add('section-hidden');
     });
     

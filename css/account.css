@@ -9,12 +9,11 @@
 /* Login Container */
 .login-container {
     max-width: 600px;
-    margin: 0 auto;
+    margin: 0 auto 60px 0; /* Align left to match hero content */
     background-color: var(--white);
     border-radius: 10px;
     box-shadow: var(--box-shadow);
     overflow: hidden;
-    margin-bottom: 60px;
 }
 
 .login-form-container {

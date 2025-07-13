@@ -7,7 +7,12 @@
 }
 
 section {
-    padding: 80px 0;
+    padding: 60px 0;
+}
+
+/* Special padding overrides */
+.featured-services {
+    padding-top: 40px;
 }
 
 /* Section Headers */

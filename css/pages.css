@@ -3,7 +3,7 @@
 /* Hero Section */
 .hero {
     padding-top: 150px;
-    padding-bottom: 100px;
+    padding-bottom: 30px;
     background: linear-gradient(135deg, #e6f7e6 0%, #ffffff 100%);
 }
 
@@ -130,7 +130,7 @@
 }
 
 .hero-image-account {
-    margin-top: 40px;
+    margin-top: 20px; /* Reduced from 40px to bring icon closer to text */
     width: 100%;
 }
 
@@ -150,7 +150,7 @@
 
 /* About Section */
 .about {
-    background: linear-gradient(135deg, #f4f9f4 0%, #ffffff 100%);
+    background: linear-gradient(135deg, #e6f7e6 0%, #ffffff 100%);
     padding-top: 120px;
 }
 
@@ -287,7 +287,7 @@
 
 /* Transformation Story Section */
 .transformation {
-    background-color: #f9f9f9;
+    background: linear-gradient(135deg, #e6f7e6 0%, #ffffff 100%);
     padding-top: 40px;
     padding-bottom: 80px;
 }
@@ -355,6 +355,11 @@
 .story-content .highlight-text {
     color: var(--primary-dark);
     font-weight: 600;
+}
+
+/* Featured Services Section */
+.featured-services {
+    background: linear-gradient(135deg, #e6f7e6 0%, #ffffff 100%);
 }
 
 /* Services Section */
