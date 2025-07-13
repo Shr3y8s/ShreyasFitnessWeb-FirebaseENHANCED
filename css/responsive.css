@@ -1,0 +1,265 @@
+/* Responsive Styles */
+
+/* Large devices (desktops, less than 1200px) */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 960px;
+    }
+}
+
+/* Medium devices (tablets, less than 992px) */
+@media (max-width: 992px) {
+    .container {
+        max-width: 720px;
+    }
+
+    h1 {
+        font-size: 2.5rem;
+    }
+
+    h2 {
+        font-size: 2rem;
+    }
+
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .featured-article-content {
+        grid-template-columns: 1fr;
+    }
+
+    /* Navigation responsive styles */
+    .nav-menu {
+        position: fixed;
+        left: -100%;
+        top: 80px;
+        flex-direction: column;
+        background-color: var(--white);
+        width: 100%;
+        text-align: center;
+        transition: 0.3s;
+        box-shadow: 0 10px 27px rgba(0, 0, 0, 0.05);
+        padding: 20px 0;
+    }
+
+    .nav-menu.active {
+        left: 0;
+    }
+
+    .nav-item {
+        margin: 15px 0;
+    }
+
+    .hamburger {
+        display: block;
+    }
+
+    .hamburger.active .bar:nth-child(2) {
+        opacity: 0;
+    }
+
+    .hamburger.active .bar:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+
+    .hamburger.active .bar:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
+    }
+}
+
+/* Small devices (landscape phones, less than 768px) */
+@media (max-width: 768px) {
+    .container {
+        max-width: 540px;
+    }
+
+    section {
+        padding: 60px 0;
+    }
+
+    /* Typography adjustments */
+    h1 {
+        font-size: 2.2rem;
+    }
+
+    h2 {
+        font-size: 1.8rem;
+    }
+
+    h3 {
+        font-size: 1.3rem;
+    }
+
+    /* Grid adjustments */
+    .grid-2, 
+    .grid-3 {
+        grid-template-columns: 1fr;
+    }
+
+    /* Hero section */
+    .hero-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .hero-content, .hero-image {
+        width: 100%;
+        padding-right: 0;
+    }
+    
+    .hero-content {
+        margin-bottom: 40px;
+    }
+    
+    .hero-buttons {
+        justify-content: center;
+    }
+
+    /* About section */
+    .about-content {
+        flex-direction: column;
+    }
+    
+    .about-image, .about-text {
+        width: 100%;
+    }
+    
+    .about-image {
+        margin-bottom: 30px;
+    }
+
+    /* Form adjustments */
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .panel-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+    }
+    
+    .header-icon {
+        width: 50px;
+        height: 50px;
+    }
+
+    /* Footer adjustments */
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .footer-section {
+        margin-bottom: 20px;
+    }
+
+    /* Account page adjustments */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .signup-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .signup-benefits {
+        padding: 30px 20px;
+    }
+    
+    .signup-form-container {
+        padding: 30px 20px;
+    }
+
+    /* Connect page adjustments */
+    .connection-cards {
+        flex-direction: column;
+    }
+
+    /* Motivational banner */
+    .motivation-top,
+    .motivation-bottom {
+        padding: 40px 0;
+    }
+    
+    .motivation-headline {
+        font-size: 1.8rem;
+    }
+    
+    .motivation-content p {
+        font-size: 1rem;
+    }
+    
+    .motivation-cta {
+        font-size: 1.1rem;
+    }
+
+    /* Story section */
+    .story-highlight, .story-content {
+        padding: 30px;
+    }
+    
+    .highlight-text {
+        font-size: 1.3rem;
+    }
+    
+    .story-intro {
+        font-size: 1.1rem;
+    }
+    
+    .emphasis-block p {
+        font-size: 1.2rem;
+    }
+}
+
+/* Extra small devices (portrait phones, less than 576px) */
+@media (max-width: 576px) {
+    .container {
+        width: 100%;
+        padding: 0 15px;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+    
+    h2 {
+        font-size: 1.6rem;
+    }
+    
+    h3 {
+        font-size: 1.2rem;
+    }
+
+    /* Button adjustments */
+    .btn-primary, .btn-secondary {
+        padding: 10px 20px;
+        font-size: 0.8rem;
+    }
+
+    /* CTA section */
+    .cta-buttons {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* Motivational banner */
+    .motivation-headline {
+        font-size: 1.5rem;
+    }
+    
+    .motivation-button {
+        padding: 12px 25px;
+        font-size: 1rem;
+    }
+    
+    /* Reduce all padding for smaller screens */
+    .card, .philosophy-item, .service-card {
+        padding: 20px;
+    }
+}

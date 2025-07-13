@@ -1,0 +1,23 @@
+/* Shreyas Fitness Main CSS File */
+/* This file imports all modular CSS components */
+
+/* Base styles and variables */
+@import 'base.css';
+
+/* Layout components */
+@import 'layout.css';
+
+/* Reusable components */
+@import 'components.css';
+
+/* Navigation and Footer */
+@import 'navigation.css';
+
+/* Page-specific styles */
+@import 'pages.css';
+
+/* Account and signup styles */
+@import 'account.css';
+
+/* Media queries for responsive design */
+@import 'responsive.css';
