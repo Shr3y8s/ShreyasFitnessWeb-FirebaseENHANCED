@@ -8,191 +8,127 @@ document.addEventListener('DOMContentLoaded', () => {
         navMenu.classList.toggle('active');
     });
 
-    // Close mobile menu when clicking on a navigation link
-    document.querySelectorAll('.nav-link').forEach(navLink => {
-        navLink.addEventListener('click', () => {
+    // Close mobile menu when clicking a nav link
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
             hamburger.classList.remove('active');
             navMenu.classList.remove('active');
         });
     });
 
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            
-            // Special case for login/register switching
-            if (targetId === '#show-register' || targetId === '#show-login') {
-                return;
-            }
-            
-            const targetElement = document.querySelector(targetId);
-            if (targetElement) {
-                window.scrollTo({
-                    top: targetElement.offsetTop - 80,
-                    behavior: 'smooth'
-                });
-            }
-        });
-    });
-
-    // Form Submission Handling
-    const contactForm = document.querySelector('.contact-form');
-    if (contactForm) {
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const service = document.getElementById('service').value;
-            const message = document.getElementById('message').value;
-            
-            // Normally this would send data to a server
-            // For demo purposes, we'll just show a success message
-            
-            alert(`Thank you for your message, ${name}! I'll get back to you soon regarding your interest in ${service} services.`);
-            contactForm.reset();
+    // FAQ Accordion (if on FAQ page)
+    const faqItems = document.querySelectorAll('.faq-item');
+    if (faqItems.length > 0) {
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question');
+            question.addEventListener('click', () => {
+                item.classList.toggle('active');
+            });
         });
     }
 
-    // My Account - Login/Register Form Switching
-    const showRegisterLink = document.getElementById('show-register');
-    const showLoginLink = document.getElementById('show-login');
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
-    const dashboard = document.getElementById('dashboard');
-
-    if (showRegisterLink && showLoginLink) {
-        showRegisterLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginForm.classList.add('hidden');
-            registerForm.classList.remove('hidden');
-        });
-
-        showLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            registerForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-        });
-    }
-
-    // Login Form Handling
-    const loginFormElement = document.querySelector('.login-form');
-    if (loginFormElement) {
-        loginFormElement.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            
-            // This is just a demo - in a real app, we would validate with a server
-            if (email && password) {
-                // Hide login form and show dashboard
-                if (loginForm) loginForm.classList.add('hidden');
-                if (registerForm) registerForm.classList.add('hidden');
-                if (dashboard) {
-                    dashboard.classList.remove('hidden');
+    // Modal functionality for service cards and footer links
+    const modalButtons = document.querySelectorAll('.service-modal-btn, .service-modal-link');
+    const modals = document.querySelectorAll('.modal');
+    const closeButtons = document.querySelectorAll('.modal-close');
+    
+    // Open modal when clicking the button or link
+    if (modalButtons.length > 0) {
+        modalButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const modalId = btn.getAttribute('data-modal');
+                const modal = document.getElementById(modalId);
+                
+                if (modal) {
+                    // Add a small delay before adding active class for animation purposes
+                    setTimeout(() => {
+                        modal.classList.add('active');
+                    }, 10);
                     
-                    // Display user's name (in a real app, this would come from the server)
-                    const userName = document.getElementById('user-name');
-                    if (userName) {
-                        // Extract name from email for demo purposes
-                        const nameFromEmail = email.split('@')[0];
-                        userName.textContent = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
+                    // Prevent scrolling on the body
+                    document.body.style.overflow = 'hidden';
+                    
+                    // Scroll to top of page when opening modal from footer links
+                    if (btn.classList.contains('service-modal-link')) {
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
                     }
                 }
-            }
+            });
         });
     }
-
-    // Registration Form Handling
-    const registerFormElement = document.querySelector('.register-form');
-    if (registerFormElement) {
-        registerFormElement.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const name = document.getElementById('register-name').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const confirmPassword = document.getElementById('register-confirm').value;
-            
-            // Basic validation
-            if (password !== confirmPassword) {
-                alert("Passwords don't match!");
-                return;
-            }
-            
-            // In a real app, we would send registration data to a server
-            
-            // For demo, directly show dashboard
-            if (loginForm) loginForm.classList.add('hidden');
-            if (registerForm) registerForm.classList.add('hidden');
-            if (dashboard) {
-                dashboard.classList.remove('hidden');
-                
-                // Display user's name
-                const userName = document.getElementById('user-name');
-                if (userName && name) {
-                    userName.textContent = name.split(' ')[0]; // Show first name only
+    
+    // Close modal when clicking the close button
+    if (closeButtons.length > 0) {
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modal = btn.closest('.modal');
+                if (modal) {
+                    modal.classList.remove('active');
+                    
+                    // Re-enable scrolling on the body
+                    document.body.style.overflow = 'auto';
                 }
-            }
+            });
         });
     }
-
-    // Logout Functionality
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            if (dashboard) dashboard.classList.add('hidden');
-            if (loginForm) loginForm.classList.remove('hidden');
-            
-            // Clear form fields
-            if (document.getElementById('login-email')) {
-                document.getElementById('login-email').value = '';
-                document.getElementById('login-password').value = '';
-            }
-        });
-    }
-
-    // Add animation on scroll
-    const animateOnScroll = () => {
-        const sections = document.querySelectorAll('section');
-        
-        sections.forEach(section => {
-            const sectionPosition = section.getBoundingClientRect().top;
-            const screenPosition = window.innerHeight / 1.3;
-            
-            if (sectionPosition < screenPosition) {
-                section.classList.add('animate-in');
-            }
-        });
-    };
     
-    // Add initial CSS class for animation - exclude CTA section
-    document.querySelectorAll('section:not(.cta)').forEach(section => {
-        section.classList.add('section-hidden');
+    // Close modal when clicking outside of modal content
+    if (modals.length > 0) {
+        modals.forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                // Check if click is on the modal background (not on content)
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                    
+                    // Re-enable scrolling on the body
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        });
+    }
+    
+    // Close modal with escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const activeModal = document.querySelector('.modal.active');
+            if (activeModal) {
+                activeModal.classList.remove('active');
+                
+                // Re-enable scrolling on the body
+                document.body.style.overflow = 'auto';
+            }
+        }
     });
-    
-    // Trigger once on load
-    window.addEventListener('load', animateOnScroll);
-    
-    // Trigger on scroll
-    window.addEventListener('scroll', animateOnScroll);
 
-    // Add CSS for the animations
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .section-hidden {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
+    // Smooth scrolling for anchor links on the services page (for regular section links)
+    const sectionLinks = document.querySelectorAll('a[href^="#"]:not(.service-modal-btn)');
+    sectionLinks.forEach(link => {
+        if (link.getAttribute('href').length > 1) { // Ignore links with just "#"
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href !== "#") {
+                    e.preventDefault();
+                    
+                    const targetId = href.substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    
+                    if (targetElement) {
+                        // Add offset for fixed header
+                        const headerOffset = 100;
+                        const elementPosition = targetElement.getBoundingClientRect().top;
+                        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                        
+                        window.scrollTo({
+                            top: offsetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
         }
-        
-        .animate-in {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    `;
-    document.head.appendChild(style);
+    });
 });

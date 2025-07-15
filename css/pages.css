@@ -617,11 +617,13 @@
 /* Intro Content Styling */
 .intro-content {
     background-color: var(--white);
-    padding: 40px;
+    padding: 40px 50px;
     border-radius: 15px;
     box-shadow: var(--box-shadow);
     margin-top: 40px;
-    text-align: center;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .intro-content p {
@@ -629,6 +631,7 @@
     line-height: 1.7;
     color: var(--dark-gray);
     margin-bottom: 20px;
+    text-align: left;
 }
 
 .intro-content p:last-child {
