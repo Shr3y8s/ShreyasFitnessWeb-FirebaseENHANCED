@@ -17,10 +17,60 @@
 }
 
 .login-form-container {
-    padding: 40px;
+    padding: 0;
+}
+
+/* Panel Header - Matching connect.css */
+.login-form-container .panel-header {
+    background: linear-gradient(135deg, #f4f9f4 0%, #ffffff 100%);
+    padding: 30px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.login-form-container .header-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.login-form-container .header-icon i {
+    font-size: 24px;
+    color: var(--white);
+}
+
+.login-form-container .panel-header h2 {
+    margin-bottom: 10px;
+}
+
+.login-form-container .panel-header p {
+    color: var(--dark-gray);
+    margin-bottom: 10px;
+}
+
+.login-form-container .response-time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dark-gray);
+    font-size: 0.9rem;
+}
+
+.login-form-container .response-time i {
+    margin-right: 8px;
+    color: var(--primary);
 }
 
 /* Login Form Styles */
+.enhanced-login-form {
+    padding: 30px;
+}
+
 .enhanced-login-form .form-group {
     margin-bottom: 20px;
 }

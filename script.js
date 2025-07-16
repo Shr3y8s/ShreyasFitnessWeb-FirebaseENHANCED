@@ -1,4 +1,41 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Login Form Handler
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Basic form validation
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                alert('Please fill out all required fields.');
+                return;
+            }
+            
+            // In a real implementation, you would authenticate the user here
+            // For demo purposes, we'll just show a success message
+            
+            // Hide the form
+            loginForm.style.display = 'none';
+            
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'success-message';
+            successMessage.innerHTML = `
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Login Successful!</h3>
+                <p>Welcome back! You're being redirected to your fitness dashboard.</p>
+                <button class="btn-secondary" onclick="window.location.reload()">Return to Login</button>
+            `;
+            
+            loginForm.parentNode.appendChild(successMessage);
+        });
+    }
+    
     // Mobile Navigation Toggle
     const hamburger = document.querySelector('.hamburger');
     const navMenu = document.querySelector('.nav-menu');
