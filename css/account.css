@@ -102,11 +102,60 @@
     color: var(--primary-dark);
 }
 
-/* Account Features Section */
-.account-features {
-    padding-top: 40px;
+/* Hero Portal Features */
+.hero-portal-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-top: 30px;
 }
 
+.hero-portal-features .feature-card {
+    background-color: var(--white);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    height: 100%;
+}
+
+.hero-portal-features .feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.hero-portal-features .feature-icon {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.hero-portal-features .feature-icon i {
+    font-size: 20px;
+    color: var(--white);
+}
+
+.hero-portal-features h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+}
+
+.hero-portal-features p {
+    font-size: 0.9rem;
+    color: var(--dark-gray);
+    line-height: 1.4;
+}
+
+/* Account Features Section - Hidden when in hero */
+.account-features {
+    display: none; /* Hide the duplicate section */
+}
+
+/* Account Features Section */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -425,6 +474,19 @@
 }
 
 /* Responsive adjustments */
+@media (max-width: 992px) {
+    /* Make hero content wider */
+    .hero-content-account {
+        width: 100%;
+        padding-right: 0;
+    }
+    
+    /* Adjust the hero image */
+    .hero-image-account {
+        display: none; /* Hide on smaller screens */
+    }
+}
+
 @media (max-width: 768px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
@@ -444,5 +506,9 @@
     
     .signup-form-container {
         padding: 30px 20px;
+    }
+    
+    .hero-portal-features {
+        grid-template-columns: 1fr;
     }
 }
