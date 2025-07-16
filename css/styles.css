@@ -19,5 +19,8 @@
 /* Account and signup styles */
 @import 'account.css';
 
+/* Connect page styles */
+@import 'connect.css';
+
 /* Media queries for responsive design */
 @import 'responsive.css';
