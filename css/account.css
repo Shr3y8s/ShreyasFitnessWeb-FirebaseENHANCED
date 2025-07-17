@@ -16,6 +16,35 @@
     overflow: hidden;
 }
 
+/* Hero Layout Wrapper - Side-by-side layout for login and features */
+.hero-layout-wrapper {
+    display: flex;
+    justify-content: space-between;
+    gap: 50px;
+    margin-top: 30px;
+    align-items: flex-start;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Hero Login Container - Special styling for the login form in hero section */
+.hero-login-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+}
+
+/* Hero Portal Features in side-by-side layout */
+.hero-layout-wrapper .hero-portal-features {
+    margin-top: 0;
+    width: 100%;
+    max-width: 700px;
+    flex-shrink: 0;
+}
+
 .login-form-container {
     padding: 0;
 }
@@ -117,6 +146,7 @@
     box-shadow: var(--box-shadow);
     transition: var(--transition);
     height: 100%;
+    text-align: left;
 }
 
 .hero-portal-features .feature-card:hover {
@@ -131,7 +161,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 15px;
+    margin: 0 auto 15px;
 }
 
 .hero-portal-features .feature-icon i {
@@ -142,12 +172,39 @@
 .hero-portal-features h3 {
     font-size: 1.1rem;
     margin-bottom: 10px;
+    text-align: left;
 }
 
 .hero-portal-features p {
     font-size: 0.9rem;
     color: var(--dark-gray);
     line-height: 1.4;
+    text-align: left;
+}
+
+
+/* Account Features Container in Account Section */
+.account-features-container {
+    margin: 0 auto;
+    text-align: center;
+    max-width: 1000px;
+}
+
+.account-features-container h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: var(--dark-text);
+}
+
+.account-features-container p {
+    font-size: 1.1rem;
+    color: var(--medium-gray);
+    margin-bottom: 30px;
+}
+
+/* Account Portal Features - Feature cards in Account Section */
+.account-portal-features {
+    margin-top: 20px;
 }
 
 /* Account Features Section - Hidden when in hero */
@@ -485,6 +542,22 @@
     .hero-image-account {
         display: none; /* Hide on smaller screens */
     }
+    
+    /* Stack layout on medium screens */
+    .hero-layout-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .hero-layout-wrapper .hero-login-container {
+        margin-bottom: 30px;
+    }
+    
+    .hero-layout-wrapper .hero-portal-features {
+        margin-top: 30px;
+        width: 100%;
+        max-width: 600px;
+    }
 }
 
 @media (max-width: 768px) {
@@ -508,7 +581,16 @@
         padding: 30px 20px;
     }
     
-    .hero-portal-features {
+    .hero-portal-features,
+    .account-portal-features {
         grid-template-columns: 1fr;
+    }
+    
+    .hero-login-container {
+        max-width: 100%;
+    }
+    
+    .account-features-container {
+        padding: 0 15px;
     }
 }
