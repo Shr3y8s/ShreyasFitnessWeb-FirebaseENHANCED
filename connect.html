@@ -149,7 +149,7 @@
                 <!-- Message Content -->
                 <div id="message-content" class="connection-content">
                     <div class="message-panel">
-                        <div class="panel-header">
+                        <div id="message" class="panel-header">
                             <div class="header-icon">
                                 <i class="fas fa-paper-plane"></i>
                             </div>
@@ -193,8 +193,8 @@
                     </div>
                     
                     <div class="form-group full-width">
-                        <label for="message"><i class="fas fa-comment-dots"></i> Your Message <span class="required">*</span></label>
-                        <textarea id="message" name="message" rows="5" placeholder="Tell me about your fitness goals, current fitness level, any injuries or concerns, and what you hope to achieve through training..." required></textarea>
+                        <label for="message-text"><i class="fas fa-comment-dots"></i> Your Message <span class="required">*</span></label>
+                        <textarea id="message-text" name="message" rows="5" placeholder="Tell me about your fitness goals, current fitness level, any injuries or concerns, and what you hope to achieve through training..." required></textarea>
                     </div>
                     
                     <div class="form-group checkbox-group-enhanced">
@@ -332,6 +332,54 @@
         document.addEventListener('DOMContentLoaded', function() {
             const connectionCards = document.querySelectorAll('.connection-card');
             
+            // Check if URL contains #message hash to show message section
+            function checkURLHash() {
+                console.log('Checking URL hash:', window.location.hash);
+                if (window.location.hash === '#message') {
+                    console.log('Message hash detected, switching to message card');
+                    
+                    // Remove active class from all cards and contents
+                    connectionCards.forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.connection-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    
+                    // Get the message card and content elements
+                    const messageCard = document.getElementById('message-card');
+                    const messageContent = document.getElementById('message-content');
+                    
+                    // Activate message card and content
+                    if (messageCard) {
+                        messageCard.classList.add('active');
+                        console.log('Message card activated');
+                    }
+                    if (messageContent) {
+                        messageContent.classList.add('active');
+                        console.log('Message content activated');
+                    }
+                    
+                    // Wait a moment then scroll to ensure everything is rendered
+                    setTimeout(() => {
+                        const messageElement = document.getElementById('message');
+                        if (messageElement) {
+                            messageElement.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    }, 100);
+                }
+            }
+            
+            // Check hash on page load
+            checkURLHash();
+            
+            // Also check when hash changes (back/forward browser buttons)
+            window.addEventListener('hashchange', checkURLHash);
+            
+            // Additional check after a short delay to ensure DOM is fully ready
+            setTimeout(checkURLHash, 100);
+            
             connectionCards.forEach(card => {
                 card.addEventListener('click', function() {
                     // Get the target content ID from data-target attribute
@@ -365,7 +413,7 @@
                     const name = document.getElementById('name').value;
                     const email = document.getElementById('email').value;
                     const service = document.getElementById('service').value;
-                    const message = document.getElementById('message').value;
+                    const message = document.getElementById('message-text').value;
                     
                     if (!name || !email || !service || !message) {
                         alert('Please fill out all required fields.');

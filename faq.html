@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FAQ - Shreyas Fitness</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/faq.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -71,10 +72,42 @@
         <div class="container">
             <div class="intro-content">
                 <p>Here you'll find answers to common questions about my training services, methods, and policies. If you don't find the answer you're looking for, don't hesitate to <a href="connect.html">reach out</a>.</p>
+                
+                <!-- FAQ Search -->
+                <div class="faq-search">
+                    <input type="text" id="faq-search-input" placeholder="Search questions...">
+                    <button id="search-button"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            
+            <!-- FAQ Stats -->
+            <div class="faq-stats">
+                <div class="stat-item">
+                    <div class="stat-number">25</div>
+                    <div class="stat-label">Total Questions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">4.9</div>
+                    <div class="stat-label">Client Rating</div>
+                </div>
+            </div>
+            
+            <!-- FAQ Category Navigation -->
+            <div class="faq-categories-nav">
+                <a class="category-link active" href="#getting-started">Getting Started</a>
+                <a class="category-link" href="#training">Training Info</a>
+                <a class="category-link" href="#services">Services</a>
+                <a class="category-link" href="#policies">Policies</a>
+                <a class="category-link" href="#results">Results</a>
+                <a class="category-link" href="#pricing">Pricing</a>
             </div>
             
             <div class="faq-categories">
-                <h2>Getting Started</h2>
+                <h2 id="getting-started"><span class="category-icon"><i class="fas fa-flag-checkered"></i></span>Getting Started</h2>
                 <div class="faq-container">
                     <div class="faq-item">
                         <div class="faq-question">
@@ -82,7 +115,28 @@
                             <span class="toggle-icon"><i class="fas fa-plus"></i></span>
                         </div>
                         <div class="faq-answer">
-                            <p>Getting started is simple. You can either fill out the contact form on the connect page, call me directly, or send an email. After your initial contact, we'll schedule a free consultation to discuss your goals, fitness history, and determine which service is the best fit for you.</p>
+                            <div class="faq-important">
+                                <strong>Don't worry - getting started doesn't have to be overwhelming!</strong> I've designed a simple process to make your fitness journey as smooth as possible.
+                            </div>
+                            
+                            <p>The initial step is always scheduling a <span class="answer-highlight">complimentary consultation</span> where we'll discuss your fitness goals, health history, and create a customized plan that works for your lifestyle.</p>
+                            
+                            <div class="faq-callout">
+                                <strong>What to Expect in Your Free Consultation (15-30 minutes):</strong>
+                            </div>
+                            
+                            <ul class="enhanced-list">
+                                <li><strong>Health & Fitness Assessment:</strong> We'll review your health history, current activity level, and any limitations or concerns</li>
+                                <li><strong>Goal Setting:</strong> Define your specific fitness objectives and timeline</li>
+                                <li><strong>Program Design:</strong> I'll explain how we can work together to achieve your goals safely and effectively</li>
+                                <li><strong>Logistics Discussion:</strong> Cover scheduling, pricing, and what to expect in our training sessions</li>
+                            </ul>
+                            
+                            <div class="faq-tip">
+                                This consultation helps me design a personalized program that is <span class="answer-highlight">achievable</span> for your specific <span class="answer-highlight">goals</span>.
+                            </div>
+                            
+                            <p><strong>Ready to get started?</strong> <a href="connect.html">Contact me today</a> to schedule your free consultation!</p>
                         </div>
                     </div>
                     
@@ -92,12 +146,40 @@
                             <span class="toggle-icon"><i class="fas fa-plus"></i></span>
                         </div>
                         <div class="faq-answer">
-                            <p>Not at all! I specialize in working with beginners and people at all fitness levels. My programs are designed to meet you where you are and help you progress at an appropriate pace for your current fitness level. Many of my clients are complete beginners when they first start working with me.</p>
+                            <div class="faq-important">
+                                <strong>No fitness experience required!</strong> I specialize in working with people at <span class="answer-highlight">all fitness levels</span>, including complete beginners.
+                            </div>
+                            
+                            <p>My programs are designed to meet you exactly where you are and help you progress at an appropriate pace for your current fitness level. In fact, many of my clients have never set foot in a gym before working with me.</p>
+                            
+                            <div class="faq-callout">
+                                Every program starts with foundational movements and gradually builds in complexity as your strength, confidence, and skill level increase. You'll never be asked to do anything you're not prepared for.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>What happens during the initial consultation?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>The initial consultation lasts approximately 60 minutes and includes a detailed discussion about your health history, fitness background, specific goals, and lifestyle. We'll also conduct some basic movement assessments to identify any limitations or imbalances. This information helps me create your personalized fitness plan.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>What should I wear and bring to my training sessions?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>For training sessions, wear comfortable athletic clothing and supportive shoes appropriate for your workout. Bring a water bottle, a small towel, and any specific equipment we've discussed (if applicable for home training). For gym sessions, a lock for the locker room may be useful. If you have a fitness tracker or heart rate monitor, feel free to bring it along. Most importantly, come with a positive attitude and be ready to work hard!</p>
                         </div>
                     </div>
                 </div>
 
-                <h2>Training Information</h2>
+                <h2 id="training"><span class="category-icon"><i class="fas fa-dumbbell"></i></span>Training Information</h2>
                 <div class="faq-container">
                     <div class="faq-item">
                         <div class="faq-question">
@@ -130,7 +212,7 @@
                     </div>
                 </div>
 
-                <h2>Services and Specialties</h2>
+                <h2 id="services"><span class="category-icon"><i class="fas fa-medal"></i></span>Services and Specialties</h2>
                 <div class="faq-container">
                     <div class="faq-item">
                         <div class="faq-question">
@@ -138,7 +220,29 @@
                             <span class="toggle-icon"><i class="fas fa-plus"></i></span>
                         </div>
                         <div class="faq-answer">
-                            <p>As a personal trainer, I provide general nutrition guidance and recommendations that complement your fitness program. For specialized nutrition plans or clients with specific dietary concerns, I collaborate with registered dietitians and can provide referrals as needed.</p>
+                            <div class="faq-important">
+                                <strong>Yes!</strong> Nutrition is a crucial part of achieving your fitness goals, and I provide <span class="answer-highlight">practical nutrition guidance</span> that works with your lifestyle and training program.
+                            </div>
+                            
+                            <div class="faq-callout">
+                                <strong>What I help you with:</strong>
+                            </div>
+                            
+                            <ul class="enhanced-list">
+                                <li><strong>Sustainable Eating Strategies:</strong> Practical approaches to healthy eating that fit your schedule and preferences</li>
+                                <li><strong>Meal Timing & Pre/Post Workout Nutrition:</strong> Optimize your energy and recovery through smart food timing</li>
+                                <li><strong>Portion Guidance & Food Choices:</strong> Learn to make better decisions without obsessive tracking</li>
+                                <li><strong>Supplement Recommendations:</strong> Evidence-based advice on what supplements might benefit your goals</li>
+                                <li><strong>Habit Building:</strong> Create lasting changes rather than short-term diet fixes</li>
+                            </ul>
+                            
+                            <div class="faq-tip">
+                                My approach focuses on building sustainable habits rather than restrictive diets. We'll work together to find nutrition strategies that support your training and fit your real life.
+                            </div>
+                            
+                            <div class="faq-note">
+                                <strong>When I refer to specialists:</strong> For complex medical conditions, eating disorders, or highly specialized meal planning, I collaborate with registered dietitians to ensure you get the best possible care.
+                            </div>
                         </div>
                     </div>
                     
@@ -153,7 +257,7 @@
                     </div>
                 </div>
 
-                <h2>Policies and Logistics</h2>
+                <h2 id="policies"><span class="category-icon"><i class="fas fa-clipboard-list"></i></span>Policies and Logistics</h2>
                 <div class="faq-container">
                     <div class="faq-item">
                         <div class="faq-question">
@@ -175,12 +279,163 @@
                         </div>
                     </div>
                 </div>
+
+                <h2 id="results"><span class="category-icon"><i class="fas fa-chart-line"></i></span>Results & Expectations</h2>
+                <div class="faq-container">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>How quickly will I see results?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Results vary based on your starting point, consistency, and how well you follow the program (including nutrition and recovery).</p>
+                            
+                            <div class="faq-callout">
+                                <strong>Every fitness journey is unique</strong> - your results will depend on your starting point, goals, consistency, and genetics.
+                            </div>
+                            
+                            <div class="faq-timeline">
+                                <div class="timeline-point">
+                                    <div class="timeline-point-marker"></div>
+                                    <div class="timeline-point-label">2-3 Weeks</div>
+                                    <div class="timeline-point-sublabel">Energy & Strength</div>
+                                </div>
+                                <div class="timeline-point">
+                                    <div class="timeline-point-marker"></div>
+                                    <div class="timeline-point-label">4-6 Weeks</div>
+                                    <div class="timeline-point-sublabel">Visible Changes</div>
+                                </div>
+                                <div class="timeline-point">
+                                    <div class="timeline-point-marker"></div>
+                                    <div class="timeline-point-label">8-12 Weeks</div>
+                                    <div class="timeline-point-sublabel">Major Progress</div>
+                                </div>
+                                <div class="timeline-point">
+                                    <div class="timeline-point-marker"></div>
+                                    <div class="timeline-point-label">3-6 Months</div>
+                                    <div class="timeline-point-sublabel">Transformation</div>
+                                </div>
+                            </div>
+                            
+                            <p>During our work together, I'll help you track various metrics beyond just appearance to help you see your progress clearly and stay motivated throughout your journey.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>What kind of results can I expect?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Beyond physical changes, clients typically experience improved energy levels, better sleep quality, enhanced mood, increased strength and endurance, better posture, reduced pain, and greater confidence. The specific results depend on your goals—whether that's weight loss, muscle gain, improved athletic performance, or better overall health. I design programs to deliver comprehensive improvements in both how you look and how you feel.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>Do you offer guarantees?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>While I can't guarantee specific results due to the many individual factors involved in fitness transformations, I do guarantee my commitment to providing evidence-based programming, attentive coaching, and consistent support. I offer a satisfaction guarantee for new clients: if after your first two weeks you don't feel the service is a good fit, I'll refund your initial payment. The best results come from a collaborative approach where we both bring our full effort to the process.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>What happens if I don't see progress?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>If you're not seeing expected progress, we'll first review your adherence to the program, including workout consistency, nutrition, sleep, and recovery practices. Then, I'll adjust your program as needed—changing exercises, modifying training variables, or addressing lifestyle factors that may be hindering your progress. Plateaus are normal, and overcoming them often leads to the best long-term results. My job is to help identify what's holding you back and find effective solutions.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 id="pricing"><span class="category-icon"><i class="fas fa-dollar-sign"></i></span>Pricing & Packages</h2>
+                <div class="faq-container">
+                    <div class="faq-item popular-question">
+                        <div class="faq-question">
+                            <h3>What do your services cost?</h3>
+                            <span class="popular-badge">Most Asked</span>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>My personal training services are customized based on your specific needs, frequency of sessions, and training location.</p>
+                            
+                            <div class="faq-important">
+                                All new clients receive a <span class="answer-highlight">free consultation</span> where I'll provide detailed pricing options based on your specific goals and requirements.
+                            </div>
+                            
+                            <ul class="enhanced-list">
+                                <li><strong>1:1 Personal Training:</strong> $60 per session (packages available)</li>
+                                <li><strong>Online Coaching:</strong> Starting at $150/month</li>
+                                <li><strong>Nutrition Coaching:</strong> $75/month</li>
+                                <li><strong>Group Training:</strong> $45-65 per person (2-3 people)</li>
+                            </ul>
+                            
+                            <div class="faq-note">
+                                <strong>Student Discount:</strong> Special reduced rates available for students with valid ID.
+                            </div>
+                            
+                            <div class="faq-note">
+                                Package discounts are available when purchasing multiple sessions, with savings of up to 20% compared to individual session rates. I believe fitness should be accessible to everyone - <span class="answer-highlight">if cost is a barrier, please discuss your situation during our consultation as I may be able to offer accommodations.</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>Do you offer package deals or discounts?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Yes, I offer package deals that provide savings compared to paying per session. The more sessions you commit to, the greater the discount. I also offer referral bonuses and occasional promotional discounts for new clients. Package options typically include 8, 16, or 24 sessions, with the flexibility to use them within a specific timeframe.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>Is there a contract requirement?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>I offer both contract and no-contract options to suit different preferences. Package deals require an agreement on the number of sessions and timeframe, while pay-as-you-go options are available at a slightly higher per-session rate. For online coaching, I recommend a minimum 3-month commitment for optimal results, but month-to-month options are also available.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <h3>What's included in my training with you?</h3>
+                            <span class="toggle-icon"><i class="fas fa-plus"></i></span>
+                        </div>
+                        <div class="faq-answer">
+                            <p>Every client receives comprehensive support designed to maximize your success and transformation:</p>
+                            
+                            <div class="faq-callout">
+                                <strong>All clients receive:</strong> Personalized workout programming, ongoing progress assessments, and expert form guidance during every session.
+                            </div>
+                            
+                            <ul class="enhanced-list">
+                                <li><strong>Customized Programming:</strong> Workouts tailored specifically to your goals, fitness level, and any limitations</li>
+                                <li><strong>Nutrition Guidance:</strong> Practical nutritional advice and strategies that complement your training</li>
+                                <li><strong>Progress Tracking:</strong> Regular assessments to monitor improvements and adjust your program as needed</li>
+                                <li><strong>Ongoing Support:</strong> Access to guidance and motivation between sessions to keep you on track</li>
+                                <li><strong>Education & Coaching:</strong> Learn proper form, exercise techniques, and sustainable fitness habits</li>
+                            </ul>
+                            
+                            <div class="faq-tip">
+                                My approach ensures every client receives the same high-quality, comprehensive service regardless of their starting point or specific goals.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <div class="still-have-questions">
                 <h2>Still Have Questions?</h2>
                 <p>If you couldn't find the answer you were looking for, feel free to reach out directly.</p>
-                <a href="connect.html" class="btn-primary">Contact Me</a>
+                <a href="connect.html#message" class="btn-primary">Contact Me</a>
             </div>
         </div>
     </section>
@@ -220,20 +475,149 @@
 
     <script src="script.js"></script>
     <script>
-        // FAQ Toggle Functionality
-        document.querySelectorAll('.faq-question').forEach(question => {
-            question.addEventListener('click', () => {
-                const faqItem = question.parentElement;
-                faqItem.classList.toggle('active');
+        // Ultra-simple FAQ toggle - direct style manipulation
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('FAQ script starting...');
+            
+            // Initially hide all answers
+            var allAnswers = document.querySelectorAll('.faq-answer');
+            for (var i = 0; i < allAnswers.length; i++) {
+                allAnswers[i].style.display = 'none';
+            }
+            
+            // Add click handlers to questions
+            var questions = document.querySelectorAll('.faq-question');
+            console.log('Found questions:', questions.length);
+            
+            for (var i = 0; i < questions.length; i++) {
+                questions[i].onclick = function() {
+                    console.log('Question clicked!');
+                    
+                    // Find the answer div
+                    var answer = this.nextElementSibling;
+                    var icon = this.querySelector('.toggle-icon i');
+                    
+                    // Close all other open answers first
+                    var allOtherAnswers = document.querySelectorAll('.faq-answer');
+                    var allOtherIcons = document.querySelectorAll('.toggle-icon i');
+                    
+                    for (var j = 0; j < allOtherAnswers.length; j++) {
+                        if (allOtherAnswers[j] !== answer) {
+                            allOtherAnswers[j].style.display = 'none';
+                        }
+                    }
+                    
+                    for (var k = 0; k < allOtherIcons.length; k++) {
+                        if (allOtherIcons[k] !== icon) {
+                            allOtherIcons[k].className = 'fas fa-plus';
+                        }
+                    }
+                    
+                    // Toggle this answer
+                    if (answer.style.display === 'none' || answer.style.display === '') {
+                        answer.style.display = 'block';
+                        answer.style.padding = '20px';
+                        answer.style.backgroundColor = 'white';
+                        answer.style.height = 'auto';
+                        answer.style.maxHeight = 'none';
+                        answer.style.overflow = 'visible';
+                        icon.className = 'fas fa-minus';
+                        console.log('Answer opened');
+                    } else {
+                        answer.style.display = 'none';
+                        icon.className = 'fas fa-plus';
+                        console.log('Answer closed');
+                    }
+                };
+            }
+            
+            // Add search functionality
+            var searchInput = document.getElementById('faq-search-input');
+            var searchButton = document.getElementById('search-button');
+            
+            if (searchInput && searchButton) {
+                var faqItems = document.querySelectorAll('.faq-item');
+                var faqCategories = document.querySelectorAll('.faq-categories h2');
+                var noResultsMessage = document.createElement('div');
+                noResultsMessage.className = 'no-results';
+                noResultsMessage.innerHTML = '<p>No questions found matching your search. Try different keywords or <a href="connect.html">contact us</a> directly.</p>';
                 
-                // Update the icon
-                const icon = question.querySelector('.toggle-icon i');
-                if (faqItem.classList.contains('active')) {
-                    icon.classList.replace('fa-plus', 'fa-minus');
-                } else {
-                    icon.classList.replace('fa-minus', 'fa-plus');
+                // Add the no results message
+                var lastContainer = document.querySelector('.faq-container:last-child');
+                if (lastContainer) {
+                    lastContainer.parentNode.insertBefore(noResultsMessage, lastContainer.nextSibling);
+                    noResultsMessage.style.display = 'none';
                 }
-            });
+                
+                function performSearch() {
+                    var searchTerm = searchInput.value.toLowerCase().trim();
+                    var resultsFound = false;
+                    
+                    // Search functionality
+                    for (var i = 0; i < faqItems.length; i++) {
+                        var item = faqItems[i];
+                        var questionText = item.querySelector('.faq-question h3').textContent.toLowerCase();
+                        var answerText = item.querySelector('.faq-answer').textContent.toLowerCase();
+                        
+                        if (searchTerm === '' || questionText.includes(searchTerm) || answerText.includes(searchTerm)) {
+                            item.style.display = 'block';
+                            resultsFound = true;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    }
+                    
+                    // Show/hide categories
+                    for (var j = 0; j < faqCategories.length; j++) {
+                        var category = faqCategories[j];
+                        var nextContainer = category.nextElementSibling;
+                        var hasVisibleItems = false;
+                        
+                        var categoryItems = nextContainer.querySelectorAll('.faq-item');
+                        for (var k = 0; k < categoryItems.length; k++) {
+                            if (categoryItems[k].style.display !== 'none') {
+                                hasVisibleItems = true;
+                                break;
+                            }
+                        }
+                        
+                        if (hasVisibleItems) {
+                            category.style.display = 'flex';
+                            nextContainer.style.display = 'block';
+                        } else {
+                            category.style.display = 'none';
+                            nextContainer.style.display = 'none';
+                        }
+                    }
+                    
+                    noResultsMessage.style.display = resultsFound ? 'none' : 'block';
+                }
+                
+                searchInput.addEventListener('input', performSearch);
+                searchButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    performSearch();
+                });
+            }
+            
+            // Category navigation
+            var categoryLinks = document.querySelectorAll('.category-link');
+            for (var i = 0; i < categoryLinks.length; i++) {
+                categoryLinks[i].addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    for (var j = 0; j < categoryLinks.length; j++) {
+                        categoryLinks[j].classList.remove('active');
+                    }
+                    this.classList.add('active');
+                    
+                    var targetId = this.getAttribute('href').substring(1);
+                    var target = document.getElementById(targetId);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            }
         });
     </script>
 </body>
