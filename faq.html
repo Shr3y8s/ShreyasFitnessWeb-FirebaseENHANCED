@@ -64,35 +64,38 @@
         <div class="container">
             <h1>Frequently Asked Questions</h1>
             <p>Common questions about working with me</p>
+            
+            <!-- FAQ Search -->
+            <div class="faq-search">
+                <input type="text" id="faq-search-input" placeholder="Search questions...">
+                <button id="search-button"><i class="fas fa-search"></i></button>
+            </div>
         </div>
     </section>
 
     <!-- FAQ Content -->
     <section class="faq-page">
         <div class="container">
-            <div class="intro-content">
-                <p>Here you'll find answers to common questions about my training services, methods, and policies. If you don't find the answer you're looking for, don't hesitate to <a href="connect.html">reach out</a>.</p>
+            <!-- Top section with intro and stats side-by-side -->
+            <div class="faq-top-section">
+                <div class="intro-content">
+                    <p>Here you'll find answers to common questions about my training services, methods, and policies. If you don't find the answer you're looking for, don't hesitate to <a href="connect.html">reach out</a>.</p>
+                </div>
                 
-                <!-- FAQ Search -->
-                <div class="faq-search">
-                    <input type="text" id="faq-search-input" placeholder="Search questions...">
-                    <button id="search-button"><i class="fas fa-search"></i></button>
-                </div>
-            </div>
-            
-            <!-- FAQ Stats -->
-            <div class="faq-stats">
-                <div class="stat-item">
-                    <div class="stat-number">25</div>
-                    <div class="stat-label">Total Questions</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">6</div>
-                    <div class="stat-label">Categories</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number">4.9</div>
-                    <div class="stat-label">Client Rating</div>
+                <!-- FAQ Stats -->
+                <div class="faq-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">25</div>
+                        <div class="stat-label">Total Questions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">6</div>
+                        <div class="stat-label">Categories</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">4.9</div>
+                        <div class="stat-label">Client Rating</div>
+                    </div>
                 </div>
             </div>
             
@@ -532,8 +535,8 @@
             }
             
             // Add search functionality
-            var searchInput = document.getElementById('faq-search-input');
-            var searchButton = document.getElementById('search-button');
+            var searchInput = document.querySelector('.page-header .faq-search input');
+            var searchButton = document.querySelector('.page-header .faq-search button');
             
             if (searchInput && searchButton) {
                 var faqItems = document.querySelectorAll('.faq-item');

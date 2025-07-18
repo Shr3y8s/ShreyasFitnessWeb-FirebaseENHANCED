@@ -1,12 +1,23 @@
 /* FAQ Page Specific Styles */
 
+/* Reduce top spacing for FAQ page to bring content closer to header */
+.faq-page {
+    padding-top: 20px;
+}
+
 /* FAQ Search Bar */
 .faq-search {
-    margin: 20px 0;
     display: flex;
     max-width: 600px;
     margin: 30px auto;
     position: relative;
+}
+
+/* Search box in page header */
+.page-header .faq-search {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    max-width: 500px;
 }
 
 .faq-search input {
@@ -291,26 +302,46 @@
     }
 }
 
+/* Top section with intro content and stats side by side */
+.faq-top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 30px;
+    margin-top: 0;
+    margin-bottom: 30px;
+}
+
+.intro-content {
+    flex: 3;
+}
+
+.intro-content p {
+    margin-bottom: 20px;
+}
+
 /* FAQ Stats */
 .faq-stats {
+    flex: 1;
     display: flex;
-    justify-content: center;
-    margin-top: 40px;
-    margin-bottom: 20px;
+    flex-direction: column;
     background-color: var(--white);
     border-radius: 8px;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    align-self: flex-start;
+    margin-top: 0;
+    border-left: 4px solid var(--primary);
 }
 
 .stat-item {
     text-align: center;
-    padding: 0 20px;
-    border-right: 1px solid var(--light-gray);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--light-gray);
 }
 
 .stat-item:last-child {
-    border-right: none;
+    border-bottom: none;
 }
 
 .stat-number {
@@ -323,6 +354,26 @@
 .stat-label {
     font-size: 0.9rem;
     color: var(--dark-gray);
+}
+
+/* Responsive adjustments for the top section */
+@media (max-width: 768px) {
+    .faq-top-section {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .faq-stats {
+        flex-direction: row;
+        justify-content: space-around;
+        width: 100%;
+    }
+    
+    .stat-item {
+        border-bottom: none;
+        border-right: 1px solid var(--light-gray);
+        padding: 0 10px;
+    }
 }
 
 /* FAQ Categories Nav */
