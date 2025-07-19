@@ -1,4 +1,39 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Problem Section Highlight Effects
+    const boldStatements = document.querySelectorAll('.bold-statements h2[data-target], .bold-statements h3[data-target]');
+    
+    if (boldStatements.length > 0) {
+        boldStatements.forEach(statement => {
+            const targetId = statement.getAttribute('data-target');
+            const targetParagraph = document.querySelector(`.highlight-target[data-section="${targetId}"]`);
+            
+            if (targetParagraph) {
+                // Add hover events for mouse
+                statement.addEventListener('mouseenter', () => {
+                    targetParagraph.classList.add('active-highlight');
+                });
+                
+                statement.addEventListener('mouseleave', () => {
+                    targetParagraph.classList.remove('active-highlight');
+                });
+                
+                // Add touch events for mobile
+                statement.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    // Remove highlight from any other paragraphs
+                    document.querySelectorAll('.highlight-target.active-highlight').forEach(p => {
+                        if (p !== targetParagraph) {
+                            p.classList.remove('active-highlight');
+                        }
+                    });
+                    
+                    // Toggle highlight on this paragraph
+                    targetParagraph.classList.toggle('active-highlight');
+                });
+            }
+        });
+    }
+    
     // Login Form Handler
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -168,4 +203,56 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+    
+    // Blog Card Subscribe Form Expansion
+    const showSubscribeFormBtn = document.getElementById('showSubscribeFormBtn');
+    const cardSubscribeForm = document.getElementById('cardSubscribeForm');
+    
+    if (showSubscribeFormBtn && cardSubscribeForm) {
+        // Click handler for the subscribe button
+        showSubscribeFormBtn.addEventListener('click', () => {
+            // Hide button
+            showSubscribeFormBtn.style.display = 'none';
+            
+            // Show form with animation
+            cardSubscribeForm.classList.remove('hidden');
+            
+            // Focus on the email input
+            const emailInput = cardSubscribeForm.querySelector('input[type="email"]');
+            if (emailInput) {
+                emailInput.focus();
+            }
+        });
+        
+        // Handle form submission
+        cardSubscribeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Get email value
+            const emailInput = cardSubscribeForm.querySelector('input[type="email"]');
+            const email = emailInput ? emailInput.value : '';
+            
+            // Basic validation
+            if (!email || !email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            // Replace form with success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'card-success-message';
+            successMessage.innerHTML = `
+                <i class="fas fa-check-circle"></i>
+                <p>Thank you for subscribing!</p>
+            `;
+            
+            // Replace the form with success message
+            cardSubscribeForm.parentNode.replaceChild(successMessage, cardSubscribeForm);
+            
+            // Optional: Also submit to the main subscribe form
+            // This would be implemented in a real project
+            // mainSubscribeForm.email.value = email;
+            // mainSubscribeForm.submit();
+        });
+    }
 });

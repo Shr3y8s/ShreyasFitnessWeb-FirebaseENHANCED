@@ -483,9 +483,6 @@
 
 /* Privacy Note */
 .privacy-note {
-    display: flex;
-    align-items: center;
-    color: var(--dark-gray);
     font-size: 0.9rem;
     margin-top: 15px;
 }
@@ -493,6 +490,60 @@
 .privacy-note i {
     margin-right: 8px;
     color: var(--primary);
+}
+
+/* Subscribe Form - Dark Background Version */
+.subscribe-form-dark {
+    display: flex;
+    max-width: 500px;
+    margin: 25px auto;
+    gap: 10px;
+}
+
+.subscribe-form-dark input[type="email"] {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--white);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.subscribe-form-dark input[type="email"]::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.subscribe-form-dark input[type="email"]:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.25);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.subscribe-form-dark button {
+    background-color: var(--white);
+    color: var(--primary);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.subscribe-form-dark button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.cta .privacy-note {
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 10px;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* Success Message Styling */
@@ -555,5 +606,14 @@
     
     .modal-body {
         padding: 20px;
+    }
+    
+    .subscribe-form-dark {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .subscribe-form-dark button {
+        width: 100%;
     }
 }
