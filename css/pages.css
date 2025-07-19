@@ -951,7 +951,7 @@
 }
 
 .testimonial-card {
-    background-color: var(--white);
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-radius: 10px;
     padding: 30px;
     box-shadow: var(--box-shadow);
