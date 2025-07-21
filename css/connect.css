@@ -1,5 +1,81 @@
 /* Connect Page Styles */
 
+/* Enhanced Motivational Banner Styles */
+.motivation-content p {
+    font-size: 1.2rem; /* Increased from 1.1rem */
+    line-height: 1.8;
+    margin-bottom: 25px; /* Increased from 20px */
+    font-weight: 500; /* Added font weight */
+    color: var(--secondary);
+    transition: all 0.3s ease;
+}
+
+.motivation-content p strong,
+.motivation-content p b {
+    font-weight: 700;
+    color: var(--primary-dark);
+}
+
+/* Enhanced styling for key phrases */
+.motivation-content p .emphasis {
+    position: relative;
+    font-weight: 600;
+    color: var(--primary-dark);
+}
+
+/* Enhanced CTA styling */
+.motivation-cta {
+    font-size: 1.3rem; /* Increased from 1.2rem */
+    font-weight: 600; /* Increased from 500 */
+    margin: 28px 0; /* Increased from 25px 0 */
+    color: var(--primary-dark);
+    padding: 12px 20px;
+    background-color: rgba(76, 175, 80, 0.08);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary);
+    display: inline-block;
+    box-shadow: 0 2px 10px rgba(76, 175, 80, 0.1);
+    transition: all 0.3s ease;
+}
+
+.motivation-cta:hover {
+    background-color: rgba(76, 175, 80, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.15);
+}
+
+/* Enhanced button styling */
+.motivation-button {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: var(--white);
+    padding: 16px 35px; /* Increased from 15px 30px */
+    border-radius: 8px;
+    font-weight: 700; /* Increased from 600 */
+    font-size: 1.15rem; /* Increased from 1.1rem */
+    margin-top: 15px; /* Increased from 10px */
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px; /* Added letter spacing */
+}
+
+.motivation-button:hover {
+    transform: translateY(-4px); /* Increased from -3px */
+    box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4); /* Increased shadow */
+    color: var(--white);
+}
+
+/* Improves spacing in the bottom section */
+.motivation-bottom {
+    padding: 40px 0; /* Increased from 30px 0 */
+}
+
+/* Better content container spacing */
+.motivation-content {
+    padding: 0 30px; /* Increased from 0 20px */
+}
+
+
 /* Connection Option Cards */
 .connection-cards {
     display: flex;
