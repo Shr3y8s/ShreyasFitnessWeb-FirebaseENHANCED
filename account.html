@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Account - Shreyas Fitness</title>
+    <title>My Account - The Shrey Method Fitness</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -21,7 +21,7 @@
                             </div>
                         </div>
                         <div class="logo-text">
-                            <span class="brand-name">SHREYAS</span>
+                            <span class="brand-name">THE SHREY METHOD</span>
                             <span class="brand-tagline">FITNESS</span>
                         </div>
                     </div>
@@ -160,43 +160,43 @@
     <section class="account-section">
         <div class="container">
             <!-- Account dashboard content starts here -->
+            
+            <!-- Registration Form -->
+            <div id="register-form" class="auth-form hidden">
+                <h2>Create an Account</h2>
+                <p class="auth-description">Join The Shrey Method Fitness to access your personalized dashboard, track your progress, and get the most out of your training experience.</p>
+                
+                <form class="register-form">
+                    <div class="form-group">
+                        <label for="register-name">Full Name</label>
+                        <input type="text" id="register-name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email Address</label>
+                        <input type="email" id="register-email" placeholder="Enter your email address" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <input type="password" id="register-password" placeholder="Create a password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm">Confirm Password</label>
+                        <input type="password" id="register-confirm" placeholder="Confirm your password" required>
+                    </div>
+                    <div class="form-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="terms" required>
+                            <label for="terms">I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Privacy Policy</a></label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary full-width">Create Account</button>
+                    <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login here</a></p>
+                </form>
+            </div>
 
-                <!-- Registration Form -->
-                <div id="register-form" class="auth-form hidden">
-                    <h2>Create an Account</h2>
-                    <p class="auth-description">Join Shreyas Fitness to access your personalized dashboard, track your progress, and get the most out of your training experience.</p>
-                    
-                    <form class="register-form">
-                        <div class="form-group">
-                            <label for="register-name">Full Name</label>
-                            <input type="text" id="register-name" placeholder="Enter your full name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-email">Email Address</label>
-                            <input type="email" id="register-email" placeholder="Enter your email address" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-password">Password</label>
-                            <input type="password" id="register-password" placeholder="Create a password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="register-confirm">Confirm Password</label>
-                            <input type="password" id="register-confirm" placeholder="Confirm your password" required>
-                        </div>
-                        <div class="form-group">
-                            <div class="checkbox-group">
-                                <input type="checkbox" id="terms" required>
-                                <label for="terms">I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Privacy Policy</a></label>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn-primary full-width">Create Account</button>
-                        <p class="auth-switch">Already have an account? <a href="#" id="show-login">Login here</a></p>
-                    </form>
-                </div>
-
-                <!-- Dashboard (Hidden by default) -->
-                <div id="dashboard" class="dashboard hidden">
-                    <div class="dashboard-header">
+            <!-- Dashboard (Hidden by default) -->
+            <div id="dashboard" class="dashboard hidden">
+                <div class="dashboard-header">
                         <div class="user-greeting">
                             <h2>Welcome back, <span id="user-name">Client</span>!</h2>
                             <p>Here's an overview of your fitness journey</p>
@@ -404,7 +404,6 @@
                     </div>
                 </div>
             </div>
-        </div>
     </section>
 
     <!-- Features section removed - now shown beside login form -->
@@ -414,7 +413,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>Shreyas Fitness</h3>
+                    <h3>The Shrey Method Fitness</h3>
                     <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
                 </div>
                 <div class="footer-section">
@@ -436,7 +435,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 Shreyas Fitness. All rights reserved.</p>
+                <p>&copy; 2024 The Shrey Method Fitness. All rights reserved.</p>
             </div>
         </div>
     </footer>
