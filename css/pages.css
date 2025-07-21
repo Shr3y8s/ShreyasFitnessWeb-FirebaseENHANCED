@@ -725,7 +725,7 @@
 }
 
 .service-card:after {
-    content: "Actually";
+    content: "✓";
     position: absolute;
     top: -12px;
     right: 30px;
