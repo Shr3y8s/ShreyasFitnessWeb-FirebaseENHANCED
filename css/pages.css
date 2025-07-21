@@ -640,7 +640,7 @@
 .story-highlight {
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     color: var(--white);
-    padding: 40px;
+    padding: 25px 40px;
     border-radius: 10px;
     margin-bottom: 40px;
     position: relative;
@@ -661,6 +661,14 @@
     font-weight: 500;
     line-height: 1.4;
     font-style: italic;
+}
+
+.story-highlight .highlight-text {
+    font-size: 1.3rem;
+    font-weight: 500;
+    font-style: italic;
+    display: inline-block;
+    width: 100%;
 }
 
 .story-content {
@@ -1137,6 +1145,10 @@
 
 .philosophy-item:hover {
     transform: translateY(-5px);
+}
+
+.philosophy-item p {
+    text-align: left;
 }
 
 .philosophy-icon {
