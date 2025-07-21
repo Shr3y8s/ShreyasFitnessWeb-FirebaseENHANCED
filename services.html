@@ -38,13 +38,13 @@
                     <a href="services.html" class="nav-link active">Services</a>
                 </li>
                 <li class="nav-item">
-                    <a href="blog.html" class="nav-link">Blog</a>
-                </li>
-                <li class="nav-item">
                     <a href="connect.html" class="nav-link">Connect</a>
                 </li>
                 <li class="nav-item">
                     <a href="faq.html" class="nav-link">FAQ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="blog.html" class="nav-link">Blog</a>
                 </li>
                 <li class="nav-item">
                     <a href="account.html" class="nav-link account-btn">Sign Up / Login</a>
@@ -65,26 +65,89 @@
             <h1>The Shrey Method Membership</h1>
             <p>One comprehensive program. All the support you need. Results that last.</p>
         </div>
-        <div class="service-cards">
-            <div class="service-card-item membership-card">
-                <div class="service-card-icon">
-                    <i class="fas fa-dumbbell"></i>
+        <div class="service-hero">
+            <!-- Left Column (60%) - Membership Card -->
+            <div class="service-hero-col membership-col">
+                <div class="service-card-item membership-card">
+                    <div class="service-card-icon">
+                        <i class="fas fa-dumbbell"></i>
+                    </div>
+                    <h3 class="service-card-title">Complete Transformation Membership</h3>
+                    <div class="service-card-price">$199<span>/month</span></div>
+                    <p class="service-card-desc">Your complete transformation system - everything you need to build sustainable fitness habits and achieve lasting results.</p>
+                    <div class="service-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Custom training programs (updated monthly)</li>
+                            <li><i class="fas fa-check"></i> Complete nutrition coaching & meal planning</li>
+                            <li><i class="fas fa-check"></i> Unlimited messaging support (24hr response)</li>
+                            <li><i class="fas fa-check"></i> Weekly progress check-ins</li>
+                            <li><i class="fas fa-check"></i> Video form analysis & corrections</li>
+                            <li><i class="fas fa-check"></i> Habit coaching & accountability</li>
+                        </ul>
+                    </div>
+                    <span class="service-card-format">In-Person & Remote Options</span>
+                    <a href="#" class="btn-primary service-modal-btn" data-modal="membershipModal">Learn More</a>
                 </div>
-                <h3 class="service-card-title">Complete Transformation Membership</h3>
-                <div class="service-card-price">$199<span>/month</span></div>
-                <p class="service-card-desc">Your complete transformation system - everything you need to build sustainable fitness habits and achieve lasting results.</p>
-                <div class="service-features">
-                    <ul>
-                        <li><i class="fas fa-check"></i> Custom training programs (updated monthly)</li>
-                        <li><i class="fas fa-check"></i> Complete nutrition coaching & meal planning</li>
-                        <li><i class="fas fa-check"></i> Unlimited messaging support (24hr response)</li>
-                        <li><i class="fas fa-check"></i> Weekly progress check-ins</li>
-                        <li><i class="fas fa-check"></i> Video form analysis & corrections</li>
-                        <li><i class="fas fa-check"></i> Habit coaching & accountability</li>
-                    </ul>
+            </div>
+            
+            <!-- Right Column (40%) - Value Infographics -->
+            <div class="service-hero-col value-col">
+                <!-- Daily Cost Comparison -->
+                <div class="value-card daily-comparison">
+                    <h4><i class="fas fa-coffee"></i> Less Than Your Daily Coffee</h4>
+                    <div class="value-comparison">
+                        <div class="value-item">
+                            <span class="value-label">☕ Starbucks Latte:</span>
+                            <span class="value-amount">$5.50<span>/day</span></span>
+                        </div>
+                        <div class="value-item highlight">
+                            <span class="value-label">🏋️ Complete Transformation:</span>
+                            <span class="value-amount">$6.50<span>/day</span></span>
+                        </div>
+                    </div>
+                    <p class="value-note">For just $1 more than coffee, get your entire fitness solution</p>
                 </div>
-                <span class="service-card-format">In-Person & Remote Options</span>
-                <a href="#" class="btn-primary service-modal-btn" data-modal="membershipModal">Learn More</a>
+                
+                <!-- Value Breakdown -->
+                <div class="value-card value-breakdown">
+                    <h4><i class="fas fa-tags"></i> What You Get vs. Buying Separately</h4>
+                    <div class="value-list">
+                        <div class="value-item">
+                            <span class="value-service">Personal Trainer:</span>
+                            <span class="value-price">$480/month</span>
+                        </div>
+                        <div class="value-item">
+                            <span class="value-service">Nutritionist:</span>
+                            <span class="value-price">$200/month</span>
+                        </div>
+                        <div class="value-item">
+                            <span class="value-service">Meal Planning:</span>
+                            <span class="value-price">$100/month</span>
+                        </div>
+                        <div class="value-item">
+                            <span class="value-service">24/7 Support:</span>
+                            <span class="value-price">$150/month</span>
+                        </div>
+                        <div class="value-item">
+                            <span class="value-service">Progress Tracking:</span>
+                            <span class="value-price">$80/month</span>
+                        </div>
+                    </div>
+                    <div class="value-total">
+                        <div class="value-item total-value">
+                            <span class="value-service">Total Value:</span>
+                            <span class="value-price">$1,010/month</span>
+                        </div>
+                        <div class="value-item your-price">
+                            <span class="value-service">Your Investment:</span>
+                            <span class="value-price">$199/month</span>
+                        </div>
+                    </div>
+                    <div class="value-savings">
+                        <span class="savings-label">YOU SAVE:</span>
+                        <span class="savings-amount">$811/month</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -161,60 +224,6 @@
             </div>
             <div class="pricing-cta">
                 <a href="connect.html" class="btn-primary">Schedule Your Free Consultation</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Testimonials -->
-    <section class="testimonials alt-background">
-        <div class="container">
-            <div class="section-header">
-                <h2>Client Success Stories</h2>
-                <p>Hear what my clients have to say about their fitness journeys</p>
-            </div>
-            <div class="testimonial-grid">
-                <div class="testimonial-card">
-                    <div class="testimonial-content">
-                        <p>"Working with Shreyas completely transformed my approach to fitness. As a complete beginner, I was intimidated by gyms, but his patient guidance and custom program built my confidence and strength simultaneously."</p>
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="testimonial-info">
-                            <h4>Sarah M.</h4>
-                            <p>1:1 Personal Training Client</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card">
-                    <div class="testimonial-content">
-                        <p>"The group sessions are the perfect balance of personal attention and team motivation. I've made more progress in three months than I did in years of trying to figure things out on my own."</p>
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="testimonial-info">
-                            <h4>Michael T.</h4>
-                            <p>Group Training Client</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial-card">
-                    <div class="testimonial-content">
-                        <p>"Even though we work remotely, Shreyas' online coaching is incredibly attentive. The weekly check-ins and program adjustments keep me accountable and the results have been amazing."</p>
-                    </div>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="testimonial-info">
-                            <h4>Jennifer K.</h4>
-                            <p>Online Coaching Client</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
