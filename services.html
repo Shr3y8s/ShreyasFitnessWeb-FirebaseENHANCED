@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/services.css">
 </head>
 <body>
     <!-- Navigation -->
@@ -62,90 +63,78 @@
 <section class="about">
     <div class="container">
         <div class="section-header">
-            <h1>The Shrey Method Membership</h1>
-            <p>One comprehensive program. All the support you need. Results that last.</p>
+            <h1>The Shrey Method Services</h1>
+            <p>Three tailored service options designed to fit your fitness needs and goals.</p>
         </div>
-        <div class="service-hero">
-            <!-- Left Column (60%) - Membership Card -->
-            <div class="service-hero-col membership-col">
-                <div class="service-card-item membership-card">
+        <div class="service-tiers">
+            <!-- Tier 1: Personal Training Sessions -->
+            <div class="service-tier">
+                <div class="service-card-item">
+                    <div class="service-card-limitation">Training Only</div>
                     <div class="service-card-icon">
                         <i class="fas fa-dumbbell"></i>
                     </div>
-                    <h3 class="service-card-title">Complete Transformation Membership</h3>
-                    <div class="service-card-price">$199<span>/month</span></div>
-                    <p class="service-card-desc">Your complete transformation system - everything you need to build sustainable fitness habits and achieve lasting results.</p>
-                    <div class="service-features">
+                    <h3 class="service-card-title">Get Expert 1-on-1 Guidance</h3>
+                    <div class="service-card-price">$70<span>/session</span></div>
+                    <p class="service-card-desc">Expert in-person coaching sessions focused on technique, form, and effective workouts tailored to your goals.</p>
+                    <div class="service-features-essential">
                         <ul>
-                            <li><i class="fas fa-check"></i> Custom training programs (updated monthly)</li>
-                            <li><i class="fas fa-check"></i> Complete nutrition coaching & meal planning</li>
-                            <li><i class="fas fa-check"></i> Unlimited messaging support (24hr response)</li>
-                            <li><i class="fas fa-check"></i> Weekly progress check-ins</li>
-                            <li><i class="fas fa-check"></i> Video form analysis & corrections</li>
-                            <li><i class="fas fa-check"></i> Habit coaching & accountability</li>
+                            <li><i class="fas fa-check"></i> Expert 1-on-1 coaching <span class="feature-note">(in-person only)</span></li>
+                            <li><i class="fas fa-check"></i> Form correction & technique</li>
                         </ul>
                     </div>
-                    <span class="service-card-format">In-Person & Remote Options</span>
-                    <a href="#" class="btn-primary service-modal-btn" data-modal="membershipModal">Learn More</a>
+                    <span class="service-card-format">Seattle Area Only</span>
+                    <div class="card-action-buttons">
+                        <button class="btn-secondary details-modal-btn" data-modal="personalDetailsModal" onclick="openModal('personalDetailsModal')">Learn More</button>
+                        <a href="connect.html" class="btn-primary">Book Your First Session</a>
+                    </div>
                 </div>
             </div>
             
-            <!-- Right Column (40%) - Value Infographics -->
-            <div class="service-hero-col value-col">
-                <!-- Daily Cost Comparison -->
-                <div class="value-card daily-comparison">
-                    <h4><i class="fas fa-coffee"></i> Less Than Your Daily Coffee</h4>
-                    <div class="value-comparison">
-                        <div class="value-item">
-                            <span class="value-label">☕ Starbucks Latte:</span>
-                            <span class="value-amount">$5.50<span>/day</span></span>
-                        </div>
-                        <div class="value-item highlight">
-                            <span class="value-label">🏋️ Complete Transformation:</span>
-                            <span class="value-amount">$6.50<span>/day</span></span>
-                        </div>
+            <!-- Tier 2: Complete Transformation -->
+            <div class="service-tier">
+                <div class="service-card-item membership-card">
+                    <div class="service-card-badge">Most Popular - Best Value</div>
+                    <div class="service-card-icon">
+                        <i class="fas fa-sync-alt"></i>
                     </div>
-                    <p class="value-note">For just $1 more than coffee, get your entire fitness solution</p>
+                    <h3 class="service-card-title">Achieve Total Fitness Transformation</h3>
+                    <div class="service-card-price">$199<span>/month</span></div>
+                    <p class="service-card-desc">Your complete transformation system - everything you need to build sustainable fitness habits and achieve lasting results.</p>
+                    <div class="service-features-essential">
+                        <ul>
+                            <li class="feature-highlight"><i class="fas fa-check"></i> Custom training programs (updated monthly)</li>
+                            <li class="feature-highlight"><i class="fas fa-check"></i> Complete nutrition coaching & meal planning</li>
+                        </ul>
+                    </div>
+                    <span class="service-card-format">Remote Coaching</span>
+                    <div class="card-action-buttons">
+                        <button class="btn-secondary details-modal-btn" data-modal="transformationDetailsModal" onclick="openModal('transformationDetailsModal')">Learn More</button>
+                        <a href="connect.html" class="btn-primary">Start Your Transformation</a>
+                    </div>
                 </div>
-                
-                <!-- Value Breakdown -->
-                <div class="value-card value-breakdown">
-                    <h4><i class="fas fa-tags"></i> What You Get vs. Buying Separately</h4>
-                    <div class="value-list">
-                        <div class="value-item">
-                            <span class="value-service">Personal Trainer:</span>
-                            <span class="value-price">$480/month</span>
-                        </div>
-                        <div class="value-item">
-                            <span class="value-service">Nutritionist:</span>
-                            <span class="value-price">$200/month</span>
-                        </div>
-                        <div class="value-item">
-                            <span class="value-service">Meal Planning:</span>
-                            <span class="value-price">$100/month</span>
-                        </div>
-                        <div class="value-item">
-                            <span class="value-service">24/7 Support:</span>
-                            <span class="value-price">$150/month</span>
-                        </div>
-                        <div class="value-item">
-                            <span class="value-service">Progress Tracking:</span>
-                            <span class="value-price">$80/month</span>
-                        </div>
+            </div>
+            
+            <!-- Tier 3: Elite Transformation -->
+            <div class="service-tier">
+                <div class="service-card-item elite-card">
+                    <div class="service-card-badge elite-badge">Premium Experience</div>
+                    <div class="service-card-icon">
+                        <i class="fas fa-crown"></i>
                     </div>
-                    <div class="value-total">
-                        <div class="value-item total-value">
-                            <span class="value-service">Total Value:</span>
-                            <span class="value-price">$1,010/month</span>
-                        </div>
-                        <div class="value-item your-price">
-                            <span class="value-service">Your Investment:</span>
-                            <span class="value-price">$199/month</span>
-                        </div>
+                    <h3 class="service-card-title">Experience Premium Results</h3>
+                    <div class="service-card-price">$199<span>/month</span> + $70<span>/session</span></div>
+                    <p class="service-card-desc">The complete package - comprehensive transformation support plus hands-on training for maximum results and accountability.</p>
+                    <div class="service-features-essential">
+                        <ul>
+                            <li class="feature-highlight"><i class="fas fa-check"></i> Everything from Complete Transformation</li>
+                            <li class="feature-highlight"><i class="fas fa-check"></i> In-person training sessions</li>
+                        </ul>
                     </div>
-                    <div class="value-savings">
-                        <span class="savings-label">YOU SAVE:</span>
-                        <span class="savings-amount">$811/month</span>
+                    <span class="service-card-format">Seattle Premium Experience</span>
+                    <div class="card-action-buttons">
+                        <button class="btn-secondary details-modal-btn" data-modal="eliteDetailsModal" onclick="openModal('eliteDetailsModal')">Learn More</button>
+                        <a href="connect.html" class="btn-primary elite-btn">Get Elite Support</a>
                     </div>
                 </div>
             </div>
@@ -153,89 +142,154 @@
     </div>
 </section>
 
-<!-- In-Person Add-On Section -->
-<section class="add-on-section">
+<!-- Value Comparison Section -->
+<section class="value-comparison-section">
     <div class="container">
         <div class="section-header">
-            <h2>Want to Train Together In-Person?</h2>
-            <p>Add live training sessions to your membership for hands-on coaching in the Seattle area</p>
+            <h2>Why Complete Transformation is Your Best Investment</h2>
+            <p>Understand the exceptional value you're receiving compared to industry standard pricing</p>
         </div>
-        <div class="add-on-options">
-            <div class="add-on-option">
-                <h3>Single Session</h3>
-                <div class="add-on-price">$85</div>
-                <p>One 60-min session with in-person check-in</p>
+        
+        <div class="value-cards-container">
+            <!-- Coffee Comparison Card -->
+            <div class="value-card coffee-comparison">
+                <div class="value-card-header">
+                    <i class="fas fa-mug-hot"></i>
+                    <h3>Less Than Your Daily Coffee</h3>
+                </div>
+                <div class="value-comparison-table">
+                    <div class="comparison-row">
+                        <div class="comparison-item">
+                            <span class="comparison-label"><i class="fas fa-coffee"></i> Starbucks Latte:</span>
+                        </div>
+                        <div class="comparison-value">
+                            <span class="price-tag">$5.50</span><span class="price-period">/day</span>
+                        </div>
+                    </div>
+                    <div class="comparison-row highlighted">
+                        <div class="comparison-item">
+                            <span class="comparison-label"><i class="fas fa-sync-alt"></i> Complete Transformation:</span>
+                        </div>
+                        <div class="comparison-value">
+                            <span class="price-tag">$6.50</span><span class="price-period">/day</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="value-card-footer">
+                    <p>For just $1 more than coffee, get your entire fitness solution</p>
+                </div>
             </div>
-            <div class="add-on-option">
-                <h3>5-Session Pack</h3>
-                <div class="add-on-price">$400</div>
-                <p>Five 60-min sessions ($80/session)</p>
+
+            <!-- Value Breakdown Card -->
+            <div class="value-card value-breakdown">
+                <div class="value-card-header">
+                    <i class="fas fa-tags"></i>
+                    <h3>The Shrey Method vs. Industry Standards</h3>
+                </div>
+                <div class="value-comparison-table">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="border-bottom: 1px solid #f0f0f0; font-weight: 600;">
+                            <td style="padding: 12px 10px;">Service Feature</td>
+                            <td style="padding: 12px 10px; text-align: center;">The Shrey Method</td>
+                            <td style="padding: 12px 10px; text-align: right;">Industry Standards</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">Custom Training Programs</td>
+                            <td style="padding: 12px 10px; text-align: center;">Included</td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$175</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">Nutrition Coaching</td>
+                            <td style="padding: 12px 10px; text-align: center;">Included</td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$200</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">Unlimited Messaging Support</td>
+                            <td style="padding: 12px 10px; text-align: center;">Included</td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$99</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">Weekly Progress Check-Ins</td>
+                            <td style="padding: 12px 10px; text-align: center;">Included</td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$150</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">Video Form Analysis</td>
+                            <td style="padding: 12px 10px; text-align: center;">Included</td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$125</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">Habit & Accountability Coaching</td>
+                            <td style="padding: 12px 10px; text-align: center;">Included</td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$250</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f0f0f0;">
+                            <td style="padding: 12px 10px;">4 In-Person Training Sessions</td>
+                            <td style="padding: 12px 10px; text-align: center;"><span class="price-tag">$280</span><span class="price-period">/month</span></td>
+                            <td style="padding: 12px 10px; text-align: right;"><span class="price-tag">$280</span><span class="price-period">/month</span></td>
+                        </tr>
+                        <tr style="border-bottom: 2px dashed #e0e0e0; background-color: #f9f9f9; font-weight: 600;">
+                            <td style="padding: 14px 10px;">Total Monthly Cost</td>
+                            <td style="padding: 14px 10px; text-align: center;"><span class="price-tag">$479</span></td>
+                            <td style="padding: 14px 10px; text-align: right;"><span class="price-tag">$1,279</span></td>
+                        </tr>
+                        <tr style="background-color: rgba(76, 175, 80, 0.2);">
+                            <td style="padding: 14px 10px; font-weight: 600; color: var(--primary-dark);">Monthly Savings</td>
+                            <td style="padding: 14px 10px; text-align: center;"></td>
+                            <td style="padding: 14px 10px; text-align: right; font-weight: 700;"><span class="price-tag" style="color: #00b300; font-size: 1.3rem;">$800+</span></td>
+                        </tr>
+                    </table>
+                </div>
             </div>
-            <div class="add-on-option">
-                <h3>10-Session Pack</h3>
-                <div class="add-on-price">$750</div>
-                <p>Ten 60-min sessions ($75/session)</p>
-            </div>
-        </div>
-        <div class="add-on-note">
-            <p>In-person sessions are exclusively available in the Seattle area and are added to your base membership.</p>
         </div>
     </div>
 </section>
 
-    <!-- Pricing -->
-    <section class="pricing">
-        <div class="container">
-            <div class="section-header">
-                <h2>Simple, Transparent Pricing</h2>
-                <p>No hidden fees. No surprise charges. Just honest pricing for real results.</p>
-            </div>
-            <div class="pricing-grid">
-                <div class="pricing-column">
-                    <h3>Membership</h3>
-                    <div class="pricing-amount">$199<span>/month</span></div>
-                    <ul class="pricing-features">
-                        <li>Complete training program</li>
-                        <li>Full nutrition coaching</li>
-                        <li>Unlimited messaging support</li>
-                        <li>Weekly video check-ins</li>
-                        <li>Form analysis & feedback</li>
-                    </ul>
-                    <p class="pricing-value">Less than $6.50 per day for complete support</p>
+<!-- Why Choose Three-Tier Approach Section -->
+<section class="approach-section">
+    <div class="container">
+        <div class="section-header">
+            <h2>The Right Approach For Your Fitness Journey</h2>
+            <p>Choose the service level that best fits your goals, budget, and preferred coaching style</p>
+        </div>
+        <div class="approach-benefits">
+            <div class="approach-benefit">
+                <div class="approach-icon">
+                    <i class="fas fa-user"></i>
                 </div>
-                <div class="pricing-column">
-                    <h3>In-Person Add-Ons</h3>
-                    <div class="pricing-option">
-                        <span class="option-name">Single Session</span>
-                        <span class="option-price">$85</span>
-                    </div>
-                    <div class="pricing-option">
-                        <span class="option-name">5-Session Pack</span>
-                        <span class="option-price">$400 ($80/session)</span>
-                    </div>
-                    <div class="pricing-option">
-                        <span class="option-name">10-Session Pack</span>
-                        <span class="option-price">$750 ($75/session)</span>
-                    </div>
+                <h3>Just Need Expert Training?</h3>
+                <p>Perfect for those who want hands-on guidance during workouts but prefer to manage nutrition and lifestyle independently.</p>
+            </div>
+            <div class="approach-benefit">
+                <div class="approach-icon">
+                    <i class="fas fa-sync-alt"></i>
                 </div>
+                <h3>Want Complete Support?</h3>
+                <p>Ideal for those seeking comprehensive coaching including training programs, nutrition guidance, and accountability from anywhere.</p>
             </div>
-            <div class="pricing-note">
-                <p>All new clients receive a complimentary consultation to discuss goals and determine the best approach for your fitness journey.</p>
-            </div>
-            <div class="pricing-cta">
-                <a href="connect.html" class="btn-primary">Schedule Your Free Consultation</a>
+            <div class="approach-benefit">
+                <div class="approach-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <h3>Need The Ultimate Experience?</h3>
+                <p>The best solution for those who want both comprehensive coaching and the benefits of in-person training sessions.</p>
             </div>
         </div>
-    </section>
+        <div class="approach-note">
+            <p>All services can be tailored to your specific needs, and you can easily upgrade your service tier as your fitness journey progresses.</p>
+        </div>
+    </div>
+</section>
+
 
     <!-- Call to Action -->
     <section class="cta">
         <div class="container">
             <div class="cta-content">
-                <h2>Ready to Start Your Transformation?</h2>
-                <p>Take the first step toward lasting fitness results with The Shrey Method Membership.</p>
+                <h2>Ready to Start Your Fitness Journey?</h2>
+                <p>Choose the service tier that's right for you and take the first step toward achieving your fitness goals.</p>
                 <div class="cta-buttons">
-                    <a href="connect.html" class="btn-primary">Start Your Membership</a>
+                    <a href="connect.html" class="btn-primary">Schedule Consultation</a>
                     <a href="about.html" class="btn-secondary">Learn About Me</a>
                 </div>
             </div>
@@ -243,158 +297,77 @@
     </section>
 
     <!-- Service Modals -->
-    <!-- Personal Training Modal -->
-    <div id="personalModal" class="modal">
+    <!-- Service Detail Modals (All other modals were removed as they're redundant with the detail modals) -->
+    
+    <!-- Service Detail Modals -->
+    <!-- Personal Training Details Modal -->
+    <div id="personalDetailsModal" class="modal details-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>1:1 Personal Training</h2>
+                <h2>Personal Training Sessions</h2>
                 <span class="modal-close">&times;</span>
             </div>
             <div class="modal-body">
-                <p>My premium service offering personalized one-on-one training sessions tailored specifically to your unique goals, fitness level, and lifestyle. Experience the most effective path to achieving your fitness goals with dedicated attention, customized programming, and comprehensive lifestyle support.</p>
+                <p>Expert in-person coaching sessions focused on technique, form, and effective workouts tailored specifically to your unique goals, fitness level, and lifestyle. These sessions are perfect for those who want hands-on guidance without requiring comprehensive nutrition or lifestyle coaching.</p>
+                
+                <div class="modal-price-callout">
+                    <div class="modal-price">$70<span>/session</span></div>
+                    <p>4-session pack available: $260 ($65/session)</p>
+                </div>
                 
                 <h3>What's Included:</h3>
                 <ul class="modal-features">
                     <li>
                         <i class="fas fa-check"></i>
                         <div>
-                            <strong>Initial Assessment & Goal Setting</strong>
-                            <p>Comprehensive fitness evaluation, movement screening, and goal-specific program design</p>
+                            <strong>Expert 1-on-1 Coaching</strong>
+                            <p>Personalized attention and guidance throughout your entire training session</p>
                         </div>
                     </li>
                     <li>
                         <i class="fas fa-check"></i>
                         <div>
-                            <strong>Custom Workout Programs</strong>
-                            <p>Personalized exercise plans designed specifically for your body, goals, and available equipment</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Real-Time Form Coaching</strong>
+                            <strong>Form Correction & Technique</strong>
                             <p>Hands-on technique guidance and safety instruction to maximize results and prevent injury</p>
                         </div>
                     </li>
                     <li>
                         <i class="fas fa-check"></i>
                         <div>
-                            <strong>Comprehensive Nutrition Coaching</strong>
-                            <p>Personalized meal planning, dietary guidance, and nutritional education to support your training goals</p>
+                            <strong>Personalized Session Programming</strong>
+                            <p>Each session designed specifically for your body, goals, and fitness level</p>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>Equipment Guidance</strong>
+                            <p>Learn how to properly use equipment for maximum effectiveness and safety</p>
                         </div>
                     </li>
                 </ul>
                 
-                <div class="modal-format-section">
-                    <h4>Available Format:</h4>
-                    <div class="modal-format-badges">
-                        <span class="modal-format-badge">In-Person</span>
-                    </div>
-                    <p>In-person sessions available in the Seattle area.</p>
-                </div>
-                
-                <div class="modal-cta">
-                    <a href="connect.html" class="btn-primary">Start Your Transformation</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Online Coaching Modal -->
-    <div id="onlineModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Online Coaching</h2>
-                <span class="modal-close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p>Get the same personalized attention and expert guidance from anywhere in the world. Perfect for busy professionals, frequent travelers, or anyone who prefers the convenience of training on their own schedule while maintaining professional accountability and support.</p>
-                
-                <h3>What's Included:</h3>
-                <ul class="modal-features">
+                <h3>What You're Missing:</h3>
+                <ul class="modal-features fomo-features">
                     <li>
-                        <i class="fas fa-check"></i>
+                        <i class="fas fa-times"></i>
                         <div>
                             <strong>Custom Training Programs</strong>
-                            <p>Personalized workout plans updated weekly based on your progress, feedback, and available equipment</p>
+                            <p>Updated monthly based on your progress, feedback, and available equipment</p>
                         </div>
                     </li>
                     <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Video Form Analysis</strong>
-                            <p>Submit workout videos for detailed technique feedback and exercise modifications</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
+                        <i class="fas fa-times"></i>
                         <div>
                             <strong>Complete Nutrition Coaching</strong>
-                            <p>Personalized meal plans, macro tracking guidance, and ongoing dietary support tailored to your goals</p>
+                            <p>Personalized meal plans and dietary guidance to support your fitness goals</p>
                         </div>
                     </li>
                     <li>
-                        <i class="fas fa-check"></i>
+                        <i class="fas fa-times"></i>
                         <div>
-                            <strong>24/7 Support Access</strong>
-                            <p>Direct messaging for questions, motivation, and guidance between scheduled check-ins</p>
-                        </div>
-                    </li>
-                </ul>
-                
-                <div class="modal-format-section">
-                    <h4>Available Format:</h4>
-                    <div class="modal-format-badges">
-                        <span class="modal-format-badge">Remote</span>
-                    </div>
-                    <p>All coaching conducted remotely through video calls, messaging, and progress tracking tools.</p>
-                </div>
-                
-                <div class="modal-cta">
-                    <a href="connect.html" class="btn-primary">Start Online Coaching</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Nutrition Counseling Modal -->
-    <div id="nutritionModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Nutrition Counseling</h2>
-                <span class="modal-close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p>Standalone nutrition coaching for individuals who want expert dietary guidance without fitness training. Perfect for those who already have their workout routine established but need professional support to optimize their nutrition for specific health and fitness goals.</p>
-                
-                <h3>What's Included:</h3>
-                <ul class="modal-features">
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Nutritional Assessment</strong>
-                            <p>Comprehensive evaluation of current eating habits, dietary preferences, and nutritional needs</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Personalized Meal Planning</strong>
-                            <p>Custom meal plans designed around your lifestyle, food preferences, and specific goals</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Macro & Calorie Guidance</strong>
-                            <p>Learn how to track and balance macronutrients for optimal results and sustainable habits</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Educational Resources</strong>
-                            <p>Learn sustainable nutrition principles to maintain long-term success independently</p>
+                            <strong>Unlimited Messaging Support</strong>
+                            <p>Direct access with 24-hour response guarantee for questions and guidance</p>
                         </div>
                     </li>
                 </ul>
@@ -403,88 +376,44 @@
                     <h4>Available Format:</h4>
                     <div class="modal-format-badges">
                         <span class="modal-format-badge">In-Person</span>
-                        <span class="modal-format-badge">Remote</span>
                     </div>
-                    <p>Flexible consultation options available both in-person and via video call.</p>
+                    <p>In-person sessions available in the Seattle area only.</p>
+                </div>
+                
+                <div class="modal-upgrade">
+                    <h4>Ready for More?</h4>
+                    <p>Many clients start with Personal Training and upgrade to Complete Transformation within 30 days for more comprehensive results.</p>
+                </div>
+                
+                <div class="modal-social-proof">
+                    <blockquote>"Great starting point - I learned proper form quickly and saw immediate improvement in my strength."</blockquote>
                 </div>
                 
                 <div class="modal-cta">
-                    <a href="connect.html" class="btn-primary">Get Nutrition Support</a>
+                    <a href="connect.html" class="btn-primary">Book Your First Session</a>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Group Training Modal -->
-    <div id="groupModal" class="modal">
+    <!-- Complete Transformation Details Modal -->
+    <div id="transformationDetailsModal" class="modal details-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Group Training</h2>
+                <h2>Complete Transformation</h2>
                 <span class="modal-close">&times;</span>
             </div>
             <div class="modal-body">
-                <p>Train alongside your friends, family members, or workout partners in a fun, supportive environment. Group training creates accountability, builds community, and makes fitness an enjoyable shared experience while still receiving professional coaching and guidance.</p>
-                
-                <h3>What's Included:</h3>
-                <ul class="modal-features">
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Train With Your Crew</strong>
-                            <p>Bring your friends, family, or workout buddies for a shared fitness experience</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Built-In Accountability</strong>
-                            <p>Stay motivated and committed with the support and encouragement of your training partners</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Fun, Social Workouts</strong>
-                            <p>Make fitness enjoyable with team challenges, partner exercises, and group motivation</p>
-                        </div>
-                    </li>
-                    <li>
-                        <i class="fas fa-check"></i>
-                        <div>
-                            <strong>Small Group Focus</strong>
-                            <p>Limited to 2-4 people to ensure everyone receives personal attention and proper coaching</p>
-                        </div>
-                    </li>
-                </ul>
-                
-                <div class="modal-format-section">
-                    <h4>Available Format:</h4>
-                    <div class="modal-format-badges">
-                        <span class="modal-format-badge">In-Person Only</span>
-                    </div>
-                    <p>Group training sessions are exclusively in-person in the Seattle area to maximize interaction, safety, and the social experience.</p>
-                </div>
-                
-                <div class="modal-cta">
-                    <a href="connect.html" class="btn-primary">Start Group Training</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Membership Modal -->
-    <div id="membershipModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>The Shrey Method Membership</h2>
-                <span class="modal-close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <p>Your complete transformation system that delivers everything you need to build sustainable fitness habits and achieve lasting results. No confusing tiers or hidden fees - just one comprehensive program designed to provide you with full support no matter where you are.</p>
+                <p>Your complete transformation system that delivers everything you need to build sustainable fitness habits and achieve lasting results. This comprehensive program provides you with full support no matter where you are.</p>
                 
                 <div class="modal-price-callout">
                     <div class="modal-price">$199<span>/month</span></div>
                     <p>Less than $6.50 per day for complete fitness support</p>
+                </div>
+                
+                <div class="value-highlight">
+                    <div class="value-highlight-header">Value:</div>
+                    <div class="value-highlight-body">Save $800+ per month on premium fitness services!</div>
                 </div>
                 
                 <h3>What's Included:</h3>
@@ -533,35 +462,112 @@
                     </li>
                 </ul>
                 
+                <!-- Value breakdown table removed - see dedicated section below -->
+                
                 <div class="modal-format-section">
                     <h4>Available Format:</h4>
                     <div class="modal-format-badges">
                         <span class="modal-format-badge">Remote</span>
-                        <span class="modal-format-badge">In-Person Optional</span>
                     </div>
-                    <p>The base membership is delivered remotely to serve you anywhere. Add in-person training sessions in the Seattle area for hands-on coaching.</p>
+                    <p>This service is delivered remotely to serve you anywhere in the world.</p>
                 </div>
                 
-                <div class="modal-add-on-section">
-                    <h4>In-Person Add-Ons (Optional):</h4>
-                    <div class="modal-add-ons">
-                        <div class="modal-add-on-item">
-                            <span class="add-on-name">Single Session</span>
-                            <span class="add-on-price">$85</span>
-                        </div>
-                        <div class="modal-add-on-item">
-                            <span class="add-on-name">5-Session Pack</span>
-                            <span class="add-on-price">$400 ($80/session)</span>
-                        </div>
-                        <div class="modal-add-on-item">
-                            <span class="add-on-name">10-Session Pack</span>
-                            <span class="add-on-price">$750 ($75/session)</span>
-                        </div>
-                    </div>
+                <div class="modal-upgrade">
+                    <h4>Want In-Person Training Too?</h4>
+                    <p>Upgrade to the Elite Transformation to combine this comprehensive support with in-person training sessions.</p>
+                </div>
+                
+                <div class="modal-social-proof">
+                    <blockquote>"The Complete Transformation package completely changed my approach to fitness. Having both training and nutrition support made all the difference."</blockquote>
                 </div>
                 
                 <div class="modal-cta">
                     <a href="connect.html" class="btn-primary">Start Your Transformation</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Elite Transformation Details Modal -->
+    <div id="eliteDetailsModal" class="modal details-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Elite Transformation</h2>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>The ultimate fitness experience combining comprehensive transformation support with hands-on personal training. Get the best of both worlds with complete remote coaching plus in-person training sessions for maximum results.</p>
+                
+                <div class="modal-price-callout">
+                    <div class="modal-price">$199<span>/month</span> + $70<span>/session</span></div>
+                    <p>The complete package for your fitness success</p>
+                </div>
+                
+                <div class="value-highlight elite">
+                    <div class="value-highlight-header">Premium Package:</div>
+                    <div class="value-highlight-body">Our most comprehensive solution for maximum results</div>
+                </div>
+                
+                <h3>What's Included:</h3>
+                <ul class="modal-features">
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>Everything From Complete Transformation</strong>
+                            <p>All the features of the comprehensive remote coaching program</p>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>In-Person Training Sessions</strong>
+                            <p>Hands-on coaching sessions with expert guidance and form correction</p>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>Flexible Session Scheduling</strong>
+                            <p>Book sessions as needed to fit your schedule and budget ($70 per session)</p>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>Session Package Option</strong>
+                            <p>Save with a 4-session package for $260 ($65/session)</p>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>In-Person Progress Assessments</strong>
+                            <p>Track your improvements with hands-on measurements and assessments</p>
+                        </div>
+                    </li>
+                    <li>
+                        <i class="fas fa-check"></i>
+                        <div>
+                            <strong>Priority Support & Scheduling</strong>
+                            <p>Get preferential booking times and faster response to your questions</p>
+                        </div>
+                    </li>
+                </ul>
+                
+                <div class="modal-format-section">
+                    <h4>Available Format:</h4>
+                    <div class="modal-format-badges">
+                        <span class="modal-format-badge">Remote + In-Person</span>
+                    </div>
+                    <p>Remote coaching available worldwide, in-person sessions available in the Seattle area only.</p>
+                </div>
+                
+                <div class="modal-social-proof">
+                    <blockquote>"The combination of online coaching and in-person sessions gave me the perfect balance of accountability and flexibility. This is the ultimate fitness experience."</blockquote>
+                </div>
+                
+                <div class="modal-cta">
+                    <a href="connect.html" class="btn-primary elite-btn">Get Elite Support</a>
                 </div>
             </div>
         </div>
@@ -578,8 +584,9 @@
                 <div class="footer-section">
                     <h4>Services</h4>
                     <ul>
-                        <li><a href="services.html" class="service-modal-link" data-modal="membershipModal">Transformation Membership</a></li>
-                        <li><a href="services.html#add-on-section">In-Person Training</a></li>
+                        <li><a href="connect.html">Personal Training</a></li>
+                        <li><a href="connect.html">Complete Transformation</a></li>
+                        <li><a href="connect.html">Elite Transformation</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
