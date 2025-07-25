@@ -510,6 +510,12 @@
     box-shadow: 0 3px 10px rgba(156, 39, 176, 0.3);
 }
 
+/* Training badge styling */
+.service-card-badge.training-badge {
+    background: linear-gradient(135deg, #dc3545, #721c24);
+    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+}
+
 /* Limitation indicators */
 .service-card-limitation {
     position: absolute;
