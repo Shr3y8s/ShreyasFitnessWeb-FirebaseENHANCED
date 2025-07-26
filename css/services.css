@@ -559,11 +559,22 @@
 /* Service title and price emphasis */
 .service-card-title {
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     color: #222;
     font-size: 1.4rem;
     font-weight: 700;
     line-height: 1.2;
+}
+
+/* Service tagline styling */
+.service-card-tagline {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #555;
+    font-size: 1rem;
+    font-weight: 500;
+    font-style: italic;
+    line-height: 1.3;
 }
 
 .service-card-item.membership-card .service-card-title {
