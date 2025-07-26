@@ -135,6 +135,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // What You're Missing section toggle functionality
+    const missingToggleButtons = document.querySelectorAll('.missing-toggle');
+    
+    missingToggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const missingContent = this.closest('.missing-container').querySelector('.missing-content');
+            const isExpanded = this.getAttribute('data-expanded') === 'true';
+            
+            if (isExpanded) {
+                missingContent.classList.add('missing-section-collapsed');
+                this.innerHTML = '<span>Show</span> <i class="fas fa-chevron-down"></i>';
+            } else {
+                missingContent.classList.remove('missing-section-collapsed');
+                this.innerHTML = '<span>Hide</span> <i class="fas fa-chevron-up"></i>';
+            }
+            
+            this.setAttribute('data-expanded', !isExpanded);
+        });
+    });
+    
     // Expandable card functionality
     const expandButtons = document.querySelectorAll('.card-expand-btn');
     const collapseButtons = document.querySelectorAll('.card-collapse-btn');

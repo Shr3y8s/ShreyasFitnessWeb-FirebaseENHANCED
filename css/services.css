@@ -40,8 +40,8 @@
 
 /* Enhanced visual distinction */
 .service-card-item {
-    background: linear-gradient(to bottom, #ffffff, #f9fafb);
-    border-top: 4px solid #6c757d;
+    background: linear-gradient(to bottom, #ffffff, #F5F7FF);
+    border-top: 4px solid #3F51B5;
 }
 
 /* Expandable Card Essential Content */
@@ -91,6 +91,25 @@
 .btn-secondary:hover {
     background-color: rgba(76, 175, 80, 0.1);
     transform: translateY(-2px);
+}
+
+/* Secondary button styling for different tiers */
+.service-card-item .btn-secondary {
+    border-color: #3F51B5;
+    color: #303F9F;
+}
+
+.service-card-item .btn-secondary:hover {
+    background-color: rgba(63, 81, 181, 0.1);
+}
+
+.service-card-item.membership-card .btn-secondary {
+    border-color: var(--primary);
+    color: var(--primary-dark);
+}
+
+.service-card-item.membership-card .btn-secondary:hover {
+    background-color: rgba(76, 175, 80, 0.1);
 }
 
 .elite-card .btn-secondary {
@@ -202,6 +221,86 @@
 /* FOMO Features in Modal */
 .modal-features.fomo-features li i {
     color: #dc3545;
+}
+
+/* Missing Section Styling */
+.missing-container {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.missing-container h3 {
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.missing-toggle {
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    padding: 5px 10px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #dc3545;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.missing-toggle:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.missing-toggle i {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+.missing-toggle[data-expanded="true"] i {
+    transform: rotate(180deg);
+}
+
+.missing-content {
+    max-height: 1000px;
+    opacity: 1;
+    overflow: hidden;
+    transition: all 0.5s ease;
+}
+
+.missing-content.missing-section-collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    padding-top: 0;
+    pointer-events: none;
+}
+
+/* Tier-specific toggle button colors */
+#personalDetailsModal .missing-toggle {
+    color: #3F51B5;
+}
+
+#personalDetailsModal .missing-toggle:hover {
+    background-color: rgba(63, 81, 181, 0.1);
+}
+
+#transformationDetailsModal .missing-toggle {
+    color: var(--primary-dark);
+}
+
+#transformationDetailsModal .missing-toggle:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+#eliteDetailsModal .missing-toggle {
+    color: #7b1fa2;
+}
+
+#eliteDetailsModal .missing-toggle:hover {
+    background-color: rgba(156, 39, 176, 0.1);
 }
 
 .detail-section.fomo-section {
@@ -459,7 +558,7 @@
     justify-content: center;
     width: 70px;
     height: 70px;
-    background: #f5f5f5;
+    background: rgba(63, 81, 181, 0.1);
     border-radius: 50%;
     margin: 0 auto 20px;
     transition: all 0.3s ease;
@@ -470,7 +569,7 @@
 }
 
 .service-card-item .fa-dumbbell {
-    color: #6c757d;
+    color: #3F51B5;
 }
 
 .service-card-item.membership-card .service-card-icon {
@@ -512,8 +611,8 @@
 
 /* Training badge styling */
 .service-card-badge.training-badge {
-    background: linear-gradient(135deg, #dc3545, #721c24);
-    box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+    background: linear-gradient(135deg, #3F51B5, #303F9F);
+    box-shadow: 0 3px 10px rgba(63, 81, 181, 0.3);
 }
 
 /* Limitation indicators */
@@ -879,6 +978,16 @@
     color: rgba(156, 39, 176, 0.3);
 }
 
+/* Blue button for basic tier */
+.basic-btn {
+    background: linear-gradient(135deg, #3F51B5, #303F9F);
+    border: none;
+}
+
+.basic-btn:hover {
+    background: linear-gradient(135deg, #3949AB, #283593);
+}
+
 /* Elite button */
 .elite-btn {
     background: linear-gradient(135deg, #9c27b0, #7b1fa2);
@@ -905,6 +1014,11 @@
 .service-card-item:hover .btn-primary {
     transform: translateY(-3px);
     box-shadow: 0 6px 15px rgba(76, 175, 80, 0.25);
+}
+
+/* Specific hover effects for tier buttons */
+.service-card-item:hover .basic-btn {
+    box-shadow: 0 6px 15px rgba(63, 81, 181, 0.25);
 }
 
 .service-card-item.elite-card:hover .elite-btn {
@@ -958,7 +1072,7 @@
 
 /* Color-code each approach to match the tiers */
 .approach-benefit:nth-child(1) {
-    border-top: 4px solid #6c757d;
+    border-top: 4px solid #3F51B5;
 }
 
 .approach-benefit:nth-child(2) {
@@ -988,7 +1102,7 @@
 }
 
 .approach-benefit:nth-child(1) .approach-icon {
-    background: rgba(108, 117, 125, 0.1);
+    background: rgba(63, 81, 181, 0.1);
 }
 
 .approach-benefit:nth-child(2) .approach-icon {
@@ -1000,7 +1114,7 @@
 }
 
 .approach-benefit:nth-child(1) .approach-icon i {
-    color: #6c757d;
+    color: #3F51B5;
 }
 
 .approach-benefit:nth-child(2) .approach-icon i {
@@ -1074,8 +1188,8 @@
 
 /* Color-code pricing columns to match tiers */
 .pricing-column:nth-child(1) {
-    border-top: 4px solid #6c757d;
-    background: linear-gradient(to bottom, #ffffff, #f9fafb);
+    border-top: 4px solid #3F51B5;
+    background: linear-gradient(to bottom, #ffffff, #F5F7FF);
 }
 
 .pricing-column.highlighted {
