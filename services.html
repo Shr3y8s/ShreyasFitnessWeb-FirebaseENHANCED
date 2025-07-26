@@ -267,19 +267,20 @@
 </section>
 
 
-    <!-- Call to Action -->
-    <section class="cta">
-        <div class="container">
-            <div class="cta-content">
-                <h2>Ready to Start Your Fitness Journey?</h2>
-                <p>Choose the service tier that's right for you and take the first step toward achieving your fitness goals.</p>
-                <div class="cta-buttons">
-                    <a href="connect.html" class="btn-primary">Schedule Consultation</a>
-                    <a href="about.html" class="btn-secondary">Learn About Me</a>
-                </div>
+    <!-- Consultation Popup will be added via JavaScript -->
+    <div id="consultation-popup" class="consultation-popup">
+        <div class="popup-content">
+            <span class="popup-close">&times;</span>
+            <div class="consultation-icon">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h3>Not Sure Which Option Is Right For You?</h3>
+            <p>Schedule a free consultation to discuss your goals and find your perfect fitness solution.</p>
+            <div class="popup-buttons">
+                <a href="connect.html" class="btn-primary popup-btn">Schedule Free Consultation</a>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Service Modals -->
     <!-- Service Detail Modals (All other modals were removed as they're redundant with the detail modals) -->
@@ -404,10 +405,6 @@
                     <p>Less than $6.50 per day for complete fitness support</p>
                 </div>
                 
-                <div class="value-highlight">
-                    <div class="value-highlight-header">Value:</div>
-                    <div class="value-highlight-body">Save $840 per month on premium fitness services!</div>
-                </div>
                 
                 <h3>What's Included:</h3>
                 <ul class="modal-features">
@@ -533,6 +530,11 @@
                     <div class="value-highlight-body">Our most comprehensive solution for maximum results</div>
                 </div>
                 
+                <div class="value-highlight elite">
+                    <div class="value-highlight-header">Value:</div>
+                    <div class="value-highlight-body">Save $840 per month on premium fitness services!</div>
+                </div>
+                
                 <h3>What's Included:</h3>
                 <ul class="modal-features">
                     <li>
@@ -641,9 +643,9 @@
                 <div class="footer-section">
                     <h4>Services</h4>
                     <ul>
-                        <li><a href="connect.html">In-Person Training</a></li>
-                        <li><a href="connect.html">Online Coaching</a></li>
-                        <li><a href="connect.html">Complete Transformation</a></li>
+                        <li><a href="services.html">In-Person Training</a></li>
+                        <li><a href="services.html">Online Coaching</a></li>
+                        <li><a href="services.html">Complete Transformation</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

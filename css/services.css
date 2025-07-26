@@ -1631,12 +1631,206 @@
     }
 }
 
-/* Call to Action Section Enhancement */
+/* Call to Action & Consultation Section Enhancement */
 .cta {
     background: linear-gradient(135deg, #4caf50, #2c6b2f);
     padding: 40px 0;
     margin-top: 30px;
     box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Consultation Popup Styling */
+.consultation-popup {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+    max-width: 350px;
+    animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.popup-content {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+    padding: 25px;
+    position: relative;
+    border-top: 4px solid var(--primary);
+}
+
+.popup-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 1.5rem;
+    color: #777;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.popup-close:hover {
+    color: #333;
+}
+
+.consultation-popup .consultation-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.consultation-popup .consultation-icon i {
+    color: var(--primary);
+    font-size: 1.5rem;
+}
+
+.consultation-popup h3 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.consultation-popup p {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.popup-buttons {
+    text-align: center;
+}
+
+.popup-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    width: 100%;
+}
+
+.consultation-popup.show {
+    display: block;
+}
+
+.consultation-popup.hide {
+    animation: slideOut 0.5s ease-out forwards;
+}
+
+/* Mobile styles for popup */
+@media (max-width: 768px) {
+    .consultation-popup {
+        bottom: 20px;
+        right: 20px;
+        left: 20px;
+        max-width: none;
+    }
+    
+    .popup-content {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .consultation-popup {
+        bottom: 15px;
+        right: 15px;
+        left: 15px;
+    }
+    
+    .popup-content {
+        padding: 15px;
+    }
+    
+    .consultation-popup .consultation-icon {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .consultation-popup .consultation-icon i {
+        font-size: 1.3rem;
+    }
+    
+    .consultation-popup h3 {
+        font-size: 1.1rem;
+    }
+    
+    .consultation-popup p {
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+    }
+}
+
+/* Mobile styles for consultation section */
+@media (max-width: 768px) {
+    .consultation-benefits {
+        padding: 15px 20px;
+    }
+    
+    .benefit-item {
+        margin-bottom: 12px;
+    }
+    
+    .consultation-icon {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .consultation-icon i {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .consultation-benefits {
+        padding: 12px 15px;
+    }
+    
+    .benefit-item {
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .benefit-item i {
+        font-size: 1rem;
+    }
+    
+    .consultation-testimonial {
+        padding: 0 10px;
+        font-size: 0.9rem;
+    }
+    
+    .consultation-testimonial blockquote {
+        padding: 0 15px;
+    }
 }
 
 .cta-content {

@@ -12,8 +12,76 @@ function openModal(modalId) {
 
 // Mobile Menu Toggle
 document.addEventListener('DOMContentLoaded', function() {
+    // FAQ Question Popup
+    const showHelpButton = document.getElementById('show-help-popup');
+    const faqQuestionPopup = document.getElementById('faq-question-popup');
+    const closeFaqPopup = document.getElementById('close-faq-popup');
+    
+    if (showHelpButton && faqQuestionPopup && closeFaqPopup) {
+        // Show popup when help button is clicked
+        showHelpButton.addEventListener('click', function() {
+            faqQuestionPopup.style.display = 'block';
+            showHelpButton.style.display = 'none';
+        });
+        
+        // Hide popup when close button is clicked
+        closeFaqPopup.addEventListener('click', function() {
+            faqQuestionPopup.classList.add('hide');
+            setTimeout(function() {
+                faqQuestionPopup.style.display = 'none';
+                faqQuestionPopup.classList.remove('hide');
+                showHelpButton.style.display = 'flex';
+            }, 500); // Match the animation duration
+        });
+    }
+    
     const hamburger = document.querySelector('.hamburger');
     const navMenu = document.querySelector('.nav-menu');
+
+    // Consultation popup functionality
+    const isServicesPage = window.location.pathname.includes('services.html');
+    const consultationPopup = document.getElementById('consultation-popup');
+    
+    if (isServicesPage && consultationPopup) {
+        // Track if popup has been shown this session
+        let popupShown = false;
+        
+        // Set up Intersection Observer to detect when approach section is visible
+        const approachSection = document.querySelector('.approach-section');
+        
+        if (approachSection) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    // If approach section is visible and popup hasn't been shown yet
+                    if (entry.isIntersecting && !popupShown) {
+                        // Add a small delay to let user read some of the section first
+                        setTimeout(() => {
+                            consultationPopup.classList.add('show');
+                            popupShown = true;
+                        }, 2000); // 2 second delay after scrolling to section
+                        
+                        // Stop observing once triggered
+                        observer.unobserve(approachSection);
+                    }
+                });
+            }, { threshold: 0.3 }); // Trigger when 30% of the section is visible
+            
+            // Start observing the approach section
+            observer.observe(approachSection);
+        }
+        
+        // Close popup when X is clicked
+        const popupClose = consultationPopup.querySelector('.popup-close');
+        if (popupClose) {
+            popupClose.addEventListener('click', () => {
+                consultationPopup.classList.add('hide');
+                setTimeout(() => {
+                    consultationPopup.classList.remove('show');
+                    consultationPopup.classList.remove('hide');
+                }, 500); // Match animation duration
+            });
+        }
+    }
 
     if (hamburger) {
         hamburger.addEventListener('click', function() {

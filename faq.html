@@ -355,21 +355,16 @@
                             <span class="toggle-icon"><i class="fas fa-plus"></i></span>
                         </div>
                         <div class="faq-answer">
-                            <p>My personal training services are customized based on your specific needs, frequency of sessions, and training location.</p>
+                            <p>My training services are customized based on your specific needs, frequency of sessions, and training location.</p>
                             
                             <div class="faq-important">
                                 All new clients receive a <span class="answer-highlight">free consultation</span> where I'll provide detailed pricing options based on your specific goals and requirements.
                             </div>
                             
                             <ul class="enhanced-list">
-                                <li><strong>The Shrey Method Membership:</strong> $199/month (includes all coaching services)</li>
-                                <li><strong>In-Person Training Add-Ons:</strong>
-                                    <ul>
-                                        <li>Single Session: $85</li>
-                                        <li>5-Session Pack: $400 ($80/session)</li>
-                                        <li>10-Session Pack: $750 ($75/session)</li>
-                                    </ul>
-                                </li>
+                                <li><strong>In-Person Training:</strong> $70/session</li>
+                                <li><strong>Online Coaching:</strong> $199/month (includes all remote coaching services)</li>
+                                <li><strong>Complete Transformation:</strong> $199/month + $60/session (our premium package combining online coaching with in-person training)</li>
                             </ul>
                             
                             <div class="faq-note">
@@ -391,9 +386,10 @@
                             <p>Yes, I offer several ways to save on your fitness investment:</p>
                             
                             <ul class="enhanced-list">
-                                <li><strong>In-Person Session Packages:</strong> The more sessions you purchase, the more you save. My 10-session pack saves you $100 compared to individual sessions.</li>
-                                <li><strong>Referral Bonuses:</strong> When you refer a friend who joins the membership program, you'll receive a free in-person training session.</li>
-                                <li><strong>Seasonal Promotions:</strong> I occasionally offer special rates for new members during specific promotional periods.</li>
+                                <li><strong>Complete Transformation Package:</strong> Save $10 per in-person session when you combine online coaching with in-person training.</li>
+                                <li><strong>4-Session Pack:</strong> Purchase a 4-session pack for $260 ($65/session) with standalone in-person training, or $240 ($60/session) with the Complete Transformation package.</li>
+                                <li><strong>Referral Bonuses:</strong> When you refer a friend who joins any program, you'll receive your choice of either a half-off in-person training session OR 20% off one month of membership.</li>
+                                <li><strong>Seasonal Promotions:</strong> I occasionally offer special rates for new clients during specific promotional periods.</li>
                             </ul>
                             
                             <div class="faq-tip">
@@ -412,11 +408,12 @@
                             <span class="toggle-icon"><i class="fas fa-plus"></i></span>
                         </div>
                         <div class="faq-answer">
-                            <p>My Shrey Method Membership is designed to be flexible while encouraging the consistency needed for real results:</p>
+                            <p>My service options are designed to be flexible while encouraging the consistency needed for real results:</p>
                             
                             <ul class="enhanced-list">
-                                <li><strong>Monthly Membership:</strong> The base membership is month-to-month with no long-term contract required.</li>
-                                <li><strong>In-Person Session Packs:</strong> Session packs can be purchased as needed and used within a 6-month timeframe.</li>
+                                <li><strong>Online Coaching:</strong> This service is month-to-month with no long-term contract required.</li>
+                                <li><strong>In-Person Training:</strong> Sessions can be purchased individually or in 4-session packs, to be used within a 2-month timeframe.</li>
+                                <li><strong>Complete Transformation:</strong> Combines the flexibility of online coaching with discounted in-person sessions.</li>
                                 <li><strong>Recommended Commitment:</strong> For optimal results, I recommend staying with the program for at least 3 months, but there's no contractual obligation to do so.</li>
                             </ul>
                             
@@ -432,10 +429,10 @@
                             <span class="toggle-icon"><i class="fas fa-plus"></i></span>
                         </div>
                         <div class="faq-answer">
-                            <p>The Shrey Method Membership is all-inclusive, providing everything you need for a successful fitness journey:</p>
+                            <p>My service options provide everything you need for a successful fitness journey:</p>
                             
                             <div class="faq-callout">
-                                <strong>Every membership includes:</strong>
+                                <strong>Online Coaching & Complete Transformation include:</strong>
                             </div>
                             
                             <ul class="enhanced-list">
@@ -447,30 +444,51 @@
                                 <li><strong>Habit & Accountability Coaching:</strong> Support in building the sustainable lifestyle changes that lead to lasting results</li>
                             </ul>
                             
+                            <div class="faq-callout">
+                                <strong>In-Person Training includes:</strong>
+                            </div>
+                            
+                            <ul class="enhanced-list">
+                                <li><strong>Expert 1-on-1 Coaching:</strong> Personalized attention and guidance throughout your entire training session</li>
+                                <li><strong>Form Correction & Technique:</strong> Hands-on guidance to maximize results and prevent injury</li>
+                                <li><strong>Personalized Session Programming:</strong> Each session designed specifically for your body, goals, and fitness level</li>
+                                <li><strong>Equipment Guidance:</strong> Learn how to properly use equipment for maximum effectiveness and safety</li>
+                            </ul>
+                            
                             <div class="faq-tip">
-                                The membership model ensures every client receives the same high-quality, comprehensive support package regardless of location. In-person sessions can be added to enhance your experience but aren't required for excellent results.
+                                The Complete Transformation package offers the best value by combining the comprehensive support of Online Coaching with the hands-on guidance of In-Person Training.
                             </div>
                             
                             <div class="faq-note">
-                                <strong>Value Comparison:</strong> The $199/month membership provides services that would cost $500+ if purchased separately.
+                                <strong>Value Comparison:</strong> The Online Coaching service at $199/month provides services that would cost $840+ if purchased separately from typical fitness coaches.
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <!-- Call to Action -->
-            <section class="cta">
-                <div class="container">
-                    <div class="cta-content">
-                        <h2>Still Have Questions?</h2>
-                        <p>If you couldn't find the answer you were looking for, feel free to reach out directly.</p>
-                        <div class="cta-buttons">
-                            <a href="connect.html#message" class="btn-primary">Contact Me</a>
+            <!-- Floating Help Button -->
+            <div class="floating-help-button" id="show-help-popup">
+                <i class="fas fa-question-circle"></i>
+                <span>Need Help?</span>
+            </div>
+            
+            <!-- FAQ Question Popup -->
+            <div id="faq-question-popup" class="consultation-popup">
+                <div class="popup-content">
+                    <span class="popup-close" id="close-faq-popup">&times;</span>
+                    <div class="popup-icon-container">
+                        <div class="popup-icon">
+                            <i class="fas fa-question-circle"></i>
                         </div>
                     </div>
+                    <h3>Still Have Questions?</h3>
+                    <p>If you couldn't find the answer you were looking for, feel free to reach out directly.</p>
+                    <div class="popup-buttons">
+                        <a href="connect.html#message" class="btn-primary popup-btn">Contact Me</a>
+                    </div>
                 </div>
-            </section>
+            </div>
         </div>
     </section>
 
@@ -485,8 +503,9 @@
                 <div class="footer-section">
                     <h4>Services</h4>
                     <ul>
-                        <li><a href="services.html" class="service-modal-link" data-modal="membershipModal">Transformation Membership</a></li>
-                        <li><a href="services.html#add-on-section">In-Person Training</a></li>
+                        <li><a href="services.html">In-Person Training</a></li>
+                        <li><a href="services.html">Online Coaching</a></li>
+                        <li><a href="services.html">Complete Transformation</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
