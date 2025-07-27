@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The 'Less Is More' Nutrition Framework - The Shrey Method Fitness</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Blog Post Specific Styles */
+        html {
+            scroll-behavior: smooth;
+        }
+        .blog-post-header {
+            background: linear-gradient(135deg, #f4f9f4 0%, #ffffff 100%);
+            padding: 100px 0 60px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .blog-post-header h1 {
+            margin-bottom: 15px;
+            color: var(--secondary);
+            font-size: 2.5rem;
+        }
+        
+        .blog-post-meta {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+        
+        .blog-post-meta .author {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        
+        .blog-post-meta .author-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .blog-post-meta .date {
+            display: flex;
+            align-items: center;
+        }
+        
+        .blog-post-meta i {
+            margin-right: 5px;
+            color: var(--primary);
+        }
+        
+        .blog-post-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.8;
+        }
+        
+        .blog-post-content p {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: var(--dark-gray);
+        }
+        
+        .blog-post-content h2 {
+            margin: 40px 0 20px;
+            color: var(--secondary);
+            font-size: 1.8rem;
+        }
+        
+        .blog-post-content h3 {
+            margin: 30px 0 15px;
+            color: var(--secondary);
+            font-size: 1.4rem;
+        }
+        
+        .blog-post-content ul, .blog-post-content ol {
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+        
+        .blog-post-content li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            color: var(--dark-gray);
+        }
+        
+        .blog-post-content strong {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .blog-post-content em {
+            font-style: italic;
+        }
+        
+        .tip-section {
+            margin: 30px 0;
+            padding: 30px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+        
+        .tip-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .tip-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .tip-icon i {
+            font-size: 20px;
+        }
+        
+        .tip-title {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+        
+        .pro-tip-box {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            margin: 30px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .summary-box {
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 20px 0 30px;
+            font-weight: 500;
+        }
+        
+        .summary-box h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .summary-box h4 i {
+            margin-right: 8px;
+            color: var(--primary);
+        }
+        
+        .summary-box p {
+            margin-bottom: 0;
+        }
+        
+        .key-takeaway {
+            background-color: rgba(76, 175, 80, 0.05);
+            border: 1px dashed var(--primary);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 30px 0 10px;
+        }
+        
+        .key-takeaway h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+        }
+        
+        .key-takeaway h4 i {
+            margin-right: 8px;
+        }
+        
+        .key-takeaway p {
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+        
+        .pull-quote {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--primary-dark);
+            border-left: 4px solid var(--primary);
+            padding-left: 20px;
+            margin: 30px 0;
+            line-height: 1.6;
+        }
+        
+        .share-section {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .share-section span {
+            margin-right: 15px;
+            font-weight: 500;
+            color: var(--secondary);
+        }
+        
+        .share-section a {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            color: var(--dark-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .share-section a:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top i {
+            font-size: 20px;
+        }
+        
+        .pro-tip-box h4 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .pro-tip-box h4 i {
+            margin-right: 8px;
+        }
+        
+        .pro-tip-box p {
+            margin-bottom: 0;
+        }
+        
+        .related-posts {
+            margin: 50px 0;
+            padding: 30px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+        }
+        
+        .related-posts h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--secondary);
+        }
+        
+        .related-posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .related-post-card {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .related-post-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .related-post-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .related-post-image {
+            height: 150px;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+        
+        .related-post-image i {
+            font-size: 2rem;
+        }
+        
+        .related-post-content {
+            padding: 15px;
+        }
+        
+        .related-post-content h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--secondary);
+            font-size: 1.1rem;
+        }
+        
+        .related-post-content p {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+        
+        .post-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-previous, .nav-next {
+            max-width: 45%;
+        }
+        
+        .nav-previous a, .nav-next a {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-previous a:hover, .nav-next a:hover {
+            color: var(--primary-dark);
+        }
+        
+        .nav-previous i, .nav-next i {
+            margin: 0 8px;
+        }
+        
+        .nav-previous span, .nav-next span {
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .back-to-top {
+                bottom: 20px;
+                right: 20px;
+                width: 40px;
+                height: 40px;
+            }
+            .blog-post-header h1 {
+                font-size: 2rem;
+            }
+            
+            .blog-post-meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .tip-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .tip-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .related-posts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .post-navigation {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .nav-previous, .nav-next {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html" class="logo-link">
+                    <div class="logo-container">
+                        <div class="logo-icon">
+                            <div class="weight-plate">
+                                <span class="weight-plate-letter">S</span>
+                            </div>
+                        </div>
+                        <div class="logo-text">
+                            <span class="brand-name">THE SHREY METHOD</span>
+                            <span class="brand-tagline">FITNESS</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">About Me</a>
+                </li>
+                <li class="nav-item">
+                    <a href="services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="connect.html" class="nav-link">Connect</a>
+                </li>
+                <li class="nav-item">
+                    <a href="faq.html" class="nav-link">FAQ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="blog.html" class="nav-link active">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a href="account.html" class="nav-link account-btn">Sign Up / Login</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Blog Post Header -->
+    <header class="blog-post-header">
+        <div class="container">
+            <h1>The 'Less Is More' Nutrition Framework</h1>
+            <div class="blog-post-meta">
+                <div class="author">
+                    <div class="author-avatar">
+                        <img src="Shreyas-profile.jpg" alt="Shreyas Annapureddy" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <span>By Shreyas Annapureddy</span>
+                </div>
+                <div class="date">
+                    <i class="far fa-calendar-alt"></i>
+                    <span>July 20, 2025</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Blog Post Content -->
+    <div class="blog-post-content" id="top">
+        <!-- Introduction -->
+        <p>If you've ever tried to improve your nutrition, you've likely encountered the overwhelming complexity of modern diet advice. Macros, micros, meal timing, supplements, "superfoods," and endless lists of foods to avoid—it's enough to make anyone throw in the towel before they even begin.</p>
+        
+        <p>As a fitness coach who's worked with hundreds of clients, I've seen firsthand how this complexity leads to analysis paralysis, frustration, and ultimately giving up. That's why I've developed a radically different approach to nutrition that focuses on simplicity and sustainability.</p>
+        
+        <p>In this article, I'll share my 'Less Is More' Nutrition Framework—an approach that has helped my clients achieve better results with less stress, less restriction, and less obsession about food.</p>
+
+        <div class="pull-quote">
+            "The nutrition approach that works best isn't the one that's theoretically 'perfect'—it's the one you can actually follow consistently."
+        </div>
+        
+        <div class="tip-section">
+            <div class="tip-header">
+                <div class="tip-icon">
+                    <i class="fas fa-apple-alt"></i>
+                </div>
+                <h2 class="tip-title">The 'Less Is More' Nutrition Framework</h2>
+            </div>
+            
+            <div class="summary-box">
+                <h4><i class="fas fa-star"></i> In a Nutshell</h4>
+                <p>Simplify nutrition by focusing on a few key principles rather than complex rules. Prioritize protein, focus on whole foods, and follow the 80/20 rule for sustainable eating habits that don't require obsession.</p>
+            </div>
+            
+            <p>Most trainers overcomplicate nutrition to the point where clients feel overwhelmed and eventually give up. I've seen it countless times—detailed meal plans, complex macronutrient calculations, and endless lists of "forbidden" foods. My approach is radically different because I've learned that simplicity leads to consistency, and consistency is what actually gets results.</p>
+            
+            <h3>Why Most Nutrition Advice Fails Beginners</h3>
+            <p>Through my own transformation journey and working with clients, I've discovered why traditional nutrition advice often fails:</p>
+            <ul>
+                <li>It's too restrictive to maintain in real life with social events, travel, and busy schedules</li>
+                <li>It creates an unhealthy all-or-nothing mentality that leads to guilt and giving up</li>
+                <li>It focuses on short-term results rather than sustainable habits</li>
+                <li>It ignores individual preferences, making adherence nearly impossible</li>
+            </ul>
+            
+            <div class="pro-tip-box">
+                <h4><i class="fas fa-lightbulb"></i> Pro Tip</h4>
+                <p>The nutrition approach that works best isn't the one that's theoretically "perfect"—it's the one you can actually follow consistently. I've seen clients get better results from simple, sustainable changes than from perfect but unsustainable meal plans.</p>
+            </div>
+            
+            <h3>My Minimalist Approach to Nutrition</h3>
+            <p>Instead of overwhelming you with complex rules, I focus on these fundamental principles:</p>
+            <ul>
+                <li><strong>Protein prioritization:</strong> Simply ensuring adequate protein (roughly a palm-sized portion at each meal) improves body composition even without other changes</li>
+                <li><strong>Food quality over quantity:</strong> Focusing first on whole, minimally processed foods naturally regulates appetite and energy levels</li>
+                <li><strong>Strategic flexibility:</strong> Planning for "imperfect" meals prevents the restrict-binge cycle that derails most beginners</li>
+                <li><strong>Hydration as a foundation:</strong> Proper water intake improves workout performance, recovery, and even helps regulate hunger</li>
+            </ul>
+            
+            <h3>Practical Implementation That Actually Works</h3>
+            <p>Here's how I help clients implement nutrition changes without the overwhelm:</p>
+            
+            <h4>Week 1-2: Foundation Building</h4>
+            <ul>
+                <li>Focus solely on protein intake and hydration—nothing else</li>
+                <li>Establish a simple pre-workout snack routine (even just a piece of fruit)</li>
+                <li>Begin tracking hunger and energy levels rather than calories</li>
+            </ul>
+            
+            <h4>Week 3-4: Strategic Additions</h4>
+            <ul>
+                <li>Gradually increase vegetable intake at meals</li>
+                <li>Identify and plan around your most challenging eating situations</li>
+                <li>Develop simple meal templates rather than rigid meal plans</li>
+            </ul>
+            
+            <h3>The 80/20 Principle in Action</h3>
+            <p>One of my core nutrition philosophies is the 80/20 rule:</p>
+            <ul>
+                <li>Focus on making 80% of your food choices support your goals</li>
+                <li>Allow 20% flexibility for enjoyment, social situations, and real life</li>
+                <li>This prevents the psychological fatigue that comes from trying to be "perfect"</li>
+                <li>It creates a sustainable approach you can maintain for life, not just for a few weeks</li>
+            </ul>
+            
+            <div class="key-takeaway">
+                <h4><i class="fas fa-check-circle"></i> Key Takeaway</h4>
+                <p>Focus on simple, sustainable nutrition habits rather than complex diets. The 80/20 rule—eating well 80% of the time while allowing 20% flexibility—creates lasting results without the mental fatigue of "perfect" eating.</p>
+            </div>
+        </div>
+        
+        <!-- Conclusion -->
+        <h2>Simplicity Is the Ultimate Sophistication</h2>
+        <p>If you've been struggling with nutrition, I encourage you to take a step back and consider whether complexity might be your biggest obstacle. The most effective nutrition approach isn't the one with the most rules or the most restrictions—it's the one you can actually maintain consistently.</p>
+        
+        <p>Start by focusing on just one or two of the principles I've outlined—perhaps prioritizing protein at each meal and increasing your water intake. Once these become habits that no longer require conscious effort, you can gradually add more layers of sophistication.</p>
+        
+        <p>Remember that nutrition is a skill that develops over time, not an all-or-nothing proposition. By embracing the 'Less Is More' approach, you'll build sustainable habits that support your fitness goals without taking over your life.</p>
+        
+        <!-- Post Navigation -->
+        <div class="post-navigation">
+            <div class="nav-previous">
+                <a href="blog-sustainable-approach.html">
+                    <i class="fas fa-chevron-left"></i> The Sustainable Approach I Learned After Years of Failure
+                    <span>Previous Article</span>
+                </a>
+            </div>
+            <div class="nav-next">
+                <a href="blog-forty-sixty-rule.html">
+                    <span>Next Article</span>
+                    The 40/60 Rule: Why What You Do Outside the Gym Matters Most <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Related Posts -->
+        <div class="related-posts">
+            <h3>Related Articles</h3>
+            <div class="related-posts-grid">
+                <div class="related-post-card">
+                    <a href="blog-sustainable-approach.html">
+                        <div class="related-post-image">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="related-post-content">
+                            <h4>The Sustainable Approach I Learned After Years of Failure</h4>
+                            <p>Why consistency with a program you enjoy beats perfection every time.</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="related-post-card">
+                    <a href="blog-forty-sixty-rule.html">
+                        <div class="related-post-image">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <div class="related-post-content">
+                            <h4>The 40/60 Rule: Why What You Do Outside the Gym Matters Most</h4>
+                            <p>Discover why your daily habits matter more than your workouts.</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="related-post-card">
+                    <a href="blog-control-first.html">
+                        <div class="related-post-image">
+                            <i class="fas fa-seedling"></i>
+                        </div>
+                        <div class="related-post-content">
+                            <h4>The Control-First Approach Most Trainers Miss</h4>
+                            <p>Learn why mastering control before chasing heavy weights leads to better results.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="share-section">
+            <span>Share this article:</span>
+            <a href="#" aria-label="Share on Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" aria-label="Share on Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>The Shrey Method Fitness</h3>
+                    <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="services.html">In-Person Training</a></li>
+                        <li><a href="services.html">Online Coaching</a></li>
+                        <li><a href="services.html">Complete Transformation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="about.html">About Me</a></li>
+                        <li><a href="blog.html">Blog</a></li>
+                        <li><a href="connect.html">Contact</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                        <li><a href="account.html">My Account</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 The Shrey Method Fitness. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <a href="#top" class="back-to-top" id="backToTop">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+
+    <script src="script.js"></script>
+    <script>
+        // Back to top button functionality
+        const backToTopButton = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The 40/60 Rule: Why What You Do Outside the Gym Matters Most - The Shrey Method Fitness</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Blog Post Specific Styles */
+        html {
+            scroll-behavior: smooth;
+        }
+        .blog-post-header {
+            background: linear-gradient(135deg, #f4f9f4 0%, #ffffff 100%);
+            padding: 100px 0 60px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .blog-post-header h1 {
+            margin-bottom: 15px;
+            color: var(--secondary);
+            font-size: 2.5rem;
+        }
+        
+        .blog-post-meta {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+        
+        .blog-post-meta .author {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        
+        .blog-post-meta .author-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .blog-post-meta .date {
+            display: flex;
+            align-items: center;
+        }
+        
+        .blog-post-meta i {
+            margin-right: 5px;
+            color: var(--primary);
+        }
+        
+        .blog-post-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.8;
+        }
+        
+        .blog-post-content p {
+            margin-bottom: 20px;
+            line-height: 1.8;
+            color: var(--dark-gray);
+        }
+        
+        .blog-post-content h2 {
+            margin: 40px 0 20px;
+            color: var(--secondary);
+            font-size: 1.8rem;
+        }
+        
+        .blog-post-content h3 {
+            margin: 30px 0 15px;
+            color: var(--secondary);
+            font-size: 1.4rem;
+        }
+        
+        .blog-post-content ul, .blog-post-content ol {
+            margin-bottom: 20px;
+            padding-left: 20px;
+        }
+        
+        .blog-post-content li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+            color: var(--dark-gray);
+        }
+        
+        .blog-post-content strong {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+        
+        .blog-post-content em {
+            font-style: italic;
+        }
+        
+        .tip-section {
+            margin: 30px 0;
+            padding: 30px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+        
+        .tip-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .tip-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .tip-icon i {
+            font-size: 20px;
+        }
+        
+        .tip-title {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+        
+        .pro-tip-box {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            margin: 30px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .summary-box {
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 20px 0 30px;
+            font-weight: 500;
+        }
+        
+        .summary-box h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .summary-box h4 i {
+            margin-right: 8px;
+            color: var(--primary);
+        }
+        
+        .summary-box p {
+            margin-bottom: 0;
+        }
+        
+        .key-takeaway {
+            background-color: rgba(76, 175, 80, 0.05);
+            border: 1px dashed var(--primary);
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 30px 0 10px;
+        }
+        
+        .key-takeaway h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+        }
+        
+        .key-takeaway h4 i {
+            margin-right: 8px;
+        }
+        
+        .key-takeaway p {
+            margin-bottom: 0;
+            font-weight: 500;
+        }
+        
+        .pull-quote {
+            font-size: 1.3rem;
+            font-weight: 500;
+            color: var(--primary-dark);
+            border-left: 4px solid var(--primary);
+            padding-left: 20px;
+            margin: 30px 0;
+            line-height: 1.6;
+        }
+        
+        .share-section {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .share-section span {
+            margin-right: 15px;
+            font-weight: 500;
+            color: var(--secondary);
+        }
+        
+        .share-section a {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            color: var(--dark-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .share-section a:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top i {
+            font-size: 20px;
+        }
+        
+        .pro-tip-box h4 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .pro-tip-box h4 i {
+            margin-right: 8px;
+        }
+        
+        .pro-tip-box p {
+            margin-bottom: 0;
+        }
+        
+        .related-posts {
+            margin: 50px 0;
+            padding: 30px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+        }
+        
+        .related-posts h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--secondary);
+        }
+        
+        .related-posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .related-post-card {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+        
+        .related-post-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .related-post-card a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .related-post-image {
+            height: 150px;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+        
+        .related-post-image i {
+            font-size: 2rem;
+        }
+        
+        .related-post-content {
+            padding: 15px;
+        }
+        
+        .related-post-content h4 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--secondary);
+            font-size: 1.1rem;
+        }
+        
+        .related-post-content p {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+        
+        .post-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .nav-previous, .nav-next {
+            max-width: 45%;
+        }
+        
+        .nav-previous a, .nav-next a {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--primary);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-previous a:hover, .nav-next a:hover {
+            color: var(--primary-dark);
+        }
+        
+        .nav-previous i, .nav-next i {
+            margin: 0 8px;
+        }
+        
+        .nav-previous span, .nav-next span {
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .back-to-top {
+                bottom: 20px;
+                right: 20px;
+                width: 40px;
+                height: 40px;
+            }
+            .blog-post-header h1 {
+                font-size: 2rem;
+            }
+            
+            .blog-post-meta {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .tip-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .tip-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .related-posts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .post-navigation {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .nav-previous, .nav-next {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html" class="logo-link">
+                    <div class="logo-container">
+                        <div class="logo-icon">
+                            <div class="weight-plate">
+                                <span class="weight-plate-letter">S</span>
+                            </div>
+                        </div>
+                        <div class="logo-text">
+                            <span class="brand-name">THE SHREY METHOD</span>
+                            <span class="brand-tagline">FITNESS</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">About Me</a>
+                </li>
+                <li class="nav-item">
+                    <a href="services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="connect.html" class="nav-link">Connect</a>
+                </li>
+                <li class="nav-item">
+                    <a href="faq.html" class="nav-link">FAQ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="blog.html" class="nav-link active">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a href="account.html" class="nav-link account-btn">Sign Up / Login</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Blog Post Header -->
+    <header class="blog-post-header">
+        <div class="container">
+            <h1>The 40/60 Rule: Why What You Do Outside the Gym Matters Most</h1>
+            <div class="blog-post-meta">
+                <div class="author">
+                    <div class="author-avatar">
+                        <img src="Shreyas-profile.jpg" alt="Shreyas Annapureddy" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <span>By Shreyas Annapureddy</span>
+                </div>
+                <div class="date">
+                    <i class="far fa-calendar-alt"></i>
+                    <span>July 18, 2025</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Blog Post Content -->
+    <div class="blog-post-content" id="top">
+        <!-- Introduction -->
+        <p>When you think about fitness transformation, what comes to mind? For most people, it's intense workouts, sweat-drenched training sessions, and pushing to the limit in the gym. But what if I told you that your workouts—even the most intense ones—account for only about 40% of your results?</p>
+        
+        <p>After years of working with clients who were crushing their workouts but still not seeing the results they wanted, I've discovered a fundamental truth that goes against much of what the fitness industry promotes: what you do during the other 23 hours of your day matters more than what you do during your workout hour.</p>
+        
+        <p>In this article, I'll explain the 40/60 Rule—the principle that your workouts account for roughly 40% of your results, while the other 60% comes from your daily lifestyle choices—and how understanding this rule can completely transform your approach to fitness.</p>
+
+        <div class="pull-quote">
+            "Your fitness results are built in the gaps between your workouts."
+        </div>
+        
+        <div class="tip-section">
+            <div class="tip-header">
+                <div class="tip-icon">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <h2 class="tip-title">The 40/60 Rule</h2>
+            </div>
+            
+            <div class="summary-box">
+                <h4><i class="fas fa-star"></i> In a Nutshell</h4>
+                <p>Your workouts only account for 40% of your results—the other 60% comes from your daily lifestyle choices. Small decisions about movement, food, and environment throughout your day have a greater impact than intense workouts alone.</p>
+            </div>
+            
+            <p>Here's the truth that most fitness influencers won't tell you: your workouts account for only about 40% of your results. The other 60%? It's all about what you do during the other 23 hours of your day. After years of working with clients, I've seen this pattern consistently—the people who transform their bodies aren't necessarily those who push hardest in the gym, but those who make better choices outside of it.</p>
+            
+            <h3>The Truth About Results Most Trainers Won't Tell You</h3>
+            <p>The fitness industry loves to glorify intense workouts—they're marketable, they look impressive on social media, and they make you feel like you're doing something productive. But here's what I've observed working with hundreds of clients:</p>
+            <ul>
+                <li>Clients who crush every workout but make poor lifestyle choices see minimal results</li>
+                <li>Clients with moderate workouts but excellent daily habits consistently transform their bodies</li>
+                <li>Most people dramatically overestimate the calorie burn from their workouts</li>
+                <li>The habits that actually drive results aren't the "sexy" ones that get featured in fitness content</li>
+            </ul>
+            
+            <div class="pull-quote">
+                "Your fitness results are built in the gaps between your workouts. The client who gets great results isn't the one who pushes hardest for an hour with me—it's the one who consistently makes better choices during the other 23 hours of their day."
+            </div>
+            
+            <h3>The Daily Choices That Actually Transform Your Body</h3>
+            <p>When I work with beginners, we focus heavily on these everyday decisions that most trainers ignore:</p>
+            
+            <h4>Movement Decisions:</h4>
+            <ul>
+                <li><strong>Stairs vs. elevators:</strong> This simple choice can add hundreds of steps to your day</li>
+                <li><strong>Parking strategies:</strong> Choosing spots farther from entrances adds movement without feeling like "exercise"</li>
+                <li><strong>Sitting alternatives:</strong> Standing desks, walking meetings, and movement breaks between sitting periods</li>
+                <li><strong>Weekend activities:</strong> Choosing active leisure (walks, hikes, active hobbies) over purely sedentary options</li>
+                <li><strong>Screen time habits:</strong> Breaking the cycle of coming home and immediately sitting for hours</li>
+            </ul>
+            
+            <h4>Food Decisions:</h4>
+            <ul>
+                <li><strong>Restaurant ordering:</strong> Learning to scan menus for better options without feeling deprived</li>
+                <li><strong>Grocery shopping patterns:</strong> How you navigate store layouts affects what ends up in your home</li>
+                <li><strong>Social eating strategies:</strong> Managing food choices during weekends and gatherings</li>
+                <li><strong>Alcohol consumption:</strong> Understanding how even moderate drinking impacts your results</li>
+                <li><strong>Convenience food swaps:</strong> Finding realistic alternatives that fit your real life</li>
+            </ul>
+            
+            <h4>Environmental Choices:</h4>
+            <ul>
+                <li><strong>Home setup:</strong> Arranging your living space to encourage movement and better food choices</li>
+                <li><strong>Social circles:</strong> The profound impact of who you spend time with on your habits</li>
+                <li><strong>Stress responses:</strong> Developing alternatives to food-based coping mechanisms</li>
+                <li><strong>Sleep environment:</strong> Creating conditions that support quality rest</li>
+            </ul>
+            
+            <div class="pro-tip-box">
+                <h4><i class="fas fa-lightbulb"></i> Pro Tip</h4>
+                <p>One strategy I use with all my clients: the "1-mile rule"—for any destination under a mile away, commit to walking instead of driving. This one habit can add thousands of steps to your week without requiring any "workout time."</p>
+            </div>
+            
+            <h3>The Compounding Effect of Consistent Choices</h3>
+            <p>Small daily decisions might seem insignificant in the moment, but they create dramatic differences over time:</p>
+            <ul>
+                <li>Taking stairs instead of elevators can burn an extra 5-10 calories each time—multiplied by several times daily over months, that's pounds of fat</li>
+                <li>Swapping one sugary drink for water daily saves roughly 150 calories—that's 15 pounds of fat loss potential per year</li>
+                <li>Adding just 1,000 extra steps daily (about 10 minutes of walking) burns roughly 30,000 additional calories per year</li>
+                <li>Reducing weekend alcohol consumption by just two drinks weekly can prevent the storage of thousands of empty calories</li>
+            </ul>
+            
+            <p>These aren't dramatic changes that require massive willpower—they're small adjustments to your existing routine that become automatic over time. And unlike extreme diets or workout programs, they're sustainable for life.</p>
+            
+            <p>Remember: Fitness isn't about what you can accomplish in a few heroic weeks of intense effort. It's about the hundreds of small choices you make every single day. Master the 60% that happens outside the gym, and you'll be amazed at how much easier the 40% becomes.</p>
+            
+            <div class="key-takeaway">
+                <h4><i class="fas fa-check-circle"></i> Key Takeaway</h4>
+                <p>Focus on the small daily choices that compound over time—taking stairs, walking more, making better food decisions, and creating an environment that supports your goals. These matter more than your workouts alone.</p>
+            </div>
+        </div>
+        
+        <!-- Conclusion -->
+        <h2>Mastering the 60%</h2>
+        <p>If you've been frustrated with your fitness results despite putting in hard work at the gym, it might be time to shift your focus to the 60% of the equation that happens outside your workouts. This doesn't mean your training isn't important—it absolutely is—but it means that optimizing your daily habits can dramatically amplify the results you get from that training.</p>
+        
+        <p>Start by identifying just one or two small daily habits you could adjust. Perhaps it's taking the stairs at work, parking farther from store entrances, or swapping one daily sugary drink for water. Once these small changes become automatic, add another. Over time, these seemingly minor adjustments will compound into significant results.</p>
+        
+        <p>Remember that fitness transformation isn't about heroic efforts—it's about consistent choices repeated day after day. By mastering the 60% that happens outside the gym, you'll build a foundation for lasting results that no workout program alone could ever deliver.</p>
+        
+        <!-- Post Navigation -->
+        <div class="post-navigation">
+            <div class="nav-previous">
+                <a href="blog-nutrition-framework.html">
+                    <i class="fas fa-chevron-left"></i> The 'Less Is More' Nutrition Framework
+                    <span>Previous Article</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Related Posts -->
+        <div class="related-posts">
+            <h3>Related Articles</h3>
+            <div class="related-posts-grid">
+                <div class="related-post-card">
+                    <a href="blog-nutrition-framework.html">
+                        <div class="related-post-image">
+                            <i class="fas fa-apple-alt"></i>
+                        </div>
+                        <div class="related-post-content">
+                            <h4>The 'Less Is More' Nutrition Framework</h4>
+                            <p>Simplify your nutrition approach for better, sustainable results.</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="related-post-card">
+                    <a href="blog-sustainable-approach.html">
+                        <div class="related-post-image">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="related-post-content">
+                            <h4>The Sustainable Approach I Learned After Years of Failure</h4>
+                            <p>Why consistency with a program you enjoy beats perfection every time.</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="related-post-card">
+                    <a href="blog-control-first.html">
+                        <div class="related-post-image">
+                            <i class="fas fa-seedling"></i>
+                        </div>
+                        <div class="related-post-content">
+                            <h4>The Control-First Approach Most Trainers Miss</h4>
+                            <p>Learn why mastering control before chasing heavy weights leads to better results.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="share-section">
+            <span>Share this article:</span>
+            <a href="#" aria-label="Share on Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" aria-label="Share on Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>The Shrey Method Fitness</h3>
+                    <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="services.html">In-Person Training</a></li>
+                        <li><a href="services.html">Online Coaching</a></li>
+                        <li><a href="services.html">Complete Transformation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="about.html">About Me</a></li>
+                        <li><a href="blog.html">Blog</a></li>
+                        <li><a href="connect.html">Contact</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                        <li><a href="account.html">My Account</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 The Shrey Method Fitness. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <a href="#top" class="back-to-top" id="backToTop">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+
+    <script src="script.js"></script>
+    <script>
+        // Back to top button functionality
+        const backToTopButton = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.add('visible');
+            } else {
+                backToTopButton.classList.remove('visible');
+            }
+        });
+    </script>
+</body>
+</html>

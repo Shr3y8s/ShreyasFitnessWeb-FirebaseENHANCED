@@ -7,6 +7,48 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .page-header .container {
+            text-align: left;
+            max-width: 1000px;
+            padding: 0 20px;
+        }
+        
+        .page-header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .page-header h1:after {
+            content: "";
+            display: block;
+            width: 80px;
+            height: 3px;
+            background-color: var(--primary);
+            margin: 15px 0;
+        }
+        
+        .header-subtitle {
+            max-width: 800px;
+            margin: 0;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: var(--dark-gray);
+            font-weight: 400;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .header-subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation -->
@@ -61,16 +103,8 @@
     <!-- Page Header -->
     <section class="page-header">
         <div class="container">
-            <h1>Blog</h1>
-        </div>
-    </section>
-
-    <!-- Blog Introduction -->
-    <section class="blog-intro">
-        <div class="container">
-            <div class="intro-content">
-                <p>Welcome to my fitness blog, where I share evidence-based advice, practical tips, and motivational content to help you on your fitness journey. Whether you're just starting out or looking to take your fitness to the next level, you'll find valuable information here to support your goals.</p>
-            </div>
+            <h1>Welcome to my blog</h1>
+            <p class="header-subtitle">Where I share evidence-based advice, practical tips, and motivational content to help you on your fitness journey. Whether you're just starting out or looking to take your fitness to the next level, you'll find valuable information here to support your goals.</p>
         </div>
     </section>
 
@@ -80,16 +114,16 @@
             <div class="featured-article-content">
                 <div class="featured-image">
                     <div class="article-image-placeholder">
-                        <i class="fas fa-running"></i>
+                        <i class="fas fa-balance-scale"></i>
                     </div>
                     <span class="featured-tag">Featured</span>
                 </div>
                 <div class="featured-text">
-                    <span class="article-date">March 15, 2024</span>
-                    <h2>5 Essential Tips for Fitness Beginners</h2>
-                    <p>Starting your fitness journey can feel overwhelming, with conflicting advice and information coming from all directions. As a personal trainer who specializes in working with beginners, I've compiled these five fundamental tips to help you build a strong foundation and set yourself up for long-term success.</p>
-                    <p>Whether you're stepping into a gym for the first time or returning after a long break, these principles will guide you toward sustainable progress while minimizing frustration and potential injuries.</p>
-                    <a href="blog-post-1.html" class="btn-secondary">Read Full Article</a>
+                    <span class="article-date">July 18, 2025</span>
+                    <h2>The 40/60 Rule: Why What You Do Outside the Gym Matters Most</h2>
+                    <p>What if I told you that your workouts—even the most intense ones—account for only about 40% of your results? After years of working with clients, I've discovered that what you do during the other 23 hours of your day matters more than what you do during your workout hour.</p>
+                    <p>Learn how small daily choices about movement, food, and your environment have a greater impact on your fitness results than your workouts alone, and how to optimize the 60% that happens outside the gym.</p>
+                    <a href="blog-forty-sixty-rule.html" class="btn-secondary">Read Full Article</a>
                 </div>
             </div>
         </div>
@@ -101,59 +135,67 @@
             <div class="blog-grid">
                 <article class="blog-card">
                     <div class="blog-image">
-                        <i class="fas fa-apple-alt"></i>
+                        <i class="fas fa-seedling"></i>
                     </div>
                     <div class="blog-content">
-                        <span class="article-date">March 10, 2024</span>
-                        <h3>Nutrition Basics: Fueling Your Workouts</h3>
-                        <p>Proper nutrition is crucial for achieving your fitness goals. Learn the fundamentals of pre and post-workout nutrition to maximize your energy, performance, and recovery. This article breaks down the essential nutrients your body needs and when to consume them for optimal results.</p>
+                        <span class="article-date">July 26, 2025</span>
+                        <h3>The Control-First Approach Most Trainers Miss</h3>
+                        <p>Master control and proper form before chasing heavy weights. This approach builds better muscle connection, prevents injuries, and delivers superior results compared to the typical "lift heavy" mentality most trainers push.</p>
                         <div class="blog-meta">
                             <div class="blog-categories">
                             </div>
-                            <a href="blog-post-2.html" class="btn-secondary">Read More</a>
+                            <a href="blog-control-first.html" class="btn-secondary">Read More</a>
                         </div>
                     </div>
                 </article>
 
                 <article class="blog-card">
                     <div class="blog-image">
-                        <i class="fas fa-clock"></i>
+                        <i class="fas fa-balance-scale"></i>
                     </div>
                     <div class="blog-content">
-                        <span class="article-date">March 5, 2024</span>
-                        <h3>Building Consistency: The Key to Long-term Success</h3>
-                        <p>Consistency beats perfection every time. Discover strategies to build sustainable fitness habits that last, overcome common obstacles, and stay motivated when progress seems slow. This article provides practical techniques to integrate fitness into your lifestyle permanently.</p>
+                        <span class="article-date">July 24, 2025</span>
+                        <h3>Why I Never Let Clients Chase Numbers</h3>
+                        <p>Developing a strong mind-muscle connection is far more important than lifting heavy weights. Learn to feel each exercise in the target muscles rather than just moving weight from point A to point B.</p>
                         <div class="blog-meta">
                             <div class="blog-categories">
                             </div>
-                            <a href="blog-post-3.html" class="btn-secondary">Read More</a>
+                            <a href="blog-mind-muscle.html" class="btn-secondary">Read More</a>
                         </div>
                     </div>
                 </article>
 
-                <article class="blog-card coming-soon">
+                <article class="blog-card">
                     <div class="blog-image">
-                        <i class="fas fa-calendar-plus"></i>
-                        <span class="coming-soon-badge">Coming Soon</span>
+                        <i class="fas fa-calendar-check"></i>
                     </div>
                     <div class="blog-content">
-                        <h3>New Blogs Coming Soon!</h3>
-                        <p>I'm currently developing an exciting series of new articles covering nutrition tips, workout routines, and fitness myths debunked. Stay tuned for fresh content that will help take your fitness journey to the next level.</p>
-                        <p class="expected-date">Expected: Summer 2024</p>
+                        <span class="article-date">July 22, 2025</span>
+                        <h3>The Sustainable Approach I Learned After Years of Failure</h3>
+                        <p>Consistency with a "good enough" program you enjoy will always beat sporadic adherence to the "perfect" program you dread. Find workouts you actually look forward to rather than those that look impressive on paper.</p>
                         <div class="blog-meta">
-                            <!-- Subscribe Button (visible by default) -->
-                            <button id="showSubscribeFormBtn" class="btn-primary card-subscribe-btn">Get Notified</button>
-                            
-                            <!-- Hidden Email Form (revealed when button is clicked) -->
-                            <form id="cardSubscribeForm" class="card-subscribe-form hidden">
-                                <input type="email" placeholder="Your email address" required>
-                                <button type="submit" class="btn-primary">Subscribe</button>
-                                <p class="card-privacy-note">I respect your privacy. No spam, just valuable content.</p>
-                            </form>
+                            <div class="blog-categories">
+                            </div>
+                            <a href="blog-sustainable-approach.html" class="btn-secondary">Read More</a>
                         </div>
                     </div>
                 </article>
                 
+                <article class="blog-card">
+                    <div class="blog-image">
+                        <i class="fas fa-apple-alt"></i>
+                    </div>
+                    <div class="blog-content">
+                        <span class="article-date">July 20, 2025</span>
+                        <h3>The 'Less Is More' Nutrition Framework</h3>
+                        <p>Simplify nutrition by focusing on a few key principles rather than complex rules. Prioritize protein, focus on whole foods, and follow the 80/20 rule for sustainable eating habits that don't require obsession.</p>
+                        <div class="blog-meta">
+                            <div class="blog-categories">
+                            </div>
+                            <a href="blog-nutrition-framework.html" class="btn-secondary">Read More</a>
+                        </div>
+                    </div>
+                </article>
             </div>
         </div>
     </section>
