@@ -656,10 +656,43 @@
         
         <div class="share-section">
             <span>Share this article:</span>
-            <a href="#" aria-label="Share on Facebook"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" aria-label="Share on Twitter"><i class="fab fa-twitter"></i></a>
-            <a href="#" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://theshreymethod.com/blog-forty-sixty-rule.html&quote=The 40/60 Rule: Why What You Do Outside the Gym Matters Most" target="_blank" aria-label="Share on Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="https://twitter.com/intent/tweet?url=https://theshreymethod.com/blog-forty-sixty-rule.html&text=The 40/60 Rule: Why What You Do Outside the Gym Matters Most" target="_blank" aria-label="Share on Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="https://www.linkedin.com/shareArticle?mini=true&url=https://theshreymethod.com/blog-forty-sixty-rule.html&title=The 40/60 Rule: Why What You Do Outside the Gym Matters Most&summary=What if I told you that your workouts—even the most intense ones—account for only about 40% of your results?" target="_blank" aria-label="Share on LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" id="copy-link" aria-label="Copy link to clipboard"><i class="fas fa-link"></i></a>
         </div>
+        
+        <script>
+            // Copy link functionality
+            document.getElementById('copy-link').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Create a temporary input element
+                const tempInput = document.createElement('input');
+                tempInput.value = 'https://theshreymethod.com/blog-forty-sixty-rule.html';
+                document.body.appendChild(tempInput);
+                
+                // Select and copy the link
+                tempInput.select();
+                document.execCommand('copy');
+                
+                // Remove the temporary element
+                document.body.removeChild(tempInput);
+                
+                // Show feedback
+                const originalHTML = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-check"></i>';
+                this.style.backgroundColor = '#4CAF50';
+                this.style.color = 'white';
+                
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    this.innerHTML = originalHTML;
+                    this.style.backgroundColor = '';
+                    this.style.color = '';
+                }, 2000);
+            });
+        </script>
     </div>
 
     <!-- Footer -->

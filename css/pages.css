@@ -507,6 +507,7 @@
     transform: translateX(5px);
 }
 
+.bold-statements h2:after,
 .bold-statements h3:after {
     content: '';
     position: absolute;
@@ -518,6 +519,7 @@
     transition: all 0.3s ease;
 }
 
+.bold-statements h2:hover:after,
 .bold-statements h3:hover:after {
     width: 100%;
 }

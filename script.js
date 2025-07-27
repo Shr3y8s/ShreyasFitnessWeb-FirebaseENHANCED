@@ -12,6 +12,54 @@ function openModal(modalId) {
 
 // Mobile Menu Toggle
 document.addEventListener('DOMContentLoaded', function() {
+    // Problem/Emotion Section Highlighting
+    const boldStatements = document.querySelectorAll('.bold-statements h2, .bold-statements h3');
+    const highlightTargets = document.querySelectorAll('.highlight-target');
+    
+    boldStatements.forEach(statement => {
+        // Add hover event listener
+        statement.addEventListener('mouseenter', function() {
+            const targetSection = this.getAttribute('data-target');
+            
+            // Remove active class from all targets first
+            highlightTargets.forEach(target => {
+                target.classList.remove('active-highlight');
+            });
+            
+            // Add active class to matching target
+            const matchingTarget = document.querySelector(`.highlight-target[data-section="${targetSection}"]`);
+            if (matchingTarget) {
+                matchingTarget.classList.add('active-highlight');
+            }
+        });
+        
+        // Add click event for mobile users
+        statement.addEventListener('click', function() {
+            const targetSection = this.getAttribute('data-target');
+            
+            // Remove active class from all targets first
+            highlightTargets.forEach(target => {
+                target.classList.remove('active-highlight');
+            });
+            
+            // Add active class to matching target
+            const matchingTarget = document.querySelector(`.highlight-target[data-section="${targetSection}"]`);
+            if (matchingTarget) {
+                matchingTarget.classList.add('active-highlight');
+            }
+        });
+    });
+    
+    // Remove highlight when mouse leaves the entire bold-statements section
+    const boldStatementsSection = document.querySelector('.bold-statements');
+    if (boldStatementsSection) {
+        boldStatementsSection.addEventListener('mouseleave', function() {
+            highlightTargets.forEach(target => {
+                target.classList.remove('active-highlight');
+            });
+        });
+    }
+    
     // FAQ Question Popup
     const showHelpButton = document.getElementById('show-help-popup');
     const faqQuestionPopup = document.getElementById('faq-question-popup');
