@@ -53,16 +53,34 @@
     border-radius: 8px;
     font-weight: 700; /* Increased from 600 */
     font-size: 1.15rem; /* Increased from 1.1rem */
-    margin-top: 15px; /* Increased from 10px */
+    margin-top: 25px; /* Increased for better spacing */
+    margin-bottom: 15px;
     box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
     transition: all 0.3s ease;
     letter-spacing: 0.5px; /* Added letter spacing */
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    max-width: 90%;
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.motivation-button i {
+    margin-left: 12px;
+    transition: transform 0.3s ease;
 }
 
 .motivation-button:hover {
     transform: translateY(-4px); /* Increased from -3px */
     box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4); /* Increased shadow */
     color: var(--white);
+}
+
+.motivation-button:hover i {
+    transform: translateX(5px);
 }
 
 /* Improves spacing in the bottom section */
