@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Phase1_User_Login.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="phase-1-user-login-system">Phase 1: User Login System</h1>
+<h2 id="the-shrey-method-fitness-platform-guide">The Shrey Method Fitness Platform Guide</h2>
+<p><a href="Tools_Setup.md">← Back to Tools Setup</a> | <a href="Phase2_Dashboards.md">Next: Phase 2 - Dashboards →</a></p>
+<hr>
+<p>In this phase, we'll create the login system for your fitness platform. This will allow:</p>
+<ul>
+<li>Clients to sign up for accounts</li>
+<li>Users to log in securely</li>
+<li>Different access levels for clients and coaches</li>
+</ul>
+<p>We'll break this down into small, manageable steps.</p>
+<h2 id="step-1-initialize-your-project-with-amplify">Step 1: Initialize Your Project with Amplify</h2>
+<p>First, we need to set up AWS Amplify in your project folder.</p>
+<ol>
+<li>Open VS Code</li>
+<li>Open your project folder (File &gt; Open Folder &gt; select your ShreyMethodFitness folder)</li>
+<li>Open the terminal (View &gt; Terminal or press Ctrl+`)</li>
+<li>Initialize Amplify in your project:<pre class="hljs"><code><div>amplify init
+</div></code></pre>
+</li>
+<li>Answer the prompts:
+<ul>
+<li>Enter a name for the project: &quot;ShreyMethodFitness&quot;</li>
+<li>Enter a name for the environment: &quot;dev&quot;</li>
+<li>Choose your default editor: &quot;Visual Studio Code&quot;</li>
+<li>Choose the type of app: &quot;javascript&quot;</li>
+<li>Choose JavaScript framework: &quot;none&quot;</li>
+<li>Source directory path: &quot;/&quot; (just press Enter)</li>
+<li>Distribution directory path: &quot;/&quot; (just press Enter)</li>
+<li>Build command: &quot;npm run build&quot; (just press Enter)</li>
+<li>Start command: &quot;npm start&quot; (just press Enter)</li>
+<li>Select &quot;Yes&quot; when asked if you want to use an AWS profile</li>
+</ul>
+</li>
+</ol>
+<p><strong>What's happening here?</strong> You're telling AWS Amplify about your project so it can help you build it. Amplify will create configuration files in your project folder.</p>
+<h2 id="step-2-add-authentication">Step 2: Add Authentication</h2>
+<p>Now we'll add user authentication to your project.</p>
+<ol>
+<li>In the terminal, type:<pre class="hljs"><code><div>amplify add auth
+</div></code></pre>
+</li>
+<li>Answer the prompts:
+<ul>
+<li>Choose the default configuration: &quot;Default configuration&quot;</li>
+<li>How do you want users to sign in: &quot;Username&quot;</li>
+<li>Do you want to configure advanced settings: &quot;Yes&quot;</li>
+<li>What attributes are required: Select &quot;Email&quot; and &quot;Name&quot; using spacebar, then press Enter</li>
+<li>Do you want to enable any of the following capabilities: Don't select any, just press Enter</li>
+<li>Select &quot;Yes&quot; for &quot;Do you want to edit your user pool groups&quot;</li>
+<li>Select &quot;Add a group&quot; and create two groups:
+<ul>
+<li>First group name: &quot;clients&quot;</li>
+<li>Second group name: &quot;coaches&quot;</li>
+</ul>
+</li>
+<li>Select &quot;No&quot; when asked if you want to add another group</li>
+</ul>
+</li>
+</ol>
+<p><strong>What's happening here?</strong> You're setting up the system that will handle user accounts, logins, and passwords. You're also creating two user groups: one for clients and one for coaches.</p>
+<h2 id="step-3-set-up-database-for-messages">Step 3: Set Up Database for Messages</h2>
+<p>Let's create a database to store messages between you and your clients.</p>
+<ol>
+<li>
+<p>In the terminal, type:</p>
+<pre class="hljs"><code><div>amplify add api
+</div></code></pre>
+</li>
+<li>
+<p>Answer the prompts:</p>
+<ul>
+<li>Select &quot;GraphQL&quot; as the API service</li>
+<li>Enter API name: &quot;shreymethodapi&quot;</li>
+<li>Select authorization type: &quot;Amazon Cognito User Pool&quot;</li>
+<li>Do you want to configure additional auth types: &quot;No&quot;</li>
+<li>Select &quot;Single object with fields&quot; as the schema template</li>
+<li>Do you want to edit the schema now: &quot;Yes&quot;</li>
+</ul>
+</li>
+<li>
+<p>It will open a file in VS Code. Replace everything in this file with:</p>
+</li>
+</ol>
+<pre class="hljs"><code><div>type Message @model
+@auth(rules: [
+  { allow: groups, groups: [&quot;coaches&quot;], operations: [create, read, update, delete] },
+  { allow: owner, operations: [create, read] }
+]) {
+  id: ID!
+  senderName: String!
+  senderEmail: String!
+  subject: String!
+  content: String!
+  read: Boolean!
+  archived: Boolean!
+  createdAt: AWSDateTime!
+}
+
+type User @model
+@auth(rules: [
+  { allow: groups, groups: [&quot;coaches&quot;], operations: [read, update] },
+  { allow: owner, operations: [read, update] }
+]) {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String
+  userGroup: String!
+  createdAt: AWSDateTime!
+}
+</div></code></pre>
+<ol start="4">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating a database to store messages between you and your clients. The code defines two types of data: Messages and Users, along with rules about who can access them.</p>
+<h2 id="step-4-deploy-your-backend-resources">Step 4: Deploy Your Backend Resources</h2>
+<p>Now let's upload your configuration to AWS so they can create all the necessary resources.</p>
+<ol>
+<li>In the terminal, type:<pre class="hljs"><code><div>amplify push
+</div></code></pre>
+</li>
+<li>Review the changes and confirm by typing &quot;y&quot;</li>
+<li>Select &quot;Yes&quot; when asked to generate code for the GraphQL API</li>
+<li>Choose the default options for the code generation</li>
+</ol>
+<p><strong>What's happening here?</strong> AWS is creating all the necessary resources for your application based on your configuration. This includes the authentication system and database.</p>
+<h2 id="step-5-create-login-page">Step 5: Create Login Page</h2>
+<p>Now let's create the login page that users will see when they want to access their dashboard.</p>
+<ol>
+<li>In VS Code, create a new file called <code>client-login.html</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-meta">&lt;!DOCTYPE <span class="hljs-meta-keyword">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span> <span class="hljs-attr">lang</span>=<span class="hljs-string">"en"</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"UTF-8"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"viewport"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">"width=device-width, initial-scale=1.0"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>Login - The Shrey Method Fitness<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">rel</span>=<span class="hljs-string">"stylesheet"</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"css/styles.css"</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- Add AWS Amplify libraries --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://cdn.jsdelivr.net/npm/aws-amplify@5.0.4/dist/aws-amplify.min.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- Navigation bar (reuse existing) --&gt;</span>
+    
+    <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-container"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-form"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">h2</span>&gt;</span>Log In to Your Dashboard<span class="hljs-tag">&lt;/<span class="hljs-name">h2</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"error-message"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"error-message"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            
+            <span class="hljs-tag">&lt;<span class="hljs-name">form</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"login-form"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"email"</span>&gt;</span>Email<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"email"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"email"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"password"</span>&gt;</span>Password<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"password"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"password"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-actions"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"forgot-password.html"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"forgot-password"</span>&gt;</span>Forgot Password?<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"submit"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"btn-primary"</span>&gt;</span>Log In<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">form</span>&gt;</span>
+            
+            <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-redirect"</span>&gt;</span>New client? <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"signup.html"</span>&gt;</span>Sign Up<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"js/auth.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</div></code></pre>
+<ol start="3">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating the HTML structure for the login page, which includes a form for users to enter their email and password.</p>
+<h2 id="step-6-create-authentication-javascript">Step 6: Create Authentication JavaScript</h2>
+<p>Now let's create the JavaScript code that will handle the login process.</p>
+<ol>
+<li>Create a folder called <code>js</code> in your project folder</li>
+<li>Create a new file called <code>js/auth.js</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-comment">// Configure Amplify</span>
+<span class="hljs-keyword">const</span> awsConfig = {
+    <span class="hljs-attr">Auth</span>: {
+        <span class="hljs-attr">region</span>: <span class="hljs-string">'us-west-2'</span>, <span class="hljs-comment">// Your AWS region</span>
+        <span class="hljs-attr">userPoolId</span>: <span class="hljs-string">'us-west-2_xxxxxxxx'</span>, <span class="hljs-comment">// Your Cognito User Pool ID</span>
+        <span class="hljs-attr">userPoolWebClientId</span>: <span class="hljs-string">'xxxxxxxxxxxxxxxxxxxxxxxxxx'</span>, <span class="hljs-comment">// Your App Client ID</span>
+    }
+};
+
+<span class="hljs-comment">// Replace the placeholder values with your actual values</span>
+<span class="hljs-comment">// You can find these in the AWS Cognito console or in the aws-exports.js file</span>
+
+Amplify.configure(awsConfig);
+
+<span class="hljs-comment">// Login form handler</span>
+<span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'login-form'</span>).addEventListener(<span class="hljs-string">'submit'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">event</span>) </span>{
+    event.preventDefault();
+    
+    <span class="hljs-keyword">const</span> email = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'email'</span>).value;
+    <span class="hljs-keyword">const</span> password = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'password'</span>).value;
+    <span class="hljs-keyword">const</span> errorMessage = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'error-message'</span>);
+    
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> Amplify.Auth.signIn(email, password);
+        
+        <span class="hljs-comment">// Check user group and redirect accordingly</span>
+        <span class="hljs-keyword">const</span> session = <span class="hljs-keyword">await</span> Amplify.Auth.currentSession();
+        <span class="hljs-keyword">const</span> idToken = session.getIdToken().payload;
+        
+        <span class="hljs-keyword">if</span> (idToken[<span class="hljs-string">'cognito:groups'</span>] &amp;&amp; idToken[<span class="hljs-string">'cognito:groups'</span>].includes(<span class="hljs-string">'coaches'</span>)) {
+            <span class="hljs-built_in">window</span>.location.href = <span class="hljs-string">'coach-dashboard.html'</span>;
+        } <span class="hljs-keyword">else</span> {
+            <span class="hljs-built_in">window</span>.location.href = <span class="hljs-string">'client-dashboard.html'</span>;
+        }
+    } <span class="hljs-keyword">catch</span> (error) {
+        errorMessage.textContent = error.message;
+    }
+});
+</div></code></pre>
+<ol start="4">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating the JavaScript code that will handle the login process when someone submits the login form. It will check if the user is a coach or a client and redirect them to the appropriate dashboard.</p>
+<h2 id="step-7-update-configuration-values">Step 7: Update Configuration Values</h2>
+<p>Now we need to update the JavaScript code with your actual AWS configuration values.</p>
+<ol>
+<li>In the terminal, type:<pre class="hljs"><code><div>amplify status
+</div></code></pre>
+</li>
+<li>Note the name of your Auth resource (something like &quot;authshreymethod123456&quot;)</li>
+<li>Type:<pre class="hljs"><code><div>amplify console auth
+</div></code></pre>
+</li>
+<li>This will open the AWS Cognito console in your browser</li>
+<li>Click on &quot;User Pools&quot; in the left sidebar</li>
+<li>Click on your user pool (it should have the name you noted earlier)</li>
+<li>Click on &quot;App integration&quot; in the left sidebar</li>
+<li>Under &quot;App clients and analytics&quot;, find your app client</li>
+<li>Note the &quot;App client ID&quot; value</li>
+<li>Go back to VS Code and open <code>js/auth.js</code></li>
+<li>Replace the placeholder values with your actual values:
+<ul>
+<li>Replace <code>us-west-2</code> with your region (if different)</li>
+<li>Replace <code>us-west-2_xxxxxxxx</code> with your User Pool ID</li>
+<li>Replace <code>xxxxxxxxxxxxxxxxxxxxxxxxxx</code> with your App Client ID</li>
+</ul>
+</li>
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're connecting your login page to your AWS authentication system by updating the configuration values.</p>
+<h2 id="step-8-create-css-for-login-page">Step 8: Create CSS for Login Page</h2>
+<p>Let's create the styling for your login page.</p>
+<ol>
+<li>Create a folder called <code>css</code> in your project folder</li>
+<li>Create a new file called <code>css/styles.css</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-comment">/* General Styles */</span>
+<span class="hljs-selector-pseudo">:root</span> {
+    <span class="hljs-attribute">--primary</span>: <span class="hljs-number">#4CAF50</span>;
+    <span class="hljs-attribute">--primary-dark</span>: <span class="hljs-number">#388E3C</span>;
+    <span class="hljs-attribute">--secondary</span>: <span class="hljs-number">#2E7D32</span>;
+    <span class="hljs-attribute">--light-gray</span>: <span class="hljs-number">#f5f5f5</span>;
+    <span class="hljs-attribute">--dark-gray</span>: <span class="hljs-number">#333</span>;
+}
+
+<span class="hljs-selector-tag">body</span> {
+    <span class="hljs-attribute">font-family</span>: <span class="hljs-string">'Inter'</span>, sans-serif;
+    <span class="hljs-attribute">margin</span>: <span class="hljs-number">0</span>;
+    <span class="hljs-attribute">padding</span>: <span class="hljs-number">0</span>;
+    <span class="hljs-attribute">color</span>: <span class="hljs-built_in">var</span>(--dark-gray);
+    <span class="hljs-attribute">line-height</span>: <span class="hljs-number">1.6</span>;
+}
+
+<span class="hljs-selector-class">.container</span> {
+    <span class="hljs-attribute">max-width</span>: <span class="hljs-number">1200px</span>;
+    <span class="hljs-attribute">margin</span>: <span class="hljs-number">0</span> auto;
+    <span class="hljs-attribute">padding</span>: <span class="hljs-number">0</span> <span class="hljs-number">20px</span>;
+}
+
+<span class="hljs-comment">/* Authentication Styles */</span>
+<span class="hljs-selector-class">.auth-container</span> {
+    <span class="hljs-attribute">display</span>: flex;
+    <span class="hljs-attribute">justify-content</span>: center;
+    <span class="hljs-attribute">align-items</span>: center;
+    <span class="hljs-attribute">min-height</span>: <span class="hljs-number">100vh</span>;
+    <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">var</span>(--light-gray);
+}
+
+<span class="hljs-selector-class">.auth-form</span> {
+    <span class="hljs-attribute">background-color</span>: white;
+    <span class="hljs-attribute">padding</span>: <span class="hljs-number">40px</span>;
+    <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">10px</span>;
+    <span class="hljs-attribute">box-shadow</span>: <span class="hljs-number">0</span> <span class="hljs-number">5px</span> <span class="hljs-number">15px</span> <span class="hljs-built_in">rgba</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0.1</span>);
+    <span class="hljs-attribute">width</span>: <span class="hljs-number">100%</span>;
+    <span class="hljs-attribute">max-width</span>: <span class="hljs-number">400px</span>;
+}
+
+<span class="hljs-selector-class">.auth-form</span> <span class="hljs-selector-tag">h2</span> {
+    <span class="hljs-attribute">margin-top</span>: <span class="hljs-number">0</span>;
+    <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">20px</span>;
+    <span class="hljs-attribute">color</span>: <span class="hljs-built_in">var</span>(--secondary);
+    <span class="hljs-attribute">text-align</span>: center;
+}
+
+<span class="hljs-selector-class">.form-group</span> {
+    <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">20px</span>;
+}
+
+<span class="hljs-selector-class">.form-group</span> <span class="hljs-selector-tag">label</span> {
+    <span class="hljs-attribute">display</span>: block;
+    <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">5px</span>;
+    <span class="hljs-attribute">font-weight</span>: <span class="hljs-number">500</span>;
+}
+
+<span class="hljs-selector-class">.form-group</span> <span class="hljs-selector-tag">input</span> {
+    <span class="hljs-attribute">width</span>: <span class="hljs-number">100%</span>;
+    <span class="hljs-attribute">padding</span>: <span class="hljs-number">10px</span>;
+    <span class="hljs-attribute">border</span>: <span class="hljs-number">1px</span> solid <span class="hljs-number">#ddd</span>;
+    <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">5px</span>;
+    <span class="hljs-attribute">font-size</span>: <span class="hljs-number">16px</span>;
+}
+
+<span class="hljs-selector-class">.form-actions</span> {
+    <span class="hljs-attribute">display</span>: flex;
+    <span class="hljs-attribute">justify-content</span>: space-between;
+    <span class="hljs-attribute">align-items</span>: center;
+    <span class="hljs-attribute">margin-top</span>: <span class="hljs-number">30px</span>;
+}
+
+<span class="hljs-selector-class">.forgot-password</span> {
+    <span class="hljs-attribute">color</span>: <span class="hljs-built_in">var</span>(--primary);
+    <span class="hljs-attribute">text-decoration</span>: none;
+}
+
+<span class="hljs-selector-class">.forgot-password</span><span class="hljs-selector-pseudo">:hover</span> {
+    <span class="hljs-attribute">text-decoration</span>: underline;
+}
+
+<span class="hljs-selector-class">.btn-primary</span> {
+    <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">var</span>(--primary);
+    <span class="hljs-attribute">color</span>: white;
+    <span class="hljs-attribute">border</span>: none;
+    <span class="hljs-attribute">padding</span>: <span class="hljs-number">10px</span> <span class="hljs-number">20px</span>;
+    <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">5px</span>;
+    <span class="hljs-attribute">cursor</span>: pointer;
+    <span class="hljs-attribute">font-size</span>: <span class="hljs-number">16px</span>;
+    <span class="hljs-attribute">font-weight</span>: <span class="hljs-number">500</span>;
+    <span class="hljs-attribute">transition</span>: background-color <span class="hljs-number">0.3s</span> ease;
+}
+
+<span class="hljs-selector-class">.btn-primary</span><span class="hljs-selector-pseudo">:hover</span> {
+    <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">var</span>(--primary-dark);
+}
+
+<span class="hljs-selector-class">.auth-redirect</span> {
+    <span class="hljs-attribute">text-align</span>: center;
+    <span class="hljs-attribute">margin-top</span>: <span class="hljs-number">20px</span>;
+}
+
+<span class="hljs-selector-class">.auth-redirect</span> <span class="hljs-selector-tag">a</span> {
+    <span class="hljs-attribute">color</span>: <span class="hljs-built_in">var</span>(--primary);
+    <span class="hljs-attribute">text-decoration</span>: none;
+}
+
+<span class="hljs-selector-class">.auth-redirect</span> <span class="hljs-selector-tag">a</span><span class="hljs-selector-pseudo">:hover</span> {
+    <span class="hljs-attribute">text-decoration</span>: underline;
+}
+
+<span class="hljs-selector-class">.error-message</span> {
+    <span class="hljs-attribute">color</span>: red;
+    <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">15px</span>;
+    <span class="hljs-attribute">text-align</span>: center;
+}
+</div></code></pre>
+<ol start="4">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating the CSS styling for your login page so it looks nice and professional.</p>
+<h2 id="step-9-create-signup-page">Step 9: Create Signup Page</h2>
+<p>Now let's create the signup page for new users.</p>
+<ol>
+<li>Create a new file called <code>signup.html</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-meta">&lt;!DOCTYPE <span class="hljs-meta-keyword">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span> <span class="hljs-attr">lang</span>=<span class="hljs-string">"en"</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"UTF-8"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"viewport"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">"width=device-width, initial-scale=1.0"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>Sign Up - The Shrey Method Fitness<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">rel</span>=<span class="hljs-string">"stylesheet"</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"css/styles.css"</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- Add AWS Amplify libraries --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://cdn.jsdelivr.net/npm/aws-amplify@5.0.4/dist/aws-amplify.min.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- Navigation bar (reuse existing) --&gt;</span>
+    
+    <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-container"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-form"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">h2</span>&gt;</span>Create Your Account<span class="hljs-tag">&lt;/<span class="hljs-name">h2</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"error-message"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"error-message"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            
+            <span class="hljs-tag">&lt;<span class="hljs-name">form</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"signup-form"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"name"</span>&gt;</span>Full Name<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"name"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"email"</span>&gt;</span>Email<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"email"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"email"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"password"</span>&gt;</span>Password<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"password"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"password"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"confirm-password"</span>&gt;</span>Confirm Password<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"password"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"confirm-password"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-actions"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"submit"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"btn-primary"</span>&gt;</span>Sign Up<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">form</span>&gt;</span>
+            
+            <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-redirect"</span>&gt;</span>Already have an account? <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"client-login.html"</span>&gt;</span>Log In<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"js/signup.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</div></code></pre>
+<ol start="3">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating the HTML structure for the signup page, which includes a form for users to enter their name, email, and password.</p>
+<h2 id="step-10-create-signup-javascript">Step 10: Create Signup JavaScript</h2>
+<p>Now let's create the JavaScript code that will handle the signup process.</p>
+<ol>
+<li>Create a new file called <code>js/signup.js</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-comment">// Configure Amplify (same as auth.js)</span>
+<span class="hljs-keyword">const</span> awsConfig = {
+    <span class="hljs-attr">Auth</span>: {
+        <span class="hljs-attr">region</span>: <span class="hljs-string">'us-west-2'</span>, <span class="hljs-comment">// Your AWS region</span>
+        <span class="hljs-attr">userPoolId</span>: <span class="hljs-string">'us-west-2_xxxxxxxx'</span>, <span class="hljs-comment">// Your Cognito User Pool ID</span>
+        <span class="hljs-attr">userPoolWebClientId</span>: <span class="hljs-string">'xxxxxxxxxxxxxxxxxxxxxxxxxx'</span>, <span class="hljs-comment">// Your App Client ID</span>
+    }
+};
+
+<span class="hljs-comment">// Replace with your actual values (same as in auth.js)</span>
+
+Amplify.configure(awsConfig);
+
+<span class="hljs-comment">// Signup form handler</span>
+<span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'signup-form'</span>).addEventListener(<span class="hljs-string">'submit'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">event</span>) </span>{
+    event.preventDefault();
+    
+    <span class="hljs-keyword">const</span> name = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'name'</span>).value;
+    <span class="hljs-keyword">const</span> email = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'email'</span>).value;
+    <span class="hljs-keyword">const</span> password = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'password'</span>).value;
+    <span class="hljs-keyword">const</span> confirmPassword = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'confirm-password'</span>).value;
+    <span class="hljs-keyword">const</span> errorMessage = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'error-message'</span>);
+    
+    <span class="hljs-comment">// Clear previous error messages</span>
+    errorMessage.textContent = <span class="hljs-string">''</span>;
+    
+    <span class="hljs-comment">// Validate passwords match</span>
+    <span class="hljs-keyword">if</span> (password !== confirmPassword) {
+        errorMessage.textContent = <span class="hljs-string">'Passwords do not match'</span>;
+        <span class="hljs-keyword">return</span>;
+    }
+    
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// Sign up the user</span>
+        <span class="hljs-keyword">const</span> { user } = <span class="hljs-keyword">await</span> Amplify.Auth.signUp({
+            <span class="hljs-attr">username</span>: email,
+            <span class="hljs-attr">password</span>: password,
+            <span class="hljs-attr">attributes</span>: {
+                <span class="hljs-attr">email</span>: email,
+                <span class="hljs-attr">name</span>: name
+            }
+        });
+        
+        <span class="hljs-comment">// Redirect to verification page</span>
+        <span class="hljs-built_in">window</span>.location.href = <span class="hljs-string">'verify.html?email='</span> + <span class="hljs-built_in">encodeURIComponent</span>(email);
+        
+    } <span class="hljs-keyword">catch</span> (error) {
+        errorMessage.textContent = error.message;
+    }
+});
+</div></code></pre>
+<ol start="3">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+<li>Update the configuration values with your actual values (same as in Step 7)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating the JavaScript code that will handle the signup process when someone submits the signup form. It will create a new user account and redirect them to the verification page.</p>
+<h2 id="step-11-create-verification-page">Step 11: Create Verification Page</h2>
+<p>Finally, let's create the verification page that users will see after signing up.</p>
+<ol>
+<li>Create a new file called <code>verify.html</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-meta">&lt;!DOCTYPE <span class="hljs-meta-keyword">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span> <span class="hljs-attr">lang</span>=<span class="hljs-string">"en"</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"UTF-8"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"viewport"</span> <span class="hljs-attr">content</span>=<span class="hljs-string">"width=device-width, initial-scale=1.0"</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">title</span>&gt;</span>Verify Account - The Shrey Method Fitness<span class="hljs-tag">&lt;/<span class="hljs-name">title</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">rel</span>=<span class="hljs-string">"stylesheet"</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"css/styles.css"</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- Add AWS Amplify libraries --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://cdn.jsdelivr.net/npm/aws-amplify@5.0.4/dist/aws-amplify.min.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+    <span class="hljs-comment">&lt;!-- Navigation bar (reuse existing) --&gt;</span>
+    
+    <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-container"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-form"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">h2</span>&gt;</span>Verify Your Account<span class="hljs-tag">&lt;/<span class="hljs-name">h2</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">p</span>&gt;</span>We've sent a verification code to your email. Please enter it below to verify your account.<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"error-message"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"error-message"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            
+            <span class="hljs-tag">&lt;<span class="hljs-name">form</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"verify-form"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"email"</span>&gt;</span>Email<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"email"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"email"</span> <span class="hljs-attr">readonly</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">for</span>=<span class="hljs-string">"code"</span>&gt;</span>Verification Code<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"code"</span> <span class="hljs-attr">required</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+                
+                <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"form-actions"</span>&gt;</span>
+                    <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"submit"</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"btn-primary"</span>&gt;</span>Verify Account<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+                <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">form</span>&gt;</span>
+            
+            <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">class</span>=<span class="hljs-string">"auth-redirect"</span>&gt;</span>Didn't receive a code? <span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"#"</span> <span class="hljs-attr">id</span>=<span class="hljs-string">"resend-code"</span>&gt;</span>Resend Code<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"js/verify.js"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</div></code></pre>
+<ol start="3">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+</ol>
+<h2 id="step-12-create-verification-javascript">Step 12: Create Verification JavaScript</h2>
+<p>Now let's create the JavaScript code that will handle the verification process.</p>
+<ol>
+<li>Create a new file called <code>js/verify.js</code></li>
+<li>Copy and paste this code:</li>
+</ol>
+<pre class="hljs"><code><div><span class="hljs-comment">// Configure Amplify (same as auth.js)</span>
+<span class="hljs-keyword">const</span> awsConfig = {
+    <span class="hljs-attr">Auth</span>: {
+        <span class="hljs-attr">region</span>: <span class="hljs-string">'us-west-2'</span>, <span class="hljs-comment">// Your AWS region</span>
+        <span class="hljs-attr">userPoolId</span>: <span class="hljs-string">'us-west-2_xxxxxxxx'</span>, <span class="hljs-comment">// Your Cognito User Pool ID</span>
+        <span class="hljs-attr">userPoolWebClientId</span>: <span class="hljs-string">'xxxxxxxxxxxxxxxxxxxxxxxxxx'</span>, <span class="hljs-comment">// Your App Client ID</span>
+    }
+};
+
+<span class="hljs-comment">// Replace with your actual values (same as in auth.js)</span>
+
+Amplify.configure(awsConfig);
+
+<span class="hljs-comment">// Get email from URL parameter</span>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">getEmailFromUrl</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> urlParams = <span class="hljs-keyword">new</span> URLSearchParams(<span class="hljs-built_in">window</span>.location.search);
+    <span class="hljs-keyword">return</span> urlParams.get(<span class="hljs-string">'email'</span>);
+}
+
+<span class="hljs-comment">// Set email field value</span>
+<span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'DOMContentLoaded'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">const</span> emailField = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'email'</span>);
+    <span class="hljs-keyword">const</span> email = getEmailFromUrl();
+    
+    <span class="hljs-keyword">if</span> (email) {
+        emailField.value = email;
+    } <span class="hljs-keyword">else</span> {
+        <span class="hljs-built_in">window</span>.location.href = <span class="hljs-string">'signup.html'</span>; <span class="hljs-comment">// Redirect if no email provided</span>
+    }
+});
+
+<span class="hljs-comment">// Verification form handler</span>
+<span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'verify-form'</span>).addEventListener(<span class="hljs-string">'submit'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">event</span>) </span>{
+    event.preventDefault();
+    
+    <span class="hljs-keyword">const</span> email = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'email'</span>).value;
+    <span class="hljs-keyword">const</span> code = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'code'</span>).value;
+    <span class="hljs-keyword">const</span> errorMessage = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'error-message'</span>);
+    
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// Confirm signup with verification code</span>
+        <span class="hljs-keyword">await</span> Amplify.Auth.confirmSignUp(email, code);
+        
+        <span class="hljs-comment">// Show success message</span>
+        alert(<span class="hljs-string">'Account verified successfully! You can now log in.'</span>);
+        
+        <span class="hljs-comment">// Redirect to login page</span>
+        <span class="hljs-built_in">window</span>.location.href = <span class="hljs-string">'client-login.html'</span>;
+        
+    } <span class="hljs-keyword">catch</span> (error) {
+        errorMessage.textContent = error.message;
+    }
+});
+
+<span class="hljs-comment">// Resend code handler</span>
+<span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'resend-code'</span>).addEventListener(<span class="hljs-string">'click'</span>, <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">event</span>) </span>{
+    event.preventDefault();
+    
+    <span class="hljs-keyword">const</span> email = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'email'</span>).value;
+    <span class="hljs-keyword">const</span> errorMessage = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'error-message'</span>);
+    
+    <span class="hljs-keyword">try</span> {
+        <span class="hljs-comment">// Resend verification code</span>
+        <span class="hljs-keyword">await</span> Amplify.Auth.resendSignUp(email);
+        
+        <span class="hljs-comment">// Show success message</span>
+        alert(<span class="hljs-string">'Verification code resent. Please check your email.'</span>);
+        
+    } <span class="hljs-keyword">catch</span> (error) {
+        errorMessage.textContent = error.message;
+    }
+});
+</div></code></pre>
+<ol start="3">
+<li>Save the file (Ctrl+S or File &gt; Save)</li>
+<li>Update the configuration values with your actual values (same as in Step 7)</li>
+</ol>
+<p><strong>What's happening here?</strong> You're creating the JavaScript code that will handle the verification process when someone submits the verification form. It will verify their account and redirect them to the login page.</p>
+<h2 id="step-13-test-your-authentication-system">Step 13: Test Your Authentication System</h2>
+<p>Now let's test your authentication system to make sure everything works correctly.</p>
+<ol>
+<li>Open your website in a browser:
+<ul>
+<li>Right-click on <code>client-login.html</code> in VS Code</li>
+<li>Select &quot;Open with Live Server&quot; (if you have the Live Server extension)</li>
+<li>Or open the file directly in your browser</li>
+</ul>
+</li>
+<li>Try signing up a new user:
+<ul>
+<li>Click &quot;Sign Up&quot; on the login page</li>
+<li>Fill out the form with your name, email, and password</li>
+<li>Click &quot;Sign Up&quot;</li>
+</ul>
+</li>
+<li>Check your email for the verification code:
+<ul>
+<li>You should receive an email with a verification code</li>
+<li>Enter the code on the verification page</li>
+<li>Click &quot;Verify Account&quot;</li>
+</ul>
+</li>
+<li>Try logging in with your new account:
+<ul>
+<li>Enter your email and password on the login page</li>
+<li>Click &quot;Log In&quot;</li>
+</ul>
+</li>
+</ol>
+<p><strong>What's happening here?</strong> You're testing the entire authentication flow to make sure users can sign up, verify their accounts, and log in successfully.</p>
+<h2 id="congratulations">Congratulations!</h2>
+<p>You've completed Phase 1 of your fitness platform. You now have a working authentication system that allows users to sign up, verify their accounts, and log in. In the next phase, we'll create the dashboards for both clients and coaches.</p>
+<hr>
+<p><a href="Tools_Setup.md">← Back to Tools Setup</a> | <a href="Phase2_Dashboards.md">Next: Phase 2 - Dashboards →</a></p>
+
+</body>
+</html>
