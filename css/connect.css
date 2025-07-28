@@ -284,10 +284,28 @@
     margin: 0 20px 0 0;
     width: 50px;
     height: 50px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .contact-method-enhanced .header-icon i {
     font-size: 18px;
+    color: var(--white);
+}
+
+/* Fix for location icon container to ensure perfect square dimensions */
+.contact-method-enhanced:nth-child(3) .header-icon {
+    width: 50px !important;
+    min-width: 50px !important;
+    height: 50px !important;
+    aspect-ratio: 1/1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
 }
 
 .method-details h3 {

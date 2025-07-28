@@ -83,9 +83,9 @@
             <!-- Tier 2: Online Coaching -->
             <div class="service-tier">
                 <div class="service-card-item membership-card">
-                    <div class="service-card-badge">Most Popular</div>
+                    <div class="service-card-badge">Most Convenient</div>
                     <div class="service-card-icon">
-                        <i class="fas fa-sync-alt"></i>
+                        <i class="fas fa-laptop"></i>
                     </div>
                     <h3 class="service-card-title">Online Coaching</h3>
                     <p class="service-card-tagline">Achieve total fitness transformation</p>
@@ -138,7 +138,7 @@
             </div>
             <div class="approach-benefit">
                 <div class="approach-icon">
-                    <i class="fas fa-sync-alt"></i>
+                    <i class="fas fa-laptop"></i>
                 </div>
                 <h3>Want Remote Coaching Support?</h3>
                 <p>Ideal for those seeking comprehensive coaching including training programs, nutrition guidance, and accountability from anywhere.</p>
@@ -158,7 +158,7 @@
 </section>
 
 <!-- Value Comparison Section -->
-<section class="value-comparison-section">
+<section class="value-comparison-section" id="value-comparison-section">
     <div class="container">
         <div class="section-header">
             <h2>Why Our Services Are Your Best Investment</h2>
@@ -183,7 +183,7 @@
                     </div>
                     <div class="comparison-row highlighted">
                         <div class="comparison-item">
-                            <span class="comparison-label"><i class="fas fa-sync-alt"></i> Our Premium Services:</span>
+                            <span class="comparison-label"><i class="fas fa-laptop"></i> Our Premium Services:</span>
                         </div>
                         <div class="comparison-value">
                             <span class="price-tag">$6.50</span><span class="price-period">/day</span>
@@ -196,7 +196,7 @@
             </div>
 
             <!-- Value Breakdown Card -->
-            <div class="value-card value-breakdown">
+            <div class="value-card value-breakdown" id="savings-comparison-table">
                 <div class="value-card-header">
                     <i class="fas fa-tags"></i>
                     <h3>Complete Transformation vs. Typical Fitness Coaching</h3>
@@ -281,7 +281,7 @@
     
     <!-- Service Detail Modals -->
     <!-- In-Person Training Details Modal -->
-    <div id="personalDetailsModal" class="modal details-modal">
+    <div id="personalDetailsModal" class="modal details-modal training-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>In-person Training Sessions</h2>
@@ -385,7 +385,7 @@
     </div>
     
     <!-- Online Coaching Details Modal -->
-    <div id="transformationDetailsModal" class="modal details-modal">
+    <div id="transformationDetailsModal" class="modal details-modal standard-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Online Coaching</h2>
@@ -505,7 +505,7 @@
     </div>
     
     <!-- Complete Transformation Details Modal -->
-    <div id="eliteDetailsModal" class="modal details-modal">
+    <div id="eliteDetailsModal" class="modal details-modal elite-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Complete Transformation</h2>
@@ -526,7 +526,7 @@
                 
                 <div class="value-highlight elite">
                     <div class="value-highlight-header">Value:</div>
-                    <div class="value-highlight-body">Save $840 per month on premium fitness services!</div>
+                    <div class="value-highlight-body"><a href="#value-comparison-section" class="savings-link" onclick="closeModalAndScrollToTable()">See how we can save you $800+ on premium fitness services! &rarr;</a></div>
                 </div>
                 
                 <h3>What's Included:</h3>
@@ -661,5 +661,54 @@
 
 
     <script src="script.js"></script>
+    <style>
+        .savings-link {
+            color: inherit;
+            text-decoration: none;
+            position: relative;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .savings-link:hover {
+            color: #00b300;
+        }
+        
+        .savings-link:after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background-color: #00b300;
+            transform: scaleX(0);
+            transform-origin: bottom right;
+            transition: transform 0.3s ease;
+        }
+        
+        .savings-link:hover:after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+    </style>
+    <script>
+        function closeModalAndScrollToTable() {
+            // Close the modal using classList to remove 'active' class
+            // This matches how modals are closed elsewhere in the site
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+            
+            // Give a slight delay to ensure modal is closed before scrolling
+            setTimeout(() => {
+                // Scroll to the value comparison section
+                const valueSection = document.getElementById('value-comparison-section');
+                if (valueSection) {
+                    valueSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+    </script>
 </body>
 </html>
