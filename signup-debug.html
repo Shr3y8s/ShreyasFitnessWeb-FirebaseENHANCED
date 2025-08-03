@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup Debug - SHREY.FIT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Signup Debug Page</h1>
+        <p>This page helps diagnose issues with the AWS Cognito signup process.</p>
+        
+        <h2>1. AWS Configuration</h2>
+        <pre id="config-output">Loading AWS configuration...</pre>
+        
+        <h2>2. Test Signup</h2>
+        <div class="form-group">
+            <label for="fullname">Full Name:</label>
+            <input type="text" id="fullname" placeholder="Enter your full name">
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" placeholder="Enter your email">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter password (min 8 chars, uppercase, lowercase, number, special)">
+        </div>
+        <button id="signup-btn">Test Signup</button>
+        
+        <h2>3. Console Output</h2>
+        <pre id="console-output">Console output will appear here...</pre>
+    </div>
+
+    <script type="module">
+        import { Amplify, Auth } from 'https://cdn.jsdelivr.net/npm/aws-amplify@5.0.4/+esm';
+        import awsConfig from './js/aws-config.js';
+        
+        // Initialize Amplify with our configuration
+        Amplify.configure(awsConfig);
+        
+        // Custom console logger
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function addToConsoleOutput(type, ...args) {
+            const timestamp = new Date().toISOString();
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return String(arg);
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            
+            const color = type === 'error' ? 'red' : 'black';
+            consoleOutput.innerHTML += `<span style="color: ${color}">[${timestamp}] ${type.toUpperCase()}: ${message}</span>\n\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Call original console method
+            if (type === 'error') {
+                originalConsoleError.apply(console, args);
+            } else {
+                originalConsoleLog.apply(console, args);
+            }
+        }
+        
+        // Override console methods
+        console.log = function(...args) {
+            addToConsoleOutput('log', ...args);
+        };
+        
+        console.error = function(...args) {
+            addToConsoleOutput('error', ...args);
+        };
+        
+        // Display AWS configuration
+        const configOutput = document.getElementById('config-output');
+        try {
+            // Create a sanitized version of the config (mask sensitive info)
+            const sanitizedConfig = JSON.parse(JSON.stringify(awsConfig));
+            if (sanitizedConfig.Auth && sanitizedConfig.Auth.userPoolWebClientId) {
+                sanitizedConfig.Auth.userPoolWebClientId = sanitizedConfig.Auth.userPoolWebClientId.substring(0, 4) + '...[MASKED]';
+            }
+            
+            configOutput.textContent = JSON.stringify(sanitizedConfig, null, 2);
+            console.log('AWS configuration loaded successfully');
+        } catch (error) {
+            configOutput.textContent = `Error loading AWS configuration: ${error.message}`;
+            console.error('Error loading AWS configuration:', error);
+        }
+        
+        // Handle signup button click
+        document.getElementById('signup-btn').addEventListener('click', async () => {
+            const fullname = document.getElementById('fullname').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!fullname || !email || !password) {
+                console.error('Please fill in all fields');
+                return;
+            }
+            
+            console.log('Starting signup process...');
+            console.log('Form values:', { fullname, email, password: '********' });
+            
+            try {
+                console.log('Calling Auth.signUp...');
+                const { user } = await Auth.signUp({
+                    username: email,
+                    password,
+                    attributes: {
+                        email,
+                        name: fullname
+                    }
+                });
+                
+                console.log('Signup successful!', user);
+                consoleOutput.innerHTML += '<span class="success">✅ SIGNUP SUCCESSFUL! Check your email for verification code.</span>\n\n';
+            } catch (error) {
+                console.error('Signup failed:', error);
+                consoleOutput.innerHTML += `<span class="error">❌ SIGNUP FAILED: ${error.message}</span>\n\n`;
+                
+                // Add more detailed error information
+                console.error('Error details:', {
+                    name: error.name,
+                    code: error.code,
+                    message: error.message
+                });
+            }
+        });
+        
+        console.log('Debug page initialized');
+    </script>
+</body>
+</html>

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- AWS Amplify will be imported in the module scripts -->
 </head>
 <body>
     <!-- Navigation -->
@@ -59,7 +60,7 @@
                 <h2>Join SHREY.FIT</h2>
                 <p>Create your account to start your fitness journey</p>
             </div>
-            
+
             <div class="signup-container">
                 <div class="signup-benefits">
                     <div class="benefit-header">
@@ -92,34 +93,51 @@
                         </li>
                     </ul>
                 </div>
-                
+
                 <div class="signup-form-container">
                     <form class="signup-form" action="#" method="post">
                         <div class="form-group">
                             <label for="fullname"><i class="fas fa-user"></i> Full Name <span class="required">*</span></label>
                             <input type="text" id="fullname" name="fullname" placeholder="Enter your full name" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="email"><i class="fas fa-envelope"></i> Email Address <span class="required">*</span></label>
                             <input type="email" id="email" name="email" placeholder="Enter your email address" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="phone"><i class="fas fa-phone"></i> Phone Number</label>
                             <input type="tel" id="phone" name="phone" placeholder="Enter your phone number">
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="password"><i class="fas fa-lock"></i> Password <span class="required">*</span></label>
                             <input type="password" id="password" name="password" placeholder="Create a password" required>
+                            <div class="password-requirements">
+                                <p class="requirements-title">Password must contain:</p>
+                                <ul class="requirements-list">
+                                    <li id="length-check"><i class="fas fa-times-circle"></i> At least 8 characters</li>
+                                    <li id="uppercase-check"><i class="fas fa-times-circle"></i> At least 1 uppercase letter</li>
+                                    <li id="lowercase-check"><i class="fas fa-times-circle"></i> At least 1 lowercase letter</li>
+                                    <li id="number-check"><i class="fas fa-times-circle"></i> At least 1 number</li>
+                                    <li id="special-check"><i class="fas fa-times-circle"></i> At least 1 special character</li>
+                                </ul>
+                            </div>
+                            <div class="password-strength">
+                                <div class="strength-meter">
+                                    <div class="strength-fill" id="strength-fill"></div>
+                                </div>
+                                <span id="strength-text">Password strength</span>
+                            </div>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="confirm-password"><i class="fas fa-lock"></i> Confirm Password <span class="required">*</span></label>
                             <input type="password" id="confirm-password" name="confirm-password" placeholder="Confirm your password" required>
+                            <div class="password-match" id="password-match-message"></div>
                         </div>
-                        
+
                         <div class="checkbox-group-enhanced">
                             <div class="custom-checkbox">
                                 <input type="checkbox" id="terms" name="terms" required>
@@ -133,11 +151,24 @@
                             </div>
                         </div>
                         
+                        <div class="checkbox-group-enhanced">
+                            <div class="custom-checkbox">
+                                <input type="checkbox" id="remember-signup" name="remember-signup" checked>
+                                <label for="remember-signup">
+                                    <div class="checkmark"></div>
+                                    <div class="checkbox-text">
+                                        <strong>Remember my login information</strong>
+                                        <small>Your browser will securely store your email and password for future logins</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
                         <button type="submit" class="btn-primary-enhanced">
                             <i class="fas fa-user-plus"></i>
                             Create Account
                         </button>
-                        
+
                         <div class="form-footer">
                             <p>Already have an account? <a href="account.html" class="login-link">Login</a></p>
                         </div>
@@ -180,20 +211,89 @@
         </div>
     </footer>
 
-
+    <!-- Original script -->
     <script src="script.js"></script>
-    <!-- Coming Soon Overlay with inline styles -->
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-        <div style="background-color: white; border-radius: 15px; padding: 40px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #2E7D32); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white;">
-                <i class="fas fa-rocket" style="font-size: 36px;"></i>
-            </div>
-            <h2 style="color: #2E7D32; margin-bottom: 20px; font-size: 1.8rem;">Client Portal Coming Soon!</h2>
-            <p style="color: #555; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">We're building an exciting new client portal to enhance your fitness journey.</p>
-            <a href="index.html" style="margin-top: 20px; display: inline-block; color: #4CAF50; text-decoration: none; font-weight: 500; transition: all 0.2s ease;">
-                <i class="fas fa-arrow-left"></i> Return to Homepage
-            </a>
-        </div>
-    </div>
+    
+    <!-- AWS Amplify and custom scripts -->
+    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/signup-handler.js"></script>
+    <script type="module" src="js/phone-formatter.js"></script>
+    
+    <style>
+        /* Password requirements styling */
+        .password-requirements {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .requirements-title {
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .requirements-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        
+        .requirements-list li {
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .requirements-list li i {
+            margin-right: 5px;
+            font-size: 0.8rem;
+        }
+        
+        .requirements-list .fa-times-circle {
+            color: #dc3545;
+        }
+        
+        .requirements-list .fa-check-circle {
+            color: #28a745;
+        }
+        
+        .password-strength {
+            margin-top: 10px;
+        }
+        
+        .strength-meter {
+            height: 5px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            margin-bottom: 5px;
+        }
+        
+        .strength-fill {
+            height: 100%;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s, background-color 0.3s;
+        }
+        
+        #strength-text {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .password-match {
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .match-error {
+            color: #dc3545;
+        }
+        
+        .match-success {
+            color: #28a745;
+        }
+    </style>
 </body>
 </html>

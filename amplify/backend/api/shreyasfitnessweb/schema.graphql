@@ -1,0 +1,28 @@
+type Message @model
+@auth(rules: [
+  { allow: groups, groups: ["coaches"], operations: [create, read, update, delete] },
+  { allow: owner, operations: [create, read] },
+  { allow: public, operations: [create], provider: apiKey }
+]) {
+  id: ID!
+  senderName: String!
+  senderEmail: String!
+  subject: String!
+  content: String!
+  read: Boolean!
+  archived: Boolean!
+  createdAt: AWSDateTime!
+}
+
+type User @model
+@auth(rules: [
+  { allow: groups, groups: ["coaches"], operations: [read, update] },
+  { allow: owner, operations: [read, update] }
+]) {
+  id: ID!
+  name: String!
+  email: String!
+  phone: String
+  userGroup: String!
+  createdAt: AWSDateTime!
+}

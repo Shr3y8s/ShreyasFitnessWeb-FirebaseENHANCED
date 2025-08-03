@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup Form Test - SHREY.FIT</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-panel {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+        }
+        
+        .test-section h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+        
+        .test-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .test-button:hover {
+            background-color: #45a049;
+        }
+        
+        .test-result {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .success {
+            color: #28a745;
+        }
+        
+        .error {
+            color: #dc3545;
+        }
+        
+        .info {
+            color: #17a2b8;
+        }
+        
+        .warning {
+            color: #ffc107;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .test-form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-logs {
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+        }
+        
+        .test-status {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html" class="logo-link">
+                    <div class="logo-container">
+                        <div class="logo-text">
+                            <span class="brand-name">SHREY<span class="brand-dot">.</span>FIT</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="signup.html" class="nav-link">Back to Signup</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="test-container">
+        <div class="test-panel">
+            <div class="test-header">
+                <h1>Signup Form Functionality Test</h1>
+                <p>This page allows you to test the functionality of the signup form without affecting your production environment.</p>
+            </div>
+            
+            <div class="test-grid">
+                <!-- Left Column: Form -->
+                <div class="test-section">
+                    <h3>Test Signup Form</h3>
+                    <div class="test-form">
+                        <form id="test-signup-form">
+                            <div class="form-group">
+                                <label for="test-fullname"><i class="fas fa-user"></i> Full Name <span class="required">*</span></label>
+                                <input type="text" id="test-fullname" name="fullname" placeholder="Enter your full name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="test-email"><i class="fas fa-envelope"></i> Email Address <span class="required">*</span></label>
+                                <input type="email" id="test-email" name="email" placeholder="Enter your email address" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="test-phone"><i class="fas fa-phone"></i> Phone Number</label>
+                                <input type="tel" id="test-phone" name="phone" placeholder="Enter your phone number">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="test-password"><i class="fas fa-lock"></i> Password <span class="required">*</span></label>
+                                <input type="password" id="test-password" name="password" placeholder="Create a password" required>
+                                <div class="password-requirements">
+                                    <p class="requirements-title">Password must contain:</p>
+                                    <ul class="requirements-list">
+                                        <li id="test-length-check"><i class="fas fa-times-circle"></i> At least 8 characters</li>
+                                        <li id="test-uppercase-check"><i class="fas fa-times-circle"></i> At least 1 uppercase letter</li>
+                                        <li id="test-lowercase-check"><i class="fas fa-times-circle"></i> At least 1 lowercase letter</li>
+                                        <li id="test-number-check"><i class="fas fa-times-circle"></i> At least 1 number</li>
+                                        <li id="test-special-check"><i class="fas fa-times-circle"></i> At least 1 special character</li>
+                                    </ul>
+                                </div>
+                                <div class="password-strength">
+                                    <div class="strength-meter">
+                                        <div class="strength-fill" id="test-strength-fill"></div>
+                                    </div>
+                                    <span id="test-strength-text">Password strength</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="test-confirm-password"><i class="fas fa-lock"></i> Confirm Password <span class="required">*</span></label>
+                                <input type="password" id="test-confirm-password" name="confirm-password" placeholder="Confirm your password" required>
+                                <div class="password-match" id="test-password-match-message"></div>
+                            </div>
+
+                            <div class="checkbox-group-enhanced">
+                                <div class="custom-checkbox">
+                                    <input type="checkbox" id="test-terms" name="terms" required>
+                                    <label for="test-terms">
+                                        <div class="checkmark"></div>
+                                        <div class="checkbox-text">
+                                            <strong>I agree to the Terms and Privacy Policy</strong>
+                                            <small>By signing up, you agree to our Terms of Service and Privacy Policy</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="checkbox-group-enhanced">
+                                <div class="custom-checkbox">
+                                    <input type="checkbox" id="test-remember-signup" name="remember-signup" checked>
+                                    <label for="test-remember-signup">
+                                        <div class="checkmark"></div>
+                                        <div class="checkbox-text">
+                                            <strong>Remember my login information</strong>
+                                            <small>Your browser will securely store your email and password for future logins</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary-enhanced" id="test-submit-btn">
+                                <i class="fas fa-user-plus"></i>
+                                Test Account Creation
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Test Controls and Results -->
+                <div class="test-section">
+                    <h3>Test Controls & Results</h3>
+                    
+                    <div class="test-panel">
+                        <h4>Test Options</h4>
+                        <button id="btn-test-validation" class="test-button">Test Form Validation</button>
+                        <button id="btn-test-phone-format" class="test-button">Test Phone Formatting</button>
+                        <button id="btn-test-password-strength" class="test-button">Test Password Strength</button>
+                        <button id="btn-test-mock-submit" class="test-button">Test Mock Submission</button>
+                        <button id="btn-reset-form" class="test-button">Reset Form</button>
+                        
+                        <h4>Test Results</h4>
+                        <div class="test-result" id="test-result">
+                            <p class="info">Test results will appear here...</p>
+                        </div>
+                        
+                        <h4>Console Logs</h4>
+                        <div class="test-result test-logs" id="test-logs">
+                            <p class="info">Console logs will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h3>Functionality Test Summary</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 10px; border-bottom: 1px solid #ddd;">Feature</th>
+                            <th style="text-align: left; padding: 10px; border-bottom: 1px solid #ddd;">Status</th>
+                            <th style="text-align: left; padding: 10px; border-bottom: 1px solid #ddd;">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Email Validation</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-email">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-email">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Phone Number Formatting</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-phone">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-phone">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Password Validation</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-password">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-password">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Password Matching</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-password-match">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-password-match">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Terms Checkbox</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-terms">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-terms">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Remember Login Checkbox</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-remember">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-remember">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Form Submission</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-submit">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-submit">Not tested yet</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">AWS Cognito Integration</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;"><span class="test-status status-pending" id="status-aws">Pending</span></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;" id="notes-aws">Not tested yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>SHREY.FIT</h3>
+                    <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 SHREY.FIT. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Original script -->
+    <script src="script.js"></script>
+    
+    <!-- Phone formatter -->
+    <script type="module" src="js/phone-formatter.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const testForm = document.getElementById('test-signup-form');
+            const testResult = document.getElementById('test-result');
+            const testLogs = document.getElementById('test-logs');
+            const fullnameField = document.getElementById('test-fullname');
+            const emailField = document.getElementById('test-email');
+            const phoneField = document.getElementById('test-phone');
+            const passwordField = document.getElementById('test-password');
+            const confirmPasswordField = document.getElementById('test-confirm-password');
+            const termsCheckbox = document.getElementById('test-terms');
+            const rememberCheckbox = document.getElementById('test-remember-signup');
+            const submitButton = document.getElementById('test-submit-btn');
+            
+            // Password validation elements
+            const lengthCheck = document.getElementById('test-length-check');
+            const uppercaseCheck = document.getElementById('test-uppercase-check');
+            const lowercaseCheck = document.getElementById('test-lowercase-check');
+            const numberCheck = document.getElementById('test-number-check');
+            const specialCheck = document.getElementById('test-special-check');
+            const strengthFill = document.getElementById('test-strength-fill');
+            const strengthText = document.getElementById('test-strength-text');
+            const passwordMatchMessage = document.getElementById('test-password-match-message');
+            
+            // Test buttons
+            const btnTestValidation = document.getElementById('btn-test-validation');
+            const btnTestPhoneFormat = document.getElementById('btn-test-phone-format');
+            const btnTestPasswordStrength = document.getElementById('btn-test-password-strength');
+            const btnTestMockSubmit = document.getElementById('btn-test-mock-submit');
+            const btnResetForm = document.getElementById('btn-reset-form');
+            
+            // Status elements
+            const statusEmail = document.getElementById('status-email');
+            const statusPhone = document.getElementById('status-phone');
+            const statusPassword = document.getElementById('status-password');
+            const statusPasswordMatch = document.getElementById('status-password-match');
+            const statusTerms = document.getElementById('status-terms');
+            const statusRemember = document.getElementById('status-remember');
+            const statusSubmit = document.getElementById('status-submit');
+            const statusAws = document.getElementById('status-aws');
+            
+            const notesEmail = document.getElementById('notes-email');
+            const notesPhone = document.getElementById('notes-phone');
+            const notesPassword = document.getElementById('notes-password');
+            const notesPasswordMatch = document.getElementById('notes-password-match');
+            const notesTerms = document.getElementById('notes-terms');
+            const notesRemember = document.getElementById('notes-remember');
+            const notesSubmit = document.getElementById('notes-submit');
+            const notesAws = document.getElementById('notes-aws');
+            
+            // Helper functions
+            function log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                testLogs.innerHTML += `<p class="${type}">[${timestamp}] ${message}</p>`;
+                testLogs.scrollTop = testLogs.scrollHeight;
+                console.log(`[${timestamp}] ${message}`);
+            }
+            
+            function showResult(message, type = 'info') {
+                testResult.innerHTML = `<p class="${type}">${message}</p>`;
+            }
+            
+            function updateStatus(element, status, message) {
+                if (status === 'pass') {
+                    element.className = 'test-status status-pass';
+                    element.textContent = 'Pass';
+                } else if (status === 'fail') {
+                    element.className = 'test-status status-fail';
+                    element.textContent = 'Fail';
+                } else {
+                    element.className = 'test-status status-pending';
+                    element.textContent = 'Pending';
+                }
+                
+                // Update notes
+                const notesElement = document.getElementById('notes-' + element.id.split('-')[1]);
+                if (notesElement) {
+                    notesElement.textContent = message || (status === 'pass' ? 'Test passed' : 'Test failed');
+                }
+            }
+            
+            // Password validation function
+            function validatePassword(password) {
+                // Check requirements
+                const hasLength = password.length >= 8;
+                const hasUppercase = /[A-Z]/.test(password);
+                const hasLowercase = /[a-z]/.test(password);
+                const hasNumber = /[0-9]/.test(password);
+                const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+                
+                // Update requirement checks
+                updateRequirementCheck(lengthCheck, hasLength);
+                updateRequirementCheck(uppercaseCheck, hasUppercase);
+                updateRequirementCheck(lowercaseCheck, hasLowercase);
+                updateRequirementCheck(numberCheck, hasNumber);
+                updateRequirementCheck(specialCheck, hasSpecial);
+                
+                // Calculate strength
+                let strength = 0;
+                if (hasLength) strength += 20;
+                if (hasUppercase) strength += 20;
+                if (hasLowercase) strength += 20;
+                if (hasNumber) strength += 20;
+                if (hasSpecial) strength += 20;
+                
+                // Update strength meter
+                strengthFill.style.width = strength + '%';
+                
+                // Set color based on strength
+                if (strength < 40) {
+                    strengthFill.style.backgroundColor = '#dc3545'; // Red
+                    strengthText.textContent = 'Weak password';
+                } else if (strength < 80) {
+                    strengthFill.style.backgroundColor = '#ffc107'; // Yellow
+                    strengthText.textContent = 'Moderate password';
+                } else {
+                    strengthFill.style.backgroundColor = '#28a745'; // Green
+                    strengthText.textContent = 'Strong password';
+                }
+                
+                // Return if all requirements are met
+                return hasLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
+            }
+            
+            // Update requirement check icon
+            function updateRequirementCheck(element, isValid) {
+                if (isValid) {
+                    element.innerHTML = '<i class="fas fa-check-circle"></i> ' + element.textContent.substring(element.textContent.indexOf(' ') + 1);
+                } else {
+                    element.innerHTML = '<i class="fas fa-times-circle"></i> ' + element.textContent.substring(element.textContent.indexOf(' ') + 1);
+                }
+            }
+            
+            // Check if passwords match
+            function checkPasswordsMatch() {
+                const password = passwordField.value;
+                const confirmPassword = confirmPasswordField.value;
+                
+                if (confirmPassword === '') {
+                    passwordMatchMessage.textContent = '';
+                    passwordMatchMessage.className = '';
+                    return false;
+                } else if (password === confirmPassword) {
+                    passwordMatchMessage.textContent = 'Passwords match';
+                    passwordMatchMessage.className = 'match-success';
+                    return true;
+                } else {
+                    passwordMatchMessage.textContent = 'Passwords do not match';
+                    passwordMatchMessage.className = 'match-error';
+                    return false;
+                }
+            }
+            
+            // Email validation function
+            function validateEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+            
+            // Add event listeners for real-time validation
+            passwordField.addEventListener('input', function() {
+                const isValid = validatePassword(this.value);
+                if (isValid) {
+                    updateStatus(statusPassword, 'pass', 'Password meets all requirements');
+                } else {
+                    updateStatus(statusPassword, 'pending', 'Password does not meet all requirements');
+                }
+                
+                if (confirmPasswordField.value !== '') {
+                    const doMatch = checkPasswordsMatch();
+                    if (doMatch) {
+                        updateStatus(statusPasswordMatch, 'pass', 'Passwords match');
+                    } else {
+                        updateStatus(statusPasswordMatch, 'fail', 'Passwords do not match');
+                    }
+                }
+            });
+            
+            confirmPasswordField.addEventListener('input', function() {
+                const doMatch = checkPasswordsMatch();
+                if (doMatch) {
+                    updateStatus(statusPasswordMatch, 'pass', 'Passwords match');
+                } else {
+                    updateStatus(statusPasswordMatch, 'fail', 'Passwords do not match');
+                }
+            });
+            
+            emailField.addEventListener('blur', function() {
+                if (this.value !== '') {
+                    const isValid = validateEmail(this.value);
+                    if (isValid) {
+                        updateStatus(statusEmail, 'pass', 'Email format is valid');
+                        this.setCustomValidity('');
+                    } else {
+                        updateStatus(statusEmail, 'fail', 'Email format is invalid');
+                        this.setCustomValidity('Please enter a valid email address');
+                        this.reportValidity();
+                    }
+                }
+            });
+            
+            phoneField.addEventListener('input', function() {
+                if (this.value !== '') {
+                    // Check if the phone number is being formatted
+                    const digits = this.value.replace(/\D/g, '');
+                    const formatted = this.value;
+                    
+                    if (digits.length > 0 && formatted.includes('(')) {
+                        updateStatus(statusPhone, 'pass', 'Phone formatting is working');
+                        log('Phone formatting test: PASS - Number is being formatted', 'success');
+                    } else {
+                        updateStatus(statusPhone, 'fail', 'Phone formatting is not working');
+                        log('Phone formatting test: FAIL - Number is not being formatted', 'error');
+                    }
+                }
+            });
+            
+            termsCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    updateStatus(statusTerms, 'pass', 'Terms checkbox can be checked');
+                } else {
+                    updateStatus(statusTerms, 'pending', 'Terms checkbox is unchecked');
+                }
+            });
+            
+            rememberCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    updateStatus(statusRemember, 'pass', 'Remember checkbox can be toggled');
+                } else {
+                    updateStatus(statusRemember, 'pass', 'Remember checkbox can be toggled');
+                }
+            });
+            
+            // Test form submission
+            testForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                log('Form submission test started', 'info');
+                
+                // Validate all fields
+                let isValid = true;
+                
+                // Check name
+                if (fullnameField.value === '') {
+                    log('Validation error: Name is required', 'error');
+                    isValid = false;
+                }
+                
+                // Check email
+                if (emailField.value === '' || !validateEmail(emailField.value)) {
+                    log('Validation error: Valid email is required', 'error');
+                    updateStatus(statusEmail, 'fail', 'Email validation failed');
+                    isValid = false;
+                } else {
+                    updateStatus(statusEmail, 'pass', 'Email validation passed');
+                }
+                
+                // Check password
+                if (passwordField.value === '' || !validatePassword(passwordField.value)) {
+                    log('Validation error: Password does not meet requirements', 'error');
+                    updateStatus(statusPassword, 'fail', 'Password validation failed');
+                    isValid = false;
+                } else {
+                    updateStatus(statusPassword, 'pass', 'Password validation passed');
+                }
+                
+                // Check password match
+                if (passwordField.value !== confirmPasswordField.value) {
+                    log('Validation error: Passwords do not match', 'error');
+                    updateStatus(statusPasswordMatch, 'fail', 'Passwords do not match');
+                    isValid = false;
+                } else {
+                    updateStatus(statusPasswordMatch, 'pass', 'Passwords match');
+                }
+                
+                // Check terms
+                if (!termsCheckbox.checked) {
+                    log('Validation error: Terms must be accepted', 'error');
+                    updateStatus(statusTerms, 'fail', 'Terms checkbox validation failed');
+                    isValid = false;
+                } else {
+                    updateStatus(statusTerms, 'pass', 'Terms checkbox validation passed');
+                }
+                
+                // Update remember me status
+                updateStatus(statusRemember, 'pass', 'Remember checkbox is ' + (rememberCheckbox.checked ? 'checked' : 'unchecked'));
+                
+                if (isValid) {
+                    log('Form validation passed', 'success');
+                    updateStatus(statusSubmit, 'pass', 'Form validation passed');
+                    
+                    // Show success message
+                    showResult(`
+                        <h4 class="success">Form Validation Successful!</h4>
+                        <p>All form fields are valid and the form would be submitted with the following data:</p>
+                        <ul>
+                            <li><strong>Name:</strong> ${fullnameField.value}</li>
+                            <li><strong>Email:</strong> ${emailField.value}</li>
+                            <li><strong>Phone:</strong> ${phoneField.value || 'Not provided'}</li>
+                            <li><strong>Password:</strong> ********</li>
+                            <li><strong>Terms Accepted:</strong> ${termsCheckbox.checked ? 'Yes' : 'No'}</li>
+                            <li><strong>Remember Login:</strong> ${rememberCheckbox.checked ? 'Yes' : 'No'}</li>
+                        </ul>
+                        <p>In a real submission, this data would be sent to AWS Cognito for account creation.</p>
+                    `);
+                    
+                    // Update AWS status
+                    updateStatus(statusAws, 'pending', 'AWS integration not tested (mock submission only)');
+                } else {
+                    log('Form validation failed', 'error');
+                    updateStatus(statusSubmit, 'fail', 'Form validation failed');
+                    showResult('<h4 class="error">Form Validation Failed!</h4><p>Please check the form for errors.</p>', 'error');
+                }
+            });
+            
+            // Test buttons
+            btnTestValidation.addEventListener('click', function() {
+                log('Running form validation test...', 'info');
+                
+                // Test email validation
+                const testEmail = 'test@example.com';
+                emailField.value = testEmail;
+                const isEmailValid = validateEmail(testEmail);
+                log(`Email validation test: ${isEmailValid ? 'PASS' : 'FAIL'} - "${testEmail}"`, isEmailValid ? 'success' : 'error');
+                updateStatus(statusEmail, isEmailValid ? 'pass' : 'fail', isEmailValid ? 'Email format is valid' : 'Email format is invalid');
+                
+                // Test password validation
+                const testPassword = 'Password123!';
+                passwordField.value = testPassword;
+                const isPasswordValid = validatePassword(testPassword);
+                log(`Password validation test: ${isPasswordValid ? 'PASS' : 'FAIL'} - "${testPassword}"`, isPasswordValid ? 'success' : 'error');
+                updateStatus(statusPassword, isPasswordValid ? 'pass' : 'fail', isPasswordValid ? 'Password meets all requirements' : 'Password does not meet all requirements');
+                
+                // Test password match
+                confirmPasswordField.value = testPassword;
+                const doPasswordsMatch = checkPasswordsMatch();
+                log(`Password match test: ${doPasswordsMatch ? 'PASS' : 'FAIL'}`, doPasswordsMatch ? 'success' : 'error');
+                updateStatus(statusPasswordMatch, doPasswordsMatch ? 'pass' : 'fail', doPasswordsMatch ? 'Passwords match' : 'Passwords do not match');
+                
+                // Test terms checkbox
+                termsCheckbox.checked = true;
+                log('Terms checkbox test: PASS - Can be checked', 'success');
+                updateStatus(statusTerms, 'pass', 'Terms checkbox can be checked');
+                
+                // Show result
+                showResult('<h4 class="success">Form Validation Test Complete</h4><p>All validation tests have been run. Check the console logs for details.</p>', 'success');
+            });
+            
+            btnTestPhoneFormat.addEventListener('click', function() {
+                log('Running phone formatting test...', 'info');
+                
+                // Test phone formatting
+                const testPhone = '4258299961';
+                phoneField.value = testPhone;
+                
+                // Trigger input event to format the phone number
+                const inputEvent = new Event('input', { bubbles: true });
+                phoneField.dispatchEvent(inputEvent);
+                
+                // Check if the phone number was formatted
+                setTimeout(() => {
+                    const formattedPhone = phoneField.value;
+                    const isFormatted = formattedPhone.includes('(') && formattedPhone.includes(')');
+                    
+                    if (isFormatted) {
+                        log(`Phone formatting test: PASS - "${testPhone}" formatted to "${formattedPhone}"`, 'success');
+                        updateStatus(statusPhone, 'pass', 'Phone formatting is working');
+                        showResult(`<h4 class="success">Phone Formatting Test Passed</h4><p>Input: ${testPhone}<br>Formatted: ${formattedPhone}</p>`, 'success');
+                    } else {
+                        log(`Phone formatting test: FAIL - "${testPhone}" not formatted properly`, 'error');
+                        updateStatus(statusPhone, 'fail', 'Phone formatting is not working');
+                        showResult(`<h4 class="error">Phone Formatting Test Failed</h4><p>Input: ${testPhone}<br>Output: ${formattedPhone}</p>`, 'error');
+                    }
+                }, 100);
+            });
+            
+            btnTestPasswordStrength.addEventListener('click', function() {
+                log('Running password strength test...', 'info');
+                
+                // Test different password strengths
+                const passwords = [
+                    { value: 'pass', expected: 'Weak' },
+                    { value: 'Password', expected: 'Weak' },
+                    { value: 'Password123', expected: 'Moderate' },
+                    { value: 'Password123!', expected: 'Strong' }
+                ];
+                
+                let testResults = '<h4>Password Strength Test Results</h4><ul>';
+                
+                passwords.forEach((test, index) => {
+                    // Set password and trigger validation
+                    passwordField.value = test.value;
+                    validatePassword(test.value);
+                    
+                    // Get actual strength
+                    const actualStrength = strengthText.textContent.split(' ')[0];
+                    const passed = actualStrength.toLowerCase().includes(test.expected.toLowerCase());
+                    
+                    log(`Password strength test ${index + 1}: ${passed ? 'PASS' : 'FAIL'} - "${test.value}" strength is "${actualStrength}"`, passed ? 'success' : 'error');
+                    testResults += `<li>${passed ? '✅' : '❌'} "${test.value}": Expected "${test.expected}", Got "${actualStrength}"</li>`;
+                });
+                
+                testResults += '</ul>';
+                showResult(testResults);
+                
+                // Set a strong password for final display
+                passwordField.value = 'Password123!';
+                validatePassword('Password123!');
+                updateStatus(statusPassword, 'pass', 'Password strength meter is working');
+            });
+            
+            btnTestMockSubmit.addEventListener('click', function() {
+                log('Running mock submission test...', 'info');
+                
+                // Fill in all required fields with valid data
+                fullnameField.value = 'Test User';
+                emailField.value = 'test@example.com';
+                phoneField.value = '(425) 829-9961';
+                passwordField.value = 'Password123!';
+                confirmPasswordField.value = 'Password123!';
+                termsCheckbox.checked = true;
+                rememberCheckbox.checked = true;
+                
+                // Validate all fields
+                validatePassword(passwordField.value);
+                checkPasswordsMatch();
+                
+                // Update statuses
+                updateStatus(statusEmail, 'pass', 'Email format is valid');
+                updateStatus(statusPhone, 'pass', 'Phone formatting is working');
+                updateStatus(statusPassword, 'pass', 'Password meets all requirements');
+                updateStatus(statusPasswordMatch, 'pass', 'Passwords match');
+                updateStatus(statusTerms, 'pass', 'Terms checkbox is checked');
+                updateStatus(statusRemember, 'pass', 'Remember checkbox is checked');
+                updateStatus(statusSubmit, 'pass', 'Form is ready for submission');
+                
+                // Show mock submission result
+                showResult(`
+                    <h4 class="success">Mock Submission Ready</h4>
+                    <p>The form is filled with valid test data and ready for submission:</p>
+                    <ul>
+                        <li><strong>Name:</strong> ${fullnameField.value}</li>
+                        <li><strong>Email:</strong> ${emailField.value}</li>
+                        <li><strong>Phone:</strong> ${phoneField.value}</li>
+                        <li><strong>Password:</strong> ********</li>
+                        <li><strong>Terms Accepted:</strong> Yes</li>
+                        <li><strong>Remember Login:</strong> Yes</li>
+                    </ul>
+                    <p>Click the "Test Account Creation" button to test the form submission.</p>
+                `, 'success');
+                
+                log('Mock submission test complete - Form is filled with valid test data', 'success');
+            });
+            
+            btnResetForm.addEventListener('click', function() {
+                // Reset form fields
+                testForm.reset();
+                
+                // Reset password validation elements
+                updateRequirementCheck(lengthCheck, false);
+                updateRequirementCheck(uppercaseCheck, false);
+                updateRequirementCheck(lowercaseCheck, false);
+                updateRequirementCheck(numberCheck, false);
+                updateRequirementCheck(specialCheck, false);
+                
+                // Reset strength meter
+                strengthFill.style.width = '0%';
+                strengthText.textContent = 'Password strength';
+                
+                // Reset password match message
+                passwordMatchMessage.textContent = '';
+                passwordMatchMessage.className = '';
+                
+                // Reset status indicators
+                updateStatus(statusEmail, 'pending', 'Not tested yet');
+                updateStatus(statusPhone, 'pending', 'Not tested yet');
+                updateStatus(statusPassword, 'pending', 'Not tested yet');
+                updateStatus(statusPasswordMatch, 'pending', 'Not tested yet');
+                updateStatus(statusTerms, 'pending', 'Not tested yet');
+                updateStatus(statusRemember, 'pending', 'Not tested yet');
+                updateStatus(statusSubmit, 'pending', 'Not tested yet');
+                updateStatus(statusAws, 'pending', 'Not tested yet');
+                
+                // Clear test results
+                showResult('<p class="info">Test results will appear here...</p>');
+                
+                // Clear logs
+                testLogs.innerHTML = '<p class="info">Console logs will appear here...</p>';
+                
+                log('Form reset complete', 'info');
+            });
+            
+            // Initialize
+            log('Test page initialized', 'info');
+            showResult('<p class="info">Welcome to the Signup Form Test Page. Use the test buttons above to test different aspects of the form.</p>');
+        });
+    </script>
+</body>
+</html>

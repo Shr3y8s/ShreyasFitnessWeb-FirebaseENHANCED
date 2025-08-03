@@ -1,0 +1,11 @@
+{
+  "AppSyncApiName": "shreyasfitnessweb",
+  "DynamoDBBillingMode": "PAY_PER_REQUEST",
+  "DynamoDBEnableServerSideEncryption": false,
+  "AuthCognitoUserPoolId": {
+    "Fn::GetAtt": [
+      "authshreyasfitnessweb215ca8f0",
+      "Outputs.UserPoolId"
+    ]
+  }
+}

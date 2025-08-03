@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coach Dashboard - SHREY.FIT</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Coach Dashboard Specific Styles */
+        .dashboard-container {
+            padding: 2rem 0;
+        }
+        
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-title {
+            margin: 0;
+            font-size: 2rem;
+            color: #333;
+        }
+        
+        .dashboard-tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-tab.active {
+            color: #4CAF50;
+            border-bottom-color: #4CAF50;
+        }
+        
+        .dashboard-tab:hover:not(.active) {
+            color: #333;
+            border-bottom-color: #ddd;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Message List Styles */
+        .message-list {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .message-item {
+            display: flex;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .message-item:last-child {
+            border-bottom: none;
+        }
+        
+        .message-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .message-item.unread {
+            background-color: #f0f7ff;
+        }
+        
+        .message-item.unread:hover {
+            background-color: #e5f1ff;
+        }
+        
+        .message-status {
+            flex: 0 0 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+        }
+        
+        .message-item.unread .status-indicator {
+            background-color: #2196F3;
+        }
+        
+        .message-content {
+            flex: 1;
+        }
+        
+        .message-sender {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .message-subject {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .message-preview {
+            color: #666;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 500px;
+        }
+        
+        .message-meta {
+            flex: 0 0 150px;
+            text-align: right;
+        }
+        
+        .message-date {
+            font-size: 0.85rem;
+            color: #888;
+        }
+        
+        .message-actions {
+            margin-top: 0.5rem;
+        }
+        
+        .message-action-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+            transition: color 0.2s ease;
+        }
+        
+        .message-action-btn:hover {
+            color: #4CAF50;
+        }
+        
+        .message-action-btn.archive:hover {
+            color: #FF9800;
+        }
+        
+        .message-action-btn.delete:hover {
+            color: #F44336;
+        }
+        
+        /* Message Detail View */
+        .message-detail {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 2rem;
+        }
+        
+        .message-detail-header {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .message-detail-subject {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .message-detail-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .message-detail-sender {
+            font-weight: 500;
+        }
+        
+        .message-detail-content {
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+        
+        .message-detail-actions {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .detail-action-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-left: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .reply-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .reply-btn:hover {
+            background-color: #3d9c40;
+        }
+        
+        .archive-btn {
+            background-color: #FF9800;
+            color: white;
+        }
+        
+        .archive-btn:hover {
+            background-color: #e68900;
+        }
+        
+        .back-btn {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        
+        .back-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* User List Styles */
+        .user-list {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .user-item {
+            display: flex;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .user-item:last-child {
+            border-bottom: none;
+        }
+        
+        .user-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .user-avatar {
+            flex: 0 0 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+            color: #666;
+        }
+        
+        .user-info {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .user-email {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        
+        .user-group {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .user-group.coach {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .user-group.client {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .user-actions {
+            flex: 0 0 100px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .user-action-btn {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+            transition: color 0.2s ease;
+            font-size: 1.1rem;
+        }
+        
+        .user-action-btn:hover {
+            color: #4CAF50;
+        }
+        
+        .user-action-btn.edit:hover {
+            color: #2196F3;
+        }
+        
+        /* Loading Indicator */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4CAF50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 1rem;
+        }
+        
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html" class="logo-link">
+                    <div class="logo-container">
+                        <div class="logo-text">
+                            <span class="brand-name">SHREY<span class="brand-dot">.</span>FIT</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="about.html" class="nav-link">About Me</a>
+                </li>
+                <li class="nav-item">
+                    <a href="services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="connect.html" class="nav-link">Connect</a>
+                </li>
+                <li class="nav-item">
+                    <a href="faq.html" class="nav-link">FAQ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="blog.html" class="nav-link">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a href="coach-dashboard.html" class="nav-link account-btn active">Coach Dashboard</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Coach Dashboard -->
+    <section class="dashboard-container">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Coach Dashboard</h1>
+                <button id="logout-btn" class="btn-secondary">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+
+            <div class="dashboard-tabs">
+                <div class="dashboard-tab active" data-tab="messages">
+                    <i class="fas fa-envelope"></i> Messages
+                </div>
+                <div class="dashboard-tab" data-tab="users">
+                    <i class="fas fa-users"></i> Users
+                </div>
+                <div class="dashboard-tab" data-tab="settings">
+                    <i class="fas fa-cog"></i> Settings
+                </div>
+            </div>
+
+            <!-- Messages Tab -->
+            <div id="messages-tab" class="tab-content active">
+                <div id="message-list-view">
+                    <div class="message-list">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading messages...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="message-detail-view" style="display: none;">
+                    <div class="message-detail">
+                        <div class="message-detail-header">
+                            <h2 class="message-detail-subject">Message Subject</h2>
+                            <div class="message-detail-meta">
+                                <div class="message-detail-sender">
+                                    From: <span id="detail-sender-name">John Doe</span> (<span id="detail-sender-email">john@example.com</span>)
+                                </div>
+                                <div class="message-detail-date" id="detail-date">July 15, 2025</div>
+                            </div>
+                        </div>
+                        <div class="message-detail-content" id="detail-content">
+                            Message content will appear here.
+                        </div>
+                        <div class="message-detail-actions">
+                            <button class="detail-action-btn back-btn" id="back-to-list-btn">
+                                <i class="fas fa-arrow-left"></i> Back to List
+                            </button>
+                            <button class="detail-action-btn archive-btn" id="archive-message-btn">
+                                <i class="fas fa-archive"></i> Archive
+                            </button>
+                            <button class="detail-action-btn reply-btn" id="reply-message-btn">
+                                <i class="fas fa-reply"></i> Reply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content">
+                <div class="user-list">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading users...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-content">
+                <h2>Account Settings</h2>
+                <p>Settings functionality will be implemented in a future update.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>SHREY.FIT</h3>
+                    <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="services.html">In-Person Training</a></li>
+                        <li><a href="services.html">Online Coaching</a></li>
+                        <li><a href="services.html">Complete Transformation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="about.html">About Me</a></li>
+                        <li><a href="blog.html">Blog</a></li>
+                        <li><a href="connect.html">Contact</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                        <li><a href="account.html">My Account</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 SHREY.FIT. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Original script -->
+    <script src="script.js"></script>
+    
+    <!-- AWS Amplify and custom scripts -->
+    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/coach-dashboard.js"></script>
+</body>
+</html>
