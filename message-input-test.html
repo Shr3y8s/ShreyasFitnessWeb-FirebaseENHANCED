@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Input Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .console-output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #222;
+            color: #f8f8f8;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Message Input Test</h1>
+        <p>This page tests the message input field functionality.</p>
+        
+        <form id="contact-form">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="tel" id="phone" name="phone">
+            </div>
+            
+            <div class="form-group">
+                <label for="service">Service</label>
+                <select id="service" name="service" required>
+                    <option value="Personal Training">Personal Training</option>
+                    <option value="Nutrition Coaching">Nutrition Coaching</option>
+                    <option value="Online Coaching">Online Coaching</option>
+                    <option value="Group Classes">Group Classes</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="message-text">Message</label>
+                <textarea id="message-text" name="message" rows="5" required></textarea>
+            </div>
+            
+            <button type="button" onclick="testMessageInput()">Test Message Input</button>
+        </form>
+        
+        <h2>Console Output</h2>
+        <div id="console-output" class="console-output"></div>
+    </div>
+
+    <script>
+        // Custom console logger
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function addToConsoleOutput(type, ...args) {
+            const timestamp = new Date().toISOString();
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return String(arg);
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            
+            const color = type === 'error' ? 'red' : 'white';
+            consoleOutput.innerHTML += `<div style="color: ${color}"><strong>[${timestamp}]</strong> ${type.toUpperCase()}: ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Call original console method
+            if (type === 'error') {
+                originalConsoleError.apply(console, args);
+            } else {
+                originalConsoleLog.apply(console, args);
+            }
+        }
+        
+        // Override console methods
+        console.log = function(...args) {
+            addToConsoleOutput('log', ...args);
+        };
+        
+        console.error = function(...args) {
+            addToConsoleOutput('error', ...args);
+        };
+        
+        // Test message input function
+        function testMessageInput() {
+            const messageText = document.getElementById('message-text').value;
+            console.log('Message input value:', messageText);
+            
+            // Test if we can modify the value
+            document.getElementById('message-text').value = messageText + ' (modified)';
+            console.log('Modified message input value:', document.getElementById('message-text').value);
+            
+            // Test if we can focus the field
+            document.getElementById('message-text').focus();
+            console.log('Message input field focused');
+        }
+        
+        // Log when the page is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded');
+            console.log('Message input field:', document.getElementById('message-text'));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Amplify Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+        }
+        pre {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+        }
+    </style>
+    <!-- AWS Configuration -->
+    <script src="js/aws-config.js"></script>
+    <!-- AWS Amplify Bundle -->
+    <script src="js/amplify-bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>AWS Amplify Integration Test</h1>
+        <p>This page tests the AWS Amplify integration for authentication and API functionality.</p>
+        
+        <div class="test-section">
+            <h2>1. AWS Configuration</h2>
+            <pre id="config-output">Loading AWS configuration...</pre>
+            <button id="test-config">Test Configuration</button>
+            <div id="config-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. Authentication Test</h2>
+            <p>Test Cognito authentication functionality:</p>
+            <button id="test-auth">Test Authentication</button>
+            <div id="auth-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. API Test</h2>
+            <p>Test GraphQL API functionality:</p>
+            <button id="test-api">Test API</button>
+            <div id="api-result" class="test-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. Console Output</h2>
+            <pre id="console-output">Console output will appear here...</pre>
+        </div>
+    </div>
+
+    <script>
+        // Custom console logger
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function addToConsoleOutput(type, ...args) {
+            const timestamp = new Date().toISOString();
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    try {
+                        return JSON.stringify(arg, null, 2);
+                    } catch (e) {
+                        return String(arg);
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+            
+            const color = type === 'error' ? 'red' : 'black';
+            consoleOutput.innerHTML += `<span style="color: ${color}">[${timestamp}] ${type.toUpperCase()}: ${message}</span>\n\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Call original console method
+            if (type === 'error') {
+                originalConsoleError.apply(console, args);
+            } else {
+                originalConsoleLog.apply(console, args);
+            }
+        }
+        
+        // Override console methods
+        console.log = function(...args) {
+            addToConsoleOutput('log', ...args);
+        };
+        
+        console.error = function(...args) {
+            addToConsoleOutput('error', ...args);
+        };
+        
+        // Initialize Amplify
+        function initializeAmplify() {
+            try {
+                if (typeof Amplify !== 'undefined') {
+                    Amplify.configure(window.awsConfig);
+                    console.log('Amplify configured successfully');
+                    return true;
+                } else {
+                    console.error('Amplify is not defined');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error configuring Amplify:', error);
+                return false;
+            }
+        }
+        
+        // Display AWS configuration
+        document.getElementById('test-config').addEventListener('click', function() {
+            const configOutput = document.getElementById('config-output');
+            const configResult = document.getElementById('config-result');
+            
+            try {
+                // Create a sanitized version of the config (mask sensitive info)
+                const sanitizedConfig = JSON.parse(JSON.stringify(window.awsConfig));
+                if (sanitizedConfig.Auth && sanitizedConfig.Auth.userPoolWebClientId) {
+                    sanitizedConfig.Auth.userPoolWebClientId = sanitizedConfig.Auth.userPoolWebClientId.substring(0, 4) + '...[MASKED]';
+                }
+                if (sanitizedConfig.API && sanitizedConfig.API.aws_appsync_apiKey) {
+                    sanitizedConfig.API.aws_appsync_apiKey = sanitizedConfig.API.aws_appsync_apiKey.substring(0, 4) + '...[MASKED]';
+                }
+                
+                configOutput.textContent = JSON.stringify(sanitizedConfig, null, 2);
+                
+                // Test if Amplify is properly initialized
+                const amplifyInitialized = initializeAmplify();
+                
+                if (amplifyInitialized) {
+                    configResult.innerHTML = '<span class="success">✅ AWS Configuration loaded successfully</span>';
+                    configResult.innerHTML += '<br>Amplify version: ' + (Amplify.version || 'unknown');
+                } else {
+                    configResult.innerHTML = '<span class="error">❌ Failed to initialize Amplify</span>';
+                }
+            } catch (error) {
+                configOutput.textContent = `Error loading AWS configuration: ${error.message}`;
+                configResult.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+                console.error('Error loading AWS configuration:', error);
+            }
+        });
+        
+        // Test Authentication
+        document.getElementById('test-auth').addEventListener('click', async function() {
+            const authResult = document.getElementById('auth-result');
+            authResult.innerHTML = 'Testing authentication...';
+            
+            try {
+                // Initialize Amplify if not already done
+                initializeAmplify();
+                
+                // Check if we're using mock or real implementation
+                const isMock = Amplify.version && Amplify.version.includes('mock');
+                
+                if (isMock) {
+                    console.log('Using mock Amplify implementation for authentication test');
+                    
+                    // Test mock sign up
+                    const signUpResponse = await Amplify.Auth.signUp({
+                        username: 'test@example.com',
+                        password: 'Password123!',
+                        attributes: {
+                            email: 'test@example.com',
+                            name: 'Test User'
+                        }
+                    });
+                    
+                    console.log('Mock signup response:', signUpResponse);
+                    
+                    // Test mock sign in
+                    const signInResponse = await Amplify.Auth.signIn('test@example.com', 'Password123!');
+                    console.log('Mock signin response:', signInResponse);
+                    
+                    authResult.innerHTML = '<span class="success">✅ Mock authentication test passed</span>';
+                    authResult.innerHTML += '<br>Successfully tested mock signup and signin';
+                } else {
+                    // For real implementation, just check if the Auth module is available
+                    if (Amplify.Auth) {
+                        authResult.innerHTML = '<span class="success">✅ Authentication module available</span>';
+                        authResult.innerHTML += '<br>Auth module is properly configured';
+                    } else {
+                        authResult.innerHTML = '<span class="error">❌ Authentication module not available</span>';
+                    }
+                }
+            } catch (error) {
+                authResult.innerHTML = '<span class="error">❌ Authentication test failed: ' + error.message + '</span>';
+                console.error('Authentication test error:', error);
+            }
+        });
+        
+        // Test API
+        document.getElementById('test-api').addEventListener('click', async function() {
+            const apiResult = document.getElementById('api-result');
+            apiResult.innerHTML = 'Testing API...';
+            
+            try {
+                // Initialize Amplify if not already done
+                initializeAmplify();
+                
+                // Check if we're using mock or real implementation
+                const isMock = Amplify.version && Amplify.version.includes('mock');
+                
+                if (isMock) {
+                    console.log('Using mock Amplify implementation for API test');
+                    
+                    // Test mock GraphQL API
+                    const createMessageMutation = `
+                        mutation CreateMessage($input: CreateMessageInput!) {
+                            createMessage(input: $input) {
+                                id
+                                senderName
+                                senderEmail
+                                subject
+                                content
+                                read
+                                archived
+                                createdAt
+                            }
+                        }
+                    `;
+                    
+                    const messageInput = {
+                        senderName: 'Test User',
+                        senderEmail: 'test@example.com',
+                        subject: 'Test Message',
+                        content: 'This is a test message',
+                        read: false,
+                        archived: false
+                    };
+                    
+                    const response = await Amplify.API.graphql({
+                        query: createMessageMutation,
+                        variables: {
+                            input: messageInput
+                        },
+                        authMode: 'API_KEY'
+                    });
+                    
+                    console.log('Mock API response:', response);
+                    
+                    apiResult.innerHTML = '<span class="success">✅ Mock API test passed</span>';
+                    apiResult.innerHTML += '<br>Successfully tested mock GraphQL API';
+                } else {
+                    // For real implementation, just check if the API module is available
+                    if (Amplify.API) {
+                        apiResult.innerHTML = '<span class="success">✅ API module available</span>';
+                        apiResult.innerHTML += '<br>API module is properly configured';
+                    } else {
+                        apiResult.innerHTML = '<span class="error">❌ API module not available</span>';
+                    }
+                }
+            } catch (error) {
+                apiResult.innerHTML = '<span class="error">❌ API test failed: ' + error.message + '</span>';
+                console.error('API test error:', error);
+            }
+        });
+        
+        // Initialize the page
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Amplify test page loaded');
+            console.log('window.Amplify exists:', typeof window.Amplify !== 'undefined');
+            console.log('window.awsConfig exists:', typeof window.awsConfig !== 'undefined');
+            
+            // Display AWS configuration
+            const configOutput = document.getElementById('config-output');
+            try {
+                if (window.awsConfig) {
+                    // Create a sanitized version of the config (mask sensitive info)
+                    const sanitizedConfig = JSON.parse(JSON.stringify(window.awsConfig));
+                    if (sanitizedConfig.Auth && sanitizedConfig.Auth.userPoolWebClientId) {
+                        sanitizedConfig.Auth.userPoolWebClientId = sanitizedConfig.Auth.userPoolWebClientId.substring(0, 4) + '...[MASKED]';
+                    }
+                    if (sanitizedConfig.API && sanitizedConfig.API.aws_appsync_apiKey) {
+                        sanitizedConfig.API.aws_appsync_apiKey = sanitizedConfig.API.aws_appsync_apiKey.substring(0, 4) + '...[MASKED]';
+                    }
+                    
+                    configOutput.textContent = JSON.stringify(sanitizedConfig, null, 2);
+                } else {
+                    configOutput.textContent = 'AWS configuration not found';
+                }
+            } catch (error) {
+                configOutput.textContent = `Error loading AWS configuration: ${error.message}`;
+                console.error('Error loading AWS configuration:', error);
+            }
+        });
+    </script>
+</body>
+</html>

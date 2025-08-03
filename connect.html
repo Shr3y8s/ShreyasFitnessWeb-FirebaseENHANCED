@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- AWS Amplify will be imported in the module scripts -->
+    <!-- AWS Configuration -->
+    <script src="js/aws-config.js"></script>
+    <!-- AWS Amplify Bundle -->
+    <script src="js/amplify-bundle.min.js"></script>
+    <!-- Amplify API Wrapper -->
+    <script src="js/amplify-api-wrapper.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -313,10 +318,10 @@
     <!-- Original script -->
     <script src="script.js"></script>
     
-    <!-- AWS Amplify and custom scripts -->
-    <script type="module" src="js/main.js"></script>
-    <script type="module" src="js/contact-handler.js"></script>
-    <script type="module" src="js/phone-formatter.js"></script>
+    <!-- Custom scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/contact-handler.js"></script>
+    <script src="js/phone-formatter.js"></script>
     
     <script>
         // Connection Cards Functionality

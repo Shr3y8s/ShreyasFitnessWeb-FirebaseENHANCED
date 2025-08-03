@@ -7,7 +7,10 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- AWS Amplify will be imported in the module scripts -->
+    <!-- AWS Configuration -->
+    <script src="js/aws-config.js"></script>
+    <!-- AWS Amplify Bundle -->
+    <script src="js/amplify-bundle.min.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -215,9 +218,18 @@
     <script src="script.js"></script>
     
     <!-- AWS Amplify and custom scripts -->
-    <script type="module" src="js/main.js"></script>
-    <script type="module" src="js/signup-handler.js"></script>
-    <script type="module" src="js/phone-formatter.js"></script>
+    <script src="js/signup-handler-global.js"></script>
+    <script src="js/phone-formatter.js"></script>
+    
+    <!-- Debug logging for Amplify -->
+    <script>
+        console.log('Amplify status check:');
+        console.log('window.Amplify exists:', typeof window.Amplify !== 'undefined');
+        console.log('window.awsConfig exists:', typeof window.awsConfig !== 'undefined');
+        if (typeof window.Amplify !== 'undefined') {
+            console.log('Amplify version:', window.Amplify.version || 'unknown');
+        }
+    </script>
     
     <style>
         /* Password requirements styling */

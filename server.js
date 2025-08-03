@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const PORT = 3002;
 
 const MIME_TYPES = {
     '.html': 'text/html',
@@ -18,6 +18,19 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    
+    // Set CORS headers for all responses
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Authorization, X-Api-Key');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight OPTIONS requests
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
     
     // Handle favicon.ico requests
     if (req.url === '/favicon.ico') {
@@ -62,5 +75,8 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}/`);
-    console.log(`To test Cognito, visit: http://localhost:${PORT}/cognito-test.html`);
+    console.log(`CORS enabled for all origins`);
+    console.log(`To test signup, visit: http://localhost:${PORT}/signup.html`);
+    console.log(`To test login, visit: http://localhost:${PORT}/account.html`);
+    console.log(`To test contact form, visit: http://localhost:${PORT}/connect.html#message`);
 });

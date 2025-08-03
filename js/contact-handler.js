@@ -1,63 +1,34 @@
-// Import Amplify modules
-import { Amplify, API, graphqlOperation } from 'https://cdn.jsdelivr.net/npm/aws-amplify@5.0.4/+esm';
-import awsConfig from './aws-config.js';
+// AWS Amplify Contact Form Handler
+console.log('Contact handler initialized with AWS Amplify');
 
-// Initialize Amplify with our configuration
-Amplify.configure(awsConfig);
-
-// Enable debug logging
-console.log('Contact handler initialized with AWS config:', JSON.stringify({
-    region: awsConfig.Auth?.region || 'Not configured',
-    userPoolId: awsConfig.Auth?.userPoolId ? 'Configured' : 'Not configured',
-    apiEndpoint: awsConfig.API?.graphql_endpoint || 'Not configured'
-}));
-
-// Wait for the DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Get the contact form and phone field
-    const contactForm = document.getElementById('contact-form');
-    const phoneField = document.getElementById('phone');
-    
-    // Phone number formatting function
-    function formatPhoneNumber(phoneNumber) {
-        // Remove all non-digit characters
-        const cleaned = phoneNumber.replace(/\D/g, '');
-        
-        // Format the phone number based on length
-        if (cleaned.length === 0) {
-            return '';
-        } else if (cleaned.length <= 3) {
-            return `(${cleaned}`;
-        } else if (cleaned.length <= 6) {
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
-        } else if (cleaned.length <= 10) {
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-        } else {
-            // Handle numbers longer than 10 digits
-            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)} ${cleaned.slice(10)}`;
+// Function to initialize the contact form
+function initializeContactForm() {
+    // Configure AWS Amplify with our configuration
+    try {
+        // Make sure window.awsConfig exists
+        if (!window.awsConfig) {
+            console.error('AWS Config not found. Make sure aws-config.js is loaded properly.');
+            return;
         }
+        
+        // Check if Amplify is defined
+        if (typeof window.Amplify === 'undefined') {
+            console.error('Amplify is not defined. Make sure amplify-bundle.min.js is loaded properly.');
+            return;
+        }
+        
+        // Configure Amplify with the global config
+        window.Amplify.configure(window.awsConfig);
+        console.log('Amplify configured successfully');
+    } catch (error) {
+        console.error('Error configuring Amplify:', error);
     }
-    
-    // Add phone number formatting if phone field exists
-    if (phoneField) {
-        phoneField.addEventListener('input', function(e) {
-            // Store cursor position
-            const start = this.selectionStart;
-            const end = this.selectionEnd;
-            const previousLength = this.value.length;
-            
-            // Format the phone number
-            this.value = formatPhoneNumber(this.value);
-            
-            // Adjust cursor position based on formatting changes
-            const newLength = this.value.length;
-            const cursorAdjustment = newLength - previousLength;
-            
-            // Set cursor position
-            if (cursorAdjustment !== 0) {
-                this.setSelectionRange(start + cursorAdjustment, end + cursorAdjustment);
-            }
-        });
+
+    // Get the contact form
+    const contactForm = document.getElementById('contact-form');
+    if (!contactForm) {
+        console.error('Contact form not found');
+        return;
     }
     
     // Add submit event listener
@@ -105,17 +76,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 archived: false
             };
             
-            // Note: Newsletter subscription checkbox has been removed from the form
-            
             console.log('Sending message with input:', JSON.stringify(messageInput));
             
+            console.log('Sending GraphQL request with Amplify API');
+            
             // Send the message to the API
-            const response = await API.graphql({
+            const response = await window.Amplify.API.graphql({
                 query: createMessageMutation,
                 variables: {
                     input: messageInput
                 },
-                authMode: 'API_KEY' // Use API key for unauthenticated users
+                authMode: 'apiKey'
+            }).catch(error => {
+                console.error('GraphQL error details:', error);
+                throw error;
             });
             
             console.log('Message sent successfully:', response);
@@ -123,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide the form
             contactForm.style.display = 'none';
             
-            // Show success message (using your existing success message code)
+            // Show success message
             const successMessage = document.createElement('div');
             successMessage.className = 'success-message';
             successMessage.innerHTML = `
@@ -175,11 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
             let errorMessage = `Failed to send message: ${error.message}`;
             
             // Add more context based on error type
-            if (error.message.includes('Network Error')) {
+            if (error.message && error.message.includes('Network Error')) {
                 errorMessage += '\n\nThis appears to be a network issue. Please check your internet connection and try again.';
-            } else if (error.message.includes('Not Authorized')) {
+            } else if (error.message && error.message.includes('Not Authorized')) {
                 errorMessage += '\n\nAuthorization error. The API key may be missing or invalid.';
-            } else if (error.message.includes('GraphQL error')) {
+            } else if (error.message && error.message.includes('GraphQL error')) {
                 errorMessage += '\n\nGraphQL API error. The message format may be incorrect or the API endpoint may be unavailable.';
             }
             
@@ -191,4 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
             submitButton.disabled = false;
         }
     });
+}
+
+// Initialize the contact form when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit to ensure everything is loaded
+    setTimeout(initializeContactForm, 100);
 });
+
+// Also expose the initialization function globally
+window.initializeContactForm = initializeContactForm;

@@ -1,26 +1,6 @@
 /* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
-export const createMessage = /* GraphQL */ `
-  mutation CreateMessage(
-    $input: CreateMessageInput!
-    $condition: ModelMessageConditionInput
-  ) {
-    createMessage(input: $input, condition: $condition) {
-      id
-      senderName
-      senderEmail
-      subject
-      content
-      read
-      archived
-      createdAt
-      updatedAt
-      owner
-      __typename
-    }
-  }
-`;
 export const updateMessage = /* GraphQL */ `
   mutation UpdateMessage(
     $input: UpdateMessageInput!
@@ -108,6 +88,26 @@ export const deleteUser = /* GraphQL */ `
       email
       phone
       userGroup
+      createdAt
+      updatedAt
+      owner
+      __typename
+    }
+  }
+`;
+export const createMessage = /* GraphQL */ `
+  mutation CreateMessage(
+    $input: CreateMessageInput!
+    $condition: ModelMessageConditionInput
+  ) {
+    createMessage(input: $input, condition: $condition) {
+      id
+      senderName
+      senderEmail
+      subject
+      content
+      read
+      archived
       createdAt
       updatedAt
       owner

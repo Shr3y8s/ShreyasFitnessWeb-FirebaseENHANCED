@@ -7,14 +7,14 @@
       "mode": "AMAZON_COGNITO_USER_POOLS",
       "cognitoUserPoolId": "authshreyasfitnessweb215ca8f0"
     },
-    "conflictResolution": {},
     "additionalAuthTypes": [
       {
         "mode": "API_KEY",
         "expirationTime": 365,
-        "apiKeyExpirationDate": "2026-08-03T09:03:17.802Z",
+        "apiKeyExpirationDate": "2026-08-03T00:00:00.000Z",
         "keyDescription": "API key for unauthenticated access"
       }
-    ]
+    ],
+    "conflictResolution": {}
   }
 }
