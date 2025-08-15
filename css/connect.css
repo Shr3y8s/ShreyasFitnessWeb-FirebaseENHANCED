@@ -362,28 +362,144 @@
 }
 
 /* Success Message Styling */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes checkmarkAppear {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 .success-message {
     text-align: center;
-    padding: 40px 20px;
+    padding: 40px 25px;
     background-color: #f8fff8;
-    border-radius: 10px;
+    background: linear-gradient(to right bottom, #f8fff8, #f0fcf0);
+    border-radius: 12px;
     border: 1px solid var(--primary);
-    margin: 30px;
+    box-shadow: 0 10px 25px rgba(76, 175, 80, 0.15);
+    margin: 30px auto;
+    max-width: 600px;
+    position: relative;
+    animation: fadeIn 0.6s ease-out forwards;
+    border-left: 5px solid var(--primary);
+    transition: all 0.3s ease;
 }
 
 .success-icon {
-    font-size: 48px;
+    font-size: 54px;
     color: var(--primary);
     margin-bottom: 20px;
+    display: inline-block;
+    animation: checkmarkAppear 0.8s ease-out forwards;
+    animation-delay: 0.3s;
+    opacity: 0;
 }
 
 .success-message h3 {
     color: var(--primary);
-    margin-bottom: 15px;
+    margin-bottom: 18px;
+    font-size: 1.8rem;
+    letter-spacing: 0.5px;
 }
 
 .success-message p {
     margin-bottom: 25px;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--secondary);
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.success-message p strong {
+    color: var(--secondary);
+    font-weight: 700;
+}
+
+#send-another-btn {
+    background-color: white;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: 12px 24px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.1);
+}
+
+#send-another-btn:hover {
+    background-color: var(--primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+}
+
+#send-another-btn i {
+    font-size: 0.9rem;
+    transition: transform 0.3s ease;
+}
+
+#send-another-btn:hover i {
+    transform: translateX(3px);
+}
+
+/* Form status messages */
+#form-status {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+#form-status.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Form Field Validation Styles */
+.validation-feedback {
+  margin-top: 5px;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  height: 20px;
+}
+
+input.valid-input {
+  border-color: #4CAF50 !important;
+  background-color: #f8fff8;
+}
+
+input.invalid-input {
+  border-color: #f44336 !important;
+  background-color: #fff8f8;
+}
+
+.validation-icon {
+  margin-left: 5px;
+}
+
+.valid-feedback {
+  color: #155724;
+}
+
+.invalid-feedback {
+  color: #721c24;
 }
 
 /* Responsive Styles */
@@ -422,5 +538,50 @@
     
     .header-icon i {
         font-size: 20px;
+    }
+    
+    /* Mobile-specific success message styles */
+    .success-message {
+        padding: 30px 20px;
+        margin: 20px 15px;
+        max-width: calc(100% - 30px);
+    }
+    
+    .success-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .success-message h3 {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .success-message p {
+        font-size: 1rem;
+        max-width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    #send-another-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 20px;
+    }
+}
+
+/* Ensure proper spacing on very small devices */
+@media (max-width: 360px) {
+    .success-message {
+        padding: 25px 15px;
+        margin: 15px 10px;
+    }
+    
+    .success-icon {
+        font-size: 42px;
+    }
+    
+    .success-message h3 {
+        font-size: 1.3rem;
     }
 }

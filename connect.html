@@ -165,14 +165,22 @@
                         
                         <div class="form-group">
                             <label for="email"><i class="fas fa-envelope"></i> Email Address <span class="required">*</span></label>
-                            <input type="email" id="email" name="email" placeholder="Enter your email address" required>
+                            <input type="email" id="email" name="email" 
+                                   placeholder="Enter your email address" 
+                                   pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$" 
+                                   title="Please enter a valid email address (e.g., your.name@example.com)"
+                                   required>
+                            <div class="validation-feedback"></div>
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="phone"><i class="fas fa-phone"></i> Phone Number <span class="optional">(Optional)</span></label>
-                            <input type="tel" id="phone" name="phone" placeholder="Enter your phone number">
+                            <input type="tel" id="phone" name="phone" 
+                                   placeholder="(XXX) XXX-XXXX"
+                                   title="Enter a 10-digit phone number in the format (XXX) XXX-XXXX">
+                            <div class="validation-feedback"></div>
                         </div>
                         
                         <div class="form-group">
@@ -398,70 +406,24 @@
                 });
             });
             
-            // Contact Form Functionality
-            const contactForm = document.getElementById('contact-form');
-            if (contactForm) {
-                contactForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    // Basic form validation
-                    const name = document.getElementById('name').value;
-                    const email = document.getElementById('email').value;
-                    const service = document.getElementById('service').value;
-                    const message = document.getElementById('message-text').value;
-                    
-                    if (!name || !email || !service || !message) {
-                        alert('Please fill out all required fields.');
-                        return;
-                    }
-                    
-                    // In a real implementation, you would send the data to a server here
-                    // For demo purposes, we'll just show a success message
-                    
-                    // Hide the form
-                    contactForm.style.display = 'none';
-                    
-                    // Show success message
-                    const successMessage = document.createElement('div');
-                    successMessage.className = 'success-message';
-                    successMessage.innerHTML = `
-                        <div class="success-icon">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <h3>Message Sent Successfully!</h3>
-                        <p>Thank you for reaching out, ${name}. I'll get back to you regarding your interest in ${service} within 2-4 hours.</p>
-                        <button class="btn-secondary" onclick="window.location.reload()">Send Another Message</button>
-                    `;
-                    
-                    contactForm.parentNode.appendChild(successMessage);
-                    
-                    // Add some basic styles for the success message
-                    const style = document.createElement('style');
-                    style.textContent = `
-                        .success-message {
-                            text-align: center;
-                            padding: 40px 20px;
-                            background-color: #f8fff8;
-                            border-radius: 10px;
-                            border: 1px solid #4CAF50;
-                        }
-                        .success-icon {
-                            font-size: 48px;
-                            color: #4CAF50;
-                            margin-bottom: 20px;
-                        }
-                        .success-message h3 {
-                            color: #4CAF50;
-                            margin-bottom: 15px;
-                        }
-                        .success-message p {
-                            margin-bottom: 25px;
-                        }
-                    `;
-                    document.head.appendChild(style);
-                });
-            }
+            // Note: Contact form functionality is now handled by Firebase in contact-form.js
         });
     </script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Add a small script to catch and log Firebase errors -->
+    <script>
+      window.addEventListener('error', function(event) {
+        if (event.message && event.message.includes('firebase')) {
+          console.error('Firebase Error:', event.message);
+        }
+      });
+    </script>
+
+    <!-- Your contact form script -->
+    <script src="js/contact-form.js"></script>
 </body>
 </html>

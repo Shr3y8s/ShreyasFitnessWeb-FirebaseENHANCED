@@ -104,6 +104,13 @@
                                     <a href="#" class="forgot-password">Forgot your password?</a>
                                     <p class="auth-switch">Don't have an account? <a href="signup.html" class="signup-link">Join Now</a></p>
                                 </div>
+                                
+                                <div class="social-login">
+                                    <p>Or sign in with:</p>
+                                    <button type="button" id="google-signin" class="btn-secondary-enhanced">
+                                        <i class="fab fa-google"></i> Google
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -183,215 +190,6 @@
                 </form>
             </div>
 
-            <!-- Dashboard (Hidden by default) -->
-            <div id="dashboard" class="dashboard hidden">
-                <div class="dashboard-header">
-                        <div class="user-greeting">
-                            <h2>Welcome back, <span id="user-name">Client</span>!</h2>
-                            <p>Here's an overview of your fitness journey</p>
-                        </div>
-                        <button id="logout-btn" class="btn-secondary">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </button>
-                    </div>
-                    
-                    <div class="dashboard-overview">
-                        <div class="overview-card">
-                            <div class="overview-icon">
-                                <i class="fas fa-calendar-check"></i>
-                            </div>
-                            <div class="overview-details">
-                                <h3>12</h3>
-                                <p>Sessions Completed</p>
-                            </div>
-                        </div>
-                        <div class="overview-card">
-                            <div class="overview-icon">
-                                <i class="fas fa-fire"></i>
-                            </div>
-                            <div class="overview-details">
-                                <h3>8</h3>
-                                <p>Weeks Active</p>
-                            </div>
-                        </div>
-                        <div class="overview-card">
-                            <div class="overview-icon">
-                                <i class="fas fa-dumbbell"></i>
-                            </div>
-                            <div class="overview-details">
-                                <h3>15lb</h3>
-                                <p>Strength Gained</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="dashboard-grid">
-                        <!-- Current Plan -->
-                        <div class="dashboard-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-clipboard-list"></i> Current Plan</h3>
-                            </div>
-                            <div class="plan-info">
-                                <h4>Strength Building Program</h4>
-                                <p>4 weeks remaining</p>
-                                <div class="plan-details">
-                                    <div class="detail-item">
-                                        <span class="detail-label">Focus:</span>
-                                        <span class="detail-value">Building Strength & Endurance</span>
-                                    </div>
-                                    <div class="detail-item">
-                                        <span class="detail-label">Frequency:</span>
-                                        <span class="detail-value">3 sessions per week</span>
-                                    </div>
-                                </div>
-                                <div class="progress-container">
-                                    <div class="progress-label">
-                                        <span>Program Progress</span>
-                                        <span>60%</span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width: 60%"></div>
-                                    </div>
-                                </div>
-                                <a href="#" class="btn-secondary">View Full Program</a>
-                            </div>
-                        </div>
-                        
-                        <!-- Progress Tracking -->
-                        <div class="dashboard-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-chart-line"></i> Progress Tracking</h3>
-                            </div>
-                            <div class="progress-tracking">
-                                <div class="metrics-grid">
-                                    <div class="metric">
-                                        <h4>Weight</h4>
-                                        <div class="metric-chart placeholder-chart">
-                                            <i class="fas fa-chart-line"></i>
-                                        </div>
-                                        <div class="metric-summary">
-                                            <div class="metric-value">165 lbs</div>
-                                            <div class="metric-change positive">-5 lbs</div>
-                                        </div>
-                                    </div>
-                                    <div class="metric">
-                                        <h4>Body Fat %</h4>
-                                        <div class="metric-chart placeholder-chart">
-                                            <i class="fas fa-chart-line"></i>
-                                        </div>
-                                        <div class="metric-summary">
-                                            <div class="metric-value">18%</div>
-                                            <div class="metric-change positive">-2%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <a href="#" class="btn-secondary">View All Metrics</a>
-                            </div>
-                        </div>
-                        
-                        <!-- Upcoming Sessions -->
-                        <div class="dashboard-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-calendar"></i> Upcoming Sessions</h3>
-                            </div>
-                            <div class="session-list">
-                                <div class="session-item">
-                                    <div class="session-date">
-                                        <div class="date-day">15</div>
-                                        <div class="date-month">Jul</div>
-                                    </div>
-                                    <div class="session-info">
-                                        <h4>Upper Body Strength</h4>
-                                        <p>2:00 PM - 3:00 PM</p>
-                                        <span class="session-type">In-Person</span>
-                                    </div>
-                                    <div class="session-actions">
-                                        <button class="icon-button" title="Reschedule Session">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </button>
-                                        <button class="icon-button" title="Cancel Session">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="session-item">
-                                    <div class="session-date">
-                                        <div class="date-day">17</div>
-                                        <div class="date-month">Jul</div>
-                                    </div>
-                                    <div class="session-info">
-                                        <h4>Full Body HIIT</h4>
-                                        <p>10:00 AM - 11:00 AM</p>
-                                        <span class="session-type">Remote</span>
-                                    </div>
-                                    <div class="session-actions">
-                                        <button class="icon-button" title="Reschedule Session">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </button>
-                                        <button class="icon-button" title="Cancel Session">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="session-item">
-                                    <div class="session-date">
-                                        <div class="date-day">19</div>
-                                        <div class="date-month">Jul</div>
-                                    </div>
-                                    <div class="session-info">
-                                        <h4>Lower Body Focus</h4>
-                                        <p>3:30 PM - 4:30 PM</p>
-                                        <span class="session-type">In-Person</span>
-                                    </div>
-                                    <div class="session-actions">
-                                        <button class="icon-button" title="Reschedule Session">
-                                            <i class="fas fa-calendar-alt"></i>
-                                        </button>
-                                        <button class="icon-button" title="Cancel Session">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <a href="#" class="btn-secondary">Schedule New Session</a>
-                            </div>
-                        </div>
-                        
-                        <!-- Completed Sessions -->
-                        <div class="dashboard-card">
-                            <div class="card-header">
-                                <h3><i class="fas fa-history"></i> Completed Sessions</h3>
-                            </div>
-                            <div class="session-history">
-                                <div class="history-item">
-                                    <span class="date">Jul 12</span>
-                                    <span class="workout">Lower Body Power</span>
-                                    <span class="duration">60 min</span>
-                                </div>
-                                <div class="history-item">
-                                    <span class="date">Jul 10</span>
-                                    <span class="workout">Cardio & Core</span>
-                                    <span class="duration">45 min</span>
-                                </div>
-                                <div class="history-item">
-                                    <span class="date">Jul 8</span>
-                                    <span class="workout">Upper Body Strength</span>
-                                    <span class="duration">60 min</span>
-                                </div>
-                                <div class="history-item">
-                                    <span class="date">Jul 5</span>
-                                    <span class="workout">Full Body HIIT</span>
-                                    <span class="duration">45 min</span>
-                                </div>
-                                <div class="history-item">
-                                    <span class="date">Jul 3</span>
-                                    <span class="workout">Active Recovery</span>
-                                    <span class="duration">30 min</span>
-                                </div>
-                                <a href="#" class="btn-secondary">View All History</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
     </section>
 
@@ -431,18 +229,117 @@
 
 
     <script src="script.js"></script>
-    <!-- Coming Soon Overlay with inline styles -->
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-        <div style="background-color: white; border-radius: 15px; padding: 40px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #2E7D32); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white;">
-                <i class="fas fa-rocket" style="font-size: 36px;"></i>
+    
+    <!-- Firebase SDK - Make sure these are loaded in the correct order -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Our authentication script - loaded after Firebase SDK -->
+    <script src="js/auth.js"></script>
+    <!-- Add a small script to catch and log Firebase errors -->
+    <script>
+      window.addEventListener('error', function(event) {
+        if (event.message && event.message.includes('firebase')) {
+          console.error('Firebase Error:', event.message);
+        }
+      });
+    </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const loginForm = document.getElementById('login-form');
+        const forgotPasswordLink = document.querySelector('.forgot-password');
+        
+        // Handle login form submission
+        if (loginForm) {
+          loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const rememberMe = document.getElementById('remember-me').checked;
+            
+            // Disable the submit button
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            
+            // Login
+            login(email, password, rememberMe)
+              .catch(error => {
+                alert(`Error: ${error.message}`);
+                submitButton.disabled = false;
+              });
+          });
+        }
+        
+        // Handle forgot password link
+        if (forgotPasswordLink) {
+          forgotPasswordLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const email = prompt('Enter your email to reset your password:');
+            
+            if (email) {
+              resetPassword(email)
+                .then(() => {
+                  alert('Password reset email sent. Check your inbox.');
+                })
+                .catch(error => {
+                  alert(`Error: ${error.message}`);
+                });
+            }
+          });
+        }
+        
+        // Handle Google Sign In button
+        const googleSignInBtn = document.getElementById('google-signin');
+        if (googleSignInBtn) {
+          googleSignInBtn.addEventListener('click', function() {
+            signInWithGoogle().catch(error => {
+              alert(`Error: ${error.message}`);
+            });
+          });
+        }
+        
+        // Check URL parameters for signup success
+        const urlParams = new URLSearchParams(window.location.search);
+        const signupSuccess = urlParams.get('signup');
+        const email = urlParams.get('email');
+        
+        // Check for plain email parameter (from signup page "Login Now" button)
+        if (email && !signupSuccess) {
+          // If we have an email parameter but not a signup success parameter,
+          // just fill in the email field
+          const emailInput = document.getElementById('login-email');
+          if (emailInput) emailInput.value = email;
+        }
+        
+        if (signupSuccess === 'success') {
+          // Create and show success message
+          const successDiv = document.createElement('div');
+          successDiv.className = 'success-message';
+          successDiv.innerHTML = `
+            <div class="alert-icon">
+              <i class="fas fa-check-circle"></i>
             </div>
-            <h2 style="color: #2E7D32; margin-bottom: 20px; font-size: 1.8rem;">Client Portal Coming Soon!</h2>
-            <p style="color: #555; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">We're building an exciting new client portal to enhance your fitness journey.</p>
-            <a href="index.html" style="margin-top: 20px; display: inline-block; color: #4CAF50; text-decoration: none; font-weight: 500; transition: all 0.2s ease;">
-                <i class="fas fa-arrow-left"></i> Return to Homepage
-            </a>
-        </div>
-    </div>
+            <p><strong>Account Created Successfully!</strong></p>
+            <p>Your account has been created. Please log in with your credentials to access your dashboard.</p>
+            ${email ? `<p>Email: ${email}</p>` : ''}
+          `;
+          
+          // Insert before the login form
+          const loginContainer = document.querySelector('.login-form-container');
+          if (loginContainer) {
+            loginContainer.insertBefore(successDiv, loginContainer.firstChild);
+            
+            // Auto-fill email if available
+            if (email) {
+              const emailInput = document.getElementById('login-email');
+              if (emailInput) emailInput.value = email;
+            }
+          }
+        }
+      });
+    </script>
 </body>
 </html>

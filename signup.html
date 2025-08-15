@@ -182,18 +182,183 @@
 
 
     <script src="script.js"></script>
-    <!-- Coming Soon Overlay with inline styles -->
-    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-        <div style="background-color: white; border-radius: 15px; padding: 40px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #4CAF50, #2E7D32); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white;">
-                <i class="fas fa-rocket" style="font-size: 36px;"></i>
-            </div>
-            <h2 style="color: #2E7D32; margin-bottom: 20px; font-size: 1.8rem;">Client Portal Coming Soon!</h2>
-            <p style="color: #555; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6;">We're building an exciting new client portal to enhance your fitness journey.</p>
-            <a href="index.html" style="margin-top: 20px; display: inline-block; color: #4CAF50; text-decoration: none; font-weight: 500; transition: all 0.2s ease;">
-                <i class="fas fa-arrow-left"></i> Return to Homepage
-            </a>
+    
+    <!-- Firebase SDK - Make sure these are loaded in the correct order -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Our authentication script - loaded after Firebase SDK -->
+    <script src="js/auth.js"></script>
+    <!-- Add a small script to catch and log Firebase errors -->
+    <script>
+      window.addEventListener('error', function(event) {
+        if (event.message && event.message.includes('firebase')) {
+          console.error('Firebase Error:', event.message);
+        }
+      });
+    </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const signupForm = document.querySelector('.signup-form');
+        
+        if (signupForm) {
+          signupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const name = document.getElementById('fullname').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            // Validate form
+            if (password !== confirmPassword) {
+              alert('Passwords do not match');
+              return;
+            }
+            
+            // Disable the submit button
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            
+            // Create user
+            signUp(email, password, name, phone)
+              .catch(error => {
+                alert(`Error: ${error.message}`);
+                submitButton.disabled = false;
+              });
+          });
+        }
+        
+        // Add Google Sign In option
+        const socialLoginDiv = document.createElement('div');
+        socialLoginDiv.className = 'social-login';
+        socialLoginDiv.innerHTML = `
+          <p>Or sign up with:</p>
+          <button type="button" id="google-signin" class="btn-secondary-enhanced">
+            <i class="fab fa-google"></i> Google
+          </button>
+        `;
+        
+        // Insert after the signup form but before the footer
+        const formFooter = document.querySelector('.form-footer');
+        if (formFooter) {
+          formFooter.after(socialLoginDiv);
+          
+          // Add event listener for Google Sign In
+      document.getElementById('google-signin').addEventListener('click', function() {
+        signInWithGoogle().catch(error => {
+          alert(`Error: ${error.message}`);
+        });
+      });
+    }
+    
+    // Listen for signup success event
+    document.addEventListener('signupSuccess', function(event) {
+      // Get user details from event
+      const { email, name } = event.detail;
+      
+      // Get the signup form container
+      const signupFormContainer = document.querySelector('.signup-form-container');
+      if (!signupFormContainer) return;
+      
+      // Hide the signup form
+      const signupForm = signupFormContainer.querySelector('form');
+      if (signupForm) {
+        signupForm.style.display = 'none';
+      }
+      
+      // Create success message
+      const successMessage = document.createElement('div');
+      successMessage.className = 'success-message';
+      successMessage.innerHTML = `
+        <div class="success-icon">
+          <i class="fas fa-check-circle"></i>
         </div>
-    </div>
+        <h3>Account Created Successfully!</h3>
+        <p>Thank you for joining SHREY.FIT, <strong>${name}</strong>!</p>
+        <p>Your account has been created. Please log in with your credentials to access your dashboard.</p>
+        <p class="email-display">${email}</p>
+        <button id="login-now-btn" class="btn-primary-enhanced">
+          <i class="fas fa-sign-in-alt"></i>
+          <span>Login Now</span>
+        </button>
+      `;
+      
+      // Add the success message to the container
+      signupFormContainer.appendChild(successMessage);
+      
+      // Add event listener for the Login Now button
+      setTimeout(() => {
+        const loginButton = document.getElementById('login-now-btn');
+        if (loginButton) {
+          loginButton.addEventListener('click', function() {
+            // Check if the user is already logged in (autoLogin flag)
+            if (event.detail.autoLogin) {
+              // If user is already logged in, go straight to dashboard
+              window.location.href = 'dashboard.html';
+            } else {
+              // Otherwise, go to login page with email prefilled
+              window.location.href = 'account.html?email=' + encodeURIComponent(email);
+            }
+          });
+        }
+      }, 100);
+    });
+  });
+</script>
+
+<style>
+  /* Success message styling */
+  .success-message {
+    background-color: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    color: #2e7d32;
+    padding: 30px;
+    margin: 20px 0;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .success-message .success-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+    color: #4caf50;
+  }
+  
+  .success-message h3 {
+    margin-bottom: 15px;
+    font-size: 1.6rem;
+  }
+  
+  .success-message p {
+    margin: 5px 0 15px;
+    line-height: 1.5;
+  }
+  
+  .success-message .email-display {
+    font-weight: 500;
+    margin: 10px 0 20px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    border: 1px solid #c8e6c9;
+  }
+  
+  #login-now-btn {
+    margin-top: 15px;
+    padding: 12px 24px;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
 </body>
 </html>

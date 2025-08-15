@@ -1,5 +1,37 @@
 /* Account & Login Styles */
 
+/* Success Message */
+.success-message {
+    background-color: #e8f5e9;
+    border-left: 4px solid #4caf50;
+    color: #2e7d32;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.success-message .alert-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+    color: #4caf50;
+}
+
+.success-message p {
+    margin: 5px 0;
+    line-height: 1.4;
+}
+
+.success-message strong {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    display: block;
+}
+
 /* Account Section */
 .account-section {
     padding-top: 40px;
