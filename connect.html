@@ -410,20 +410,24 @@
         });
     </script>
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
-    <!-- Add a small script to catch and log Firebase errors -->
-    <script>
-      window.addEventListener('error', function(event) {
-        if (event.message && event.message.includes('firebase')) {
-          console.error('Firebase Error:', event.message);
-        }
-      });
-    </script>
+<!-- Add a small script to catch and log Firebase errors -->
+<script>
+  window.addEventListener('error', function(event) {
+    if (event.message && event.message.includes('firebase')) {
+      console.error('Firebase Error:', event.message);
+    }
+  });
+</script>
 
-    <!-- Your contact form script -->
-    <script src="js/contact-form.js"></script>
+<!-- Firebase Initialization -->
+<script src="js/auth.js"></script>
+
+<!-- Your contact form script -->
+<script src="js/contact-form.js"></script>
 </body>
 </html>

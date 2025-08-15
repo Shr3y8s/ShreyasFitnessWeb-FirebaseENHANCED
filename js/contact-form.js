@@ -12,16 +12,16 @@ const firebaseConfig = {
 };
 */
 
-// Get existing Firebase instance
-let firebaseApp;
-let db;
+// Use existing Firebase instance from auth.js with different variable names to avoid conflicts
+let contactFormFirebaseApp;
+let contactFormDb;
 
 // Check if Firebase is already initialized
 if (typeof firebase !== 'undefined') {
   console.log('Contact form: Using existing Firebase app');
   if (firebase.apps.length > 0) {
-    firebaseApp = firebase.app(); // Get the already initialized app
-    db = firebase.firestore(); // Get Firestore instance
+    contactFormFirebaseApp = firebase.app(); // Get the already initialized app
+    contactFormDb = firebase.firestore(); // Get Firestore instance
   } else {
     console.error('Firebase is defined but no apps are initialized');
   }
@@ -201,7 +201,7 @@ async function handleFormSubmit(e) {
     };
     
     // Save to Firestore
-    await db.collection('messages').add(message);
+    await contactFormDb.collection('messages').add(message);
     
     // Hide the form
     contactForm.style.display = 'none';
