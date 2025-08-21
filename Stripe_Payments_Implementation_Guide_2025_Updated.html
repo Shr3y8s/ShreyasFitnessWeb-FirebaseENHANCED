@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Stripe_Payments_Implementation_Guide_2025_Updated.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="complete-beginners-guide-to-implementing-stripe-payments-in-your-react-signup-form-august-2025-edition">Complete Beginner's Guide to Implementing Stripe Payments in Your React Signup Form (August 2025 Edition)</h1>
+<p>This comprehensive guide will help you add secure, professional payment processing to your fitness signup form using the latest Stripe, React, and Firebase technologies.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#part-1-stripe-account-setup">Stripe Account Setup</a></li>
+<li><a href="#part-2-firebase-extension-setup">Firebase Extension Setup</a></li>
+<li><a href="#part-3-environment-variables-configuration">Environment Variables Configuration</a></li>
+<li><a href="#part-4-client-side-integration">Client-Side Integration</a></li>
+<li><a href="#part-5-testing-the-integration">Testing the Integration</a></li>
+<li><a href="#part-6-going-live">Going Live</a></li>
+<li><a href="#part-7-troubleshooting">Troubleshooting</a></li>
+</ol>
+<h2 id="part-1-stripe-account-setup">PART 1: STRIPE ACCOUNT SETUP</h2>
+<h3 id="step-1-create-a-stripe-account">Step 1: Create a Stripe Account</h3>
+<ol>
+<li>Go to <a href="https://stripe.com">stripe.com</a> and click &quot;Start now&quot;</li>
+<li>Enter your email address and create a password</li>
+<li>Fill in your business details</li>
+<li>You'll automatically be in TEST MODE (indicated by a &quot;Test&quot; badge in the dashboard)</li>
+</ol>
+<h3 id="step-2-set-up-your-products-in-stripe">Step 2: Set Up Your Products in Stripe</h3>
+<ol>
+<li>In your Stripe dashboard, go to <strong>Products</strong> in the left sidebar</li>
+<li>Click <strong>+ Create product</strong> button (note: the UI has been updated from &quot;+ Add Product&quot; to &quot;+ Create product&quot;)</li>
+<li><strong>For In-Person Training:</strong>
+<ul>
+<li>Name: &quot;In-Person Training Session&quot;</li>
+<li>Price: $70.00 / one time</li>
+<li>Click &quot;Save product&quot;</li>
+</ul>
+</li>
+<li><strong>For Online Coaching:</strong>
+<ul>
+<li>Name: &quot;Online Coaching Subscription&quot;</li>
+<li>Price: $199.00 / monthly recurring</li>
+<li>Click &quot;Save product&quot;</li>
+</ul>
+</li>
+<li><strong>For Complete Transformation:</strong>
+<ul>
+<li>Name: &quot;Complete Transformation Package&quot;</li>
+<li>Price: $199.00 / monthly recurring</li>
+<li>Click &quot;Save product&quot;</li>
+<li>Click <strong>+ Add another price</strong></li>
+<li>Add a second price: $60.00 / one time (for the session fee)</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-3-set-up-payment-schedules-for-installments">Step 3: Set Up Payment Schedules (for Installments)</h3>
+<ol>
+<li>For each product, create a payment schedule:
+<ul>
+<li>Click on your product</li>
+<li>Click <strong>+ Add price</strong></li>
+<li>Select &quot;Payment schedule&quot;</li>
+<li>Set &quot;Number of payments&quot; to 4</li>
+<li>&quot;Interval between payments&quot; to 1 month</li>
+<li>For In-Person Training: $17.50 per installment (total $70)</li>
+<li>For Online Coaching: $49.75 per installment (total $199)</li>
+<li>Click &quot;Save price&quot;</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-4-get-your-api-keys">Step 4: Get Your API Keys</h3>
+<ol>
+<li>In the Stripe dashboard, click on <strong>Developers</strong> in the left sidebar</li>
+<li>Click on <strong>API keys</strong></li>
+<li>Note down your <strong>Publishable key</strong> (starts with <code>pk_test_</code>)</li>
+<li>Click <strong>Reveal test key</strong> to see your <strong>Secret key</strong> (starts with <code>sk_test_</code>)</li>
+<li>Keep these keys for later steps</li>
+<li><strong>SECURITY BEST PRACTICE</strong>: Never hardcode these keys in your frontend code. Always use environment variables.</li>
+</ol>
+<h2 id="part-2-firebase-extension-setup">PART 2: FIREBASE EXTENSION SETUP</h2>
+<h3 id="step-1-install-the-firebase-stripe-extension">Step 1: Install the Firebase Stripe Extension</h3>
+<ol>
+<li>Go to your Firebase console at <a href="https://console.firebase.google.com">console.firebase.google.com</a></li>
+<li>Select your project</li>
+<li>Click on <strong>Extensions</strong> in the left sidebar</li>
+<li>Search for &quot;Run Payments with Stripe&quot;</li>
+<li><strong>IMPORTANT</strong>: Select the Invertase-maintained version of the extension (v0.3.12+)
+<ul>
+<li>Look for &quot;Maintained by Invertase&quot; in the extension details</li>
+<li>The original Firebase-maintained version is now deprecated</li>
+</ul>
+</li>
+<li>Click <strong>Install</strong> button</li>
+<li>Configure the extension:
+<ul>
+<li><strong>Cloud Functions location</strong>: Choose the location closest to your users</li>
+<li><strong>Collection path for customers</strong>: <code>stripe_customers</code> (default for Invertase extension)</li>
+<li><strong>Collection path for products and prices</strong>: <code>stripe_products</code> (default for Invertase extension)</li>
+<li><strong>Stripe API key</strong>: Enter your Stripe Secret key from Step 4 above</li>
+<li><strong>Sync mode options</strong>: Select &quot;Serverless&quot; (modern approach)</li>
+<li><strong>Automatic user provisioning</strong>: Set to &quot;Enabled&quot; to automatically create Stripe customers</li>
+<li><strong>Default currency</strong>: Set to &quot;USD&quot; (or your preferred currency)</li>
+<li>Click <strong>Install extension</strong></li>
+</ul>
+</li>
+</ol>
+<h3 id="step-2-set-up-stripe-webhooks">Step 2: Set Up Stripe Webhooks</h3>
+<ol>
+<li>After installation, click on &quot;Manage extension&quot;</li>
+<li>Look for the <strong>Set up webhooks</strong> section</li>
+<li>Copy the webhook URL provided by Firebase</li>
+<li>Go to your Stripe dashboard &gt; Developers &gt; Webhooks</li>
+<li>Click <strong>+ Add endpoint</strong></li>
+<li>Paste the webhook URL</li>
+<li>Select events to listen for:
+<ul>
+<li><code>checkout.session.completed</code></li>
+<li><code>customer.subscription.created</code></li>
+<li><code>customer.subscription.updated</code></li>
+<li><code>customer.subscription.deleted</code></li>
+<li><code>invoice.payment_succeeded</code></li>
+<li><code>invoice.payment_failed</code></li>
+<li><code>payment_intent.succeeded</code></li>
+<li><code>payment_intent.payment_failed</code></li>
+</ul>
+</li>
+<li>Click <strong>Add endpoint</strong></li>
+<li>Copy the <strong>Signing secret</strong> (starts with <code>whsec_</code>)</li>
+<li>Return to Firebase extension settings and update the webhook secret field with this value</li>
+<li>Click <strong>Update configuration</strong></li>
+</ol>
+<h3 id="step-3-set-up-firebase-cli">Step 3: Set Up Firebase CLI</h3>
+<ol>
+<li>Open your command prompt/terminal</li>
+<li>Install Firebase CLI if you haven't already:<pre class="hljs"><code><div>npm install -g firebase-tools@latest
+</div></code></pre>
+</li>
+<li>Login to Firebase:<pre class="hljs"><code><div>firebase login
+</div></code></pre>
+</li>
+<li>Initialize Firebase in your project:<pre class="hljs"><code><div><span class="hljs-built_in">cd</span> your-project-directory
+firebase init
+</div></code></pre>
+</li>
+<li>Select:
+<ul>
+<li>Firestore</li>
+<li>Functions</li>
+<li>When asked about Functions, select JavaScript or TypeScript</li>
+<li>Set up ESLint</li>
+<li>Choose to set up dependencies now</li>
+</ul>
+</li>
+</ol>
+<h2 id="part-3-environment-variables-configuration">PART 3: ENVIRONMENT VARIABLES CONFIGURATION</h2>
+<h3 id="setting-up-environment-variables">Setting Up Environment Variables</h3>
+<p>Create a <code>.env</code> file in your project root with your API keys and configuration:</p>
+<pre class="hljs"><code><div># .env - DO NOT COMMIT THIS FILE TO VERSION CONTROL
+REACT_APP_FIREBASE_API_KEY=your_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
+REACT_APP_MEASUREMENT_ID=your_measurement_id
+REACT_APP_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+</div></code></pre>
+<p>Add <code>.env</code> to your <code>.gitignore</code> file to prevent accidental commits:</p>
+<pre class="hljs"><code><div># .gitignore
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+</div></code></pre>
+<h3 id="environment-variables-for-different-deployment-platforms">Environment Variables for Different Deployment Platforms</h3>
+<h4 id="development">Development</h4>
+<ul>
+<li>Create a <code>.env.local</code> file in your project root with your development variables</li>
+<li>Add this file to <code>.gitignore</code></li>
+</ul>
+<h4 id="firebase-hosting">Firebase Hosting</h4>
+<pre class="hljs"><code><div><span class="hljs-comment"># Set environment variables for Firebase Functions</span>
+firebase <span class="hljs-built_in">functions</span>:config:<span class="hljs-built_in">set</span> stripe.key=<span class="hljs-string">"sk_test_your_key"</span> stripe.webhook=<span class="hljs-string">"whsec_your_webhook"</span>
+firebase <span class="hljs-built_in">functions</span>:config:<span class="hljs-built_in">set</span> stripe.publishable=<span class="hljs-string">"pk_test_your_key"</span>
+
+<span class="hljs-comment"># Access in functions using:</span>
+<span class="hljs-comment"># const stripe = require('stripe')(functions.config().stripe.key);</span>
+</div></code></pre>
+<h4 id="vercel">Vercel</h4>
+<ul>
+<li>Add environment variables in the Vercel dashboard under Project Settings</li>
+<li>Prefix client-side variables with <code>NEXT_PUBLIC_</code> if using Next.js</li>
+</ul>
+<h4 id="netlify">Netlify</h4>
+<ul>
+<li>Add environment variables in the Netlify dashboard under Site Settings &gt; Build &amp; Deploy &gt; Environment</li>
+<li>Use <code>.env</code> variables in <code>netlify.toml</code> for build-time variables</li>
+</ul>
+<h2 id="part-4-client-side-integration">PART 4: CLIENT-SIDE INTEGRATION</h2>
+<h3 id="step-1-install-required-packages">Step 1: Install Required Packages</h3>
+<pre class="hljs"><code><div>npm install @stripe/stripe-js@latest @stripe/react-stripe-js@latest
+</div></code></pre>
+<h3 id="step-2-update-your-indexjs-file">Step 2: Update Your index.js File</h3>
+<pre class="hljs"><code><div><span class="hljs-comment">// src/react/signup/index.js</span>
+<span class="hljs-keyword">import</span> React <span class="hljs-keyword">from</span> <span class="hljs-string">'react'</span>;
+<span class="hljs-keyword">import</span> { createRoot } <span class="hljs-keyword">from</span> <span class="hljs-string">'react-dom/client'</span>;
+<span class="hljs-keyword">import</span> { Elements } <span class="hljs-keyword">from</span> <span class="hljs-string">'@stripe/react-stripe-js'</span>;
+<span class="hljs-keyword">import</span> { loadStripe } <span class="hljs-keyword">from</span> <span class="hljs-string">'@stripe/stripe-js'</span>;
+<span class="hljs-keyword">import</span> { SignupForm } <span class="hljs-keyword">from</span> <span class="hljs-string">'./SignupForm'</span>;
+<span class="hljs-keyword">import</span> <span class="hljs-string">'./signup.css'</span>;
+
+<span class="hljs-comment">// Load Stripe with your publishable key</span>
+<span class="hljs-comment">// In production, use environment variables: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY</span>
+<span class="hljs-keyword">const</span> stripePromise = loadStripe(<span class="hljs-string">'pk_test_YOUR_PUBLISHABLE_KEY'</span>);
+
+<span class="hljs-comment">// Modern Stripe Elements appearance configuration</span>
+<span class="hljs-keyword">const</span> appearance = {
+  <span class="hljs-attr">theme</span>: <span class="hljs-string">'stripe'</span>,
+  <span class="hljs-attr">variables</span>: {
+    <span class="hljs-attr">colorPrimary</span>: <span class="hljs-string">'#4caf50'</span>,
+    <span class="hljs-attr">colorBackground</span>: <span class="hljs-string">'#ffffff'</span>,
+    <span class="hljs-attr">colorText</span>: <span class="hljs-string">'#30313d'</span>,
+    <span class="hljs-attr">fontFamily</span>: <span class="hljs-string">'Roboto, system-ui, sans-serif'</span>,
+    <span class="hljs-attr">borderRadius</span>: <span class="hljs-string">'8px'</span>,
+  },
+};
+
+<span class="hljs-keyword">const</span> options = {
+  appearance,
+  <span class="hljs-attr">loader</span>: <span class="hljs-string">'auto'</span>
+};
+
+<span class="hljs-comment">// Wait for DOM to be ready, then mount React</span>
+<span class="hljs-built_in">document</span>.addEventListener(<span class="hljs-string">'DOMContentLoaded'</span>, () =&gt; {
+  <span class="hljs-keyword">const</span> container = <span class="hljs-built_in">document</span>.getElementById(<span class="hljs-string">'react-signup-form'</span>);
+  <span class="hljs-keyword">if</span> (container) {
+    <span class="hljs-keyword">const</span> root = createRoot(container);
+    root.render(
+      <span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">Elements</span> <span class="hljs-attr">stripe</span>=<span class="hljs-string">{stripePromise}</span> <span class="hljs-attr">options</span>=<span class="hljs-string">{options}</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">SignupForm</span> /&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">Elements</span>&gt;</span></span>
+    );
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Could not find react-signup-form container element'</span>);
+  }
+});
+</div></code></pre>
+<h3 id="step-3-update-firebase-configjs-with-security-best-practices">Step 3: Update firebase-config.js with Security Best Practices</h3>
+<pre class="hljs"><code><div><span class="hljs-comment">// src/firebase-config.js</span>
+
+<span class="hljs-comment">// Use environment variables for Firebase configuration</span>
+<span class="hljs-keyword">const</span> firebaseConfig = {
+  <span class="hljs-attr">apiKey</span>: process.env.REACT_APP_FIREBASE_API_KEY,
+  <span class="hljs-attr">authDomain</span>: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  <span class="hljs-attr">projectId</span>: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  <span class="hljs-attr">storageBucket</span>: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  <span class="hljs-attr">messagingSenderId</span>: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  <span class="hljs-attr">appId</span>: process.env.REACT_APP_FIREBASE_APP_ID,
+  <span class="hljs-attr">measurementId</span>: process.env.REACT_APP_MEASUREMENT_ID
+};
+
+<span class="hljs-comment">// Use modern modular Firebase SDK</span>
+<span class="hljs-keyword">import</span> { initializeApp, getApps, getApp } <span class="hljs-keyword">from</span> <span class="hljs-string">'firebase/app'</span>;
+<span class="hljs-keyword">import</span> { 
+  getAuth, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged
+} <span class="hljs-keyword">from</span> <span class="hljs-string">'firebase/auth'</span>;
+<span class="hljs-keyword">import</span> { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc,
+  collection,
+  onSnapshot,
+  serverTimestamp 
+} <span class="hljs-keyword">from</span> <span class="hljs-string">'firebase/firestore'</span>;
+
+<span class="hljs-comment">// Initialize Firebase for React components - proper initialization pattern</span>
+<span class="hljs-keyword">let</span> app;
+<span class="hljs-keyword">if</span> (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} <span class="hljs-keyword">else</span> {
+  app = getApp(); <span class="hljs-comment">// Use existing app instance</span>
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> auth = getAuth(app);
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> db = getFirestore(app);
+
+<span class="hljs-comment">// Function to create a user with tier information (modern approach)</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">createUserWithTier</span>(<span class="hljs-params">email, password, name, phone, tier</span>) </span>{
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-comment">// Use modern Firebase SDK</span>
+    <span class="hljs-keyword">const</span> userCredential = <span class="hljs-keyword">await</span> createUserWithEmailAndPassword(auth, email, password);
+    <span class="hljs-keyword">const</span> userId = userCredential.user.uid;
+    
+    <span class="hljs-keyword">await</span> setDoc(doc(db, <span class="hljs-string">'users'</span>, userId), {
+      <span class="hljs-attr">name</span>: name,
+      <span class="hljs-attr">email</span>: email,
+      <span class="hljs-attr">phone</span>: phone || <span class="hljs-literal">null</span>,
+      <span class="hljs-attr">tier</span>: tier,
+      <span class="hljs-attr">role</span>: <span class="hljs-string">'client'</span>,
+      <span class="hljs-attr">createdAt</span>: serverTimestamp()
+    });
+    
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, userId, <span class="hljs-attr">user</span>: userCredential.user };
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Error creating user:'</span>, error);
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>,
+      <span class="hljs-attr">error</span>: error
+    };
+  }
+}
+
+<span class="hljs-comment">// Function to listen to subscription status changes</span>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">listenToSubscriptionStatus</span>(<span class="hljs-params">userId, callback</span>) </span>{
+  <span class="hljs-keyword">if</span> (!userId) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+  
+  <span class="hljs-comment">// Note the collection path uses stripe_customers per Invertase extension</span>
+  <span class="hljs-keyword">const</span> userSubscriptionsRef = collection(db, <span class="hljs-string">'stripe_customers'</span>, userId, <span class="hljs-string">'subscriptions'</span>);
+  
+  <span class="hljs-keyword">return</span> onSnapshot(userSubscriptionsRef, (snapshot) =&gt; {
+    <span class="hljs-keyword">const</span> subscriptions = [];
+    snapshot.forEach(<span class="hljs-function">(<span class="hljs-params">doc</span>) =&gt;</span> {
+      subscriptions.push({
+        <span class="hljs-attr">id</span>: doc.id,
+        ...doc.data()
+      });
+    });
+    callback(subscriptions);
+  });
+}
+
+<span class="hljs-comment">// Function to get user's payment methods</span>
+<span class="hljs-keyword">export</span> <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">listenToPaymentMethods</span>(<span class="hljs-params">userId, callback</span>) </span>{
+  <span class="hljs-keyword">if</span> (!userId) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
+  
+  <span class="hljs-comment">// Note the collection path uses stripe_customers per Invertase extension</span>
+  <span class="hljs-keyword">const</span> paymentMethodsRef = collection(db, <span class="hljs-string">'stripe_customers'</span>, userId, <span class="hljs-string">'payment_methods'</span>);
+  
+  <span class="hljs-keyword">return</span> onSnapshot(paymentMethodsRef, (snapshot) =&gt; {
+    <span class="hljs-keyword">const</span> paymentMethods = [];
+    snapshot.forEach(<span class="hljs-function">(<span class="hljs-params">doc</span>) =&gt;</span> {
+      paymentMethods.push({
+        <span class="hljs-attr">id</span>: doc.id,
+        ...doc.data()
+      });
+    });
+    callback(paymentMethods);
+  });
+}
+</div></code></pre>
+<h3 id="step-4-create-the-paymentstep-component-with-clean-flow-separation">Step 4: Create the PaymentStep Component with Clean Flow Separation</h3>
+<p>When implementing payments for both subscription and one-time purchase products, it's important to follow Stripe's best practice of using separate payment flows:</p>
+<ol>
+<li><strong>For Subscription Products</strong>: Use Stripe Checkout to handle the subscription creation</li>
+<li><strong>For One-Time Payments</strong>: Use Stripe Payment Element in your React UI</li>
+</ol>
+<p>This separation provides the best user experience and developer experience. Here's how to implement this pattern:</p>
+<pre class="hljs"><code><div><span class="hljs-comment">// src/react/signup/components/PaymentStep.jsx</span>
+<span class="hljs-keyword">import</span> React, { useState, useEffect, useCallback, useMemo } <span class="hljs-keyword">from</span> <span class="hljs-string">'react'</span>;
+<span class="hljs-keyword">import</span> { PaymentElement, useStripe, useElements } <span class="hljs-keyword">from</span> <span class="hljs-string">'@stripe/react-stripe-js'</span>;
+<span class="hljs-keyword">import</span> { getFunctions, httpsCallable } <span class="hljs-keyword">from</span> <span class="hljs-string">'firebase/functions'</span>;
+<span class="hljs-keyword">import</span> { getAuth } <span class="hljs-keyword">from</span> <span class="hljs-string">'firebase/auth'</span>;
+<span class="hljs-keyword">import</span> { getFirestore, doc, getDoc } <span class="hljs-keyword">from</span> <span class="hljs-string">'firebase/firestore'</span>;
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">PaymentStep</span>(<span class="hljs-params">{ formData, updateFormData, nextStep, prevStep, error }</span>) </span>{
+  <span class="hljs-keyword">const</span> stripe = useStripe();
+  <span class="hljs-keyword">const</span> elements = useElements();
+  <span class="hljs-keyword">const</span> [processing, setProcessing] = useState(<span class="hljs-literal">false</span>);
+  <span class="hljs-keyword">const</span> [paymentError, setPaymentError] = useState(<span class="hljs-literal">null</span>);
+  <span class="hljs-keyword">const</span> [clientSecret, setClientSecret] = useState(<span class="hljs-string">''</span>);
+  <span class="hljs-keyword">const</span> [priceInfo, setPriceInfo] = useState(<span class="hljs-literal">null</span>);
+  <span class="hljs-keyword">const</span> [isPaymentElementReady, setIsPaymentElementReady] = useState(<span class="hljs-literal">false</span>);
+  <span class="hljs-keyword">const</span> [paymentPlan, setPaymentPlan] = useState(<span class="hljs-string">'full'</span>); <span class="hljs-comment">// 'full' or 'installment'</span>
+
+  <span class="hljs-keyword">const</span> auth = getAuth();
+  <span class="hljs-keyword">const</span> db = getFirestore();
+  
+  <span class="hljs-comment">// Fetch product prices from Firestore (synced by Firebase extension)</span>
+  useEffect(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!formData.tier) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">let</span> productId;
+    <span class="hljs-keyword">switch</span> (formData.tier) {
+      <span class="hljs-keyword">case</span> <span class="hljs-string">'in-person-training'</span>:
+        productId = <span class="hljs-string">'in-person-training'</span>;
+        <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> <span class="hljs-string">'online-coaching'</span>:
+        productId = <span class="hljs-string">'online-coaching'</span>;
+        <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">case</span> <span class="hljs-string">'complete-transformation'</span>:
+        productId = <span class="hljs-string">'complete-transformation'</span>;
+        <span class="hljs-keyword">break</span>;
+      <span class="hljs-keyword">default</span>:
+        <span class="hljs-keyword">return</span>;
+    }
+
+    <span class="hljs-keyword">const</span> fetchPrices = <span class="hljs-keyword">async</span> () =&gt; {
+      <span class="hljs-keyword">try</span> {
+        <span class="hljs-keyword">const</span> productRef = doc(db, <span class="hljs-string">'stripe_products'</span>, productId);
+        <span class="hljs-keyword">const</span> productSnap = <span class="hljs-keyword">await</span> getDoc(productRef);
+        <span class="hljs-keyword">if</span> (!productSnap.exists()) <span class="hljs-keyword">return</span>;
+        <span class="hljs-keyword">const</span> productData = productSnap.data();
+        <span class="hljs-keyword">const</span> prices = productData.prices;
+
+        setPriceInfo({
+          <span class="hljs-comment">// FIXED: Using correct comparison operators (=== instead of =)</span>
+          <span class="hljs-attr">fullPrice</span>: prices.find(
+            <span class="hljs-function"><span class="hljs-params">p</span> =&gt;</span> !p.payment_schedule &amp;&amp; p.recurring === getProductDetails().isSubscription
+          )?.id,
+          <span class="hljs-attr">installmentPrice</span>: prices.find(
+            <span class="hljs-function"><span class="hljs-params">p</span> =&gt;</span> p.payment_schedule?.interval === <span class="hljs-string">'month'</span>
+          )?.id,
+          <span class="hljs-attr">sessionPrice</span>: prices.find(
+            <span class="hljs-function"><span class="hljs-params">p</span> =&gt;</span> p.type === <span class="hljs-string">'one_time'</span> &amp;&amp; p.unit_amount === <span class="hljs-number">6000</span>
+          )?.id,
+        });
+      } <span class="hljs-keyword">catch</span> (err) {
+        setPaymentError(<span class="hljs-string">'Could not fetch price info: '</span> + err.message);
+      }
+    };
+    fetchPrices();
+  }, [formData.tier, db]);
+  
+  <span class="hljs-comment">// Initialize PaymentIntent ONLY for one-time payments</span>
+  useEffect(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-keyword">if</span> (!stripe || !priceInfo || !auth.currentUser) <span class="hljs-keyword">return</span>;
+    <span class="hljs-keyword">const</span> productDetails = getProductDetails();
+    
+    <span class="hljs-comment">// Only create PaymentIntent for one-time payments</span>
+    <span class="hljs-keyword">if</span> (!productDetails.isSubscription) {
+      (<span class="hljs-keyword">async</span> () =&gt; {
+        <span class="hljs-keyword">try</span> {
+          <span class="hljs-keyword">const</span> functions = getFunctions();
+          <span class="hljs-keyword">const</span> createPaymentFn = httpsCallable(
+            functions, 
+            <span class="hljs-string">'ext-firestore-stripe-payments-createPaymentIntent'</span>
+          );
+          <span class="hljs-keyword">const</span> priceId = paymentPlan === <span class="hljs-string">'full'</span> ? 
+            priceInfo.fullPrice : 
+            priceInfo.installmentPrice;
+            
+          <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> createPaymentFn({
+            <span class="hljs-attr">price</span>: priceId,
+            <span class="hljs-attr">automatic_payment_methods</span>: { <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span> },
+            <span class="hljs-attr">currency</span>: <span class="hljs-string">'usd'</span>
+          });
+          
+          setClientSecret(result.data.clientSecret);
+        } <span class="hljs-keyword">catch</span> (err) {
+          setPaymentError(<span class="hljs-string">'Could not create payment intent: '</span> + err.message);
+        }
+      })();
+    }
+  }, [stripe, priceInfo, paymentPlan, auth.currentUser]);
+  
+  <span class="hljs-comment">// Get product details based on selected tier</span>
+  <span class="hljs-keyword">const</span> getProductDetails = useCallback(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+    <span class="hljs-keyword">switch</span>(formData.tier) {
+      <span class="hljs-keyword">case</span> <span class="hljs-string">'in-person-training'</span>:
+        <span class="hljs-keyword">return</span> {
+          <span class="hljs-attr">name</span>: <span class="hljs-string">'In-Person Training'</span>,
+          <span class="hljs-attr">amount</span>: <span class="hljs-number">7000</span>, <span class="hljs-comment">// $70.00 in cents</span>
+          <span class="hljs-attr">installmentAmount</span>: <span class="hljs-number">1750</span>, <span class="hljs-comment">// $17.50 in cents</span>
+          <span class="hljs-attr">isSubscription</span>: <span class="hljs-literal">false</span>
+        };
+      <span class="hljs-keyword">case</span> <span class="hljs-string">'online-coaching'</span>:
+        <span class="hljs-keyword">return</span> {
+          <span class="hljs-attr">name</span>: <span class="hljs-string">'Online Coaching'</span>,
+          <span class="hljs-attr">amount</span>: <span class="hljs-number">19900</span>, <span class="hljs-comment">// $199.00 in cents</span>
+          <span class="hljs-attr">installmentAmount</span>: <span class="hljs-number">4975</span>, <span class="hljs-comment">// $49.75 in cents</span>
+          <span class="hljs-attr">isSubscription</span>: <span class="hljs-literal">true</span>
+        };
+      <span class="hljs-keyword">case</span> <span class="hljs-string">'complete-transformation'</span>:
+        <span class="hljs-keyword">return</span> {
+          <span class="hljs-attr">name</span>: <span class="hljs-string">'Complete Transformation'</span>,
+          <span class="hljs-attr">amount</span>: <span class="hljs-number">19900</span>, <span class="hljs-comment">// $199.00 in cents</span>
+          <span class="hljs-attr">sessionAmount</span>: <span class="hljs-number">6000</span>, <span class="hljs-comment">// $60.00 in cents</span>
+          <span class="hljs-attr">installmentAmount</span>: <span class="hljs-number">4975</span>, <span class="hljs-comment">// $49.75 in cents</span>
+          <span class="hljs-attr">isSubscription</span>: <span class="hljs-literal">true</span>,
+          <span class="hljs-attr">hasAdditionalCharge</span>: <span class="hljs-literal">true</span>
+        };
+      <span class="hljs-keyword">default</span>:
+        <span class="hljs-keyword">return</span> { <span class="hljs-attr">name</span>: <span class="hljs-string">''</span>, <span class="hljs-attr">amount</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">isSubscription</span>: <span class="hljs-literal">false</span> };
+    }
+  }, [formData.tier]);
+  
+  <span class="hljs-keyword">const</span> formatCurrency = <span class="hljs-function">(<span class="hljs-params">amount</span>) =&gt;</span> {
+    <span class="hljs-keyword">return</span> (amount / <span class="hljs-number">100</span>).toLocaleString(<span class="hljs-string">'en-US'</span>, {
+      <span class="hljs-attr">style</span>: <span class="hljs-string">'currency'</span>,
+      <span class="hljs-attr">currency</span>: <span class="hljs-string">'USD'</span>
+    });
+  };
+  
+  <span class="hljs-keyword">const</span> handlePlanSelection = <span class="hljs-function">(<span class="hljs-params">plan</span>) =&gt;</span> {
+    setPaymentPlan(plan);
+  };
+  
+  <span class="hljs-comment">// Submit handler with clean separation of payment flows</span>
+  <span class="hljs-keyword">const</span> handleSubmit = <span class="hljs-keyword">async</span> (e) =&gt; {
+    e.preventDefault();
+    setProcessing(<span class="hljs-literal">true</span>);
+    setPaymentError(<span class="hljs-literal">null</span>);
+    
+    <span class="hljs-keyword">const</span> productDetails = getProductDetails();
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">if</span> (productDetails.isSubscription) {
+        <span class="hljs-comment">// SUBSCRIPTION FLOW: Use Stripe Checkout</span>
+        <span class="hljs-keyword">const</span> functions = getFunctions();
+        <span class="hljs-keyword">const</span> createCheckoutSession = httpsCallable(
+          functions, 
+          <span class="hljs-string">'ext-firestore-stripe-payments-createCheckoutSession'</span>
+        );
+        
+        <span class="hljs-comment">// Build line items array for checkout</span>
+        <span class="hljs-keyword">const</span> priceId = paymentPlan === <span class="hljs-string">'full'</span> ? 
+          priceInfo.fullPrice : 
+          priceInfo.installmentPrice;
+          
+        <span class="hljs-keyword">const</span> lineItems = [{ <span class="hljs-attr">price</span>: priceId, <span class="hljs-attr">quantity</span>: <span class="hljs-number">1</span> }];
+        
+        <span class="hljs-comment">// If complete transformation with additional session fee, add it to checkout</span>
+        <span class="hljs-keyword">if</span> (productDetails.hasAdditionalCharge &amp;&amp; paymentPlan === <span class="hljs-string">'full'</span> &amp;&amp; priceInfo.sessionPrice) {
+          lineItems.push({ <span class="hljs-attr">price</span>: priceInfo.sessionPrice, <span class="hljs-attr">quantity</span>: <span class="hljs-number">1</span> });
+        }
+        
+        <span class="hljs-comment">// Create checkout session with multiple prices if needed</span>
+        <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> createCheckoutSession({
+          <span class="hljs-attr">line_items</span>: lineItems,
+          <span class="hljs-attr">success_url</span>: <span class="hljs-string">`<span class="hljs-subst">${<span class="hljs-built_in">window</span>.location.origin}</span>/signup-success.html?session_id={CHECKOUT_SESSION_ID}`</span>,
+          <span class="hljs-attr">cancel_url</span>: <span class="hljs-string">`<span class="hljs-subst">${<span class="hljs-built_in">window</span>.location.origin}</span>/signup.html`</span>,
+          <span class="hljs-attr">billing_address_collection</span>: <span class="hljs-string">'required'</span>,
+          <span class="hljs-attr">client_reference_id</span>: auth.currentUser.uid,
+          <span class="hljs-attr">customer_email</span>: formData.email,
+          <span class="hljs-attr">metadata</span>: {
+            <span class="hljs-attr">tier</span>: formData.tier,
+            paymentPlan
+          }
+        });
+        
+        <span class="hljs-comment">// Redirect to Stripe Checkout</span>
+        <span class="hljs-keyword">const</span> { sessionId } = result.data;
+        <span class="hljs-keyword">const</span> { error } = <span class="hljs-keyword">await</span> stripe.redirectToCheckout({ sessionId });
+        
+        <span class="hljs-keyword">if</span> (error) {
+          <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(error.message);
+        }
+      } <span class="hljs-keyword">else</span> {
+        <span class="hljs-comment">// ONE-TIME FLOW: Use Payment Element with confirmPayment</span>
+        <span class="hljs-keyword">if</span> (!stripe || !elements || !clientSecret) {
+          setPaymentError(<span class="hljs-string">"Payment system not ready. Please try again."</span>);
+          <span class="hljs-keyword">return</span>;
+        }
+        
+        <span class="hljs-keyword">const</span> { error, paymentIntent } = <span class="hljs-keyword">await</span> stripe.confirmPayment({
+          elements,
+          <span class="hljs-attr">confirmParams</span>: {
+            <span class="hljs-attr">return_url</span>: <span class="hljs-string">`<span class="hljs-subst">${<span class="hljs-built_in">window</span>.location.origin}</span>/signup-success.html`</span>,
+            <span class="hljs-attr">payment_method_data</span>: {
+              <span class="hljs-attr">billing_details</span>: {
+                <span class="hljs-attr">name</span>: formData.name,
+                <span class="hljs-attr">email</span>: formData.email
+              }
+            }
+          },
+          <span class="hljs-attr">redirect</span>: <span class="hljs-string">'if_required'</span> <span class="hljs-comment">// Only redirect for 3D Secure or other auth flows</span>
+        });
+        
+        <span class="hljs-keyword">if</span> (error) {
+          setPaymentError(error.message || <span class="hljs-string">'Payment failed'</span>);
+          <span class="hljs-keyword">throw</span> error;
+        }
+        
+        <span class="hljs-comment">// Payment succeeded, update formData and continue</span>
+        updateFormData({
+          <span class="hljs-attr">paymentInfo</span>: {
+            <span class="hljs-attr">paymentMethodId</span>: paymentIntent.payment_method,
+            <span class="hljs-attr">last4</span>: <span class="hljs-string">"****"</span>, <span class="hljs-comment">// Will be updated on success page</span>
+            <span class="hljs-attr">brand</span>: <span class="hljs-string">"card"</span>,
+            paymentPlan,
+            <span class="hljs-attr">paymentComplete</span>: <span class="hljs-literal">true</span>
+          }
+        });
+        
+        nextStep();
+      }
+    } <span class="hljs-keyword">catch</span> (err) {
+      <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Payment error:'</span>, err);
+      <span class="hljs-keyword">if</span> (!paymentError) {
+        setPaymentError(err.message || <span class="hljs-string">'An unexpected error occurred'</span>);
+      }
+    } <span class="hljs-keyword">finally</span> {
+      setProcessing(<span class="hljs-literal">false</span>);
+    }
+  };
+
+  <span class="hljs-comment">// Use different UI based on product type</span>
+  <span class="hljs-keyword">const</span> productDetails = getProductDetails();
+  
+  <span class="hljs-comment">// CLEAN SEPARATION: Show different UI based on product type</span>
+  
+  <span class="hljs-comment">// Loading state</span>
+  <span class="hljs-keyword">if</span> ((!productDetails.isSubscription &amp;&amp; (!stripe || !elements || !clientSecret)) || !priceInfo) {
+    <span class="hljs-keyword">return</span> (
+      <span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"signup-form loading"</span> <span class="hljs-attr">aria-live</span>=<span class="hljs-string">"polite"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h3</span>&gt;</span>Payment Information<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"loading-indicator"</span> <span class="hljs-attr">role</span>=<span class="hljs-string">"status"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"spinner"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>Loading payment system...<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>
+    );
+  }
+  
+  <span class="hljs-comment">// Subscription Flow UI (No Payment Element, just payment plan selection)</span>
+  <span class="hljs-keyword">if</span> (productDetails.isSubscription) {
+    <span class="hljs-keyword">return</span> (
+      <span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">form</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"signup-form"</span> <span class="hljs-attr">onSubmit</span>=<span class="hljs-string">{handleSubmit}</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h3</span>&gt;</span>Subscription Payment<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+        
+        {paymentError &amp;&amp; (
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"error-message"</span> <span class="hljs-attr">role</span>=<span class="hljs-string">"alert"</span> <span class="hljs-attr">aria-live</span>=<span class="hljs-string">"polite"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-exclamation-circle"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>
+            {paymentError}
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        )}
+        
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"payment-summary"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">h4</span>&gt;</span>Order Summary<span class="hljs-tag">&lt;/<span class="hljs-name">h4</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"summary-item"</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-name"</span>&gt;</span>{productDetails.name}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-price"</span>&gt;</span>{formatCurrency(productDetails.amount)}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          {productDetails.hasAdditionalCharge &amp;&amp; (
+            <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"summary-item"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-name"</span>&gt;</span>Session Fee<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-price"</span>&gt;</span>{formatCurrency(productDetails.sessionAmount)}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          )}
+          <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"recurring-notice"</span>&gt;</span>
+            You will be charged {formatCurrency(productDetails.amount)} monthly
+          <span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"payment-plan-options"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">h4</span>&gt;</span>Payment Options<span class="hljs-tag">&lt;/<span class="hljs-name">h4</span>&gt;</span>
+          
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">{</span>`<span class="hljs-attr">plan-option</span> ${<span class="hljs-attr">paymentPlan</span> === <span class="hljs-string">'full'</span> ? '<span class="hljs-attr">selected</span>' <span class="hljs-attr">:</span> ''}`}&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">input</span> 
+              <span class="hljs-attr">type</span>=<span class="hljs-string">"radio"</span> 
+              <span class="hljs-attr">id</span>=<span class="hljs-string">"full-payment"</span> 
+              <span class="hljs-attr">name</span>=<span class="hljs-string">"payment-plan"</span>
+              <span class="hljs-attr">checked</span>=<span class="hljs-string">{paymentPlan</span> === <span class="hljs-string">'full'</span>}
+              <span class="hljs-attr">onChange</span>=<span class="hljs-string">{()</span> =&gt;</span> handlePlanSelection('full')}
+            /&gt;
+            <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">htmlFor</span>=<span class="hljs-string">"full-payment"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"plan-option-details"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">strong</span>&gt;</span>Pay in Full<span class="hljs-tag">&lt;/<span class="hljs-name">strong</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>{formatCurrency(productDetails.amount)}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"plan-option-description"</span>&gt;</span>
+                Monthly subscription, cancel anytime
+              <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+          
+          <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">{</span>`<span class="hljs-attr">plan-option</span> ${<span class="hljs-attr">paymentPlan</span> === <span class="hljs-string">'installment'</span> ? '<span class="hljs-attr">selected</span>' <span class="hljs-attr">:</span> ''}`}&gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">input</span> 
+              <span class="hljs-attr">type</span>=<span class="hljs-string">"radio"</span> 
+              <span class="hljs-attr">id</span>=<span class="hljs-string">"installment-payment"</span> 
+              <span class="hljs-attr">name</span>=<span class="hljs-string">"payment-plan"</span>
+              <span class="hljs-attr">checked</span>=<span class="hljs-string">{paymentPlan</span> === <span class="hljs-string">'installment'</span>}
+              <span class="hljs-attr">onChange</span>=<span class="hljs-string">{()</span> =&gt;</span> handlePlanSelection('installment')}
+            /&gt;
+            <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">htmlFor</span>=<span class="hljs-string">"installment-payment"</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"plan-option-details"</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">strong</span>&gt;</span>4 Monthly Payments<span class="hljs-tag">&lt;/<span class="hljs-name">strong</span>&gt;</span>
+                <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>{formatCurrency(productDetails.installmentAmount)}/month<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+              <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+              <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"plan-option-description"</span>&gt;</span>
+                Split into 4 easy payments
+              <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+            <span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+          <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"payment-security-notice"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-lock"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>You'll be securely redirected to Stripe to complete your subscription.<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"button-row"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">button</span> 
+            <span class="hljs-attr">type</span>=<span class="hljs-string">"button"</span> 
+            <span class="hljs-attr">className</span>=<span class="hljs-string">"btn-secondary"</span>
+            <span class="hljs-attr">onClick</span>=<span class="hljs-string">{prevStep}</span>
+            <span class="hljs-attr">disabled</span>=<span class="hljs-string">{processing}</span>
+          &gt;</span>
+            <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-arrow-left"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span> Back
+          <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">button</span> 
+            <span class="hljs-attr">type</span>=<span class="hljs-string">"submit"</span> 
+            <span class="hljs-attr">className</span>=<span class="hljs-string">"btn-primary-enhanced"</span>
+            <span class="hljs-attr">disabled</span>=<span class="hljs-string">{processing}</span>
+            <span class="hljs-attr">aria-busy</span>=<span class="hljs-string">{processing}</span>
+          &gt;</span>
+            {processing ? 'Processing...' : 'Subscribe Now'} 
+            {!processing &amp;&amp; <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-arrow-right"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>}
+          <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">form</span>&gt;</span></span>
+    );
+  }
+  
+  <span class="hljs-comment">// One-time Payment Flow UI (Uses Payment Element)</span>
+  <span class="hljs-keyword">return</span> (
+    <span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">form</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"signup-form"</span> <span class="hljs-attr">onSubmit</span>=<span class="hljs-string">{handleSubmit}</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">h3</span>&gt;</span>Payment Information<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+      
+      {paymentError &amp;&amp; (
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"error-message"</span> <span class="hljs-attr">role</span>=<span class="hljs-string">"alert"</span> <span class="hljs-attr">aria-live</span>=<span class="hljs-string">"polite"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-exclamation-circle"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>
+          {paymentError}
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      )}
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"payment-summary"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h4</span>&gt;</span>Order Summary<span class="hljs-tag">&lt;/<span class="hljs-name">h4</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"summary-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-name"</span>&gt;</span>{productDetails.name}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-price"</span>&gt;</span>{formatCurrency(productDetails.amount)}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"form-group"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">htmlFor</span>=<span class="hljs-string">"payment-element"</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"sr-only"</span>&gt;</span>
+          Payment details
+        <span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"payment-element-container"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">PaymentElement</span> 
+            <span class="hljs-attr">id</span>=<span class="hljs-string">"payment-element"</span> 
+            <span class="hljs-attr">options</span>=<span class="hljs-string">{{</span>
+              <span class="hljs-attr">layout:</span> '<span class="hljs-attr">tabs</span>',
+              <span class="hljs-attr">paymentMethodOrder:</span> ['<span class="hljs-attr">card</span>', '<span class="hljs-attr">apple_pay</span>', '<span class="hljs-attr">google_pay</span>'],
+              <span class="hljs-attr">defaultValues:</span> {
+                <span class="hljs-attr">billingDetails:</span> {
+                  <span class="hljs-attr">name:</span> <span class="hljs-attr">formData.name</span> || '',
+                  <span class="hljs-attr">email:</span> <span class="hljs-attr">formData.email</span> || ''
+                }
+              }
+            }}
+            <span class="hljs-attr">onReady</span>=<span class="hljs-string">{()</span> =&gt;</span> setIsPaymentElementReady(true)}
+          /&gt;
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"payment-security-notice"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-lock"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">span</span>&gt;</span>Payments are securely processed through Stripe.<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"button-row"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">button</span> 
+          <span class="hljs-attr">type</span>=<span class="hljs-string">"button"</span> 
+          <span class="hljs-attr">className</span>=<span class="hljs-string">"btn-secondary"</span>
+          <span class="hljs-attr">onClick</span>=<span class="hljs-string">{prevStep}</span>
+          <span class="hljs-attr">disabled</span>=<span class="hljs-string">{processing}</span>
+        &gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-arrow-left"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span> Back
+        <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">button</span> 
+          <span class="hljs-attr">type</span>=<span class="hljs-string">"submit"</span> 
+          <span class="hljs-attr">className</span>=<span class="hljs-string">"btn-primary-enhanced"</span>
+          <span class="hljs-attr">disabled</span>=<span class="hljs-string">{!stripe</span> || !<span class="hljs-attr">isPaymentElementReady</span> || <span class="hljs-attr">processing</span>}
+          <span class="hljs-attr">aria-busy</span>=<span class="hljs-string">{processing}</span>
+        &gt;</span>
+          {processing ? 'Processing...' : 'Pay Now'} 
+          {!processing &amp;&amp; <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-arrow-right"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>}
+        <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">form</span>&gt;</span></span>
+  );
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> PaymentStep;
+</div></code></pre>
+<h4 id="key-best-practices-in-this-implementation">Key Best Practices in This Implementation:</h4>
+<ol>
+<li>
+<p><strong>Flow Separation</strong>: Subscription products use Stripe Checkout, while one-time purchases use Payment Element. This provides the optimal experience for each payment type.</p>
+</li>
+<li>
+<p><strong>Conditional UI</strong>: The component renders completely different UIs based on product type - no PaymentElement for subscriptions, only for one-time purchases.</p>
+</li>
+<li>
+<p><strong>Error Handling</strong>: Robust error handling with clear user-friendly messages.</p>
+</li>
+<li>
+<p><strong>Accessibility</strong>: ARIA attributes and proper loading states provide an accessible experience.</p>
+</li>
+<li>
+<p><strong>Performance</strong>: Using React hooks like useCallback and useMemo for optimal rendering performance.</p>
+</li>
+<li>
+<p><strong>Clean Code Structure</strong>: Clear separation between data fetching, UI rendering, and payment processing logic.</p>
+</li>
+</ol>
+<h3 id="step-5-add-enhanced-css-styling">Step 5: Add Enhanced CSS Styling</h3>
+<p>Add these styles to your <code>src/react/signup/signup.css</code> file:</p>
+<pre class="hljs"><code><div><span class="hljs-comment">/* Payment form styling */</span>
+<span class="hljs-selector-class">.payment-element-container</span> {
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">border</span>: <span class="hljs-number">1px</span> solid <span class="hljs-number">#e0e0e0</span>;
+  <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">8px</span>;
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-number">#fff</span>;
+  <span class="hljs-attribute">transition</span>: all <span class="hljs-number">0.3s</span>;
+}
+
+<span class="hljs-selector-class">.payment-element-container</span><span class="hljs-selector-pseudo">:focus-within</span> {
+  <span class="hljs-attribute">border-color</span>: <span class="hljs-built_in">var</span>(--primary, #<span class="hljs-number">4</span>caf50);
+  <span class="hljs-attribute">box-shadow</span>: <span class="hljs-number">0</span> <span class="hljs-number">0</span> <span class="hljs-number">0</span> <span class="hljs-number">2px</span> <span class="hljs-built_in">rgba</span>(<span class="hljs-number">76</span>, <span class="hljs-number">175</span>, <span class="hljs-number">80</span>, <span class="hljs-number">0.2</span>);
+}
+
+<span class="hljs-comment">/* Payment plan options */</span>
+<span class="hljs-selector-class">.payment-plan-options</span> {
+  <span class="hljs-attribute">margin</span>: <span class="hljs-number">1.5rem</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-selector-class">.plan-option</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">align-items</span>: flex-start;
+  <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">border</span>: <span class="hljs-number">1px</span> solid <span class="hljs-number">#e0e0e0</span>;
+  <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">8px</span>;
+  <span class="hljs-attribute">transition</span>: all <span class="hljs-number">0.3s</span>;
+}
+
+<span class="hljs-selector-class">.plan-option</span> <span class="hljs-selector-tag">input</span><span class="hljs-selector-attr">[type=<span class="hljs-string">"radio"</span>]</span> {
+  <span class="hljs-attribute">margin-top</span>: <span class="hljs-number">0.3rem</span>;
+  <span class="hljs-attribute">margin-right</span>: <span class="hljs-number">1rem</span>;
+}
+
+<span class="hljs-selector-class">.plan-option</span> <span class="hljs-selector-tag">label</span> {
+  <span class="hljs-attribute">flex</span>: <span class="hljs-number">1</span>;
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">flex-direction</span>: column;
+  <span class="hljs-attribute">cursor</span>: pointer;
+}
+
+<span class="hljs-selector-class">.plan-option-details</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">justify-content</span>: space-between;
+  <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">0.5rem</span>;
+}
+
+<span class="hljs-selector-class">.plan-option-description</span> {
+  <span class="hljs-attribute">font-size</span>: <span class="hljs-number">0.9rem</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#666</span>;
+}
+
+<span class="hljs-comment">/* Safari-compatible selected state (instead of :has pseudo-class) */</span>
+<span class="hljs-selector-class">.plan-option</span><span class="hljs-selector-class">.selected</span> {
+  <span class="hljs-attribute">border-color</span>: <span class="hljs-built_in">var</span>(--primary, #<span class="hljs-number">4</span>caf50);
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">rgba</span>(<span class="hljs-number">76</span>, <span class="hljs-number">175</span>, <span class="hljs-number">80</span>, <span class="hljs-number">0.05</span>);
+}
+
+<span class="hljs-comment">/* Loading state */</span>
+<span class="hljs-selector-class">.signup-form</span><span class="hljs-selector-class">.loading</span> {
+  <span class="hljs-attribute">min-height</span>: <span class="hljs-number">300px</span>;
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">flex-direction</span>: column;
+  <span class="hljs-attribute">align-items</span>: center;
+  <span class="hljs-attribute">justify-content</span>: center;
+}
+
+<span class="hljs-selector-class">.loading-indicator</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">flex-direction</span>: column;
+  <span class="hljs-attribute">align-items</span>: center;
+  <span class="hljs-attribute">gap</span>: <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">margin-top</span>: <span class="hljs-number">2rem</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#666</span>;
+}
+
+<span class="hljs-selector-class">.spinner</span> {
+  <span class="hljs-attribute">width</span>: <span class="hljs-number">40px</span>;
+  <span class="hljs-attribute">height</span>: <span class="hljs-number">40px</span>;
+  <span class="hljs-attribute">border</span>: <span class="hljs-number">3px</span> solid <span class="hljs-built_in">rgba</span>(<span class="hljs-number">76</span>, <span class="hljs-number">175</span>, <span class="hljs-number">80</span>, <span class="hljs-number">0.2</span>);
+  <span class="hljs-attribute">border-top-color</span>: <span class="hljs-built_in">var</span>(--primary, #<span class="hljs-number">4</span>caf50);
+  <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">50%</span>;
+  <span class="hljs-attribute">animation</span>: spinner <span class="hljs-number">1s</span> linear infinite;
+}
+
+<span class="hljs-keyword">@keyframes</span> spinner {
+  <span class="hljs-selector-tag">to</span> {<span class="hljs-attribute">transform</span>: <span class="hljs-built_in">rotate</span>(<span class="hljs-number">360deg</span>);}
+}
+
+<span class="hljs-comment">/* Error message styling */</span>
+<span class="hljs-selector-class">.error-message</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">align-items</span>: center;
+  <span class="hljs-attribute">gap</span>: <span class="hljs-number">0.5rem</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#d32f2f</span>;
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">rgba</span>(<span class="hljs-number">211</span>, <span class="hljs-number">47</span>, <span class="hljs-number">47</span>, <span class="hljs-number">0.1</span>);
+  <span class="hljs-attribute">border-left</span>: <span class="hljs-number">3px</span> solid <span class="hljs-number">#d32f2f</span>;
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">0.75rem</span> <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">margin-bottom</span>: <span class="hljs-number">1.5rem</span>;
+  <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">0</span> <span class="hljs-number">4px</span> <span class="hljs-number">4px</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-comment">/* Retry button */</span>
+<span class="hljs-selector-class">.retry-button</span> {
+  <span class="hljs-attribute">margin-left</span>: auto;
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">0.25rem</span> <span class="hljs-number">0.75rem</span>;
+  <span class="hljs-attribute">background-color</span>: transparent;
+  <span class="hljs-attribute">border</span>: <span class="hljs-number">1px</span> solid <span class="hljs-number">#d32f2f</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#d32f2f</span>;
+  <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">4px</span>;
+  <span class="hljs-attribute">cursor</span>: pointer;
+  <span class="hljs-attribute">transition</span>: all <span class="hljs-number">0.2s</span>;
+}
+
+<span class="hljs-selector-class">.retry-button</span><span class="hljs-selector-pseudo">:hover</span> {
+  <span class="hljs-attribute">background-color</span>: <span class="hljs-built_in">rgba</span>(<span class="hljs-number">211</span>, <span class="hljs-number">47</span>, <span class="hljs-number">47</span>, <span class="hljs-number">0.1</span>);
+}
+
+<span class="hljs-comment">/* Security notice */</span>
+<span class="hljs-selector-class">.payment-security-notice</span> {
+  <span class="hljs-attribute">display</span>: flex;
+  <span class="hljs-attribute">align-items</span>: center;
+  <span class="hljs-attribute">gap</span>: <span class="hljs-number">0.5rem</span>;
+  <span class="hljs-attribute">font-size</span>: <span class="hljs-number">0.9rem</span>;
+  <span class="hljs-attribute">color</span>: <span class="hljs-number">#666</span>;
+  <span class="hljs-attribute">margin</span>: <span class="hljs-number">1.5rem</span> <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-selector-class">.payment-security-notice</span> <span class="hljs-selector-tag">i</span> {
+  <span class="hljs-attribute">color</span>: <span class="hljs-built_in">var</span>(--primary, #<span class="hljs-number">4</span>caf50);
+}
+
+<span class="hljs-comment">/* Accessibility improvements */</span>
+<span class="hljs-selector-class">.sr-only</span> {
+  <span class="hljs-attribute">position</span>: absolute;
+  <span class="hljs-attribute">width</span>: <span class="hljs-number">1px</span>;
+  <span class="hljs-attribute">height</span>: <span class="hljs-number">1px</span>;
+  <span class="hljs-attribute">padding</span>: <span class="hljs-number">0</span>;
+  <span class="hljs-attribute">margin</span>: -<span class="hljs-number">1px</span>;
+  <span class="hljs-attribute">overflow</span>: hidden;
+  <span class="hljs-attribute">clip</span>: <span class="hljs-built_in">rect</span>(<span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>, <span class="hljs-number">0</span>);
+  <span class="hljs-attribute">white-space</span>: nowrap;
+  <span class="hljs-attribute">border-width</span>: <span class="hljs-number">0</span>;
+}
+
+<span class="hljs-comment">/* Button state styles */</span>
+<span class="hljs-selector-tag">button</span><span class="hljs-selector-attr">[aria-busy=true]</span> {
+  <span class="hljs-attribute">position</span>: relative;
+  <span class="hljs-attribute">color</span>: transparent;
+}
+
+<span class="hljs-selector-tag">button</span><span class="hljs-selector-attr">[aria-busy=true]</span><span class="hljs-selector-pseudo">::after</span> {
+  <span class="hljs-attribute">content</span>: <span class="hljs-string">""</span>;
+  <span class="hljs-attribute">position</span>: absolute;
+  <span class="hljs-attribute">top</span>: <span class="hljs-number">50%</span>;
+  <span class="hljs-attribute">left</span>: <span class="hljs-number">50%</span>;
+  <span class="hljs-attribute">width</span>: <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">height</span>: <span class="hljs-number">1rem</span>;
+  <span class="hljs-attribute">margin-top</span>: -<span class="hljs-number">0.5rem</span>;
+  <span class="hljs-attribute">margin-left</span>: -<span class="hljs-number">0.5rem</span>;
+  <span class="hljs-attribute">border</span>: <span class="hljs-number">2px</span> solid <span class="hljs-built_in">rgba</span>(<span class="hljs-number">255</span>, <span class="hljs-number">255</span>, <span class="hljs-number">255</span>, <span class="hljs-number">0.2</span>);
+  <span class="hljs-attribute">border-radius</span>: <span class="hljs-number">50%</span>;
+  <span class="hljs-attribute">border-top-color</span>: white;
+  <span class="hljs-attribute">animation</span>: spinner <span class="hljs-number">1s</span> linear infinite;
+}
+</div></code></pre>
+<h3 id="step-6-update-confirmationstep-component">Step 6: Update ConfirmationStep Component</h3>
+<p>Modify your ConfirmationStep.jsx to show payment details:</p>
+<pre class="hljs"><code><div><span class="hljs-comment">// src/react/signup/components/ConfirmationStep.jsx</span>
+<span class="hljs-keyword">import</span> React <span class="hljs-keyword">from</span> <span class="hljs-string">'react'</span>;
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">ConfirmationStep</span>(<span class="hljs-params">{ formData, handleSubmit, prevStep, isSubmitting, error }</span>) </span>{
+  <span class="hljs-keyword">return</span> (
+    <span class="xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"signup-form"</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">h3</span>&gt;</span>Review Your Information<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+      
+      {error &amp;&amp; <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"error-message"</span> <span class="hljs-attr">role</span>=<span class="hljs-string">"alert"</span>&gt;</span>{error}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>}
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-section"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h4</span>&gt;</span>Account Information<span class="hljs-tag">&lt;/<span class="hljs-name">h4</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-label"</span>&gt;</span>Name:<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-value"</span>&gt;</span>{formData.name}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-label"</span>&gt;</span>Email:<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-value"</span>&gt;</span>{formData.email}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-label"</span>&gt;</span>Phone:<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-value"</span>&gt;</span>{formData.phone || 'Not provided'}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-section"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h4</span>&gt;</span>Selected Plan<span class="hljs-tag">&lt;/<span class="hljs-name">h4</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-label"</span>&gt;</span>Plan:<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-value"</span>&gt;</span>
+            {formData.tier === 'in-person-training' &amp;&amp; 'In-Person Training'}
+            {formData.tier === 'online-coaching' &amp;&amp; 'Online Coaching'}
+            {formData.tier === 'complete-transformation' &amp;&amp; 'Complete Transformation'}
+          <span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-section"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h4</span>&gt;</span>Payment Information<span class="hljs-tag">&lt;/<span class="hljs-name">h4</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-label"</span>&gt;</span>Payment Method:<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-value"</span>&gt;</span>
+            {formData.paymentInfo?.brand 
+              ? `${formData.paymentInfo.brand.toUpperCase()} •••• ${formData.paymentInfo.last4}` 
+              : 'Not provided'}
+          <span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"review-item"</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-label"</span>&gt;</span>Payment Plan:<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"item-value"</span>&gt;</span>
+            {formData.paymentInfo?.paymentPlan === 'installment' 
+              ? '4 Monthly Payments' 
+              : 'Pay in Full'}
+          <span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+        <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"disclaimer"</span>&gt;</span>
+        By clicking "Complete Sign Up", you agree to our Terms of Service and Privacy Policy.
+        Your payment will be processed securely by Stripe.
+      <span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+      
+      <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"button-row"</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">button</span> 
+          <span class="hljs-attr">type</span>=<span class="hljs-string">"button"</span> 
+          <span class="hljs-attr">className</span>=<span class="hljs-string">"btn-secondary"</span>
+          <span class="hljs-attr">onClick</span>=<span class="hljs-string">{prevStep}</span>
+          <span class="hljs-attr">disabled</span>=<span class="hljs-string">{isSubmitting}</span>
+        &gt;</span>
+          <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-arrow-left"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span> Back
+        <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">button</span> 
+          <span class="hljs-attr">type</span>=<span class="hljs-string">"button"</span> 
+          <span class="hljs-attr">className</span>=<span class="hljs-string">"btn-primary-enhanced"</span>
+          <span class="hljs-attr">onClick</span>=<span class="hljs-string">{handleSubmit}</span>
+          <span class="hljs-attr">disabled</span>=<span class="hljs-string">{isSubmitting}</span>
+          <span class="hljs-attr">aria-busy</span>=<span class="hljs-string">{isSubmitting}</span>
+        &gt;</span>
+          {isSubmitting ? 'Processing...' : 'Complete Sign Up'}
+          {!isSubmitting &amp;&amp; <span class="hljs-tag">&lt;<span class="hljs-name">i</span> <span class="hljs-attr">className</span>=<span class="hljs-string">"fas fa-check-circle"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">i</span>&gt;</span>}
+        <span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>
+  );
+}
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">default</span> ConfirmationStep;
+</div></code></pre>
+<h2 id="part-5-testing-the-integration">PART 5: TESTING THE INTEGRATION</h2>
+<h3 id="step-1-build-your-react-components">Step 1: Build Your React Components</h3>
+<pre class="hljs"><code><div>npm run dev
+</div></code></pre>
+<h3 id="step-2-test-the-payment-flow">Step 2: Test the Payment Flow</h3>
+<ol>
+<li>Open signup.html in your browser</li>
+<li>Fill out the account info step</li>
+<li>Select a service tier</li>
+<li>In the payment step, you should see:
+<ul>
+<li>Payment plan options (full or installment)</li>
+<li>Modern Payment Element with multiple payment options</li>
+<li>Credit card input form with built-in validation</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-3-test-with-stripe-test-cards">Step 3: Test with Stripe Test Cards</h3>
+<p>Stripe's latest test cards for 2025:</p>
+<table>
+<thead>
+<tr>
+<th>Card Number</th>
+<th>Brand</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4242 4242 4242 4242</td>
+<td>Visa</td>
+<td>Succeeds and immediately processes the payment</td>
+</tr>
+<tr>
+<td>4000 0025 0000 3155</td>
+<td>Visa</td>
+<td>Requires authentication (3D Secure)</td>
+</tr>
+<tr>
+<td>4000 0000 0000 9995</td>
+<td>Visa</td>
+<td>Always fails with a decline</td>
+</tr>
+<tr>
+<td>4000 0000 0000 0077</td>
+<td>Visa</td>
+<td>Failed fraud check</td>
+</tr>
+<tr>
+<td>5555 5555 5555 4444</td>
+<td>Mastercard</td>
+<td>Succeeds and immediately processes the payment</td>
+</tr>
+<tr>
+<td>3782 8224 6310 005</td>
+<td>American Express</td>
+<td>Succeeds and immediately processes the payment</td>
+</tr>
+</tbody>
+</table>
+<p>For all cards:</p>
+<ul>
+<li>Any future expiry date (e.g., 12/28)</li>
+<li>Any 3-digit CVC code (4-digits for American Express)</li>
+<li>Any billing postal code (e.g., 12345)</li>
+</ul>
+<h3 id="step-4-testing-subscription-products">Step 4: Testing Subscription Products</h3>
+<p>For subscription products, test the following scenarios:</p>
+<ol>
+<li><strong>New subscription creation</strong>: Use card 4242 4242 4242 4242</li>
+<li><strong>Authentication flow</strong>: Use card 4000 0025 0000 3155 to test 3D Secure</li>
+<li><strong>Failed subscription</strong>: Use card 4000 0000 0000 9995</li>
+<li><strong>Checkout with multiple products</strong>: Test the Complete Transformation package with both subscription and one-time fee</li>
+</ol>
+<h3 id="step-5-check-firebase-and-stripe-dashboards">Step 5: Check Firebase and Stripe Dashboards</h3>
+<ol>
+<li>Go to your Firebase console
+<ul>
+<li>Check Firestore for customer records in the <code>stripe_customers</code> collection</li>
+<li>Check Functions logs for payment processing events</li>
+<li>Verify webhook events are being processed correctly</li>
+</ul>
+</li>
+<li>Go to the Stripe dashboard
+<ul>
+<li>Click on &quot;Payments&quot; to see your test payments</li>
+<li>Check &quot;Customers&quot; to see created customer profiles</li>
+<li>Check &quot;Subscriptions&quot; for subscription records</li>
+</ul>
+</li>
+</ol>
+<h2 id="part-6-going-live">PART 6: GOING LIVE</h2>
+<h3 id="step-1-complete-stripe-account-setup">Step 1: Complete Stripe Account Setup</h3>
+<ol>
+<li>Complete your Stripe account verification
+<ul>
+<li>Add business information</li>
+<li>Connect a bank account</li>
+<li>Complete identity verification</li>
+<li>Provide required legal documents</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-2-update-api-keys-for-production">Step 2: Update API Keys for Production</h3>
+<ol>
+<li>In Stripe, switch to Live mode</li>
+<li>Get your live Publishable key and Secret key</li>
+<li>Update your environment variables with the live keys:<pre class="hljs"><code><div>REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_LIVE_KEY
+</div></code></pre>
+</li>
+<li>Update the Firebase extension with your live Stripe Secret key</li>
+</ol>
+<h3 id="step-3-update-webhook-configuration-for-production">Step 3: Update Webhook Configuration for Production</h3>
+<ol>
+<li>Set up a new webhook endpoint in Stripe's Live mode</li>
+<li>Use the same webhook URL from your Firebase extension</li>
+<li>Update the webhook secret in your Firebase extension with the live webhook signing secret</li>
+<li>Test your webhook with real events using Stripe's webhook testing tool</li>
+</ol>
+<h3 id="step-4-production-security-checklist">Step 4: Production Security Checklist</h3>
+<ol>
+<li>
+<p><strong>PCI Compliance</strong>:</p>
+<ul>
+<li>Ensure you're using the Payment Element (not collecting raw card data)</li>
+<li>Configure CSP headers to allow only Stripe domains for payment processing</li>
+<li>Add proper HTTPS for your production domain</li>
+</ul>
+</li>
+<li>
+<p><strong>API Key Security</strong>:</p>
+<ul>
+<li>Verify no API keys are hardcoded in client-side code</li>
+<li>Set restricted API keys with appropriate permissions in Stripe</li>
+<li>Use environment variables for all sensitive credentials</li>
+</ul>
+</li>
+<li>
+<p><strong>Data Protection</strong>:</p>
+<ul>
+<li>Implement proper user authentication before payment processing</li>
+<li>Set up Firestore security rules to protect customer payment data</li>
+<li>Configure Firebase Functions to validate authentication</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-5-deploy-your-application">Step 5: Deploy Your Application</h3>
+<ol>
+<li>Build your application for production:<pre class="hljs"><code><div>npm run build
+</div></code></pre>
+</li>
+<li>Deploy Firebase functions and hosting:<pre class="hljs"><code><div>firebase deploy
+</div></code></pre>
+</li>
+<li>Verify your production environment with a small test payment</li>
+</ol>
+<h3 id="step-6-monitor-transactions">Step 6: Monitor Transactions</h3>
+<ol>
+<li>Set up Stripe notifications for important payment events:
+<ul>
+<li>Failed payments</li>
+<li>Disputed charges</li>
+<li>Successful subscriptions</li>
+</ul>
+</li>
+<li>Configure monitoring for Firebase Functions:
+<ul>
+<li>Set up error alerting</li>
+<li>Monitor function execution times and failures</li>
+</ul>
+</li>
+<li>Implement proper logging for troubleshooting</li>
+</ol>
+<h2 id="part-7-troubleshooting">PART 7: TROUBLESHOOTING</h2>
+<h3 id="common-issues-and-solutions">Common Issues and Solutions</h3>
+<h4 id="1-payment-element-not-appearing">1. Payment Element Not Appearing</h4>
+<p><strong>Problem</strong>: Payment Element fails to load or doesn't display.
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Verify you've wrapped your app with the Stripe Elements provider</li>
+<li>Check the browser console for JavaScript errors</li>
+<li>Ensure your Stripe publishable key is correct</li>
+<li>Verify Stripe.js is loading (check network tab)</li>
+<li>Try setting <code>loader=&quot;always&quot;</code> in Elements options</li>
+</ul>
+<h4 id="2-payment-method-creation-error">2. Payment Method Creation Error</h4>
+<p><strong>Problem</strong>: Payment fails with &quot;Payment method creation failed&quot; error.
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Check that you're using a valid test card number</li>
+<li>Verify card details are formatted correctly</li>
+<li>Look for validation errors in the Stripe Dashboard</li>
+<li>Check browser console for detailed error messages</li>
+<li>Verify your account isn't in test mode with live keys (or vice versa)</li>
+</ul>
+<h4 id="3-firebase-functions-not-working">3. Firebase Functions Not Working</h4>
+<p><strong>Problem</strong>: Firebase functions fail to execute or return errors.
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Verify the Stripe extension is properly installed</li>
+<li>Check Firebase Functions logs for errors</li>
+<li>Ensure the Firebase region matches your extension configuration</li>
+<li>Verify function permissions (IAM roles)</li>
+<li>Check if function timeout is adequate for processing payments</li>
+</ul>
+<h4 id="4-webhook-issues">4. Webhook Issues</h4>
+<p><strong>Problem</strong>: Webhooks are not being received or processed.
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Check that webhook URLs are correctly set up</li>
+<li>Verify webhook secret is properly configured</li>
+<li>Check Stripe's webhook logs for delivery attempts</li>
+<li>Test webhooks using Stripe's webhook testing tool</li>
+<li>Verify Firebase functions are deployed and running</li>
+</ul>
+<h4 id="5-productprice-sync-issues">5. Product/Price Sync Issues</h4>
+<p><strong>Problem</strong>: Products or prices aren't appearing in Firestore.
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Verify the <code>stripe_products</code> collection exists in Firestore</li>
+<li>Check extension logs for sync errors</li>
+<li>Try manual sync from extension dashboard</li>
+<li>Check product/price IDs in your code match those in Stripe</li>
+</ul>
+<h3 id="advanced-troubleshooting">Advanced Troubleshooting</h3>
+<h4 id="payment-intent-debugging">Payment Intent Debugging</h4>
+<pre class="hljs"><code><div><span class="hljs-comment">// Add this to your handleSubmit function for debugging</span>
+<span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Payment Intent:'</span>, paymentIntent);
+</div></code></pre>
+<h4 id="webhook-verification-testing">Webhook Verification Testing</h4>
+<pre class="hljs"><code><div><span class="hljs-comment">// Test webhook signature verification manually</span>
+<span class="hljs-keyword">const</span> verifyWebhookSignature = <span class="hljs-function">(<span class="hljs-params">payload, signature, secret</span>) =&gt;</span> {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> stripe = <span class="hljs-built_in">require</span>(<span class="hljs-string">'stripe'</span>)(process.env.STRIPE_SECRET_KEY);
+    <span class="hljs-keyword">const</span> event = stripe.webhooks.constructEvent(payload, signature, secret);
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Webhook verified:'</span>, event);
+    <span class="hljs-keyword">return</span> event;
+  } <span class="hljs-keyword">catch</span> (err) {
+    <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Webhook verification failed:'</span>, err);
+    <span class="hljs-keyword">throw</span> err;
+  }
+};
+</div></code></pre>
+<h4 id="logging-for-subscription-events">Logging for Subscription Events</h4>
+<pre class="hljs"><code><div><span class="hljs-comment">// Add to your subscription webhook handler</span>
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">handleSubscriptionWebhook</span>(<span class="hljs-params">event</span>) </span>{
+  <span class="hljs-keyword">const</span> subscription = event.data.object;
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Subscription event:'</span>, event.type);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Subscription ID:'</span>, subscription.id);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Customer:'</span>, subscription.customer);
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Status:'</span>, subscription.status);
+  <span class="hljs-comment">// Handle the event based on type...</span>
+}
+</div></code></pre>
+<h3 id="getting-help">Getting Help</h3>
+<p>If you encounter issues:</p>
+<ol>
+<li>Check the browser console for detailed error messages</li>
+<li>Review Firebase Functions logs (in Firebase console)</li>
+<li>Check Stripe Dashboard logs and events</li>
+<li>Use Stripe's testing tools in the Dashboard</li>
+<li>Refer to these documentation resources:
+<ul>
+<li><a href="https://stripe.com/docs/stripe-js">Stripe Elements Documentation</a></li>
+<li><a href="https://firebase.google.com/docs/extensions/official/firestore-stripe-payments">Firebase Stripe Extension Documentation</a></li>
+<li><a href="https://stripe.com/docs/webhooks">Stripe Webhook Documentation</a></li>
+<li><a href="https://stripe.com/docs/testing">Stripe Testing Documentation</a></li>
+</ul>
+</li>
+</ol>
+<p>For production issues, Stripe's support team is available to help with payment processing problems. Firebase also offers support for issues related to the Firebase Stripe extension.</p>
+
+</body>
+</html>
