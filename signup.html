@@ -60,6 +60,9 @@
                 <p>Create your account to start your fitness journey</p>
             </div>
             
+            <!-- This is where React will mount - ADD THIS DIV -->
+            <div id="react-signup-form"></div>
+            
             <div class="signup-container">
                 <div class="signup-benefits">
                     <div class="benefit-header">
@@ -184,9 +187,9 @@
     <script src="script.js"></script>
     
     <!-- Firebase SDK - Make sure these are loaded in the correct order -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore-compat.js"></script>
     <!-- Our authentication script - loaded after Firebase SDK -->
     <script src="js/auth.js"></script>
     <!-- Add a small script to catch and log Firebase errors -->
@@ -360,5 +363,8 @@
     to { opacity: 1; transform: translateY(0); }
   }
 </style>
+
+<!-- ADD THIS LINE at the end of your body section -->
+<script src="dist/signup-bundle.js"></script>
 </body>
 </html>

@@ -1,0 +1,209 @@
+/* src/react/signup/signup.css */
+/* Progress steps */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.step.active .step-number {
+  background-color: var(--primary, #4caf50);
+  color: white;
+}
+
+.step-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.step.active .step-label {
+  color: var(--primary, #4caf50);
+  font-weight: 600;
+}
+
+.step-connector {
+  height: 2px;
+  flex-grow: 1;
+  background-color: #e0e0e0;
+  margin: 0 10px;
+  margin-bottom: 20px;
+  min-width: 40px;
+}
+
+.step-connector.active {
+  background-color: var(--primary, #4caf50);
+}
+
+/* Form styling */
+.signup-form {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: white;
+}
+
+.service-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.service-tier {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  flex: 1;
+  min-width: 250px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.service-tier.selected {
+  border-color: var(--primary, #4caf50);
+  background-color: rgba(76, 175, 80, 0.05);
+}
+
+.tier-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tier-radio {
+  margin-right: 10px;
+}
+
+.tier-title {
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.tier-price {
+  font-weight: 700;
+  font-size: 1.5rem;
+  margin: 1rem 0;
+  color: var(--primary-dark, #388e3c);
+}
+
+.tier-description {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+/* Button row */
+.button-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--primary, #4caf50);
+  border: 1px solid var(--primary, #4caf50);
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #d32f2f;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border-left: 4px solid #d32f2f;
+}
+
+/* Review step styling */
+.review-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.review-section h4 {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.review-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.item-label {
+  font-weight: 500;
+  color: #666;
+}
+
+.item-value {
+  color: #333;
+}
+
+.payment-summary {
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.recurring-notice {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Form row for splitting inputs */
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-group.half {
+  flex: 1;
+}
+
+/* Terms agreement styling */
+.terms-agreement {
+  margin: 1.5rem 0;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+}
+
+.next-steps-info {
+  background-color: #e8f5e9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
