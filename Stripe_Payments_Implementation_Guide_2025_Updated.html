@@ -392,13 +392,15 @@ code {
 <li><strong>For In-Person Training:</strong>
 <ul>
 <li>Name: &quot;In-Person Training Session&quot;</li>
-<li>Price: $70.00 / one time</li>
+<li>Description: &quot;Expert 1-on-1 coaching sessions focused on technique, form, and effective workouts tailored to your unique goals. Includes personalized attention, form correction, and equipment guidance throughout each session. Available in Seattle area only.&quot;</li>
+<li>Price: $70.00 / one time (select &quot;Flat rate&quot; from the pricing model dropdown)</li>
 <li>Click &quot;Save product&quot;</li>
 </ul>
 </li>
 <li><strong>For Online Coaching:</strong>
 <ul>
 <li>Name: &quot;Online Coaching Subscription&quot;</li>
+<li>Description: &quot;Complete transformation system with monthly custom training programs, personalized nutrition coaching, unlimited messaging support, weekly progress check-ins, video form analysis, and habit &amp; accountability coaching. Delivered remotely for clients worldwide.&quot;</li>
 <li>Price: $199.00 / monthly recurring</li>
 <li>Click &quot;Save product&quot;</li>
 </ul>
@@ -406,26 +408,45 @@ code {
 <li><strong>For Complete Transformation:</strong>
 <ul>
 <li>Name: &quot;Complete Transformation Package&quot;</li>
+<li>Description: &quot;Premium fitness experience combining comprehensive online coaching with hands-on personal training. Includes all online coaching benefits plus in-person training sessions with expert guidance and form correction. Online coaching available worldwide, in-person sessions in Seattle area only.&quot;</li>
 <li>Price: $199.00 / monthly recurring</li>
 <li>Click &quot;Save product&quot;</li>
 <li>Click <strong>+ Add another price</strong></li>
 <li>Add a second price: $60.00 / one time (for the session fee)</li>
 </ul>
 </li>
-</ol>
-<h3 id="step-3-set-up-payment-schedules-for-installments">Step 3: Set Up Payment Schedules (for Installments)</h3>
-<ol>
-<li>For each product, create a payment schedule:
+<li><strong>For 4-Pack Training Sessions:</strong>
 <ul>
-<li>Click on your product</li>
-<li>Click <strong>+ Add price</strong></li>
-<li>Select &quot;Payment schedule&quot;</li>
-<li>Set &quot;Number of payments&quot; to 4</li>
-<li>&quot;Interval between payments&quot; to 1 month</li>
-<li>For In-Person Training: $17.50 per installment (total $70)</li>
-<li>For Online Coaching: $49.75 per installment (total $199)</li>
-<li>Click &quot;Save price&quot;</li>
+<li>Name: &quot;4-Pack Training Sessions&quot;</li>
+<li>Description: &quot;Discounted package of 4 in-person training sessions at $60 each ($240 total). Expert 1-on-1 coaching with personalized attention, form correction, and equipment guidance throughout each session. Available in Seattle area only.&quot;</li>
+<li>Price: $240.00 / one time (select &quot;Flat rate&quot; from the pricing model dropdown)</li>
+<li>Click &quot;Save product&quot;</li>
 </ul>
+</li>
+</ol>
+<h3 id="step-3-setting-up-payment-installments-with-bnpl">Step 3: Setting Up Payment Installments with BNPL</h3>
+<p>Enable Buy Now, Pay Later (BNPL) Options
+BNPL services provide a modern alternative to manual payment schedules with significant benefits:</p>
+<ol>
+<li>
+<p><strong>Setup BNPL in your Stripe Dashboard:</strong></p>
+<ul>
+<li>Go to your Stripe Dashboard &gt; Settings &gt; Payment methods</li>
+<li>Enable BNPL options like Affirm, Afterpay/Clearpay, and Klarna</li>
+<li>These will automatically appear in your checkout when appropriate</li>
+</ul>
+</li>
+<li>
+<p><strong>Benefits of BNPL:</strong></p>
+<ul>
+<li><strong>Immediate full payment to you</strong>: You receive the full amount upfront while your customers pay in installments to the BNPL provider</li>
+<li><strong>No risk of missed payments</strong>: The BNPL provider assumes the risk of customer non-payment</li>
+<li><strong>Modern customer experience</strong>: Many customers prefer these familiar payment options</li>
+<li><strong>Zero development work</strong>: These options appear automatically in the Payment Element or Checkout when enabled</li>
+</ul>
+</li>
+<li>
+<p><strong>Important Note</strong>: To ensure BNPL options appear for your customers, make sure your frontend integration uses the latest Stripe libraries as shown in the client-side integration section of this guide.</p>
 </li>
 </ol>
 <h3 id="step-4-get-your-api-keys">Step 4: Get Your API Keys</h3>
@@ -573,6 +594,10 @@ firebase <span class="hljs-built_in">functions</span>:config:<span class="hljs-b
 <span class="hljs-comment">// Load Stripe with your publishable key</span>
 <span class="hljs-comment">// In production, use environment variables: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY</span>
 <span class="hljs-keyword">const</span> stripePromise = loadStripe(<span class="hljs-string">'pk_test_YOUR_PUBLISHABLE_KEY'</span>);
+
+<span class="hljs-comment">// Note: Make sure to update to the latest Stripe library versions:</span>
+<span class="hljs-comment">// npm install @stripe/stripe-js@latest @stripe/react-stripe-js@latest</span>
+<span class="hljs-comment">// This ensures BNPL options like Affirm, Klarna, and Afterpay will appear when enabled</span>
 
 <span class="hljs-comment">// Modern Stripe Elements appearance configuration</span>
 <span class="hljs-keyword">const</span> appearance = {
@@ -897,6 +922,10 @@ firebase <span class="hljs-built_in">functions</span>:config:<span class="hljs-b
           <span class="hljs-attr">billing_address_collection</span>: <span class="hljs-string">'required'</span>,
           <span class="hljs-attr">client_reference_id</span>: auth.currentUser.uid,
           <span class="hljs-attr">customer_email</span>: formData.email,
+          <span class="hljs-comment">// BNPL options will be shown automatically if enabled in your Stripe Dashboard</span>
+          <span class="hljs-comment">// Uncomment the line below only if you want to limit payment methods</span>
+          <span class="hljs-comment">// payment_method_types: ['card', 'affirm', 'afterpay_clearpay', 'klarna'],</span>
+          <span class="hljs-attr">allow_promotion_codes</span>: <span class="hljs-literal">true</span>,
           <span class="hljs-attr">metadata</span>: {
             <span class="hljs-attr">tier</span>: formData.tier,
             paymentPlan
@@ -1106,7 +1135,7 @@ firebase <span class="hljs-built_in">functions</span>:config:<span class="hljs-b
             <span class="hljs-attr">id</span>=<span class="hljs-string">"payment-element"</span> 
             <span class="hljs-attr">options</span>=<span class="hljs-string">{{</span>
               <span class="hljs-attr">layout:</span> '<span class="hljs-attr">tabs</span>',
-              <span class="hljs-attr">paymentMethodOrder:</span> ['<span class="hljs-attr">card</span>', '<span class="hljs-attr">apple_pay</span>', '<span class="hljs-attr">google_pay</span>'],
+              <span class="hljs-attr">paymentMethodOrder:</span> ['<span class="hljs-attr">card</span>', '<span class="hljs-attr">apple_pay</span>', '<span class="hljs-attr">google_pay</span>', '<span class="hljs-attr">klarna</span>', '<span class="hljs-attr">afterpay_clearpay</span>', '<span class="hljs-attr">affirm</span>'],
               <span class="hljs-attr">defaultValues:</span> {
                 <span class="hljs-attr">billingDetails:</span> {
                   <span class="hljs-attr">name:</span> <span class="hljs-attr">formData.name</span> || '',
@@ -1653,7 +1682,56 @@ firebase <span class="hljs-built_in">functions</span>:config:<span class="hljs-b
 <li>Try manual sync from extension dashboard</li>
 <li>Check product/price IDs in your code match those in Stripe</li>
 </ul>
+<h4 id="6-bnpl-options-not-appearing">6. BNPL Options Not Appearing</h4>
+<p><strong>Problem</strong>: Buy Now, Pay Later options like Affirm, Afterpay, or Klarna aren't appearing in checkout.
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Verify you've enabled these payment methods in your Stripe Dashboard (Settings &gt; Payment methods)</li>
+<li>Ensure you're using the latest versions of @stripe/stripe-js and @stripe/react-stripe-js libraries</li>
+<li>Check that the transaction amount meets the BNPL provider's minimum requirements (e.g., Afterpay typically requires $35+ transactions)</li>
+<li>Confirm customer's location/shipping address is in a supported country for the BNPL provider</li>
+<li>For Payment Element, make sure you're including these methods in paymentMethodOrder if you're specifying methods</li>
+<li>For Stripe Checkout, don't restrict payment_method_types unless you specifically need to</li>
+</ul>
 <h3 id="advanced-troubleshooting">Advanced Troubleshooting</h3>
+<h4 id="testing-bnpl-availability">Testing BNPL Availability</h4>
+<pre class="hljs"><code><div><span class="hljs-comment">// Add this to your frontend code to debug which payment methods are available</span>
+<span class="hljs-keyword">const</span> getAvailablePaymentMethods = <span class="hljs-keyword">async</span> () =&gt; {
+  <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> fetch(<span class="hljs-string">'/get-payment-methods-availability'</span>, {
+    <span class="hljs-attr">method</span>: <span class="hljs-string">'POST'</span>,
+    <span class="hljs-attr">headers</span>: {
+      <span class="hljs-string">'Content-Type'</span>: <span class="hljs-string">'application/json'</span>,
+    },
+    <span class="hljs-attr">body</span>: <span class="hljs-built_in">JSON</span>.stringify({
+      <span class="hljs-attr">amount</span>: <span class="hljs-number">10000</span>, <span class="hljs-comment">// $100.00 in cents</span>
+      <span class="hljs-attr">currency</span>: <span class="hljs-string">'usd'</span>,
+      <span class="hljs-attr">country</span>: <span class="hljs-string">'US'</span>,
+    }),
+  });
+  <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> response.json();
+  <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Available payment methods:'</span>, data.available_payment_methods);
+};
+
+<span class="hljs-comment">// Corresponding Firebase function to check available payment methods</span>
+exports.getPaymentMethodsAvailability = functions.https.onCall(<span class="hljs-keyword">async</span> (data, context) =&gt; {
+  <span class="hljs-keyword">const</span> stripe = <span class="hljs-built_in">require</span>(<span class="hljs-string">'stripe'</span>)(functions.config().stripe.key);
+  <span class="hljs-keyword">const</span> paymentMethodsResponse = <span class="hljs-keyword">await</span> stripe.paymentMethods.list({
+    <span class="hljs-attr">limit</span>: <span class="hljs-number">100</span>,
+  });
+  
+  <span class="hljs-comment">// Filter for relevant payment methods that support the transaction parameters</span>
+  <span class="hljs-keyword">const</span> availablePaymentMethods = paymentMethodsResponse.data
+    .filter(<span class="hljs-function"><span class="hljs-params">method</span> =&gt;</span> 
+      method.type === <span class="hljs-string">'card'</span> || 
+      method.type === <span class="hljs-string">'afterpay_clearpay'</span> || 
+      method.type === <span class="hljs-string">'affirm'</span> || 
+      method.type === <span class="hljs-string">'klarna'</span>
+    )
+    .map(<span class="hljs-function"><span class="hljs-params">method</span> =&gt;</span> method.type);
+    
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">available_payment_methods</span>: availablePaymentMethods };
+});
+</div></code></pre>
 <h4 id="payment-intent-debugging">Payment Intent Debugging</h4>
 <pre class="hljs"><code><div><span class="hljs-comment">// Add this to your handleSubmit function for debugging</span>
 <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Payment Intent:'</span>, paymentIntent);

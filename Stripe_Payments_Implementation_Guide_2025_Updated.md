@@ -25,29 +25,44 @@ This comprehensive guide will help you add secure, professional payment processi
 2. Click **+ Create product** button (note: the UI has been updated from "+ Add Product" to "+ Create product")
 3. **For In-Person Training:**
    - Name: "In-Person Training Session"
-   - Price: $70.00 / one time
+   - Description: "Expert 1-on-1 coaching sessions focused on technique, form, and effective workouts tailored to your unique goals. Includes personalized attention, form correction, and equipment guidance throughout each session. Available in Seattle area only."
+   - Price: $70.00 / one time (select "Flat rate" from the pricing model dropdown)
    - Click "Save product"
 4. **For Online Coaching:**
    - Name: "Online Coaching Subscription"
+   - Description: "Complete transformation system with monthly custom training programs, personalized nutrition coaching, unlimited messaging support, weekly progress check-ins, video form analysis, and habit & accountability coaching. Delivered remotely for clients worldwide."
    - Price: $199.00 / monthly recurring
    - Click "Save product"
 5. **For Complete Transformation:**
    - Name: "Complete Transformation Package"
+   - Description: "Premium fitness experience combining comprehensive online coaching with hands-on personal training. Includes all online coaching benefits plus in-person training sessions with expert guidance and form correction. Online coaching available worldwide, in-person sessions in Seattle area only."
    - Price: $199.00 / monthly recurring
    - Click "Save product"
    - Click **+ Add another price**
    - Add a second price: $60.00 / one time (for the session fee)
+6. **For 4-Pack Training Sessions:**
+   - Name: "4-Pack Training Sessions"
+   - Description: "Discounted package of 4 in-person training sessions at $60 each ($240 total). Expert 1-on-1 coaching with personalized attention, form correction, and equipment guidance throughout each session. Available in Seattle area only."
+   - Price: $240.00 / one time (select "Flat rate" from the pricing model dropdown)
+   - Click "Save product"
 
-### Step 3: Set Up Payment Schedules (for Installments)
-1. For each product, create a payment schedule:
-   - Click on your product
-   - Click **+ Add price**
-   - Select "Payment schedule"
-   - Set "Number of payments" to 4
-   - "Interval between payments" to 1 month
-   - For In-Person Training: $17.50 per installment (total $70)
-   - For Online Coaching: $49.75 per installment (total $199)
-   - Click "Save price"
+### Step 3: Setting Up Payment Installments with BNPL
+
+Enable Buy Now, Pay Later (BNPL) Options
+BNPL services provide a modern alternative to manual payment schedules with significant benefits:
+
+1. **Setup BNPL in your Stripe Dashboard:**
+   - Go to your Stripe Dashboard > Settings > Payment methods
+   - Enable BNPL options like Affirm, Afterpay/Clearpay, and Klarna
+   - These will automatically appear in your checkout when appropriate
+
+2. **Benefits of BNPL:**
+   - **Immediate full payment to you**: You receive the full amount upfront while your customers pay in installments to the BNPL provider
+   - **No risk of missed payments**: The BNPL provider assumes the risk of customer non-payment
+   - **Modern customer experience**: Many customers prefer these familiar payment options
+   - **Zero development work**: These options appear automatically in the Payment Element or Checkout when enabled
+
+3. **Important Note**: To ensure BNPL options appear for your customers, make sure your frontend integration uses the latest Stripe libraries as shown in the client-side integration section of this guide.
 
 ### Step 4: Get Your API Keys
 1. In the Stripe dashboard, click on **Developers** in the left sidebar
@@ -195,6 +210,10 @@ import './signup.css';
 // Load Stripe with your publishable key
 // In production, use environment variables: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY
 const stripePromise = loadStripe('pk_test_YOUR_PUBLISHABLE_KEY');
+
+// Note: Make sure to update to the latest Stripe library versions:
+// npm install @stripe/stripe-js@latest @stripe/react-stripe-js@latest
+// This ensures BNPL options like Affirm, Klarna, and Afterpay will appear when enabled
 
 // Modern Stripe Elements appearance configuration
 const appearance = {
@@ -526,6 +545,10 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
           billing_address_collection: 'required',
           client_reference_id: auth.currentUser.uid,
           customer_email: formData.email,
+          // BNPL options will be shown automatically if enabled in your Stripe Dashboard
+          // Uncomment the line below only if you want to limit payment methods
+          // payment_method_types: ['card', 'affirm', 'afterpay_clearpay', 'klarna'],
+          allow_promotion_codes: true,
           metadata: {
             tier: formData.tier,
             paymentPlan
@@ -735,7 +758,7 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
             id="payment-element" 
             options={{
               layout: 'tabs',
-              paymentMethodOrder: ['card', 'apple_pay', 'google_pay'],
+              paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'klarna', 'afterpay_clearpay', 'affirm'],
               defaultValues: {
                 billingDetails: {
                   name: formData.name || '',
@@ -1218,7 +1241,57 @@ For subscription products, test the following scenarios:
 - Try manual sync from extension dashboard
 - Check product/price IDs in your code match those in Stripe
 
+#### 6. BNPL Options Not Appearing
+**Problem**: Buy Now, Pay Later options like Affirm, Afterpay, or Klarna aren't appearing in checkout.
+**Solutions**:
+- Verify you've enabled these payment methods in your Stripe Dashboard (Settings > Payment methods)
+- Ensure you're using the latest versions of @stripe/stripe-js and @stripe/react-stripe-js libraries
+- Check that the transaction amount meets the BNPL provider's minimum requirements (e.g., Afterpay typically requires $35+ transactions)
+- Confirm customer's location/shipping address is in a supported country for the BNPL provider
+- For Payment Element, make sure you're including these methods in paymentMethodOrder if you're specifying methods
+- For Stripe Checkout, don't restrict payment_method_types unless you specifically need to
+
 ### Advanced Troubleshooting
+
+#### Testing BNPL Availability
+```javascript
+// Add this to your frontend code to debug which payment methods are available
+const getAvailablePaymentMethods = async () => {
+  const response = await fetch('/get-payment-methods-availability', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      amount: 10000, // $100.00 in cents
+      currency: 'usd',
+      country: 'US',
+    }),
+  });
+  const data = await response.json();
+  console.log('Available payment methods:', data.available_payment_methods);
+};
+
+// Corresponding Firebase function to check available payment methods
+exports.getPaymentMethodsAvailability = functions.https.onCall(async (data, context) => {
+  const stripe = require('stripe')(functions.config().stripe.key);
+  const paymentMethodsResponse = await stripe.paymentMethods.list({
+    limit: 100,
+  });
+  
+  // Filter for relevant payment methods that support the transaction parameters
+  const availablePaymentMethods = paymentMethodsResponse.data
+    .filter(method => 
+      method.type === 'card' || 
+      method.type === 'afterpay_clearpay' || 
+      method.type === 'affirm' || 
+      method.type === 'klarna'
+    )
+    .map(method => method.type);
+    
+  return { available_payment_methods: availablePaymentMethods };
+});
+```
 
 #### Payment Intent Debugging
 ```javascript
