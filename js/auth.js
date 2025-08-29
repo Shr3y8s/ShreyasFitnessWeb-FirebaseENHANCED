@@ -4,6 +4,7 @@ let signupResetTimeout = null;
 
 // Safety function to ensure isSigningUp gets reset
 function safelySetSigningUp(value) {
+  console.log(`safelySetSigningUp called with value: ${value}`);
   isSigningUp = value;
   
   // Clear any existing timeout
@@ -17,9 +18,12 @@ function safelySetSigningUp(value) {
     signupResetTimeout = setTimeout(() => {
       console.log('Safety timeout: resetting isSigningUp flag');
       isSigningUp = false;
-    }, 8000); // 8 seconds should be plenty for any redirect to complete
+    }, 20000); // Extended to 20 seconds to allow for payment step
   }
 }
+
+// Expose this function globally for React components to use
+window.safelySetSigningUp = safelySetSigningUp;
 
 // Firebase configuration
 const firebaseConfig = {
@@ -79,10 +83,15 @@ auth.onAuthStateChanged(user => {
       // Check which page we're on
       const currentPage = window.location.pathname.split('/').pop();
       
+      console.log('Auth state changed, current page:', currentPage, 'isSigningUp:', isSigningUp);
+      
       if ((currentPage === 'account.html' || currentPage === 'signup.html') && !isSigningUp) {
         // Only redirect if not in signup process
         console.log('Redirecting to dashboard');
         window.location.href = 'dashboard.html';
+      } else if (currentPage === 'signup.html' && isSigningUp) {
+        // We're in the signup process, do not redirect
+        console.log('In signup process, not redirecting');
       } else if (currentPage === 'dashboard.html' && !isSigningUp) {
         // Only load dashboard data if not in signup process
         console.log('Loading dashboard data');
@@ -181,7 +190,7 @@ function signUp(email, password, name, phone = null) {
       // Signal success on the current page instead of redirecting
       console.log('Triggering signup success event');
       
-      // We'll use a custom event to trigger the UI change
+// We'll use a custom event to trigger the UI change
       const signupSuccessEvent = new CustomEvent('signupSuccess', {
         detail: { 
           email: email,
@@ -189,17 +198,30 @@ function signUp(email, password, name, phone = null) {
           autoLogin: true // Indicate that the user is already logged in
         }
       });
-      document.dispatchEvent(signupSuccessEvent);
+      
+      // NOTE: For the React-based signup flow, we'll let the React components
+      // dispatch the signupSuccess event at the right time (after payment)
+      // Only dispatch this event for non-React flows
+      if (!document.querySelector('.signup-form-container')) {
+        console.log('Non-React signup flow, dispatching success event');
+        document.dispatchEvent(signupSuccessEvent);
+      } else {
+        console.log('React signup flow detected, letting components handle event dispatch');
+      }
       
       // Reset authentication flags after success
       isAuthenticating = false;
       
-      // Keep the isSigningUp flag active a bit longer to prevent redirects
-      console.log('Scheduling signup flag reset');
-      setTimeout(() => { 
-        safelySetSigningUp(false);
-        console.log('Signup flag reset');
-      }, 1000);
+      // For React flow, we keep isSigningUp true until payment is complete
+      // The React components will call safelySetSigningUp(false) when done
+      if (!document.querySelector('.signup-form-container')) {
+        // Keep the isSigningUp flag active a bit longer to prevent redirects
+        console.log('Scheduling signup flag reset');
+        setTimeout(() => { 
+          safelySetSigningUp(false);
+          console.log('Signup flag reset');
+        }, 1000);
+      }
     })
     .catch(error => {
       console.error('Error during signup process:', error);

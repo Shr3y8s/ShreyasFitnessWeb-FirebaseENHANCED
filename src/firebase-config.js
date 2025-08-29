@@ -1,44 +1,42 @@
 // src/firebase-config.js
 
-// Your Firebase config values
+// Use environment variables for Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyADF9yuram-pvlzjg6kBtdCk7LuK0M65tk",
-  authDomain: "shreyfitweb.firebaseapp.com",
-  projectId: "shreyfitweb",
-  storageBucket: "shreyfitweb.firebasestorage.app",
-  messagingSenderId: "1076359633281",
-  appId: "1:1076359633281:web:3687e1675c9e185f0ab080",
-  measurementId: "G-5GBP19SXBW"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_MEASUREMENT_ID
 };
 
 // Use modern modular Firebase SDK
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signInWithPopup,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { 
   getFirestore, 
   doc, 
   setDoc, 
+  getDoc,
+  collection,
+  onSnapshot,
   serverTimestamp 
 } from 'firebase/firestore';
 
-// Initialize Firebase for React components
+// Initialize Firebase for React components - proper initialization pattern
 let app;
-try {
+if (!getApps().length) {
   app = initializeApp(firebaseConfig);
-} catch (error) {
-  // Handle the duplicate app initialization
-  if (error.code === 'app/duplicate-app') {
-    console.info('Firebase already initialized, using existing instance');
-    app = initializeApp(undefined, 'default');
-  } else {
-    console.error("Firebase initialization error:", error);
-  }
+} else {
+  app = getApp(); // Use existing app instance
 }
 
 export const auth = getAuth(app);
@@ -97,4 +95,42 @@ export async function signInWithGoogleAuth() {
     console.error('Google sign-in error:', error);
     throw error;
   }
+}
+
+// Function to listen to subscription status changes
+export function listenToSubscriptionStatus(userId, callback) {
+  if (!userId) return null;
+  
+  // Note the collection path uses stripe_customers per Invertase extension
+  const userSubscriptionsRef = collection(db, 'stripe_customers', userId, 'subscriptions');
+  
+  return onSnapshot(userSubscriptionsRef, (snapshot) => {
+    const subscriptions = [];
+    snapshot.forEach((doc) => {
+      subscriptions.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    callback(subscriptions);
+  });
+}
+
+// Function to get user's payment methods
+export function listenToPaymentMethods(userId, callback) {
+  if (!userId) return null;
+  
+  // Note the collection path uses stripe_customers per Invertase extension
+  const paymentMethodsRef = collection(db, 'stripe_customers', userId, 'payment_methods');
+  
+  return onSnapshot(paymentMethodsRef, (snapshot) => {
+    const paymentMethods = [];
+    snapshot.forEach((doc) => {
+      paymentMethods.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    callback(paymentMethods);
+  });
 }

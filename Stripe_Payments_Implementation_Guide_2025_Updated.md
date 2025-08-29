@@ -46,23 +46,26 @@ This comprehensive guide will help you add secure, professional payment processi
    - Price: $240.00 / one time (select "Flat rate" from the pricing model dropdown)
    - Click "Save product"
 
-### Step 3: Setting Up Payment Installments with BNPL
+### Step 3: Configuring Buy Now, Pay Later (BNPL) Options
 
-Enable Buy Now, Pay Later (BNPL) Options
-BNPL services provide a modern alternative to manual payment schedules with significant benefits:
+Modern e-commerce benefits from offering flexible payment options:
 
-1. **Setup BNPL in your Stripe Dashboard:**
-   - Go to your Stripe Dashboard > Settings > Payment methods
-   - Enable BNPL options like Affirm, Afterpay/Clearpay, and Klarna
-   - These will automatically appear in your checkout when appropriate
+1. **Ensure BNPL options are enabled in your Stripe Dashboard:**
+   - Verify that Klarna, Affirm, and other BNPL providers are active in your Stripe Dashboard
+   - These will automatically appear as payment options when appropriate for the transaction
 
-2. **Benefits of BNPL:**
-   - **Immediate full payment to you**: You receive the full amount upfront while your customers pay in installments to the BNPL provider
-   - **No risk of missed payments**: The BNPL provider assumes the risk of customer non-payment
-   - **Modern customer experience**: Many customers prefer these familiar payment options
-   - **Zero development work**: These options appear automatically in the Payment Element or Checkout when enabled
+2. **Benefits of Third-Party BNPL:**
+   - **Immediate full payment to you**: You receive the full amount upfront
+   - **Zero risk management**: The BNPL provider handles collection and assumes all risk
+   - **Modern customer experience**: Customers recognize and trust these payment options
+   - **No custom development**: These providers integrate automatically with the latest Stripe libraries
 
-3. **Important Note**: To ensure BNPL options appear for your customers, make sure your frontend integration uses the latest Stripe libraries as shown in the client-side integration section of this guide.
+3. **BNPL Market Growth:**
+   - The global BNPL market is expected to reach $560.1 billion by 2025
+   - Different providers are available in different regions (e.g., Klarna in Europe, Afterpay in Australia/US)
+   - Customer demand for flexible payment options continues to grow year-over-year
+
+4. **Important Note**: To ensure BNPL options appear for your customers, make sure your frontend integration uses the latest Stripe libraries as shown in the client-side integration section of this guide.
 
 ### Step 4: Get Your API Keys
 1. In the Stripe dashboard, click on **Developers** in the left sidebar
@@ -71,6 +74,11 @@ BNPL services provide a modern alternative to manual payment schedules with sign
 4. Click **Reveal test key** to see your **Secret key** (starts with `sk_test_`)
 5. Keep these keys for later steps
 6. **SECURITY BEST PRACTICE**: Never hardcode these keys in your frontend code. Always use environment variables.
+7. **API VERSION NOTE**: As of August 2025, Stripe is using the `2025-07-30.basil` API version, which includes support for:
+   - Checkout enhancements for app-to-web purchases
+   - Enhanced support for NZ BECS Direct Debit and other regional payment methods
+   - Mixed intervals support for subscriptions
+   - New billing threshold capabilities
 
 ## PART 2: FIREBASE EXTENSION SETUP
 
@@ -81,7 +89,9 @@ BNPL services provide a modern alternative to manual payment schedules with sign
 4. Search for "Run Payments with Stripe"
 5. **IMPORTANT**: Select the Invertase-maintained version of the extension (v0.3.12+)
    - Look for "Maintained by Invertase" in the extension details
-   - The original Firebase-maintained version is now deprecated
+   - The original Firebase-maintained version was deprecated in October 2023
+   - The extension ID has changed from `stripe/firestore-stripe-payments` to `invertase/firestore-stripe-payments`
+   - **If you have the old extension installed**, you must uninstall it completely before installing the Invertase version
 6. Click **Install** button
 7. Configure the extension:
    - **Cloud Functions location**: Choose the location closest to your users
@@ -135,6 +145,15 @@ BNPL services provide a modern alternative to manual payment schedules with sign
    - When asked about Functions, select JavaScript or TypeScript
    - Set up ESLint
    - Choose to set up dependencies now
+6. **IMPORTANT**: For the best performance with Firebase Functions, use Firebase Functions 2nd gen:
+   ```bash
+   firebase init functions --gen2
+   ```
+   Benefits of Firebase Functions 2nd gen include:
+   - Better cold start performance
+   - Concurrent request handling (up to 1000 concurrent requests vs 1 in 1st gen)
+   - Larger instance sizes (up to 16GiB RAM with 4 vCPU)
+   - Built on Cloud Run for better scalability
 
 ## PART 3: ENVIRONMENT VARIABLES CONFIGURATION
 
@@ -165,6 +184,19 @@ Add `.env` to your `.gitignore` file to prevent accidental commits:
 .env.production
 ```
 
+For production deployments, create a separate `.env.production` file:
+
+```
+# .env.production
+REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_...
+```
+
+Ensure all `.env` files are in `.gitignore`:
+```bash
+# Add all .env files to .gitignore
+echo ".env*" >> .gitignore
+```
+
 ### Environment Variables for Different Deployment Platforms
 
 #### Development
@@ -177,8 +209,13 @@ Add `.env` to your `.gitignore` file to prevent accidental commits:
 firebase functions:config:set stripe.key="sk_test_your_key" stripe.webhook="whsec_your_webhook"
 firebase functions:config:set stripe.publishable="pk_test_your_key"
 
+# For production, use live keys
+firebase functions:config:set stripe.key="sk_live_your_key" stripe.webhook="whsec_your_live_webhook" --project your-production-project
+
 # Access in functions using:
-# const stripe = require('stripe')(functions.config().stripe.key);
+# const stripe = require('stripe')(functions.config().stripe.key, {
+#   apiVersion: '2025-07-30.basil'
+# });
 ```
 
 #### Vercel
@@ -196,6 +233,10 @@ firebase functions:config:set stripe.publishable="pk_test_your_key"
 npm install @stripe/stripe-js@latest @stripe/react-stripe-js@latest
 ```
 
+The latest versions as of August 2025 are:
+- @stripe/react-stripe-js: v3.9.2 (published August 24, 2025)
+- @stripe/stripe-js: Use @latest to ensure compatibility
+
 ### Step 2: Update Your index.js File
 
 ```javascript
@@ -209,7 +250,7 @@ import './signup.css';
 
 // Load Stripe with your publishable key
 // In production, use environment variables: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY
-const stripePromise = loadStripe('pk_test_YOUR_PUBLISHABLE_KEY');
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
 // Note: Make sure to update to the latest Stripe library versions:
 // npm install @stripe/stripe-js@latest @stripe/react-stripe-js@latest
@@ -224,7 +265,18 @@ const appearance = {
     colorText: '#30313d',
     fontFamily: 'Roboto, system-ui, sans-serif',
     borderRadius: '8px',
+    fontSizeBase: '16px',
+    spacingUnit: '6px',
   },
+  rules: {
+    '.Input': {
+      boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.03)',
+      border: '1px solid #e0e6eb',
+    },
+    '.Input:focus': {
+      border: '1px solid #4f8cff',
+    }
+  }
 };
 
 const options = {
@@ -385,7 +437,6 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
   const [clientSecret, setClientSecret] = useState('');
   const [priceInfo, setPriceInfo] = useState(null);
   const [isPaymentElementReady, setIsPaymentElementReady] = useState(false);
-  const [paymentPlan, setPaymentPlan] = useState('full'); // 'full' or 'installment'
 
   const auth = getAuth();
   const db = getFirestore();
@@ -417,12 +468,8 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
         const prices = productData.prices;
 
         setPriceInfo({
-          // FIXED: Using correct comparison operators (=== instead of =)
           fullPrice: prices.find(
             p => !p.payment_schedule && p.recurring === getProductDetails().isSubscription
-          )?.id,
-          installmentPrice: prices.find(
-            p => p.payment_schedule?.interval === 'month'
           )?.id,
           sessionPrice: prices.find(
             p => p.type === 'one_time' && p.unit_amount === 6000
@@ -449,12 +496,9 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
             functions, 
             'ext-firestore-stripe-payments-createPaymentIntent'
           );
-          const priceId = paymentPlan === 'full' ? 
-            priceInfo.fullPrice : 
-            priceInfo.installmentPrice;
             
           const result = await createPaymentFn({
-            price: priceId,
+            price: priceInfo.fullPrice,
             automatic_payment_methods: { enabled: true },
             currency: 'usd'
           });
@@ -465,7 +509,7 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
         }
       })();
     }
-  }, [stripe, priceInfo, paymentPlan, auth.currentUser]);
+  }, [stripe, priceInfo, auth.currentUser]);
   
   // Get product details based on selected tier
   const getProductDetails = useCallback(() => {
@@ -474,14 +518,12 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
         return {
           name: 'In-Person Training',
           amount: 7000, // $70.00 in cents
-          installmentAmount: 1750, // $17.50 in cents
           isSubscription: false
         };
       case 'online-coaching':
         return {
           name: 'Online Coaching',
           amount: 19900, // $199.00 in cents
-          installmentAmount: 4975, // $49.75 in cents
           isSubscription: true
         };
       case 'complete-transformation':
@@ -489,7 +531,6 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
           name: 'Complete Transformation',
           amount: 19900, // $199.00 in cents
           sessionAmount: 6000, // $60.00 in cents
-          installmentAmount: 4975, // $49.75 in cents
           isSubscription: true,
           hasAdditionalCharge: true
         };
@@ -503,10 +544,6 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
       style: 'currency',
       currency: 'USD'
     });
-  };
-  
-  const handlePlanSelection = (plan) => {
-    setPaymentPlan(plan);
   };
   
   // Submit handler with clean separation of payment flows
@@ -526,14 +563,10 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
         );
         
         // Build line items array for checkout
-        const priceId = paymentPlan === 'full' ? 
-          priceInfo.fullPrice : 
-          priceInfo.installmentPrice;
-          
-        const lineItems = [{ price: priceId, quantity: 1 }];
+        const lineItems = [{ price: priceInfo.fullPrice, quantity: 1 }];
         
         // If complete transformation with additional session fee, add it to checkout
-        if (productDetails.hasAdditionalCharge && paymentPlan === 'full' && priceInfo.sessionPrice) {
+        if (productDetails.hasAdditionalCharge && priceInfo.sessionPrice) {
           lineItems.push({ price: priceInfo.sessionPrice, quantity: 1 });
         }
         
@@ -545,13 +578,11 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
           billing_address_collection: 'required',
           client_reference_id: auth.currentUser.uid,
           customer_email: formData.email,
-          // BNPL options will be shown automatically if enabled in your Stripe Dashboard
-          // Uncomment the line below only if you want to limit payment methods
-          // payment_method_types: ['card', 'affirm', 'afterpay_clearpay', 'klarna'],
+          // Do NOT specify payment_method_types to ensure all enabled payment methods appear
+          // including BNPL options that are already active in your Stripe Dashboard
           allow_promotion_codes: true,
           metadata: {
-            tier: formData.tier,
-            paymentPlan
+            tier: formData.tier
           }
         });
         
@@ -594,7 +625,6 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
             paymentMethodId: paymentIntent.payment_method,
             last4: "****", // Will be updated on success page
             brand: "card",
-            paymentPlan,
             paymentComplete: true
           }
         });
@@ -629,7 +659,7 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
     );
   }
   
-  // Subscription Flow UI (No Payment Element, just payment plan selection)
+  // Subscription Flow UI
   if (productDetails.isSubscription) {
     return (
       <form className="signup-form" onSubmit={handleSubmit}>
@@ -659,51 +689,9 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
           </p>
         </div>
         
-        <div className="payment-plan-options">
-          <h4>Payment Options</h4>
-          
-          <div className={`plan-option ${paymentPlan === 'full' ? 'selected' : ''}`}>
-            <input 
-              type="radio" 
-              id="full-payment" 
-              name="payment-plan"
-              checked={paymentPlan === 'full'}
-              onChange={() => handlePlanSelection('full')}
-            />
-            <label htmlFor="full-payment">
-              <div className="plan-option-details">
-                <strong>Pay in Full</strong>
-                <span>{formatCurrency(productDetails.amount)}</span>
-              </div>
-              <div className="plan-option-description">
-                Monthly subscription, cancel anytime
-              </div>
-            </label>
-          </div>
-          
-          <div className={`plan-option ${paymentPlan === 'installment' ? 'selected' : ''}`}>
-            <input 
-              type="radio" 
-              id="installment-payment" 
-              name="payment-plan"
-              checked={paymentPlan === 'installment'}
-              onChange={() => handlePlanSelection('installment')}
-            />
-            <label htmlFor="installment-payment">
-              <div className="plan-option-details">
-                <strong>4 Monthly Payments</strong>
-                <span>{formatCurrency(productDetails.installmentAmount)}/month</span>
-              </div>
-              <div className="plan-option-description">
-                Split into 4 easy payments
-              </div>
-            </label>
-          </div>
-        </div>
-        
         <div className="payment-security-notice">
           <i className="fas fa-lock"></i>
-          <span>You'll be securely redirected to Stripe to complete your subscription.</span>
+          <span>Secure payments processed through Stripe. Multiple payment options, including buy now, pay later services like Klarna and Affirm, may be available at checkout.</span>
         </div>
         
         <div className="button-row">
@@ -757,13 +745,17 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
           <PaymentElement 
             id="payment-element" 
             options={{
-              layout: 'tabs',
+              layout: 'accordion', // New layout option that works well with BNPL
               paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'klarna', 'afterpay_clearpay', 'affirm'],
               defaultValues: {
                 billingDetails: {
                   name: formData.name || '',
                   email: formData.email || ''
                 }
+              },
+              wallets: {
+                applePay: 'auto',
+                googlePay: 'auto'
               }
             }}
             onReady={() => setIsPaymentElementReady(true)}
@@ -773,7 +765,7 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
       
       <div className="payment-security-notice">
         <i className="fas fa-lock"></i>
-        <span>Payments are securely processed through Stripe.</span>
+        <span>Secure payments processed through Stripe. Multiple payment options, including buy now, pay later services like Klarna and Affirm, may be available at checkout.</span>
       </div>
       
       <div className="button-row">
@@ -802,286 +794,6 @@ function PaymentStep({ formData, updateFormData, nextStep, prevStep, error }) {
 export default PaymentStep;
 ```
 
-#### Key Best Practices in This Implementation:
-
-1. **Flow Separation**: Subscription products use Stripe Checkout, while one-time purchases use Payment Element. This provides the optimal experience for each payment type.
-
-2. **Conditional UI**: The component renders completely different UIs based on product type - no PaymentElement for subscriptions, only for one-time purchases.
-
-3. **Error Handling**: Robust error handling with clear user-friendly messages.
-
-4. **Accessibility**: ARIA attributes and proper loading states provide an accessible experience.
-
-5. **Performance**: Using React hooks like useCallback and useMemo for optimal rendering performance.
-
-6. **Clean Code Structure**: Clear separation between data fetching, UI rendering, and payment processing logic.
-### Step 5: Add Enhanced CSS Styling
-
-Add these styles to your `src/react/signup/signup.css` file:
-
-```css
-/* Payment form styling */
-.payment-element-container {
-  padding: 1rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background-color: #fff;
-  transition: all 0.3s;
-}
-
-.payment-element-container:focus-within {
-  border-color: var(--primary, #4caf50);
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
-}
-
-/* Payment plan options */
-.payment-plan-options {
-  margin: 1.5rem 0;
-}
-
-.plan-option {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.plan-option input[type="radio"] {
-  margin-top: 0.3rem;
-  margin-right: 1rem;
-}
-
-.plan-option label {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  cursor: pointer;
-}
-
-.plan-option-details {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.plan-option-description {
-  font-size: 0.9rem;
-  color: #666;
-}
-
-/* Safari-compatible selected state (instead of :has pseudo-class) */
-.plan-option.selected {
-  border-color: var(--primary, #4caf50);
-  background-color: rgba(76, 175, 80, 0.05);
-}
-
-/* Loading state */
-.signup-form.loading {
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.loading-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 2rem;
-  color: #666;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(76, 175, 80, 0.2);
-  border-top-color: var(--primary, #4caf50);
-  border-radius: 50%;
-  animation: spinner 1s linear infinite;
-}
-
-@keyframes spinner {
-  to {transform: rotate(360deg);}
-}
-
-/* Error message styling */
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #d32f2f;
-  background-color: rgba(211, 47, 47, 0.1);
-  border-left: 3px solid #d32f2f;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.5rem;
-  border-radius: 0 4px 4px 0;
-}
-
-/* Retry button */
-.retry-button {
-  margin-left: auto;
-  padding: 0.25rem 0.75rem;
-  background-color: transparent;
-  border: 1px solid #d32f2f;
-  color: #d32f2f;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.retry-button:hover {
-  background-color: rgba(211, 47, 47, 0.1);
-}
-
-/* Security notice */
-.payment-security-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #666;
-  margin: 1.5rem 0;
-}
-
-.payment-security-notice i {
-  color: var(--primary, #4caf50);
-}
-
-/* Accessibility improvements */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-/* Button state styles */
-button[aria-busy=true] {
-  position: relative;
-  color: transparent;
-}
-
-button[aria-busy=true]::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 1rem;
-  height: 1rem;
-  margin-top: -0.5rem;
-  margin-left: -0.5rem;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spinner 1s linear infinite;
-}
-```
-
-### Step 6: Update ConfirmationStep Component
-
-Modify your ConfirmationStep.jsx to show payment details:
-
-```jsx
-// src/react/signup/components/ConfirmationStep.jsx
-import React from 'react';
-
-function ConfirmationStep({ formData, handleSubmit, prevStep, isSubmitting, error }) {
-  return (
-    <div className="signup-form">
-      <h3>Review Your Information</h3>
-      
-      {error && <div className="error-message" role="alert">{error}</div>}
-      
-      <div className="review-section">
-        <h4>Account Information</h4>
-        <div className="review-item">
-          <span className="item-label">Name:</span>
-          <span className="item-value">{formData.name}</span>
-        </div>
-        <div className="review-item">
-          <span className="item-label">Email:</span>
-          <span className="item-value">{formData.email}</span>
-        </div>
-        <div className="review-item">
-          <span className="item-label">Phone:</span>
-          <span className="item-value">{formData.phone || 'Not provided'}</span>
-        </div>
-      </div>
-      
-      <div className="review-section">
-        <h4>Selected Plan</h4>
-        <div className="review-item">
-          <span className="item-label">Plan:</span>
-          <span className="item-value">
-            {formData.tier === 'in-person-training' && 'In-Person Training'}
-            {formData.tier === 'online-coaching' && 'Online Coaching'}
-            {formData.tier === 'complete-transformation' && 'Complete Transformation'}
-          </span>
-        </div>
-      </div>
-      
-      <div className="review-section">
-        <h4>Payment Information</h4>
-        <div className="review-item">
-          <span className="item-label">Payment Method:</span>
-          <span className="item-value">
-            {formData.paymentInfo?.brand 
-              ? `${formData.paymentInfo.brand.toUpperCase()} •••• ${formData.paymentInfo.last4}` 
-              : 'Not provided'}
-          </span>
-        </div>
-        <div className="review-item">
-          <span className="item-label">Payment Plan:</span>
-          <span className="item-value">
-            {formData.paymentInfo?.paymentPlan === 'installment' 
-              ? '4 Monthly Payments' 
-              : 'Pay in Full'}
-          </span>
-        </div>
-      </div>
-      
-      <p className="disclaimer">
-        By clicking "Complete Sign Up", you agree to our Terms of Service and Privacy Policy.
-        Your payment will be processed securely by Stripe.
-      </p>
-      
-      <div className="button-row">
-        <button 
-          type="button" 
-          className="btn-secondary"
-          onClick={prevStep}
-          disabled={isSubmitting}
-        >
-          <i className="fas fa-arrow-left"></i> Back
-        </button>
-        <button 
-          type="button" 
-          className="btn-primary-enhanced"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          aria-busy={isSubmitting}
-        >
-          {isSubmitting ? 'Processing...' : 'Complete Sign Up'}
-          {!isSubmitting && <i className="fas fa-check-circle"></i>}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export default ConfirmationStep;
-```
-
 ## PART 5: TESTING THE INTEGRATION
 
 ### Step 1: Build Your React Components
@@ -1094,252 +806,156 @@ npm run dev
 2. Fill out the account info step
 3. Select a service tier
 4. In the payment step, you should see:
-   - Payment plan options (full or installment)
    - Modern Payment Element with multiple payment options
-   - Credit card input form with built-in validation
+   - Automatic appearance of any BNPL options you've enabled in your Stripe Dashboard
+   - Appropriate UI based on the product type (subscription vs. one-time payment)
 
 ### Step 3: Test with Stripe Test Cards
 Stripe's latest test cards for 2025:
 
 | Card Number | Brand | Description |
 |------------|-------|-------------|
-| 4242 4242 4242 4242 | Visa | Succeeds and immediately processes the payment |
-| 4000 0025 0000 3155 | Visa | Requires authentication (3D Secure) |
-| 4000 0000 0000 9995 | Visa | Always fails with a decline |
-| 4000 0000 0000 0077 | Visa | Failed fraud check |
-| 5555 5555 5555 4444 | Mastercard | Succeeds and immediately processes the payment |
-| 3782 8224 6310 005 | American Express | Succeeds and immediately processes the payment |
+| 4242 4242 4242 4242 | Visa | Succeeds |
+| 4000 0000 0000 0002 | Visa | Declined (generic) |
+| 4000 0000 0000 9995 | Visa | Declined (insufficient funds) |
+| 5555 5555 5555 4444 | Mastercard | Succeeds |
+| 3782 822463 10005 | American Express | Succeeds |
+| 4000 0000 0000 3220 | Visa | 3D Secure authentication |
 
-For all cards:
-- Any future expiry date (e.g., 12/28)
-- Any 3-digit CVC code (4-digits for American Express)
-- Any billing postal code (e.g., 12345)
+For all test cards:
+- Use any valid future date for expiration
+- Use any 3-digit CVC (4 digits for American Express)
+- Use any 5-digit ZIP code
 
-### Step 4: Testing Subscription Products
-For subscription products, test the following scenarios:
-1. **New subscription creation**: Use card 4242 4242 4242 4242
-2. **Authentication flow**: Use card 4000 0025 0000 3155 to test 3D Secure
-3. **Failed subscription**: Use card 4000 0000 0000 9995
-4. **Checkout with multiple products**: Test the Complete Transformation package with both subscription and one-time fee
+### Testing BNPL Payment Methods
+When testing in development mode:
+1. Use the Stripe test cards appropriate for each BNPL provider
+2. For Affirm testing, use card 4500 0000 0000 0087
+3. For Klarna testing, use details provided in the Stripe testing documentation
+4. Verify that these options appear automatically in your Payment Element or Checkout
+5. Note that some BNPL options may not appear for small transaction amounts
 
-### Step 5: Check Firebase and Stripe Dashboards
-1. Go to your Firebase console
-   - Check Firestore for customer records in the `stripe_customers` collection
-   - Check Functions logs for payment processing events
-   - Verify webhook events are being processed correctly
-2. Go to the Stripe dashboard
-   - Click on "Payments" to see your test payments
-   - Check "Customers" to see created customer profiles
-   - Check "Subscriptions" for subscription records
+### Step 4: Verify Payment Processing
+1. Complete a test payment
+2. Check your Stripe dashboard under **Payments** to see the transaction
+3. For subscriptions, verify the subscription was created under **Subscriptions**
+4. Check Firebase Firestore to ensure customer and payment data was synced correctly
 
 ## PART 6: GOING LIVE
 
-### Step 1: Complete Stripe Account Setup
-1. Complete your Stripe account verification
-   - Add business information
-   - Connect a bank account
-   - Complete identity verification
-   - Provide required legal documents
+### Step 1: Switch to Live Mode
+1. In your Stripe dashboard, toggle from **Test mode** to **Live mode**
+2. Complete Stripe's account verification process
+3. Get your live API keys (they start with `pk_live_` and `sk_live_`)
 
-### Step 2: Update API Keys for Production
-1. In Stripe, switch to Live mode
-2. Get your live Publishable key and Secret key
-3. Update your environment variables with the live keys:
-   ```
-   REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_LIVE_KEY
-   ```
-4. Update the Firebase extension with your live Stripe Secret key
-
-### Step 3: Update Webhook Configuration for Production
-1. Set up a new webhook endpoint in Stripe's Live mode
-2. Use the same webhook URL from your Firebase extension
-3. Update the webhook secret in your Firebase extension with the live webhook signing secret
-4. Test your webhook with real events using Stripe's webhook testing tool
-
-### Step 4: Production Security Checklist
-1. **PCI Compliance**:
-   - Ensure you're using the Payment Element (not collecting raw card data)
-   - Configure CSP headers to allow only Stripe domains for payment processing
-   - Add proper HTTPS for your production domain
-
-2. **API Key Security**:
-   - Verify no API keys are hardcoded in client-side code
-   - Set restricted API keys with appropriate permissions in Stripe
-   - Use environment variables for all sensitive credentials
-
-3. **Data Protection**:
-   - Implement proper user authentication before payment processing
-   - Set up Firestore security rules to protect customer payment data
-   - Configure Firebase Functions to validate authentication
-
-### Step 5: Deploy Your Application
-1. Build your application for production:
+### Step 2: Update Environment Variables
+1. Update your production environment variables with live keys
+2. Update Firebase Functions configuration:
    ```bash
-   npm run build
+   firebase functions:config:set stripe.key="sk_live_..." --project your-production-project
+   firebase functions:config:set stripe.webhook="whsec_live_..." --project your-production-project
    ```
-2. Deploy Firebase functions and hosting:
-   ```bash
-   firebase deploy
-   ```
-3. Verify your production environment with a small test payment
 
-### Step 6: Monitor Transactions
-1. Set up Stripe notifications for important payment events:
-   - Failed payments
-   - Disputed charges
-   - Successful subscriptions
-2. Configure monitoring for Firebase Functions:
-   - Set up error alerting
-   - Monitor function execution times and failures
-3. Implement proper logging for troubleshooting
+### Step 3: Set Up Live Webhooks
+1. Create new webhook endpoints for your production domain
+2. Update webhook secrets in Firebase extension configuration
+3. Test the live integration with small transactions
+
+### Step 4: Security Checklist
+- [ ] All API keys are in environment variables, never hardcoded
+- [ ] Live webhook secrets are properly configured
+- [ ] SSL certificates are valid for your domain
+- [ ] Firestore security rules are properly configured
+- [ ] Test all payment flows with real (small) transactions
 
 ## PART 7: TROUBLESHOOTING
 
 ### Common Issues and Solutions
 
-#### 1. Payment Element Not Appearing
-**Problem**: Payment Element fails to load or doesn't display.
+#### Payment Element Not Loading
+**Problem**: The Payment Element doesn't appear or shows an error
 **Solutions**:
-- Verify you've wrapped your app with the Stripe Elements provider
-- Check the browser console for JavaScript errors
-- Ensure your Stripe publishable key is correct
-- Verify Stripe.js is loading (check network tab)
-- Try setting `loader="always"` in Elements options
+1. Check that your Stripe publishable key is correct
+2. Verify you're using the latest Stripe libraries
+3. Check browser console for JavaScript errors
+4. Ensure your domain is added to your Stripe account settings
 
-#### 2. Payment Method Creation Error
-**Problem**: Payment fails with "Payment method creation failed" error.
+#### BNPL Options Not Appearing
+**Problem**: Klarna, Affirm, or other BNPL options don't show up
 **Solutions**:
-- Check that you're using a valid test card number
-- Verify card details are formatted correctly
-- Look for validation errors in the Stripe Dashboard
-- Check browser console for detailed error messages
-- Verify your account isn't in test mode with live keys (or vice versa)
+1. Verify BNPL providers are enabled in your Stripe Dashboard
+2. Ensure you're using the latest Stripe libraries (@stripe/react-stripe-js v3.9.2+)
+3. Check that transaction amounts meet BNPL provider minimums
+4. Verify customer location is supported by the BNPL provider
+5. Don't restrict payment_method_types in your configuration
 
-#### 3. Firebase Functions Not Working
-**Problem**: Firebase functions fail to execute or return errors.
+#### Subscription Creation Fails
+**Problem**: Subscription payments fail or don't create properly
 **Solutions**:
-- Verify the Stripe extension is properly installed
-- Check Firebase Functions logs for errors
-- Ensure the Firebase region matches your extension configuration
-- Verify function permissions (IAM roles)
-- Check if function timeout is adequate for processing payments
+1. Check that your product and price IDs are correct
+2. Verify the Firebase Stripe extension is properly configured
+3. Check Firebase Functions logs for errors
+4. Ensure webhook endpoints are receiving events
 
-#### 4. Webhook Issues
-**Problem**: Webhooks are not being received or processed.
+#### Firebase Extension Issues
+**Problem**: The Stripe extension doesn't sync data properly
 **Solutions**:
-- Check that webhook URLs are correctly set up
-- Verify webhook secret is properly configured
-- Check Stripe's webhook logs for delivery attempts
-- Test webhooks using Stripe's webhook testing tool
-- Verify Firebase functions are deployed and running
+1. Verify you're using the Invertase-maintained version (v0.3.12+)
+2. Check that webhook secrets match between Stripe and Firebase
+3. Review Firebase Functions logs for extension errors
+4. Ensure proper Firestore security rules
 
-#### 5. Product/Price Sync Issues
-**Problem**: Products or prices aren't appearing in Firestore.
+#### Environment Variable Issues
+**Problem**: API keys or configuration not working
 **Solutions**:
-- Verify the `stripe_products` collection exists in Firestore
-- Check extension logs for sync errors
-- Try manual sync from extension dashboard
-- Check product/price IDs in your code match those in Stripe
+1. Verify all environment variables are properly set
+2. Check that `.env` files are in the correct location
+3. Restart your development server after changing environment variables
+4. Ensure production environment variables are set on your hosting platform
 
-#### 6. BNPL Options Not Appearing
-**Problem**: Buy Now, Pay Later options like Affirm, Afterpay, or Klarna aren't appearing in checkout.
-**Solutions**:
-- Verify you've enabled these payment methods in your Stripe Dashboard (Settings > Payment methods)
-- Ensure you're using the latest versions of @stripe/stripe-js and @stripe/react-stripe-js libraries
-- Check that the transaction amount meets the BNPL provider's minimum requirements (e.g., Afterpay typically requires $35+ transactions)
-- Confirm customer's location/shipping address is in a supported country for the BNPL provider
-- For Payment Element, make sure you're including these methods in paymentMethodOrder if you're specifying methods
-- For Stripe Checkout, don't restrict payment_method_types unless you specifically need to
+### Debugging Tips
+1. **Always check browser console** for JavaScript errors
+2. **Monitor Stripe Dashboard** for payment events and webhooks
+3. **Check Firebase Functions logs** for backend errors
+4. **Use Stripe CLI** for local webhook testing:
+   ```bash
+   stripe listen --forward-to localhost:3000/webhook
+   ```
 
-### Advanced Troubleshooting
+### Performance Optimization
+1. **Lazy load Stripe**: Only load Stripe.js when needed
+2. **Optimize Payment Element**: Use `appearance` options for faster loading
+3. **Cache price data**: Store frequently accessed price information
+4. **Use proper error boundaries**: Implement React error boundaries around payment components
 
-#### Testing BNPL Availability
-```javascript
-// Add this to your frontend code to debug which payment methods are available
-const getAvailablePaymentMethods = async () => {
-  const response = await fetch('/get-payment-methods-availability', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      amount: 10000, // $100.00 in cents
-      currency: 'usd',
-      country: 'US',
-    }),
-  });
-  const data = await response.json();
-  console.log('Available payment methods:', data.available_payment_methods);
-};
+### Security Best Practices
+1. **Never log sensitive data**: Avoid logging payment method details
+2. **Validate on server side**: Always validate payments server-side
+3. **Use HTTPS everywhere**: Ensure all payment pages use SSL
+4. **Regular security audits**: Keep dependencies updated and audit regularly
 
-// Corresponding Firebase function to check available payment methods
-exports.getPaymentMethodsAvailability = functions.https.onCall(async (data, context) => {
-  const stripe = require('stripe')(functions.config().stripe.key);
-  const paymentMethodsResponse = await stripe.paymentMethods.list({
-    limit: 100,
-  });
-  
-  // Filter for relevant payment methods that support the transaction parameters
-  const availablePaymentMethods = paymentMethodsResponse.data
-    .filter(method => 
-      method.type === 'card' || 
-      method.type === 'afterpay_clearpay' || 
-      method.type === 'affirm' || 
-      method.type === 'klarna'
-    )
-    .map(method => method.type);
-    
-  return { available_payment_methods: availablePaymentMethods };
-});
-```
+## Conclusion
 
-#### Payment Intent Debugging
-```javascript
-// Add this to your handleSubmit function for debugging
-console.log('Payment Intent:', paymentIntent);
-```
+You now have a complete, modern Stripe payment integration that:
 
-#### Webhook Verification Testing
-```javascript
-// Test webhook signature verification manually
-const verifyWebhookSignature = (payload, signature, secret) => {
-  try {
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    const event = stripe.webhooks.constructEvent(payload, signature, secret);
-    console.log('Webhook verified:', event);
-    return event;
-  } catch (err) {
-    console.error('Webhook verification failed:', err);
-    throw err;
-  }
-};
-```
+- ✅ Supports multiple payment methods including BNPL options
+- ✅ Uses the latest Stripe libraries and best practices
+- ✅ Implements proper security measures
+- ✅ Provides excellent user experience with modern UI
+- ✅ Handles both subscription and one-time payments efficiently
+- ✅ Is ready for production deployment
 
-#### Logging for Subscription Events
-```javascript
-// Add to your subscription webhook handler
-function handleSubscriptionWebhook(event) {
-  const subscription = event.data.object;
-  console.log('Subscription event:', event.type);
-  console.log('Subscription ID:', subscription.id);
-  console.log('Customer:', subscription.customer);
-  console.log('Status:', subscription.status);
-  // Handle the event based on type...
-}
-```
+The integration automatically supports Klarna, Affirm, and other BNPL providers that are enabled in your Stripe Dashboard, giving your customers modern, flexible payment options while ensuring you receive full payment upfront with zero risk.
 
-### Getting Help
+### Next Steps
+1. Customize the styling to match your brand
+2. Add additional payment confirmation emails
+3. Implement customer dashboard for subscription management
+4. Add analytics tracking for conversion optimization
+5. Consider implementing promotional codes and discounts
 
-If you encounter issues:
+For the most up-to-date information, always refer to the [official Stripe documentation](https://stripe.com/docs) and [Firebase Extensions documentation](https://firebase.google.com/docs/extensions).
 
-1. Check the browser console for detailed error messages
-2. Review Firebase Functions logs (in Firebase console)
-3. Check Stripe Dashboard logs and events
-4. Use Stripe's testing tools in the Dashboard
-5. Refer to these documentation resources:
-   - [Stripe Elements Documentation](https://stripe.com/docs/stripe-js)
-   - [Firebase Stripe Extension Documentation](https://firebase.google.com/docs/extensions/official/firestore-stripe-payments)
-   - [Stripe Webhook Documentation](https://stripe.com/docs/webhooks)
-   - [Stripe Testing Documentation](https://stripe.com/docs/testing)
+---
 
-For production issues, Stripe's support team is available to help with payment processing problems. Firebase also offers support for issues related to the Firebase Stripe extension.
+*Last updated: August 2025 - Updated for latest Stripe API version 2025-07-30.basil and modern React patterns*

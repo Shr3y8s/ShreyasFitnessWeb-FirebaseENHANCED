@@ -60,8 +60,14 @@
                 <p>Create your account to start your fitness journey</p>
             </div>
             
-            <!-- This is where React will mount - ADD THIS DIV -->
+            <!-- This is where React will mount -->
             <div id="react-signup-form"></div>
+            
+            <hr class="section-divider">
+            <div class="section-header">
+                <h2>Traditional HTML Form</h2>
+                <p>Original signup form for reference</p>
+            </div>
             
             <div class="signup-container">
                 <div class="signup-benefits">
@@ -193,11 +199,31 @@
     <!-- Our authentication script - loaded after Firebase SDK -->
     <script src="js/auth.js"></script>
     <!-- Add a small script to catch and log Firebase errors -->
-    <script>
+<script>
       window.addEventListener('error', function(event) {
         if (event.message && event.message.includes('firebase')) {
           console.error('Firebase Error:', event.message);
         }
+      });
+      
+      // Monitor React component loading
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('Checking for React component loading...');
+        
+        // Check if React component loads after a short delay
+        setTimeout(function() {
+          const reactForm = document.getElementById('react-signup-form');
+          if (reactForm && reactForm.children.length > 0) {
+            console.log('React form loaded successfully!');
+            // Add a success notification
+            const notification = document.createElement('div');
+            notification.className = 'react-loaded-notification';
+            notification.innerHTML = '<div class="notification-content"><i class="fas fa-check-circle"></i> React Stripe Integration Loaded</div>';
+            reactForm.prepend(notification);
+          } else {
+            console.warn('React form not detected - check webpack build and bundle.');
+          }
+        }, 1000); // Check after 1 second to give React time to render
       });
     </script>
     <script>
@@ -313,6 +339,42 @@
 </script>
 
 <style>
+  /* Section divider */
+  .section-divider {
+    margin: 3rem 0;
+    border: 0;
+    border-top: 1px solid #e0e0e0;
+    position: relative;
+  }
+  
+  .section-divider::before {
+    content: "OR";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 0 1rem;
+    color: #9e9e9e;
+    font-size: 0.9rem;
+  }
+  
+  /* React loaded notification */
+  .react-loaded-notification {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: #e8f5e9;
+    border-radius: 4px;
+    border-left: 4px solid #4caf50;
+    color: #2e7d32;
+  }
+  
+  .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
   /* Success message styling */
   .success-message {
     background-color: #e8f5e9;

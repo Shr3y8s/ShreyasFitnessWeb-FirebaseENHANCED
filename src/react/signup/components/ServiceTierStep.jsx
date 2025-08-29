@@ -12,6 +12,13 @@ function ServiceTierStep({ formData, updateFormData, nextStep, prevStep, error }
       details: 'Seattle Area Only'
     },
     {
+      id: '4-pack-training',
+      title: '4-Pack Training Sessions',
+      price: '$240 ($60/session)',
+      description: 'Save $40 with our 4-session package. Perfect for getting started or refreshing your program.',
+      details: 'Seattle Area Only'
+    },
+    {
       id: 'online-coaching',
       title: 'Online Coaching',
       price: '$199/month',

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - SHREY.FIT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore-compat.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #22543d;
+            margin-bottom: 20px;
+        }
+        .success-icon {
+            font-size: 80px;
+            color: #48bb78;
+            margin-bottom: 20px;
+        }
+        .payment-details {
+            background-color: #f0fff4;
+            border: 1px solid #c6f6d5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .btn {
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #3182ce;
+        }
+        .btn-secondary {
+            background-color: #a0aec0;
+        }
+        .btn-secondary:hover {
+            background-color: #718096;
+        }
+        #loading {
+            display: block;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3182ce;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .button-group {
+            margin-top: 30px;
+        }
+        .error-message {
+            background-color: #fed7d7;
+            color: #742a2a;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="success-content" style="display: none;">
+            <div class="success-icon">✓</div>
+            <h1>Payment Successful!</h1>
+            <p>Thank you for your payment. Your transaction has been completed successfully.</p>
+            
+            <div class="payment-details">
+                <h3>Payment Details</h3>
+                <div id="payment-info">
+                    <div id="loading">
+                        <span class="spinner"></span> Loading payment details...
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <a href="index.html" class="btn">Return to Homepage</a>
+                <a href="dashboard.html" class="btn btn-secondary">Go to Dashboard</a>
+            </div>
+        </div>
+        
+        <div id="loading-content">
+            <div class="spinner"></div>
+            <p>Verifying your payment...</p>
+        </div>
+        
+        <div id="error-content" style="display: none;">
+            <h2>Something went wrong</h2>
+            <div class="error-message" id="error-message">
+                Unable to verify payment status. Please contact support.
+            </div>
+            <a href="payment-test.html" class="btn">Return to Payment Test</a>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyADF9yuram-pvlzjg6kBtdCk7LuK0M65tk",
+                authDomain: "shreyfitweb.firebaseapp.com",
+                projectId: "shreyfitweb",
+                storageBucket: "shreyfitweb.firebasestorage.app",
+                messagingSenderId: "1076359633281",
+                appId: "1:1076359633281:web:3687e1675c9e185f0ab080",
+                measurementId: "G-5GBP19SXBW"
+            };
+            firebase.initializeApp(firebaseConfig);
+            
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            
+            // Initialize Stripe
+            const stripe = Stripe('pk_test_51Hg4SwBjx3iGODd6fpJzOpYnyoBLQfoZS4ZMusKkfV82WhhHL0z15HWLe2Fs2K45x5GlNzX91ywD6lJkYfsbAHCz002TVq3QZn');
+            
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('session_id');
+            const paymentIntentId = urlParams.get('payment_intent');
+            const paymentIntentClientSecret = urlParams.get('payment_intent_client_secret');
+            
+            try {
+                // Handle different payment verification methods
+                if (sessionId) {
+                    // This is a checkout session from subscription flow
+                    console.log("Checkout session ID found:", sessionId);
+                    
+                    // Here we would typically verify the session with our server
+                    // For test purposes, we'll just display the session ID
+                    showSuccessWithDetails({
+                        type: 'subscription',
+                        id: sessionId,
+                        status: 'complete',
+                        mode: 'subscription'
+                    });
+                    
+                } else if (paymentIntentId && paymentIntentClientSecret) {
+                    // This is from direct payment flow
+                    console.log("Payment intent found:", paymentIntentId);
+                    
+                    // Retrieve payment intent details
+                    const { paymentIntent, error } = await stripe.retrievePaymentIntent(paymentIntentClientSecret);
+                    
+                    if (error) {
+                        showError('Could not verify payment: ' + error.message);
+                        return;
+                    }
+                    
+                    if (paymentIntent && paymentIntent.status === 'succeeded') {
+                        showSuccessWithDetails({
+                            type: 'payment',
+                            id: paymentIntent.id,
+                            amount: formatCurrency(paymentIntent.amount, paymentIntent.currency),
+                            status: paymentIntent.status,
+                            paymentMethod: paymentIntent.payment_method
+                        });
+                    } else {
+                        showError(`Payment status: ${paymentIntent ? paymentIntent.status : 'unknown'}`);
+                    }
+                    
+                } else {
+                    // Direct navigation without payment params
+                    showError('No payment information found in URL');
+                }
+            } catch (err) {
+                console.error('Payment verification error:', err);
+                showError('Error verifying payment: ' + err.message);
+            }
+            
+            function showSuccessWithDetails(paymentData) {
+                // Hide loading, show success content
+                document.getElementById('loading-content').style.display = 'none';
+                document.getElementById('success-content').style.display = 'block';
+                
+                // Create payment details HTML
+                const paymentInfo = document.getElementById('payment-info');
+                let detailsHtml = '';
+                
+                if (paymentData.type === 'subscription') {
+                    detailsHtml = `
+                        <div class="detail-row">
+                            <span>Subscription ID:</span>
+                            <span>${paymentData.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Status:</span>
+                            <span>${paymentData.status}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Type:</span>
+                            <span>${paymentData.mode}</span>
+                        </div>
+                    `;
+                } else {
+                    detailsHtml = `
+                        <div class="detail-row">
+                            <span>Transaction ID:</span>
+                            <span>${paymentData.id}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Amount:</span>
+                            <span>${paymentData.amount || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span>Status:</span>
+                            <span>${paymentData.status}</span>
+                        </div>
+                    `;
+                }
+                
+                paymentInfo.innerHTML = detailsHtml;
+            }
+            
+            function showError(message) {
+                document.getElementById('loading-content').style.display = 'none';
+                document.getElementById('error-content').style.display = 'block';
+                document.getElementById('error-message').textContent = message;
+            }
+            
+            function formatCurrency(amount, currency) {
+                const formatter = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: currency || 'USD',
+                });
+                
+                return formatter.format(amount / 100);
+            }
+        });
+    </script>
+</body>
+</html>

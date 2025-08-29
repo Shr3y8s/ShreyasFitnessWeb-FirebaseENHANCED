@@ -1,10 +1,19 @@
 // src/react/signup/SignupForm.jsx
-import React, { useState } from 'react';
-import { createUserWithTier } from '../../firebase-config';
+import React, { useState, useEffect } from 'react';
+import { createUserWithTier, auth } from '../../firebase-config';
+import { onAuthStateChanged } from 'firebase/auth';
+import { Elements } from '@stripe/react-stripe-js';
+// Access the global auth functions defined in js/auth.js
+// The window.safelySetSigningUp function prevents redirects during signup
 import AccountInfoStep from './components/AccountInfoStep';
 import ServiceTierStep from './components/ServiceTierStep';
 import PaymentStep from './components/PaymentStep';
+import PaymentStepDev from './components/PaymentStepDev';
 import ConfirmationStep from './components/ConfirmationStep';
+import { stripePromise, options } from './index';
+
+// Set this to false to use the production version of the payment step with BNPL support
+const USE_DEV_MODE = false;
 
 export function SignupForm() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -19,6 +28,19 @@ export function SignupForm() {
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [paymentComplete, setPaymentComplete] = useState(false);
+  
+  // Track authentication state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      console.log("Auth state changed:", user ? "User authenticated" : "No user");
+    });
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   const updateFormData = (data) => {
     setFormData({...formData, ...data});
@@ -28,12 +50,35 @@ export function SignupForm() {
 
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setError('');
+  
+  // Ensure we prevent automatic redirects during signup
+  useEffect(() => {
+    // Set the global signing up flag to prevent redirects
+    if (window.safelySetSigningUp && currentStep > 1 && currentStep < 4) {
+      console.log("Setting global isSigningUp flag to prevent redirects");
+      window.safelySetSigningUp(true);
+    }
     
+    // Clean up when component unmounts
+    return () => {
+      if (window.safelySetSigningUp) {
+        window.safelySetSigningUp(false);
+      }
+    };
+  }, [currentStep]);
+
+  // Create user account before proceeding to payment
+  const handleCreateAccount = async () => {
     try {
+      setIsSubmitting(true);
+      setError('');
+      
+      // Set the global signing up flag to prevent redirects
+      if (window.safelySetSigningUp) {
+        console.log("Setting global isSigningUp flag during account creation");
+        window.safelySetSigningUp(true);
+      }
+      
       // Create user with tier info
       const result = await createUserWithTier(
         formData.email,
@@ -47,7 +92,38 @@ export function SignupForm() {
         throw new Error(result.error?.message || 'Failed to create account');
       }
       
-      // Dispatch the same success event your current code looks for
+      console.log("Account created successfully");
+      setIsSubmitting(false);
+      nextStep(); // Proceed to payment step
+    } catch (error) {
+      console.error('Account creation error:', error);
+      setError(error.message);
+      setIsSubmitting(false);
+      
+      // Reset signing up flag on error
+      if (window.safelySetSigningUp) {
+        window.safelySetSigningUp(false);
+      }
+    }
+  };
+
+  // Function to handle payment completion - to be called from PaymentStep
+  const handlePaymentComplete = () => {
+    console.log("Payment completed successfully");
+    setPaymentComplete(true);
+    nextStep();
+  };
+
+  // Final submit after payment and confirmation
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setError('');
+    
+    try {
+      // No need to create user again, as it's already done before the payment step
+      console.log("Signup flow complete, dispatching success event");
+      
+      // Only now dispatch the success event - after payment is confirmed
       const signupSuccessEvent = new CustomEvent('signupSuccess', {
         detail: { 
           email: formData.email,
@@ -56,6 +132,14 @@ export function SignupForm() {
           tier: formData.tier
         }
       });
+      
+      // Allow redirect to dashboard by resetting the signing up flag
+      if (window.safelySetSigningUp) {
+        console.log("Resetting global isSigningUp flag after complete signup");
+        window.safelySetSigningUp(false);
+      }
+      
+      // Dispatch event to trigger dashboard redirect
       document.dispatchEvent(signupSuccessEvent);
       
     } catch (error) {
@@ -82,20 +166,33 @@ export function SignupForm() {
           <ServiceTierStep 
             formData={formData} 
             updateFormData={updateFormData} 
-            nextStep={nextStep} 
+            nextStep={handleCreateAccount} 
             prevStep={prevStep}
             error={error}
+            isSubmitting={isSubmitting}
           />
         );
       case 3:
-        return (
-          <PaymentStep 
+        // Use development version when DEV_MODE is enabled
+        return USE_DEV_MODE ? (
+          <PaymentStepDev 
             formData={formData} 
             updateFormData={updateFormData} 
             nextStep={nextStep} 
             prevStep={prevStep}
             error={error}
           />
+        ) : (
+          <Elements stripe={stripePromise} options={options}>
+            <PaymentStep 
+              formData={formData} 
+              updateFormData={updateFormData} 
+              nextStep={handlePaymentComplete} 
+              prevStep={prevStep}
+              error={error}
+              currentUser={currentUser}
+            />
+          </Elements>
         );
       case 4:
         return (

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Payment Function Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.1.0/firebase-functions-compat.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2d3748;
+            margin-top: 30px;
+        }
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+        button {
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #3182ce;
+        }
+        button:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #22543d;
+            background-color: #c6f6d5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .error {
+            color: #742a2a;
+            background-color: #fed7d7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        #result, #checkoutResult {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            background-color: #f7fafc;
+            white-space: pre-wrap;
+            min-height: 100px;
+            font-family: monospace;
+        }
+        .radio-group {
+            margin: 15px 0;
+        }
+        .radio-group label {
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        #loading {
+            display: none;
+            margin-top: 10px;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #3182ce;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .payment-element-container {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background-color: #f8fafc;
+        }
+        .test-cards {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fffbea;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+        }
+        .test-cards ul {
+            padding-left: 20px;
+        }
+        .test-cards li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Firebase Stripe Functions Test</h1>
+        
+        <div class="test-section">
+            <h2>1. Test Authentication</h2>
+            <p>First, sign in to test the authentication flow:</p>
+            <button id="signInBtn">Sign In Anonymously</button>
+            <button id="signOutBtn" disabled>Sign Out</button>
+            <div id="authStatus"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. Test Payment Intent (One-time Payment)</h2>
+            <p>This tests the createPaymentIntent function for one-time payments:</p>
+            
+            <div class="radio-group">
+                <p><strong>Select Test Product:</strong></p>
+                <label>
+                    <input type="radio" name="product" value="prod_SwuHPYlY94VZyY" checked> 
+                    In-Person Training
+                </label>
+                <label>
+                    <input type="radio" name="product" value="prod_SwvMUVeTqAnveu"> 
+                    4-Pack Training
+                </label>
+            </div>
+            
+            <button id="testPaymentIntentBtn" disabled>Create Payment Intent</button>
+            <div id="loading">
+                <span class="spinner"></span> Processing...
+            </div>
+            
+            <div class="test-cards">
+                <h4>Test Cards:</h4>
+                <ul>
+                    <li><strong>Success:</strong> 4242 4242 4242 4242</li>
+                    <li><strong>Decline:</strong> 4000 0000 0000 0002</li>
+                    <li><strong>3D Secure:</strong> 4000 0000 0000 3220</li>
+                </ul>
+            </div>
+            
+            <div id="payment-element-container" style="display: none;">
+                <div id="payment-element"></div>
+                <button id="submit-payment" style="margin-top: 20px;">Submit Payment</button>
+            </div>
+            
+            <div id="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. Test Checkout Session (Subscription)</h2>
+            <p>This tests the createCheckoutSession function for subscriptions:</p>
+            
+            <div class="radio-group">
+                <p><strong>Select Subscription Product:</strong></p>
+                <label>
+                    <input type="radio" name="subscription" value="prod_SwvHrfi1C4k4pS" checked> 
+                    Online Coaching
+                </label>
+                <label>
+                    <input type="radio" name="subscription" value="prod_SwvI0SWs0J3DMQ"> 
+                    Complete Transformation
+                </label>
+            </div>
+            
+            <button id="testCheckoutBtn" disabled>Create Checkout Session</button>
+            <div id="checkoutResult"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. CORS Test</h2>
+            <p>This tests if CORS is properly configured:</p>
+            <button id="testCorsBtn" disabled>Test CORS</button>
+            <div id="corsResult"></div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize Firebase
+            const firebaseConfig = {
+                apiKey: "AIzaSyADF9yuram-pvlzjg6kBtdCk7LuK0M65tk",
+                authDomain: "shreyfitweb.firebaseapp.com",
+                projectId: "shreyfitweb",
+                storageBucket: "shreyfitweb.firebasestorage.app",
+                messagingSenderId: "1076359633281",
+                appId: "1:1076359633281:web:3687e1675c9e185f0ab080",
+                measurementId: "G-5GBP19SXBW"
+            };
+            firebase.initializeApp(firebaseConfig);
+            
+            const auth = firebase.auth();
+            const functions = firebase.functions();
+            
+            // Configure Firebase Functions for local development
+            // If running with emulators, uncomment the line below
+            // functions.useEmulator("localhost", 5001);
+            
+            // For Firebase Functions v12 compat, we don't need to set region here
+            // Region is configured on the server side in functions/index.js
+            // functions.region() is deprecated in the newer SDK
+            
+            // Elements for UI interaction
+            const signInBtn = document.getElementById('signInBtn');
+            const signOutBtn = document.getElementById('signOutBtn');
+            const authStatus = document.getElementById('authStatus');
+            const testPaymentIntentBtn = document.getElementById('testPaymentIntentBtn');
+            const testCheckoutBtn = document.getElementById('testCheckoutBtn');
+            const testCorsBtn = document.getElementById('testCorsBtn');
+            const result = document.getElementById('result');
+            const checkoutResult = document.getElementById('checkoutResult');
+            const corsResult = document.getElementById('corsResult');
+            const loading = document.getElementById('loading');
+            
+            // Initialize Stripe
+            const stripe = Stripe('pk_test_51Hg4SwBjx3iGODd6fpJzOpYnyoBLQfoZS4ZMusKkfV82WhhHL0z15HWLe2Fs2K45x5GlNzX91ywD6lJkYfsbAHCz002TVq3QZn');
+            let elements;
+            
+            // Auth state listener
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    authStatus.innerHTML = `<div class="success">Signed in as: ${user.uid}</div>`;
+                    signInBtn.disabled = true;
+                    signOutBtn.disabled = false;
+                } else {
+                    authStatus.innerHTML = '<div class="error">Not signed in - Using test mode</div>';
+                    signInBtn.disabled = false;
+                    signOutBtn.disabled = true;
+                }
+                
+                // Always enable test buttons regardless of auth state
+                // Since we're using isTestMode: true in our requests
+                testPaymentIntentBtn.disabled = false;
+                testCheckoutBtn.disabled = false;
+                testCorsBtn.disabled = false;
+            });
+            
+            // Sign in anonymously
+            signInBtn.addEventListener('click', async () => {
+                try {
+                    await auth.signInAnonymously();
+                } catch (error) {
+                    authStatus.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                }
+            });
+            
+            // Sign out
+            signOutBtn.addEventListener('click', async () => {
+                try {
+                    await auth.signOut();
+                } catch (error) {
+                    authStatus.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                }
+            });
+            
+            // Test Payment Intent
+            testPaymentIntentBtn.addEventListener('click', async () => {
+                loading.style.display = 'block';
+                result.innerHTML = 'Calling createPaymentIntent function...';
+                
+                const selectedProduct = document.querySelector('input[name="product"]:checked').value;
+                
+                try {
+                    // Get the price ID for the selected product
+                    let priceId;
+                    if (selectedProduct === 'prod_SwuHPYlY94VZyY') {
+                        priceId = 'price_1NtqGcBjx3iGODd6GEfkNOfo'; // Replace with actual price ID
+                    } else {
+                        priceId = 'price_1NtqHGBjx3iGODd6LVQwKrm3'; // Replace with actual price ID
+                    }
+                    
+                    // Call the function with the proper region (us-west1)
+                    const createPaymentIntent = functions.httpsCallable('createPaymentIntent@us-west1');
+                    const response = await createPaymentIntent({ 
+                        price: priceId,
+                        automatic_payment_methods: { enabled: true },
+                        isTestMode: true // Enable test mode for authentication bypass
+                    });
+                    
+                    result.innerHTML = `Payment Intent created successfully: 
+${JSON.stringify(response.data, null, 2)}`;
+                    
+                    // Mount the payment element if we have a client secret
+                    if (response.data.clientSecret) {
+                        const clientSecret = response.data.clientSecret;
+                        
+                        // Show the payment element container
+                        document.getElementById('payment-element-container').style.display = 'block';
+                        
+                        // Create the payment element
+                        elements = stripe.elements({
+                            clientSecret: clientSecret,
+                            appearance: {
+                                theme: 'stripe',
+                                variables: {
+                                    colorPrimary: '#4299e1',
+                                }
+                            }
+                        });
+                        
+                        // Create and mount the Payment Element
+                        const paymentElement = elements.create('payment');
+                        paymentElement.mount('#payment-element');
+                        
+                        // Handle form submission
+                        document.getElementById('submit-payment').addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            
+                            // Disable the submit button to prevent multiple clicks
+                            document.getElementById('submit-payment').disabled = true;
+                            
+                            // Confirm the payment
+                            const { error } = await stripe.confirmPayment({
+                                elements,
+                                confirmParams: {
+                                    return_url: `${window.location.origin}/payment-success.html`,
+                                },
+                                redirect: 'if_required'
+                            });
+                            
+                            if (error) {
+                                document.getElementById('result').innerHTML = `<div class="error">Payment failed: ${error.message}</div>`;
+                            } else {
+                                document.getElementById('result').innerHTML = `<div class="success">Payment succeeded!</div>`;
+                            }
+                            
+                            document.getElementById('submit-payment').disabled = false;
+                        });
+                    }
+                    
+                } catch (error) {
+                    result.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                } finally {
+                    loading.style.display = 'none';
+                }
+            });
+            
+            // Test Checkout Session
+            testCheckoutBtn.addEventListener('click', async () => {
+                checkoutResult.innerHTML = 'Creating checkout session...';
+                
+                const selectedSubscription = document.querySelector('input[name="subscription"]:checked').value;
+                
+                try {
+                    // Get the price ID for the selected subscription
+                    let priceId;
+                    if (selectedSubscription === 'prod_SwvHrfi1C4k4pS') {
+                        priceId = 'price_1NtqL5Bjx3iGODd6NkXl1BJ9'; // Replace with actual price ID
+                    } else {
+                        // For Complete Transformation, we need both the subscription and one-time fee
+                        priceId = 'price_1NtqLdBjx3iGODd6D6AXntVy'; // Replace with actual price ID
+                        sessionPriceId = 'price_1NtqMQBjx3iGODd6OwmYHsHs'; // Replace with actual session price ID
+                    }
+                    
+                    const createCheckoutSession = functions.httpsCallable('createCheckoutSession@us-west1');
+                    
+                    // Build line items array
+                    const lineItems = [{ price: priceId, quantity: 1 }];
+                    
+                    // Enable test mode for authentication bypass
+                    
+                    // Add session fee for Complete Transformation
+                    if (selectedSubscription === 'prod_SwvI0SWs0J3DMQ' && sessionPriceId) {
+                        lineItems.push({ price: sessionPriceId, quantity: 1 });
+                    }
+                    
+                    const response = await createCheckoutSession({
+                        line_items: lineItems,
+                        success_url: `${window.location.origin}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,
+                        cancel_url: `${window.location.origin}/payment-test.html`,
+                        customer_email: 'test@example.com',
+                        isTestMode: true // Enable test mode for authentication bypass
+                    });
+                    
+                    checkoutResult.innerHTML = `Checkout session created: 
+${JSON.stringify(response.data, null, 2)}`;
+                    
+                    // Redirect to checkout
+                    if (response.data.sessionId) {
+                        const result = await stripe.redirectToCheckout({
+                            sessionId: response.data.sessionId
+                        });
+                        
+                        if (result.error) {
+                            checkoutResult.innerHTML = `<div class="error">Error: ${result.error.message}</div>`;
+                        }
+                    }
+                } catch (error) {
+                    checkoutResult.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                }
+            });
+            
+            // Test CORS
+            testCorsBtn.addEventListener('click', async () => {
+                corsResult.innerHTML = 'Testing CORS configuration...';
+                
+                try {
+                    // Test callable function (should work with CORS)
+                    const basicCallable = functions.httpsCallable('basicCallable@us-west1');
+                    const response = await basicCallable();
+                    
+                    corsResult.innerHTML = `<div class="success">CORS test successful for callable function: 
+${JSON.stringify(response.data, null, 2)}</div>`;
+                } catch (error) {
+                    corsResult.innerHTML = `<div class="error">CORS Error: ${error.message}</div>`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

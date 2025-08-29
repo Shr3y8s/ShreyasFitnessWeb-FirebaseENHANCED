@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow anyone to write to messages collection (for the contact form)
+    match /messages/{messageId} {
+      allow create: if true;  // Keep your existing rule for anonymous contact form submissions
+      allow read, update, delete: if false;  // Keep your existing restriction
+    }
+    
+    // Add new rules for user profiles (for authentication system)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // TEMPORARY rules for Stripe collections during development
+    match /stripe_products/{document=**} {
+      allow read: if true;  // Allow public reads for testing
+    }
+    
+    match /stripe_customers/{customerId}/{document=**} {
+      allow read: if true;  // Allow public reads for testing
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

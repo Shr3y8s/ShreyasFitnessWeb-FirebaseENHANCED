@@ -1,0 +1,18 @@
+node_modules/
+
+# Local Stripe configuration with sensitive keys
+.runtimeconfig.json
+
+# Environment variables
+.env
+.env.local
+*.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
