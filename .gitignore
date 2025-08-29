@@ -12,6 +12,12 @@
 .env.development.local
 .env.test.local
 .env.production.local
+functions/.env.default
+functions/.runtimeconfig.json
+
+# Scripts with sensitive information
+setup-stripe-config.cmd
+setup-stripe-webhook.cmd
 
 # Debug logs
 npm-debug.log*
