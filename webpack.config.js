@@ -21,6 +21,15 @@ module.exports = {
     filename: 'signup-bundle.js',
     path: path.resolve(__dirname, 'dist'),
   },
+  devServer: {
+    static: {
+      directory: path.join(__dirname, '/'),
+    },
+    hot: true,
+    open: true,
+    port: 3000,
+    historyApiFallback: true,
+  },
   module: {
     rules: [
       {

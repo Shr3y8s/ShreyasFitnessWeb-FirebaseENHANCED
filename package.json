@@ -4,7 +4,8 @@
   "main": "script.js",
   "scripts": {
     "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "start": "webpack-dev-server --mode development --open"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
     "dotenv": "^17.2.1",
     "style-loader": "^4.0.0",
     "webpack": "^5.101.3",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2"
   }
 }
