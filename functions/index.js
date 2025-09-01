@@ -7,30 +7,36 @@ const stripeKey = defineSecret("STRIPE_KEY");
 
 /**
  * Minimal test function - successfully deployed
+ * @param {Object} req - The HTTP request
+ * @param {Object} res - The HTTP response
  */
 exports.minimalTest = onRequest({
-  region: "us-west1"
+  region: "us-west1",
 }, (req, res) => {
   res.send("Hello, World!");
 });
 
 /**
- * Simple callable test function 
+ * Simple callable test function
  * This tests if the basic callable function structure works without Stripe
+ * @param {Object} request - The callable function request
+ * @return {Object} Simple response object
  */
 exports.basicCallable = onCall({
-  region: "us-west1"
+  region: "us-west1",
 }, async (request) => {
   // Return a simple response to verify the function works
   return {
     message: "Callable function working",
-    authenticated: !!request.auth
+    authenticated: !!request.auth,
   };
 });
 
 /**
  * Create a payment intent for one-time payments
  * This is used by the PaymentElement in the React UI
+ * @param {Object} request - The callable function request
+ * @return {Object} Payment intent client secret
  */
 exports.createPaymentIntent = onCall({
   region: "us-west1",
@@ -45,10 +51,10 @@ exports.createPaymentIntent = onCall({
 }, async (request) => {
   try {
     logger.info("Starting payment intent creation");
-    
+
     // For development/testing: Allow unauthenticated calls with testing flag
     const isTestMode = request.data && request.data.isTestMode;
-    
+
     if (!request.auth && !isTestMode) {
       throw new Error("The function must be called while authenticated.");
     }
@@ -59,12 +65,12 @@ exports.createPaymentIntent = onCall({
     logger.info("Creating payment intent", {
       userId: userId,
       priceId: request.data.price,
-      isTestMode: isTestMode
+      isTestMode: isTestMode,
     });
 
     // Initialize Stripe with the secret key
     const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2025-07-30.basil"
+      apiVersion: "2025-07-30.basil",
     });
 
     // Get the price from Stripe to verify it exists and get the amount
@@ -84,13 +90,13 @@ exports.createPaymentIntent = onCall({
       metadata: {
         userId: userId,
         priceId: request.data.price,
-        isTestMode: isTestMode || false
-      }
+        isTestMode: isTestMode || false,
+      },
     });
 
     // Direct return pattern for callable functions
     return {
-      clientSecret: paymentIntent.client_secret
+      clientSecret: paymentIntent.client_secret,
     };
   } catch (error) {
     logger.error("Error creating payment intent", error);
@@ -101,6 +107,8 @@ exports.createPaymentIntent = onCall({
 /**
  * Create a checkout session for subscriptions
  * This redirects the user to the Stripe Checkout page
+ * @param {Object} request - The callable function request
+ * @return {Object} Session ID for redirect
  */
 exports.createCheckoutSession = onCall({
   region: "us-west1",
@@ -116,7 +124,6 @@ exports.createCheckoutSession = onCall({
   try {
     // For development/testing: Allow unauthenticated calls with testing flag
     const isTestMode = request.data && request.data.isTestMode;
-    
     if (!request.auth && !isTestMode) {
       throw new Error("The function must be called while authenticated.");
     }
@@ -127,12 +134,12 @@ exports.createCheckoutSession = onCall({
     logger.info("Creating checkout session", {
       userId: userId,
       lineItems: request.data.line_items,
-      isTestMode: isTestMode
+      isTestMode: isTestMode,
     });
 
     // Initialize Stripe with the secret key
     const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2025-07-30.basil"
+      apiVersion: "2025-07-30.basil",
     });
 
     // Create the checkout session with provided line items
@@ -154,13 +161,13 @@ exports.createCheckoutSession = onCall({
         metadata: {
           userId: userId,
           isTestMode: isTestMode || false,
-          ...request.data.metadata
-        }
-      }
+          ...request.data.metadata,
+        },
+      },
     });
 
     return {
-      sessionId: session.id
+      sessionId: session.id,
     };
   } catch (error) {
     logger.error("Error creating checkout session", error);
@@ -171,10 +178,13 @@ exports.createCheckoutSession = onCall({
 /**
  * Webhook handler for Stripe events
  * This ensures data consistency between Stripe and Firebase
+ * @param {Object} req - The HTTP request
+ * @param {Object} res - The HTTP response
+ * @return {Object} HTTP response
  */
 exports.stripeWebhook = onRequest({
   region: "us-west1",
-  secrets: [stripeKey]
+  secrets: [stripeKey],
 }, (req, res) => {
   // Handle preflight requests for CORS directly
   if (req.method === "OPTIONS") {
@@ -188,12 +198,12 @@ exports.stripeWebhook = onRequest({
 
   // Initialize Stripe with the secret key
   const stripe = require("stripe")(stripeKey.value(), {
-    apiVersion: "2025-07-30.basil"
+    apiVersion: "2025-07-30.basil",
   });
 
   try {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || stripeKey.value();
-    
+
     if (!webhookSecret) {
       logger.error("Webhook secret not configured");
       return res.status(500).json({error: "Webhook secret not configured"});
@@ -202,9 +212,7 @@ exports.stripeWebhook = onRequest({
     const sig = req.headers["stripe-signature"];
 
     // Verify and construct the event
-    const event = stripe.webhooks.constructEvent(
-      req.rawBody, sig, webhookSecret,
-    );
+    const event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
 
     logger.info(`Webhook received: ${event.type}`);
 
@@ -224,7 +232,7 @@ exports.stripeWebhook = onRequest({
         // Log event details
         logger.info(`${event.type} event received:`, {
           id: event.data.object.id,
-          customer: event.data.object.customer
+          customer: event.data.object.customer,
         });
         break;
 
