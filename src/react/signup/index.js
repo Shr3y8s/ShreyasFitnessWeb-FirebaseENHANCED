@@ -6,9 +6,9 @@ import { loadStripe } from '@stripe/stripe-js';
 import { SignupForm } from './SignupForm';
 import './signup.css';
 
-// Load Stripe with your publishable key from environment variables
-// In production, use environment variables: process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
+// Load Stripe with your publishable key (hardcoded for development)
+// For production, you would typically use environment variables
+const stripePromise = loadStripe('pk_test_51Hg4SwBjx3iGODd6fpJzOpYnyoBLQfoZS4ZMusKkfV82WhhHL0z15HWLe2Fs2K45x5GlNzX91ywD6lJkYfsbAHCz002TVq3QZn');
 
 // Note: Make sure to update to the latest Stripe library versions:
 // npm install @stripe/stripe-js@latest @stripe/react-stripe-js@latest

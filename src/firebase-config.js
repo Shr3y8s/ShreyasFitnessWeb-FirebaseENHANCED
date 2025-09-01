@@ -1,17 +1,6 @@
 // src/firebase-config.js
 
-// Use environment variables for Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_MEASUREMENT_ID
-};
-
-// Use modern modular Firebase SDK
+// Use modern modular Firebase SDK - imports first
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -30,6 +19,17 @@ import {
   onSnapshot,
   serverTimestamp 
 } from 'firebase/firestore';
+
+// Hardcoded Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyADF9yuram-pvlzjg6kBtdCk7LuK0M65tk",
+  authDomain: "shreyfitweb.firebaseapp.com",
+  projectId: "shreyfitweb",
+  storageBucket: "shreyfitweb.firebasestorage.app",
+  messagingSenderId: "1076359633281",
+  appId: "1:1076359633281:web:3687e1675c9e185f0ab080",
+  measurementId: "G-5GBP19SXBW"
+};
 
 // Initialize Firebase for React components - proper initialization pattern
 let app;
