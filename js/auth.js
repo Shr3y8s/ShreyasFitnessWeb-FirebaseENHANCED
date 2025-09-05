@@ -76,6 +76,19 @@ auth.onAuthStateChanged(user => {
       console.log('Auth state change during authentication process, handling carefully');
     }
 
+    // Check if the URL has a showlogin parameter, which means the user explicitly wants to see the login page
+    const urlParams = new URLSearchParams(window.location.search);
+    const showLogin = urlParams.get('showlogin') === 'true';
+    
+    // Only sign out if showlogin=true AND we're not in the middle of a signup process
+    if (showLogin && user && !isSigningUp) {
+      console.log('User wants to see login page and not in signup process - signing out current user');
+      auth.signOut();
+      return;
+    } else if (showLogin && user && isSigningUp) {
+      console.log('Keeping user signed in because signup process is active');
+    }
+
     if (user) {
       // User is signed in
       console.log('User is signed in:', user.uid);
@@ -85,17 +98,16 @@ auth.onAuthStateChanged(user => {
       
       console.log('Auth state changed, current page:', currentPage, 'isSigningUp:', isSigningUp);
       
-      if ((currentPage === 'account.html' || currentPage === 'signup.html') && !isSigningUp) {
-        // Only redirect if not in signup process
-        console.log('Redirecting to dashboard');
-        window.location.href = 'dashboard.html';
+      if ((currentPage === 'account.html' || currentPage === 'signup.html') && !isSigningUp && !showLogin) {
+        // Only redirect if not in signup process and not explicitly showing login
+        console.log('Redirecting to React dashboard');
+        window.location.href = '/dashboard'; // Redirect to React dashboard route
       } else if (currentPage === 'signup.html' && isSigningUp) {
         // We're in the signup process, do not redirect
         console.log('In signup process, not redirecting');
       } else if (currentPage === 'dashboard.html' && !isSigningUp) {
-        // Only load dashboard data if not in signup process
-        console.log('Loading dashboard data');
-        loadUserDashboard(user);
+        // React dashboard will handle its own data loading via AuthContext
+        console.log('On dashboard page, React will handle authentication');
       }
     } else {
       // User is signed out
@@ -242,7 +254,7 @@ function login(email, password, rememberMe) {
       return auth.signInWithEmailAndPassword(email, password);
     })
     .then(() => {
-      window.location.href = 'dashboard.html'; // Redirect to dashboard
+      window.location.href = '/dashboard'; // Redirect to React dashboard
     });
 }
 
@@ -327,8 +339,8 @@ function signInWithGoogle() {
             }, 1000);
           } else {
             // If not on signup page, redirect directly to dashboard
-            console.log('Not on signup page, redirecting to dashboard.html');
-            window.location.href = 'dashboard.html';
+            console.log('Not on signup page, redirecting to React dashboard');
+            window.location.href = '/dashboard';
             
             // Reset authentication flag
             isAuthenticating = false;
@@ -347,7 +359,7 @@ function signInWithGoogle() {
         console.log('Returning user, redirecting to dashboard');
         safelySetSigningUp(false); // Reset signup flag
         isAuthenticating = false; // Reset authentication flag
-        window.location.href = 'dashboard.html';
+        window.location.href = '/dashboard';
         return null; // Explicit return to end the chain
       }
     })

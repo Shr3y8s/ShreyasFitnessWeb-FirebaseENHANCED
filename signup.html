@@ -41,7 +41,7 @@
                     <a href="blog.html" class="nav-link">Blog</a>
                 </li>
                 <li class="nav-item">
-                    <a href="account.html" class="nav-link account-btn">Sign Up / Login</a>
+                     <a href="account.html" class="nav-link account-btn">Sign Up / Login</a>
                 </li>
             </ul>
             <div class="hamburger">
@@ -325,8 +325,8 @@
           loginButton.addEventListener('click', function() {
             // Check if the user is already logged in (autoLogin flag)
             if (event.detail.autoLogin) {
-              // If user is already logged in, go straight to dashboard
-              window.location.href = 'dashboard.html';
+        // If user is already logged in, go straight to dashboard
+        window.location.href = '/dashboard';
             } else {
               // Otherwise, go to login page with email prefilled
               window.location.href = 'account.html?email=' + encodeURIComponent(email);
