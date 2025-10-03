@@ -38,14 +38,6 @@
         }
       },
       {
-        "source": "/dashboard",
-        "destination": "/dist/dashboard.html"
-      },
-      {
-        "source": "/dashboard/**",
-        "destination": "/dist/dashboard.html"
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }

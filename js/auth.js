@@ -99,9 +99,9 @@ auth.onAuthStateChanged(user => {
       console.log('Auth state changed, current page:', currentPage, 'isSigningUp:', isSigningUp);
       
       if ((currentPage === 'account.html' || currentPage === 'signup.html') && !isSigningUp && !showLogin) {
-        // Only redirect if not in signup process and not explicitly showing login
-        console.log('Redirecting to React dashboard');
-        window.location.href = '/dashboard'; // Redirect to React dashboard route
+        // No longer redirecting to dashboard
+        console.log('User logged in successfully');
+        // Stay on current page
       } else if (currentPage === 'signup.html' && isSigningUp) {
         // We're in the signup process, do not redirect
         console.log('In signup process, not redirecting');
@@ -113,13 +113,8 @@ auth.onAuthStateChanged(user => {
       // User is signed out
       console.log('User is signed out');
       
-      // Check if we're on dashboard page
-      const currentPage = window.location.pathname.split('/').pop();
-      if (currentPage === 'dashboard.html') {
-        // Redirect to login page
-        console.log('Redirecting to login page');
-        window.location.href = 'account.html';
-      }
+      // No need to check for dashboard page anymore
+      console.log('User is signed out');
     }
   } catch (error) {
     console.error('Error in auth state change handler:', error);
@@ -254,7 +249,8 @@ function login(email, password, rememberMe) {
       return auth.signInWithEmailAndPassword(email, password);
     })
     .then(() => {
-      window.location.href = '/dashboard'; // Redirect to React dashboard
+      // Don't redirect, just stay on the same page
+      console.log('User logged in successfully');
     });
 }
 
@@ -338,9 +334,8 @@ function signInWithGoogle() {
               console.log('Signup flag reset');
             }, 1000);
           } else {
-            // If not on signup page, redirect directly to dashboard
-            console.log('Not on signup page, redirecting to React dashboard');
-            window.location.href = '/dashboard';
+            // Don't redirect to dashboard
+            console.log('Not on signup page, login successful');
             
             // Reset authentication flag
             isAuthenticating = false;
@@ -355,11 +350,10 @@ function signInWithGoogle() {
           return null; // Return null to end the chain
         });
       } else {
-        // If returning user, go directly to dashboard
-        console.log('Returning user, redirecting to dashboard');
+        // Returning user, no redirect to dashboard
+        console.log('Returning user, login successful');
         safelySetSigningUp(false); // Reset signup flag
         isAuthenticating = false; // Reset authentication flag
-        window.location.href = '/dashboard';
         return null; // Explicit return to end the chain
       }
     })
