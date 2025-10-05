@@ -41,7 +41,7 @@
                     <a href="blog.html" class="nav-link">Blog</a>
                 </li>
                 <li class="nav-item">
-                     <a href="account.html" class="nav-link account-btn">Sign Up / Login</a>
+                     <a href="http://localhost:3000/login" class="nav-link account-btn">Sign Up / Login</a>
                 </li>
             </ul>
             <div class="hamburger">
@@ -148,7 +148,7 @@
                         </button>
                         
                         <div class="form-footer">
-                            <p>Already have an account? <a href="account.html" class="login-link">Login</a></p>
+                            <p>Already have an account? <a href="http://localhost:3000/login" class="login-link">Login</a></p>
                         </div>
                     </form>
                 </div>
@@ -179,7 +179,7 @@
                         <li><a href="blog.html">Blog</a></li>
                         <li><a href="connect.html">Contact</a></li>
                         <li><a href="faq.html">FAQ</a></li>
-                        <li><a href="account.html">My Account</a></li>
+                        <li><a href="http://localhost:3000/login">My Account</a></li>
                     </ul>
                 </div>
             </div>
@@ -326,10 +326,10 @@
             // Check if the user is already logged in (autoLogin flag)
             if (event.detail.autoLogin) {
         // If user is already logged in, go straight to dashboard
-        window.location.href = '/dashboard';
+        window.location.href = 'http://localhost:3000/dashboard';
             } else {
               // Otherwise, go to login page with email prefilled
-              window.location.href = 'account.html?email=' + encodeURIComponent(email);
+              window.location.href = 'http://localhost:3000/login?email=' + encodeURIComponent(email);
             }
           });
         }

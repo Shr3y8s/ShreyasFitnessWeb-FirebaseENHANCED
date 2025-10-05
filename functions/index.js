@@ -41,22 +41,28 @@ exports.basicCallable = onCall({
 exports.createPaymentIntent = onCall({
   region: "us-west1",
   secrets: [stripeKey],
-  cors: {
-    origin: [
-      "http://127.0.0.1:5500",
-      "http://localhost:3000",
-      "http://localhost:5000",
-    ],
-  },
 }, async (request) => {
   try {
     logger.info("Starting payment intent creation");
+
+    // Validate input data
+    if (!request.data || !request.data.price) {
+      const error = new Error("Missing required parameter: price");
+      logger.error("Payment intent creation failed - missing price", {
+        requestData: request.data,
+      });
+      throw error;
+    }
 
     // For development/testing: Allow unauthenticated calls with testing flag
     const isTestMode = request.data && request.data.isTestMode;
 
     if (!request.auth && !isTestMode) {
-      throw new Error("The function must be called while authenticated.");
+      const error = new Error("The function must be called while authenticated.");
+      logger.error("Payment intent creation failed - not authenticated", {
+        isTestMode: isTestMode,
+      });
+      throw error;
     }
 
     // Get user ID (or use test-user-id for testing)
@@ -77,7 +83,11 @@ exports.createPaymentIntent = onCall({
     const price = await stripe.prices.retrieve(request.data.price);
 
     if (!price) {
-      throw new Error("The requested price does not exist.");
+      const error = new Error("The requested price does not exist.");
+      logger.error("Payment intent creation failed - invalid price", {
+        priceId: request.data.price,
+      });
+      throw error;
     }
 
     // Create a PaymentIntent with the price amount and currency
@@ -86,7 +96,6 @@ exports.createPaymentIntent = onCall({
       currency: price.currency,
       automatic_payment_methods: request.data.automatic_payment_methods ||
         {enabled: true},
-      // Remove customer field for one-time payments to fix the error
       metadata: {
         userId: userId,
         priceId: request.data.price,
@@ -94,13 +103,25 @@ exports.createPaymentIntent = onCall({
       },
     });
 
-    // Direct return pattern for callable functions
+    logger.info("Payment intent created successfully", {
+      paymentIntentId: paymentIntent.id,
+      userId: userId,
+    });
+
+    // Return success response
     return {
+      success: true,
       clientSecret: paymentIntent.client_secret,
     };
   } catch (error) {
-    logger.error("Error creating payment intent", error);
-    throw new Error(error.message);
+    logger.error("Error creating payment intent", {
+      error: error.message,
+      stack: error.stack,
+      requestData: request.data,
+    });
+
+    // Re-throw with proper callable function error handling
+    throw new Error(`Payment intent creation failed: ${error.message}`);
   }
 });
 
@@ -113,19 +134,28 @@ exports.createPaymentIntent = onCall({
 exports.createCheckoutSession = onCall({
   region: "us-west1",
   secrets: [stripeKey],
-  cors: {
-    origin: [
-      "http://127.0.0.1:5500",
-      "http://localhost:3000",
-      "http://localhost:5000",
-    ],
-  },
 }, async (request) => {
   try {
+    // Validate input data
+    const hasValidLineItems = request.data && request.data.line_items &&
+      Array.isArray(request.data.line_items) && request.data.line_items.length > 0;
+
+    if (!hasValidLineItems) {
+      const error = new Error("Missing or invalid required parameter: line_items");
+      logger.error("Checkout session creation failed - invalid line_items", {
+        requestData: request.data,
+      });
+      throw error;
+    }
+
     // For development/testing: Allow unauthenticated calls with testing flag
     const isTestMode = request.data && request.data.isTestMode;
     if (!request.auth && !isTestMode) {
-      throw new Error("The function must be called while authenticated.");
+      const error = new Error("The function must be called while authenticated.");
+      logger.error("Checkout session creation failed - not authenticated", {
+        isTestMode: isTestMode,
+      });
+      throw error;
     }
 
     // Get user ID (or use test-user-id for testing)
@@ -166,12 +196,24 @@ exports.createCheckoutSession = onCall({
       },
     });
 
+    logger.info("Checkout session created successfully", {
+      sessionId: session.id,
+      userId: userId,
+    });
+
     return {
+      success: true,
       sessionId: session.id,
     };
   } catch (error) {
-    logger.error("Error creating checkout session", error);
-    throw new Error(error.message);
+    logger.error("Error creating checkout session", {
+      error: error.message,
+      stack: error.stack,
+      requestData: request.data,
+    });
+
+    // Re-throw with proper callable function error handling
+    throw new Error(`Checkout session creation failed: ${error.message}`);
   }
 });
 
