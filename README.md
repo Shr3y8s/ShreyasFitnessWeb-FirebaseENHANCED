@@ -89,9 +89,6 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 ├── .firebaserc                 # Firebase project config
 ├── firebase.json               # Firebase settings
 ├── firestore.rules            # Database security rules
-├── config/
-│   ├── auth_config.json       # Custom auth settings
-│   └── auth_settings.json     # Auth configuration
 ├── 
 └── # Documentation
     └── docs/

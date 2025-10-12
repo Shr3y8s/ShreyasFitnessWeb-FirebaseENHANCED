@@ -25,6 +25,12 @@ yarn-debug.log*
 yarn-error.log*
 firebase-debug.log*
 
+# Firebase emulator data (generated files)
+auth_config.json
+auth_settings.json
+firebase-export-*
+ui-debug.log
+
 # IDE and editor folders
 /.idea
 /.vscode
