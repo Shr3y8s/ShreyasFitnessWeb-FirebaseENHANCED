@@ -1,13 +1,11 @@
 // webpack.config.js
 const path = require('path');
 const webpack = require('webpack');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   mode: 'development',
   entry: {
-    signup: './src/react/signup/index.js',
-    dashboard: './src/react/dashboard/index.js'
+    signup: './src/react/signup/index.js'
   },
   output: {
     filename: '[name]-bundle.js',
@@ -15,13 +13,12 @@ module.exports = {
     publicPath: '/',
   },
   devServer: {
-    static: { directory: path.join(__dirname, '/') },
+    static: { directory: path.join(__dirname, '../') },
     hot: true,
     open: true,
     port: 3000,
     historyApiFallback: {
       rewrites: [
-        { from: /^\/dashboard.*/, to: '/dashboard.html' },
         { from: /./, to: '/index.html' }
       ],
     },
@@ -45,12 +42,5 @@ module.exports = {
   resolve: {
     extensions: ['.js', '.jsx']
   },
-  plugins: [
-    new HtmlWebpackPlugin({
-      template: './public/dashboard.html',
-      filename: 'dashboard.html',
-      chunks: ['dashboard'],
-      inject: true
-    })
-  ]
+  plugins: []
 };

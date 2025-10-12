@@ -23,20 +23,18 @@ open index.html
 npx http-server . -p 8080
 ```
 
-### 2. **Legacy React Application** (Root Directory)
+### 2. **Legacy React Application** (`/legacy-react/` Directory)
 Webpack-based React implementation for interactive components.
 
-**Location:** Root directory + `/src/` folder
-**Configuration:** `webpack.config.js`, root `package.json`
-**Components:** `/src/react/signup/`, legacy React components
+**Location:** `/legacy-react/` folder (complete legacy React project)
+**Configuration:** `legacy-react/webpack.config.js`, `legacy-react/package.json`
+**Components:** `legacy-react/src/react/signup/`, React signup components
 **Build System:** Webpack + Babel
 
 **To run:**
 ```bash
-# Install dependencies (if needed)
-npm install
-
-# Start development server
+cd legacy-react
+npm install  # if first time
 npm run start
 # or
 npm run watch
@@ -70,9 +68,11 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 ├── *.svg, *.png, *.jpg        # Images
 ├── 
 ├── # Legacy React System  
-├── package.json                # Webpack dependencies
-├── webpack.config.js           # Build configuration
-├── src/                        # React components
+├── legacy-react/               # Complete legacy React project
+│   ├── package.json           # Webpack dependencies
+│   ├── webpack.config.js      # Build configuration
+│   ├── src/react/signup/      # React components
+│   └── README.md              # Legacy React documentation
 ├── 
 ├── # Modern Next.js System
 ├── app/                        # Complete Next.js project
@@ -147,6 +147,7 @@ open index.html
 npx http-server . -p 8080
 
 # Legacy React app  
+cd legacy-react
 npm install
 npm run start
 
