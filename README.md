@@ -6,21 +6,27 @@ A comprehensive fitness platform with multiple development approaches and Fireba
 
 This repository contains **three distinct development approaches** for the fitness platform:
 
-### 1. **Static Marketing Website** (Root Directory)
+### 1. **Static Marketing Website** (`/static/` Directory)
 Traditional HTML/CSS/JavaScript implementation for public-facing pages.
 
-**Location:** Root directory
-**Files:** `index.html`, `about.html`, `services.html`, `blog.html`, `blog-*.html`, etc.
-**Assets:** `/css/`, `/js/`, image files
+**Location:** `/static/` folder (organized static website)
+**Files:** `static/*.html` - all marketing and blog pages
+**Assets:** 
+- `static/css/` - all stylesheets
+- `static/js/` - JavaScript files
+- `static/assets/` - images and media files
 **Use:** Marketing pages, blog, public content
 
 **To run:**
 ```bash
-# Open directly in browser or use Live Server
-open index.html
-
-# Or simple HTTP server
+# Navigate to static directory and serve
+cd static
 npx http-server . -p 8080
+# or
+cd static && open index.html
+
+# Or serve from parent directory
+npx http-server static -p 8080
 ```
 
 ### 2. **Legacy React Application** (`/legacy-react/` Directory)
@@ -62,16 +68,18 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 ├── README.md                    # This file
 ├── 
 ├── # Static Marketing Website
-├── *.html                      # Public pages
-├── css/                        # Stylesheets
-├── js/                         # JavaScript
-├── *.svg, *.png, *.jpg        # Images
+├── static/                     # Organized static website
+│   ├── *.html                 # All public pages (index, about, blog, etc.)
+│   ├── css/                   # Organized stylesheets
+│   ├── js/                    # JavaScript files  
+│   └── assets/                # Images and media files
 ├── 
 ├── # Legacy React System  
 ├── legacy-react/               # Complete legacy React project
 │   ├── package.json           # Webpack dependencies
 │   ├── webpack.config.js      # Build configuration
 │   ├── src/react/signup/      # React components
+│   ├── dist/                  # Build output
 │   └── README.md              # Legacy React documentation
 ├── 
 ├── # Modern Next.js System
