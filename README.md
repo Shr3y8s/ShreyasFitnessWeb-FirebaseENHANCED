@@ -10,12 +10,19 @@ This repository contains **three distinct development approaches** for the fitne
 Traditional HTML/CSS/JavaScript implementation for public-facing pages.
 
 **Location:** `/static/` folder (organized static website)
-**Files:** `static/*.html` - all marketing and blog pages
+**Files:** 
+- `static/*.html` - main marketing pages (index, about, services, etc.)
+- `static/blogs/*.html` - all blog content organized in dedicated subdirectory
 **Assets:** 
-- `static/css/` - all stylesheets
+- `static/css/` - all stylesheets (modular CSS organization)
 - `static/js/` - JavaScript files
 - `static/assets/` - images and media files
 **Use:** Marketing pages, blog, public content
+
+**Blog Organization:**
+- Blog index: `static/blogs/index.html` (replaces blog.html)
+- Individual posts: `static/blogs/blog-*.html`
+- Clean URLs: Access via `/blogs/` instead of `/blog.html`
 
 **To run:**
 ```bash
@@ -69,8 +76,11 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 ├── 
 ├── # Static Marketing Website
 ├── static/                     # Organized static website
-│   ├── *.html                 # All public pages (index, about, blog, etc.)
-│   ├── css/                   # Organized stylesheets
+│   ├── *.html                 # Main pages (index, about, services, contact, etc.)
+│   ├── blogs/                 # Blog content organized in subdirectory
+│   │   ├── index.html         # Blog listing page (main blog page)
+│   │   └── blog-*.html        # Individual blog posts
+│   ├── css/                   # Organized stylesheets (modular approach)
 │   ├── js/                    # JavaScript files  
 │   └── assets/                # Images and media files
 ├── 
@@ -91,7 +101,9 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 ├── # Firebase Backend
 ├── firebase/
 │   ├── functions/             # Cloud Functions
-│   └── extensions/            # Firebase Extensions
+│   ├── extensions/            # Firebase Extensions
+│   ├── setup-stripe-config.example.cmd  # Stripe configuration script
+│   └── setup-stripe-webhook.cmd        # Stripe webhook setup
 ├── 
 ├── # Configuration
 ├── .firebaserc                 # Firebase project config
