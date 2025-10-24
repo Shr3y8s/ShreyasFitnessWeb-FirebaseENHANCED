@@ -201,7 +201,7 @@ async function handleFormSubmit(e) {
     };
     
     // Save to Firestore
-    await contactFormDb.collection('messages').add(message);
+    await contactFormDb.collection('contact_form_submissions').add(message);
     
     // Hide the form
     contactForm.style.display = 'none';

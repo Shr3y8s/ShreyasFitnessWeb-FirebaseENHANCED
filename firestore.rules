@@ -20,10 +20,10 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
     }
 
-    // Allow anyone to write to messages collection (for the contact form)
-    match /messages/{messageId} {
-      allow create: if true;  // Keep your existing rule for anonymous contact form submissions
-      allow read, update, delete: if false;  // Keep your existing restriction
+    // Contact Form Submissions - New collection for contact form
+    match /contact_form_submissions/{submissionId} {
+      allow create: if true;  // Allow public contact form submissions
+      allow read, update, delete: if isTrainerOrAdmin();  // Only trainers/admins can manage submissions
     }
     
     // Enhanced user profile rules for dashboard
