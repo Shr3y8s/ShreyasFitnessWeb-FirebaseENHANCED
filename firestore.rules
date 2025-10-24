@@ -1,6 +1,25 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Helper functions for cleaner rule management
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isTrainer() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
+    }
+    
+    function isTrainerOrAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
+    }
+
     // Allow anyone to write to messages collection (for the contact form)
     match /messages/{messageId} {
       allow create: if true;  // Keep your existing rule for anonymous contact form submissions
@@ -10,16 +29,18 @@ service cloud.firestore {
     // Enhanced user profile rules for dashboard
     match /users/{userId} {
       // Allow users to read their own profile
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      
+      // TRAINER DASHBOARD: Allow trainers to read all client profiles for management
+      allow read: if isTrainerOrAdmin();
       
       // Allow users to update their own profile with validation
-      allow update: if request.auth != null && 
-                    request.auth.uid == userId &&
+      allow update: if isOwner(userId) &&
                     (!request.resource.data.diff(resource.data).affectedKeys()
                       .hasAny(['role', 'createdAt'])); // Prevent changing role or creation date
                       
       // Allow initial creation of user documents (for signup process)
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if isOwner(userId);
     
       // Dashboard data collection
       match /dashboard_data/{docId} {
@@ -86,6 +107,78 @@ service cloud.firestore {
       }
     }
     
+    // WORKOUT MANAGEMENT SYSTEM - Phase 1 & 2
+    
+    // Exercise Library Collection - Phase 2: Shared exercise library
+    match /exercises/{exerciseId} {
+      // Trainers can create, read, update, and delete exercises
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read public exercises (for viewing workout details)
+      allow read: if isAuthenticated() && resource.data.isPublic == true;
+      
+      // Exercise validation
+      function validateExercise() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['name', 'instructions', 'category', 'createdBy']) &&
+               data.name is string && data.name.size() > 0 &&
+               data.instructions is string && data.instructions.size() > 0 &&
+               data.category in ['strength', 'cardio', 'flexibility', 'core', 'other'] &&
+               data.createdBy is string &&
+               data.targetMuscleGroups is list &&
+               data.equipment is list;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isTrainerOrAdmin() && validateExercise();
+      allow update: if isTrainerOrAdmin() && validateExercise();
+    }
+    
+    // Workout Templates Collection - Core functionality for trainer dashboard
+    match /workout_templates/{templateId} {
+      // Trainers can create, read, update, and delete workout templates
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read public workout templates (for future assignment features)
+      allow read: if isAuthenticated() && resource.data.isPublic == true;
+      
+      // Workout template validation
+      function validateWorkoutTemplate() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['name', 'createdBy', 'exercises', 'difficulty', 'category']) &&
+               data.name is string && data.name.size() > 0 &&
+               data.createdBy is string &&
+               data.exercises is list &&
+               data.difficulty in ['beginner', 'intermediate', 'advanced'] &&
+               data.category in ['strength', 'cardio', 'hiit', 'flexibility', 'mixed'] &&
+               data.estimatedDuration is number && data.estimatedDuration > 0;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isTrainerOrAdmin() && validateWorkoutTemplate();
+      allow update: if isTrainerOrAdmin() && validateWorkoutTemplate();
+    }
+    
+    // Future collections for workout assignments and progress tracking
+    // These will be added in Phase 2
+    match /assigned_workouts/{assignmentId} {
+      // Trainers can assign and manage workouts
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read and update their own assigned workouts
+      allow read, update: if isAuthenticated() && 
+                          request.auth.uid == resource.data.clientId;
+    }
+    
+    match /workout_progress/{progressId} {
+      // Trainers can view all progress data
+      allow read: if isTrainerOrAdmin();
+      
+      // Clients can read and update their own workout progress
+      allow read, write: if isAuthenticated() && 
+                         request.auth.uid == resource.data.clientId;
+    }
+
     // TEMPORARY rules for Stripe collections during development
     match /stripe_products/{document=**} {
       allow read: if true;  // Allow public reads for testing

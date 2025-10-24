@@ -21,6 +21,12 @@ export default function DashboardWelcomePage() {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           const userData = userDoc.data();
           
+          // Check user role and redirect appropriately
+          if (userData?.role === 'trainer' || userData?.role === 'admin') {
+            router.push('/dashboard/trainer');
+            return;
+          }
+          
           if (userData?.hideWelcomeDashboard) {
             // If user has chosen to hide welcome screen, redirect to client dashboard
             router.push('/dashboard/client');

@@ -13,11 +13,22 @@ import {
 import { 
   getFirestore, 
   doc, 
+  getDoc,
   setDoc, 
   collection,
   onSnapshot,
-  serverTimestamp 
+  serverTimestamp,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  writeBatch,
+  increment,
+  Timestamp
 } from 'firebase/firestore';
+import type { Exercise, AssignedWorkout } from '@/types/workout';
 
 // Types
 interface ServiceTier {
@@ -112,6 +123,31 @@ export async function createUserWithTier(email: string, password: string, name: 
   }
 }
 
+// Function to create a trainer/admin user
+export async function createTrainerUser(email: string, password: string, name: string, phone: string): Promise<UserCreationResult> {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userId = userCredential.user.uid;
+    
+    await setDoc(doc(db, 'users', userId), {
+      name: name,
+      email: email,
+      phone: phone || null,
+      role: 'trainer',
+      permissions: ['create_workouts', 'manage_clients', 'view_analytics', 'admin_access'],
+      createdAt: serverTimestamp()
+    });
+    
+    return { success: true, userId, user: userCredential.user };
+  } catch (error) {
+    console.error('Error creating trainer user:', error);
+    return {
+      success: false,
+      error: error as Error
+    };
+  }
+}
+
 // Function to sign in a user
 export async function signInUser(email: string, password: string): Promise<SignInResult> {
   try {
@@ -186,4 +222,264 @@ export function listenToPaymentMethods(userId: string, callback: (paymentMethods
     });
     callback(paymentMethods);
   });
+}
+
+// PHASE 2: Exercise Library Management Functions
+
+export async function createExercise(exercise: Omit<Exercise, 'id' | 'createdAt' | 'updatedAt'>) {
+  try {
+    const docRef = await addDoc(collection(db, 'exercises'), {
+      ...exercise,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      usageCount: 0
+    });
+    return { success: true, exerciseId: docRef.id };
+  } catch (error) {
+    console.error('Error creating exercise:', error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export async function updateExercise(exerciseId: string, updates: Partial<Exercise>) {
+  try {
+    await updateDoc(doc(db, 'exercises', exerciseId), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating exercise:', error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export async function deleteExercise(exerciseId: string) {
+  try {
+    await deleteDoc(doc(db, 'exercises', exerciseId));
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting exercise:', error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export function listenToExercises(trainerId: string, callback: (exercises: Exercise[]) => void) {
+  const exercisesQuery = query(
+    collection(db, 'exercises'),
+    where('createdBy', '==', trainerId),
+    orderBy('name')
+  );
+  
+  return onSnapshot(exercisesQuery, (snapshot) => {
+    const exercises: Exercise[] = [];
+    snapshot.forEach((doc) => {
+      exercises.push({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      } as Exercise);
+    });
+    callback(exercises);
+  });
+}
+
+export function listenToPublicExercises(callback: (exercises: Exercise[]) => void) {
+  const exercisesQuery = query(
+    collection(db, 'exercises'),
+    where('isPublic', '==', true),
+    orderBy('usageCount', 'desc')
+  );
+  
+  return onSnapshot(exercisesQuery, (snapshot) => {
+    const exercises: Exercise[] = [];
+    snapshot.forEach((doc) => {
+      exercises.push({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      } as Exercise);
+    });
+    callback(exercises);
+  });
+}
+
+export async function incrementExerciseUsage(exerciseId: string) {
+  try {
+    const exerciseRef = doc(db, 'exercises', exerciseId);
+    await updateDoc(exerciseRef, {
+      usageCount: increment(1)
+    });
+  } catch (error) {
+    console.error('Error incrementing exercise usage:', error);
+  }
+}
+
+// PHASE 2: Workout Assignment Functions
+
+export async function assignWorkoutToClients(assignment: {
+  templateId: string;
+  clientIds: string[];
+  trainerId: string;
+  dueDate: Date;
+  notes?: string;
+}) {
+  try {
+    const batch = writeBatch(db);
+    const assignments: string[] = [];
+
+    for (const clientId of assignment.clientIds) {
+      const assignmentRef = doc(collection(db, 'assigned_workouts'));
+      batch.set(assignmentRef, {
+        templateId: assignment.templateId,
+        clientId,
+        trainerId: assignment.trainerId,
+        assignedDate: serverTimestamp(),
+        dueDate: Timestamp.fromDate(assignment.dueDate),
+        status: 'assigned',
+        notes: assignment.notes || '',
+        progress: {
+          exercisesCompleted: [],
+          totalExercises: 0,
+          completionPercentage: 0,
+          exerciseDetails: [],
+          lastUpdatedAt: serverTimestamp()
+        }
+      });
+      assignments.push(assignmentRef.id);
+    }
+
+    await batch.commit();
+    return { success: true, assignmentIds: assignments };
+  } catch (error) {
+    console.error('Error assigning workout:', error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export function listenToTrainerAssignments(trainerId: string, callback: (assignments: AssignedWorkout[]) => void) {
+  const assignmentsQuery = query(
+    collection(db, 'assigned_workouts'),
+    where('trainerId', '==', trainerId),
+    orderBy('assignedDate', 'desc')
+  );
+  
+  return onSnapshot(assignmentsQuery, (snapshot) => {
+    const assignments: AssignedWorkout[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      assignments.push({
+        id: doc.id,
+        ...data,
+        assignedDate: data.assignedDate?.toDate(),
+        dueDate: data.dueDate?.toDate(),
+        completedAt: data.completedAt?.toDate(),
+        progress: {
+          ...data.progress,
+          lastUpdatedAt: data.progress?.lastUpdatedAt?.toDate()
+        }
+      } as AssignedWorkout);
+    });
+    callback(assignments);
+  });
+}
+
+export function listenToClientAssignments(clientId: string, callback: (assignments: AssignedWorkout[]) => void) {
+  const assignmentsQuery = query(
+    collection(db, 'assigned_workouts'),
+    where('clientId', '==', clientId),
+    orderBy('assignedDate', 'desc')
+  );
+  
+  return onSnapshot(assignmentsQuery, (snapshot) => {
+    const assignments: AssignedWorkout[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      assignments.push({
+        id: doc.id,
+        ...data,
+        assignedDate: data.assignedDate?.toDate(),
+        dueDate: data.dueDate?.toDate(),
+        completedAt: data.completedAt?.toDate(),
+        progress: {
+          ...data.progress,
+          lastUpdatedAt: data.progress?.lastUpdatedAt?.toDate()
+        }
+      } as AssignedWorkout);
+    });
+    callback(assignments);
+  });
+}
+
+// PHASE 2: Workout Template Management Functions
+
+export function listenToWorkoutTemplates(trainerId: string, callback: (templates: any[]) => void) {
+  const templatesQuery = query(
+    collection(db, 'workout_templates'),
+    where('createdBy', '==', trainerId),
+    orderBy('createdAt', 'desc')
+  );
+  
+  return onSnapshot(templatesQuery, (snapshot) => {
+    const templates: any[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      templates.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+        updatedAt: data.updatedAt?.toDate()
+      });
+    });
+    callback(templates);
+  });
+}
+
+export async function getWorkoutTemplate(templateId: string) {
+  try {
+    const docRef = doc(db, 'workout_templates', templateId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      return {
+        success: true,
+        template: {
+          id: docSnap.id,
+          ...docSnap.data(),
+          createdAt: docSnap.data().createdAt?.toDate(),
+          updatedAt: docSnap.data().updatedAt?.toDate()
+        }
+      };
+    } else {
+      return { success: false, error: new Error('Workout template not found') };
+    }
+  } catch (error) {
+    console.error('Error getting workout template:', error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export async function updateWorkoutTemplate(templateId: string, updates: any) {
+  try {
+    await updateDoc(doc(db, 'workout_templates', templateId), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating workout template:', error);
+    return { success: false, error: error as Error };
+  }
+}
+
+export async function deleteWorkoutTemplate(templateId: string) {
+  try {
+    await deleteDoc(doc(db, 'workout_templates', templateId));
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting workout template:', error);
+    return { success: false, error: error as Error };
+  }
 }
