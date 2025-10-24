@@ -73,6 +73,12 @@ export default function TrainerDashboardPage() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'workouts'>('overview');
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [workoutToAssign, setWorkoutToAssign] = useState<any | null>(null);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [assignmentDeadline, setAssignmentDeadline] = useState<string>('');
+  const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -842,30 +848,43 @@ export default function TrainerDashboardPage() {
                           )}
 
                           {/* Actions */}
-                          <div className="flex gap-2 pt-4 border-t">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => setSelectedWorkout(workout)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Link href={`/dashboard/trainer/workouts/create?id=${workout.id}`}>
+                          <div className="space-y-2 pt-4 border-t">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => setSelectedWorkout(workout)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                              <Link href={`/dashboard/trainer/workouts/create?id=${workout.id}`}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </Link>
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={() => handleDeleteWorkout(workout.id)}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
-                            </Link>
+                            </div>
                             <Button
-                              variant="ghost"
                               size="sm"
-                              onClick={() => handleDeleteWorkout(workout.id)}
+                              className="w-full"
+                              onClick={() => {
+                                setWorkoutToAssign(workout);
+                                setAssignModalOpen(true);
+                              }}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Users className="h-4 w-4 mr-2" />
+                              Assign to Clients
                             </Button>
                           </div>
                         </div>
@@ -1010,6 +1029,177 @@ export default function TrainerDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Assignment Modal */}
+      {assignModalOpen && workoutToAssign && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => {
+          setAssignModalOpen(false);
+          setSelectedClients([]);
+          setAssignmentDeadline('');
+          setAssignmentNotes('');
+        }}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b sticky top-0 bg-white">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold mb-2">Assign Workout to Clients</h2>
+                  <p className="text-gray-600">Workout: <strong>{workoutToAssign.name}</strong></p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setAssignModalOpen(false);
+                  setSelectedClients([]);
+                  setAssignmentDeadline('');
+                  setAssignmentNotes('');
+                }}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Client Selection */}
+              <div>
+                <h3 className="font-semibold mb-3">Select Clients ({selectedClients.length} selected)</h3>
+                {clients.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <Users className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                    <p className="text-gray-600">No clients available</p>
+                    <Link href="/dashboard/trainer/clients/new">
+                      <Button variant="outline" size="sm" className="mt-3">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Client
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3">
+                    {clients.map((client) => (
+                      <label
+                        key={client.id}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClients.includes(client.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedClients(prev => [...prev, client.id]);
+                            } else {
+                              setSelectedClients(prev => prev.filter(id => id !== client.id));
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                          {client.name.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{client.name}</p>
+                          <p className="text-sm text-gray-600">{client.email}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          client.status === 'active' ? 'bg-green-100 text-green-800' :
+                          client.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {client.status}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Deadline */}
+              <div>
+                <label className="font-semibold mb-2 block">Due Date *</label>
+                <input
+                  type="date"
+                  value={assignmentDeadline}
+                  onChange={(e) => setAssignmentDeadline(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="font-semibold mb-2 block">Notes (Optional)</label>
+                <textarea
+                  value={assignmentNotes}
+                  onChange={(e) => setAssignmentNotes(e.target.value)}
+                  placeholder="Add any instructions or notes for the clients..."
+                  className="w-full min-h-[100px] px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+
+              {/* Summary */}
+              {selectedClients.length > 0 && assignmentDeadline && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Summary:</strong> You are about to assign <strong>{workoutToAssign.name}</strong> to{' '}
+                    <strong>{selectedClients.length} client{selectedClients.length !== 1 ? 's' : ''}</strong> with a deadline of{' '}
+                    <strong>{new Date(assignmentDeadline).toLocaleDateString()}</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setAssignModalOpen(false);
+                  setSelectedClients([]);
+                  setAssignmentDeadline('');
+                  setAssignmentNotes('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={selectedClients.length === 0 || !assignmentDeadline || assigning}
+                onClick={async () => {
+                  if (!user || selectedClients.length === 0 || !assignmentDeadline) return;
+                  
+                  setAssigning(true);
+                  try {
+                    const { assignWorkoutToClients } = await import('@/lib/firebase');
+                    const result = await assignWorkoutToClients({
+                      templateId: workoutToAssign.id,
+                      clientIds: selectedClients,
+                      trainerId: user.uid,
+                      dueDate: new Date(assignmentDeadline),
+                      notes: assignmentNotes
+                    });
+
+                    if (result.success) {
+                      alert(`Workout assigned successfully to ${selectedClients.length} client${selectedClients.length !== 1 ? 's' : ''}!`);
+                      setAssignModalOpen(false);
+                      setSelectedClients([]);
+                      setAssignmentDeadline('');
+                      setAssignmentNotes('');
+                      setWorkoutToAssign(null);
+                    } else {
+                      alert('Failed to assign workout. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Error assigning workout:', error);
+                    alert('An error occurred while assigning the workout.');
+                  } finally {
+                    setAssigning(false);
+                  }
+                }}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                {assigning ? 'Assigning...' : `Assign to ${selectedClients.length} Client${selectedClients.length !== 1 ? 's' : ''}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

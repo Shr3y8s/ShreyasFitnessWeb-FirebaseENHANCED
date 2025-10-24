@@ -454,16 +454,6 @@ export default function ExerciseLibraryPage() {
                   />
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="isPublic"
-                    checked={exerciseForm.isPublic}
-                    onChange={(e) => setExerciseForm(prev => ({ ...prev, isPublic: e.target.checked }))}
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor="isPublic">Make this exercise public (other trainers can use it)</Label>
-                </div>
               </div>
             </div>
 
@@ -582,12 +572,6 @@ export default function ExerciseLibraryPage() {
                           }`}>
                             {EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.label}
                           </span>
-                          {exercise.isPublic && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              Public
-                            </span>
-                          )}
                         </div>
                         
                         <p className="text-gray-600 mb-3">{exercise.instructions}</p>

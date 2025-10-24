@@ -230,6 +230,7 @@ export async function createExercise(exercise: Omit<Exercise, 'id' | 'createdAt'
   try {
     const docRef = await addDoc(collection(db, 'exercises'), {
       ...exercise,
+      isPublic: false, // Default to private for single trainer setup
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       usageCount: 0

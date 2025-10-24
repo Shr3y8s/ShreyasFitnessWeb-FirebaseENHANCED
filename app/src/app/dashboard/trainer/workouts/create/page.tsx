@@ -786,17 +786,9 @@ export default function EnhancedCreateWorkoutPage() {
                     </div>
 
                     <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800 mb-2">
+                      <p className="text-sm text-blue-800">
                         <strong>Note:</strong> New exercises are automatically saved to your exercise library for reuse in other workouts.
                       </p>
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={newExerciseForm.isPublic}
-                          onChange={(e) => setNewExerciseForm(prev => ({ ...prev, isPublic: e.target.checked }))}
-                        />
-                        <span className="text-sm">Make this exercise public (share with other trainers)</span>
-                      </label>
                     </div>
 
                     <div className="flex justify-end gap-3 mt-6">
