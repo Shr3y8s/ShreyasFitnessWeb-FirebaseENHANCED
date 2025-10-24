@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -71,9 +72,37 @@ export default function TrainerDashboardPage() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'workouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'workouts' | 'assignments' | 'exercises'>('overview');
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [exercises, setExercises] = useState<any[]>([]);
+  const [filteredExerciseList, setFilteredExerciseList] = useState<any[]>([]);
+  const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
+  const [selectedExerciseCategory, setSelectedExerciseCategory] = useState<string>('all');
+  const [isCreatingExercise, setIsCreatingExercise] = useState(false);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [savingExercise, setSavingExercise] = useState(false);
+  const [exerciseForm, setExerciseForm] = useState<{
+    name: string;
+    instructions: string;
+    category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
+    targetMuscleGroups: string[];
+    equipment: string[];
+    notes: string;
+    isPublic: boolean;
+  }>({
+    name: '',
+    instructions: '',
+    category: 'strength',
+    targetMuscleGroups: [],
+    equipment: [],
+    notes: '',
+    isPublic: false
+  });
+  const [selectedAssignment, setSelectedAssignment] = useState<any | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [extendDeadlineModalOpen, setExtendDeadlineModalOpen] = useState(false);
+  const [newDeadline, setNewDeadline] = useState<string>('');
   const [workoutToAssign, setWorkoutToAssign] = useState<any | null>(null);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [assignmentDeadline, setAssignmentDeadline] = useState<string>('');
@@ -142,6 +171,60 @@ export default function TrainerDashboardPage() {
     }
   }, [user]);
 
+  // Listen to assignments
+  useEffect(() => {
+    if (user) {
+      const assignmentsQuery = query(
+        collection(db, 'assigned_workouts'),
+        where('trainerId', '==', user.uid),
+        orderBy('assignedDate', 'desc')
+      );
+      
+      const unsubscribe = onSnapshot(assignmentsQuery, (snapshot) => {
+        const assignmentsData: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          assignmentsData.push({
+            id: doc.id,
+            ...data,
+            assignedDate: data.assignedDate?.toDate(),
+            dueDate: data.dueDate?.toDate()
+          });
+        });
+        setAssignments(assignmentsData);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [user]);
+
+  // Listen to exercises
+  useEffect(() => {
+    if (user) {
+      const exercisesQuery = query(
+        collection(db, 'exercises'),
+        where('createdBy', '==', user.uid),
+        orderBy('name')
+      );
+      
+      const unsubscribe = onSnapshot(exercisesQuery, (snapshot) => {
+        const exercisesData: any[] = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          exercisesData.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate(),
+            updatedAt: data.updatedAt?.toDate()
+          });
+        });
+        setExercises(exercisesData);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [user]);
+
   // Filter workouts based on search and filters
   useEffect(() => {
     let filtered = workoutTemplates;
@@ -167,6 +250,27 @@ export default function TrainerDashboardPage() {
 
     setFilteredWorkouts(filtered);
   }, [workoutTemplates, workoutSearchQuery, selectedDifficulty, selectedCategory]);
+
+  // Filter exercises based on search and category
+  useEffect(() => {
+    let filtered = exercises;
+
+    if (exerciseSearchQuery) {
+      filtered = filtered.filter(exercise =>
+        exercise.name.toLowerCase().includes(exerciseSearchQuery.toLowerCase()) ||
+        exercise.instructions.toLowerCase().includes(exerciseSearchQuery.toLowerCase()) ||
+        exercise.targetMuscleGroups?.some((muscle: string) => 
+          muscle.toLowerCase().includes(exerciseSearchQuery.toLowerCase())
+        )
+      );
+    }
+
+    if (selectedExerciseCategory !== 'all') {
+      filtered = filtered.filter(exercise => exercise.category === selectedExerciseCategory);
+    }
+
+    setFilteredExerciseList(filtered);
+  }, [exercises, exerciseSearchQuery, selectedExerciseCategory]);
 
   const handleDeleteWorkout = async (workoutId: string) => {
     if (confirm('Are you sure you want to delete this workout? This action cannot be undone.')) {
@@ -244,43 +348,44 @@ export default function TrainerDashboardPage() {
           {/* Client Management */}
           <div>
             <p className="text-xs text-gray-500 mb-2 px-2">Client Management</p>
-            <div className="space-y-1">
-              <button
-                onClick={() => setActiveTab('clients')}
-                className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                  activeTab === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  All Clients
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  activeTab === 'clients' ? 'bg-white text-primary' : 'bg-primary text-white'
-                }`}>
-                  {clients.length}
-                </span>
-              </button>
-              
-              <Link href="/dashboard/trainer/clients/new">
-                <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                  <Plus className="w-4 h-4" />
-                  Add New Client
-                </button>
-              </Link>
-            </div>
+            <button
+              onClick={() => setActiveTab('clients')}
+              className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                activeTab === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                All Clients
+              </div>
+              <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                activeTab === 'clients' ? 'bg-white text-primary' : 'bg-primary text-white'
+              }`}>
+                {clients.length}
+              </span>
+            </button>
           </div>
 
           {/* Workout Management */}
           <div>
             <p className="text-xs text-gray-500 mb-2 px-2">Workout Management</p>
             <div className="space-y-1">
-              <Link href="/dashboard/trainer/exercises">
-                <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
+              <button
+                onClick={() => setActiveTab('exercises')}
+                className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                  activeTab === 'exercises' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
                   <Target className="w-4 h-4" />
                   Exercise Library
-                </button>
-              </Link>
+                </div>
+                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                  activeTab === 'exercises' ? 'bg-white text-primary' : 'bg-primary text-white'
+                }`}>
+                  {exercises.length}
+                </span>
+              </button>
               
               <button
                 onClick={() => setActiveTab('workouts')}
@@ -295,25 +400,25 @@ export default function TrainerDashboardPage() {
                 <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
                   activeTab === 'workouts' ? 'bg-white text-primary' : 'bg-primary text-white'
                 }`}>
-                  24
+                  {workoutTemplates.length}
                 </span>
               </button>
               
-              <Link href="/dashboard/trainer/workouts/create">
-                <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                  <Plus className="w-4 h-4" />
-                  Create Workout
-                </button>
-              </Link>
-              
-              <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                <Calendar className="w-4 h-4" />
-                Assignment Calendar
-              </button>
-              
-              <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                <TrendingUp className="w-4 h-4" />
-                Progress Analytics
+              <button
+                onClick={() => setActiveTab('assignments')}
+                className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                  activeTab === 'assignments' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Assignments
+                </div>
+                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                  activeTab === 'assignments' ? 'bg-white text-primary' : 'bg-primary text-white'
+                }`}>
+                  {assignments.length}
+                </span>
               </button>
             </div>
           </div>
@@ -626,6 +731,467 @@ export default function TrainerDashboardPage() {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'assignments' && (
+            <div className="space-y-6">
+              {/* Assignments Header */}
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Workout Assignments</h2>
+                  <p className="text-gray-600 mt-1">{assignments.length} assignment{assignments.length !== 1 ? 's' : ''} total</p>
+                </div>
+              </div>
+
+              {/* Assignments Table */}
+              {assignments.length > 0 ? (
+                <div className="bg-white rounded-xl border overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-4 font-semibold">Client</th>
+                          <th className="text-left p-4 font-semibold">Workout</th>
+                          <th className="text-left p-4 font-semibold">Assigned Date</th>
+                          <th className="text-left p-4 font-semibold">Due Date</th>
+                          <th className="text-left p-4 font-semibold">Status</th>
+                          <th className="text-left p-4 font-semibold">Progress</th>
+                          <th className="text-left p-4 font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {assignments.map((assignment) => {
+                          const client = clients.find(c => c.id === assignment.clientId);
+                          const workout = workoutTemplates.find(w => w.id === assignment.templateId);
+                          const isOverdue = assignment.status !== 'completed' && new Date(assignment.dueDate) < new Date();
+                          const status = isOverdue ? 'overdue' : assignment.status;
+                          
+                          return (
+                            <tr key={assignment.id} className="hover:bg-gray-50">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                    {client?.name?.charAt(0) || '?'}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">{client?.name || 'Unknown'}</p>
+                                    <p className="text-sm text-gray-600">{client?.email || ''}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <p className="font-medium">{workout?.name || 'Unknown Workout'}</p>
+                                <p className="text-sm text-gray-600">{workout?.exercises?.length || 0} exercises</p>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm text-gray-600">
+                                  {assignment.assignedDate ? new Date(assignment.assignedDate).toLocaleDateString() : 'N/A'}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-sm text-gray-600">
+                                  {assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : 'N/A'}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                                  status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                  status === 'overdue' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {status === 'in_progress' ? 'In Progress' : 
+                                   status === 'overdue' ? 'Overdue' :
+                                   status.charAt(0).toUpperCase() + status.slice(1)}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+                                    <div 
+                                      className={`h-2 rounded-full ${
+                                        status === 'completed' ? 'bg-green-500' :
+                                        status === 'in_progress' ? 'bg-blue-500' :
+                                        status === 'overdue' ? 'bg-red-500' :
+                                        'bg-gray-400'
+                                      }`}
+                                      style={{ width: `${assignment.progress?.completionPercentage || 0}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-sm text-gray-600">
+                                    {assignment.progress?.completionPercentage || 0}%
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedAssignment(assignment);
+                                      setNewDeadline(assignment.dueDate ? new Date(assignment.dueDate).toISOString().split('T')[0] : '');
+                                      setExtendDeadlineModalOpen(true);
+                                    }}
+                                  >
+                                    <Calendar className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border p-12 text-center">
+                  <Calendar className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No Assignments Yet</h3>
+                  <p className="text-gray-600 mb-6">
+                    Assign workouts to clients to see them tracked here.
+                  </p>
+                  <Button onClick={() => setActiveTab('workouts')}>
+                    <Dumbbell className="h-4 w-4 mr-2" />
+                    View Workout Library
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'exercises' && (
+            <div className="space-y-6">
+              {/* Exercises Header */}
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold">Exercise Library</h2>
+                  <p className="text-gray-600 mt-1">{exercises.length} exercise{exercises.length !== 1 ? 's' : ''} total</p>
+                </div>
+                <Button
+                  onClick={() => setIsCreatingExercise(true)}
+                  disabled={isCreatingExercise}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Exercise
+                </Button>
+              </div>
+
+              {/* Search and Filters - Only show if exercises exist */}
+              {exercises.length > 0 && (
+                <div className="bg-white rounded-xl border p-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search exercises by name, instructions, or muscle groups..."
+                          value={exerciseSearchQuery}
+                          onChange={(e) => setExerciseSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedExerciseCategory}
+                        onChange={(e) => setSelectedExerciseCategory(e.target.value)}
+                        className="px-3 py-2 border rounded-md"
+                      >
+                        <option value="all">All Categories</option>
+                        <option value="strength">Strength</option>
+                        <option value="cardio">Cardio</option>
+                        <option value="flexibility">Flexibility</option>
+                        <option value="core">Core</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600 mt-3">
+                    Showing {filteredExerciseList.length} of {exercises.length} exercise{exercises.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              )}
+
+              {/* Create Exercise Form */}
+              {isCreatingExercise && (
+                <div className="bg-white rounded-xl border p-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Add New Exercise</h3>
+                    <Button variant="ghost" size="sm" onClick={() => setIsCreatingExercise(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="name">Exercise Name *</Label>
+                        <input
+                          id="name"
+                          placeholder="e.g., Push-ups"
+                          value={exerciseForm.name}
+                          onChange={(e) => setExerciseForm(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="instructions">Instructions *</Label>
+                        <textarea
+                          id="instructions"
+                          placeholder="Describe how to perform this exercise..."
+                          value={exerciseForm.instructions}
+                          onChange={(e) => setExerciseForm(prev => ({ ...prev, instructions: e.target.value }))}
+                          className="w-full min-h-[100px] px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-2"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Category</Label>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {['strength', 'cardio', 'flexibility', 'core', 'other'].map((cat) => (
+                            <button
+                              key={cat}
+                              onClick={() => setExerciseForm(prev => ({ ...prev, category: cat as any }))}
+                              className={`p-2 rounded-lg border text-sm transition-colors capitalize ${
+                                exerciseForm.category === cat
+                                  ? 'border-primary bg-primary text-white'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="notes">Notes (Optional)</Label>
+                        <textarea
+                          id="notes"
+                          placeholder="Additional notes, tips, or modifications..."
+                          value={exerciseForm.notes}
+                          onChange={(e) => setExerciseForm(prev => ({ ...prev, notes: e.target.value }))}
+                          className="w-full min-h-[60px] px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-2"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-6">
+                    <Button variant="outline" onClick={() => setIsCreatingExercise(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={async () => {
+                        if (!user || !exerciseForm.name || !exerciseForm.instructions) return;
+                        setSavingExercise(true);
+                        try {
+                          const { createExercise } = await import('@/lib/firebase');
+                          const result = await createExercise({
+                            ...exerciseForm,
+                            createdBy: user.uid
+                          });
+                          if (result.success) {
+                            setIsCreatingExercise(false);
+                            setExerciseForm({
+                              name: '',
+                              instructions: '',
+                              category: 'strength',
+                              targetMuscleGroups: [],
+                              equipment: [],
+                              notes: '',
+                              isPublic: false
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Error creating exercise:', error);
+                        } finally {
+                          setSavingExercise(false);
+                        }
+                      }}
+                      disabled={!exerciseForm.name || !exerciseForm.instructions || savingExercise}
+                    >
+                      {savingExercise ? 'Saving...' : 'Save Exercise'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Exercise List */}
+              {filteredExerciseList.length > 0 ? (
+                <div className="bg-white rounded-xl border">
+                  <div className="divide-y">
+                    {filteredExerciseList.map((exercise) => (
+                      <div key={exercise.id} className="p-6 hover:bg-gray-50 transition-colors">
+                        {editingExerciseId === exercise.id ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label>Exercise Name</Label>
+                                <input
+                                  value={exerciseForm.name}
+                                  onChange={(e) => setExerciseForm(prev => ({ ...prev, name: e.target.value }))}
+                                  className="w-full px-3 py-2 border rounded-lg mt-2"
+                                />
+                              </div>
+                              <div>
+                                <Label>Category</Label>
+                                <select
+                                  value={exerciseForm.category}
+                                  onChange={(e) => setExerciseForm(prev => ({ ...prev, category: e.target.value as any }))}
+                                  className="w-full px-3 py-2 border rounded-lg mt-2"
+                                >
+                                  <option value="strength">Strength</option>
+                                  <option value="cardio">Cardio</option>
+                                  <option value="flexibility">Flexibility</option>
+                                  <option value="core">Core</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <Label>Instructions</Label>
+                              <textarea
+                                value={exerciseForm.instructions}
+                                onChange={(e) => setExerciseForm(prev => ({ ...prev, instructions: e.target.value }))}
+                                className="w-full min-h-[80px] px-3 py-2 border rounded-lg mt-2"
+                              />
+                            </div>
+                            <div className="flex justify-end gap-3">
+                              <Button variant="outline" onClick={() => setEditingExerciseId(null)}>
+                                Cancel
+                              </Button>
+                              <Button 
+                                onClick={async () => {
+                                  if (!editingExerciseId || !exerciseForm.name || !exerciseForm.instructions) return;
+                                  setSavingExercise(true);
+                                  try {
+                                    const { updateExercise } = await import('@/lib/firebase');
+                                    const result = await updateExercise(editingExerciseId, exerciseForm);
+                                    if (result.success) {
+                                      setEditingExerciseId(null);
+                                      setExerciseForm({
+                                        name: '',
+                                        instructions: '',
+                                        category: 'strength',
+                                        targetMuscleGroups: [],
+                                        equipment: [],
+                                        notes: '',
+                                        isPublic: false
+                                      });
+                                    }
+                                  } catch (error) {
+                                    console.error('Error updating exercise:', error);
+                                  } finally {
+                                    setSavingExercise(false);
+                                  }
+                                }}
+                                disabled={savingExercise}
+                              >
+                                {savingExercise ? 'Saving...' : 'Save Changes'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="font-semibold text-lg">{exercise.name}</h4>
+                                <span className={`px-2 py-1 rounded-full text-xs capitalize ${
+                                  exercise.category === 'strength' ? 'bg-blue-100 text-blue-800' :
+                                  exercise.category === 'cardio' ? 'bg-red-100 text-red-800' :
+                                  exercise.category === 'flexibility' ? 'bg-green-100 text-green-800' :
+                                  exercise.category === 'core' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {exercise.category}
+                                </span>
+                              </div>
+                              <p className="text-gray-600 mb-3">{exercise.instructions}</p>
+                              {exercise.notes && (
+                                <p className="text-sm text-gray-500 italic">Note: {exercise.notes}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingExerciseId(exercise.id);
+                                  setExerciseForm({
+                                    name: exercise.name,
+                                    instructions: exercise.instructions,
+                                    category: exercise.category,
+                                    targetMuscleGroups: exercise.targetMuscleGroups || [],
+                                    equipment: exercise.equipment || [],
+                                    notes: exercise.notes || '',
+                                    isPublic: exercise.isPublic || false
+                                  });
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  if (!confirm('Are you sure you want to delete this exercise?')) return;
+                                  try {
+                                    const { deleteExercise } = await import('@/lib/firebase');
+                                    await deleteExercise(exercise.id);
+                                  } catch (error) {
+                                    console.error('Error deleting exercise:', error);
+                                  }
+                                }}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : exercises.length === 0 ? (
+                <div className="bg-white rounded-xl border p-12 text-center">
+                  <Dumbbell className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No Exercises Yet</h3>
+                  <p className="text-gray-600 mb-6">
+                    Start building your exercise library by adding your first exercise.
+                  </p>
+                  <Button onClick={() => setIsCreatingExercise(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Exercise
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border p-12 text-center">
+                  <Search className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No Exercises Found</h3>
+                  <p className="text-gray-600 mb-6">Try adjusting your search or filters.</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setExerciseSearchQuery('');
+                      setSelectedExerciseCategory('all');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1195,6 +1761,98 @@ export default function TrainerDashboardPage() {
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 {assigning ? 'Assigning...' : `Assign to ${selectedClients.length} Client${selectedClients.length !== 1 ? 's' : ''}`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Extend Deadline Modal */}
+      {extendDeadlineModalOpen && selectedAssignment && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => {
+          setExtendDeadlineModalOpen(false);
+          setSelectedAssignment(null);
+          setNewDeadline('');
+        }}>
+          <div className="bg-white rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-bold mb-1">Extend Deadline</h2>
+                  <p className="text-sm text-gray-600">
+                    Current deadline: <strong>{selectedAssignment.dueDate ? new Date(selectedAssignment.dueDate).toLocaleDateString() : 'N/A'}</strong>
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setExtendDeadlineModalOpen(false);
+                  setSelectedAssignment(null);
+                  setNewDeadline('');
+                }}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <Label htmlFor="newDeadline">New Due Date *</Label>
+                <input
+                  id="newDeadline"
+                  type="date"
+                  value={newDeadline}
+                  onChange={(e) => setNewDeadline(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent mt-2"
+                />
+              </div>
+
+              {newDeadline && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    The deadline will be extended to <strong>{new Date(newDeadline).toLocaleDateString()}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setExtendDeadlineModalOpen(false);
+                  setSelectedAssignment(null);
+                  setNewDeadline('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={!newDeadline || assigning}
+                onClick={async () => {
+                  if (!newDeadline || !selectedAssignment) return;
+                  
+                  setAssigning(true);
+                  try {
+                    const { updateDoc, doc, Timestamp } = await import('firebase/firestore');
+                    await updateDoc(doc(db, 'assigned_workouts', selectedAssignment.id), {
+                      dueDate: Timestamp.fromDate(new Date(newDeadline))
+                    });
+                    
+                    alert('Deadline updated successfully!');
+                    setExtendDeadlineModalOpen(false);
+                    setSelectedAssignment(null);
+                    setNewDeadline('');
+                  } catch (error) {
+                    console.error('Error updating deadline:', error);
+                    alert('Failed to update deadline. Please try again.');
+                  } finally {
+                    setAssigning(false);
+                  }
+                }}
+              >
+                {assigning ? 'Updating...' : 'Update Deadline'}
               </Button>
             </div>
           </div>
