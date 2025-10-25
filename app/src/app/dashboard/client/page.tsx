@@ -586,6 +586,224 @@ export default function ClientDashboardPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Progress Overview */}
+                <div className="transition-transform duration-300 ease-out hover:-translate-y-1">
+                  <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg">
+                    <div className="flex flex-col space-y-1.5 p-6">
+                      <div className="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-activity w-6 h-6 text-primary">
+                          <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
+                        </svg>
+                        <h3 className="text-xl font-semibold leading-none tracking-tight">Progress Overview</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Your body composition changes over the last 6 months.</p>
+                    </div>
+                    <div className="p-6 pt-0">
+                      <div className="w-full h-[300px] rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={chartData}
+                            margin={{
+                              top: 20,
+                              right: 30,
+                              left: 20,
+                              bottom: 20,
+                            }}
+                          >
+                            <defs>
+                              <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--primary))" opacity={0.2} />
+                            <XAxis 
+                              dataKey="month" 
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                            />
+                            <YAxis 
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                              domain={['dataMin - 5', 'dataMax + 5']}
+                            />
+                            <Tooltip 
+                              contentStyle={{
+                                backgroundColor: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--primary))',
+                                borderRadius: '8px',
+                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                              }}
+                              labelStyle={{ 
+                                color: 'hsl(var(--foreground))',
+                                fontWeight: 'bold'
+                              }}
+                              formatter={(value: number, name: string) => [
+                                `${value} lbs`,
+                                'Weight'
+                              ]}
+                              labelFormatter={(label) => `${label} 2024`}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="weight"
+                              stroke="hsl(var(--primary))"
+                              strokeWidth={3}
+                              fill="url(#weightGradient)"
+                              dot={{ 
+                                fill: 'hsl(var(--primary))', 
+                                strokeWidth: 2, 
+                                stroke: 'hsl(var(--background))',
+                                r: 4
+                              }}
+                              activeDot={{ 
+                                r: 6, 
+                                fill: 'hsl(var(--primary))',
+                                stroke: 'hsl(var(--background))',
+                                strokeWidth: 2,
+                                style: { 
+                                  filter: 'drop-shadow(0 2px 4px rgb(0 0 0 / 0.1))',
+                                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                                }
+                              }}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workout Calendar */}
+                <div className="transition-transform duration-300 ease-out hover:-translate-y-1">
+                  <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg">
+                    <div className="flex flex-col space-y-1.5 p-6">
+                      <h3 className="text-xl font-semibold leading-none tracking-tight">Workout Calendar</h3>
+                    </div>
+                    <div className="p-6 pt-0">
+                      {/* Tab Navigation */}
+                      <div className="grid grid-cols-2 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
+                        <button 
+                          onClick={() => setActiveTab('upcoming')}
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+                            activeTab === 'upcoming' 
+                              ? 'bg-primary text-primary-foreground shadow-sm' 
+                              : 'hover:bg-primary/10'
+                          }`}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          Upcoming
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('completed')}
+                          className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+                            activeTab === 'completed' 
+                              ? 'bg-primary text-primary-foreground shadow-sm' 
+                              : 'hover:bg-primary/10'
+                          }`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check-big mr-2 h-4 w-4">
+                            <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+                            <path d="m9 11 3 3L22 4"></path>
+                          </svg>
+                          Completed
+                        </button>
+                      </div>
+                      
+                      {/* Workout List */}
+                      <ul className="space-y-3">
+                        {activeTab === 'upcoming' ? (
+                          <>
+                            <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5">
+                              <div>
+                                <p className="font-semibold">Full Body Strength</p>
+                                <p className="text-sm text-muted-foreground">2024-08-15 at 09:00 AM</p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="text-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-4 w-4">
+                                  <circle cx="12" cy="12" r="1"></circle>
+                                  <circle cx="19" cy="12" r="1"></circle>
+                                  <circle cx="5" cy="12" r="1"></circle>
+                                </svg>
+                              </Button>
+                            </li>
+                            <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5">
+                              <div>
+                                <p className="font-semibold">Cardio & Core</p>
+                                <p className="text-sm text-muted-foreground">2024-08-17 at 10:00 AM</p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="text-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-4 w-4">
+                                  <circle cx="12" cy="12" r="1"></circle>
+                                  <circle cx="19" cy="12" r="1"></circle>
+                                  <circle cx="5" cy="12" r="1"></circle>
+                                </svg>
+                              </Button>
+                            </li>
+                            <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5">
+                              <div>
+                                <p className="font-semibold">Upper Body Focus</p>
+                                <p className="text-sm text-muted-foreground">2024-08-19 at 09:00 AM</p>
+                              </div>
+                              <Button variant="ghost" size="icon" className="text-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-4 w-4">
+                                  <circle cx="12" cy="12" r="1"></circle>
+                                  <circle cx="19" cy="12" r="1"></circle>
+                                  <circle cx="5" cy="12" r="1"></circle>
+                                </svg>
+                              </Button>
+                            </li>
+                          </>
+                        ) : (
+                          <>
+                            <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5 opacity-75">
+                              <div>
+                                <p className="font-semibold flex items-center gap-2">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                                    <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+                                    <path d="m9 11 3 3L22 4"></path>
+                                  </svg>
+                                  Lower Body Power
+                                </p>
+                                <p className="text-sm text-muted-foreground">2024-08-12 at 09:00 AM</p>
+                              </div>
+                              <span className="text-sm text-green-600 font-medium">Completed</span>
+                            </li>
+                            <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5 opacity-75">
+                              <div>
+                                <p className="font-semibold flex items-center gap-2">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                                    <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+                                    <path d="m9 11 3 3L22 4"></path>
+                                  </svg>
+                                  HIIT Cardio Session
+                                </p>
+                                <p className="text-sm text-muted-foreground">2024-08-10 at 06:00 AM</p>
+                              </div>
+                              <span className="text-sm text-green-600 font-medium">Completed</span>
+                            </li>
+                            <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5 opacity-75">
+                              <div>
+                                <p className="font-semibold flex items-center gap-2">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                                    <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+                                    <path d="m9 11 3 3L22 4"></path>
+                                  </svg>
+                                  Push Day Workout
+                                </p>
+                                <p className="text-sm text-muted-foreground">2024-08-08 at 07:30 AM</p>
+                              </div>
+                              <span className="text-sm text-green-600 font-medium">Completed</span>
+                            </li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Right Sidebar */}
@@ -842,228 +1060,7 @@ export default function ClientDashboardPage() {
               </div>
             </div>
 
-            {/* Third Row - Progress Chart & Workout Calendar */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Progress Chart */}
-              <div className="transition-transform duration-300 ease-out hover:-translate-y-1">
-                <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg">
-                  <div className="flex flex-col space-y-1.5 p-6">
-                    <div className="flex items-center gap-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-activity w-6 h-6 text-primary">
-                        <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-                      </svg>
-                      <h3 className="text-xl font-semibold leading-none tracking-tight">Progress Overview</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground">Your body composition changes over the last 6 months.</p>
-                  </div>
-                  <div className="p-6 pt-0">
-                    <div className="w-full h-[300px] rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart
-                          data={chartData}
-                          margin={{
-                            top: 20,
-                            right: 30,
-                            left: 20,
-                            bottom: 20,
-                          }}
-                        >
-                          <defs>
-                            <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--primary))" opacity={0.2} />
-                          <XAxis 
-                            dataKey="month" 
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                          />
-                          <YAxis 
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                            domain={['dataMin - 5', 'dataMax + 5']}
-                          />
-                          <Tooltip 
-                            contentStyle={{
-                              backgroundColor: 'hsl(var(--background))',
-                              border: '1px solid hsl(var(--primary))',
-                              borderRadius: '8px',
-                              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                            }}
-                            labelStyle={{ 
-                              color: 'hsl(var(--foreground))',
-                              fontWeight: 'bold'
-                            }}
-                            formatter={(value: number, name: string) => [
-                              `${value} lbs`,
-                              'Weight'
-                            ]}
-                            labelFormatter={(label) => `${label} 2024`}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey="weight"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={3}
-                            fill="url(#weightGradient)"
-                            dot={{ 
-                              fill: 'hsl(var(--primary))', 
-                              strokeWidth: 2, 
-                              stroke: 'hsl(var(--background))',
-                              r: 4
-                            }}
-                            activeDot={{ 
-                              r: 6, 
-                              fill: 'hsl(var(--primary))',
-                              stroke: 'hsl(var(--background))',
-                              strokeWidth: 2,
-                              style: { 
-                                filter: 'drop-shadow(0 2px 4px rgb(0 0 0 / 0.1))',
-                                animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                              }
-                            }}
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Workout Calendar */}
-              <div className="transition-transform duration-300 ease-out hover:-translate-y-1">
-                <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg">
-                  <div className="flex flex-col space-y-1.5 p-6">
-                    <h3 className="text-xl font-semibold leading-none tracking-tight">Workout Calendar</h3>
-                  </div>
-                  <div className="p-6 pt-0">
-                    {/* Tab Navigation */}
-                    <div className="grid grid-cols-2 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
-                      <button 
-                        onClick={() => setActiveTab('upcoming')}
-                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                          activeTab === 'upcoming' 
-                            ? 'bg-primary text-primary-foreground shadow-sm' 
-                            : 'hover:bg-primary/10'
-                        }`}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Upcoming
-                      </button>
-                      <button 
-                        onClick={() => setActiveTab('completed')}
-                        className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
-                          activeTab === 'completed' 
-                            ? 'bg-primary text-primary-foreground shadow-sm' 
-                            : 'hover:bg-primary/10'
-                        }`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check-big mr-2 h-4 w-4">
-                          <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
-                          <path d="m9 11 3 3L22 4"></path>
-                        </svg>
-                        Completed
-                      </button>
-                    </div>
-                    
-                    {/* Workout List */}
-                    <ul className="space-y-3">
-                      {activeTab === 'upcoming' ? (
-                        <>
-                          <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5">
-                            <div>
-                              <p className="font-semibold">Full Body Strength</p>
-                              <p className="text-sm text-muted-foreground">2024-08-15 at 09:00 AM</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="text-primary">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-4 w-4">
-                                <circle cx="12" cy="12" r="1"></circle>
-                                <circle cx="19" cy="12" r="1"></circle>
-                                <circle cx="5" cy="12" r="1"></circle>
-                              </svg>
-                            </Button>
-                          </li>
-                          <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5">
-                            <div>
-                              <p className="font-semibold">Cardio & Core</p>
-                              <p className="text-sm text-muted-foreground">2024-08-17 at 10:00 AM</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="text-primary">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-4 w-4">
-                                <circle cx="12" cy="12" r="1"></circle>
-                                <circle cx="19" cy="12" r="1"></circle>
-                                <circle cx="5" cy="12" r="1"></circle>
-                              </svg>
-                            </Button>
-                          </li>
-                          <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5">
-                            <div>
-                              <p className="font-semibold">Upper Body Focus</p>
-                              <p className="text-sm text-muted-foreground">2024-08-19 at 09:00 AM</p>
-                            </div>
-                            <Button variant="ghost" size="icon" className="text-primary">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-4 w-4">
-                                <circle cx="12" cy="12" r="1"></circle>
-                                <circle cx="19" cy="12" r="1"></circle>
-                                <circle cx="5" cy="12" r="1"></circle>
-                              </svg>
-                            </Button>
-                          </li>
-                        </>
-                      ) : (
-                        <>
-                          <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5 opacity-75">
-                            <div>
-                              <p className="font-semibold flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                                  <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
-                                  <path d="m9 11 3 3L22 4"></path>
-                                </svg>
-                                Lower Body Power
-                              </p>
-                              <p className="text-sm text-muted-foreground">2024-08-12 at 09:00 AM</p>
-                            </div>
-                            <span className="text-sm text-green-600 font-medium">Completed</span>
-                          </li>
-                          <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5 opacity-75">
-                            <div>
-                              <p className="font-semibold flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                                  <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
-                                  <path d="m9 11 3 3L22 4"></path>
-                                </svg>
-                                HIIT Cardio Session
-                              </p>
-                              <p className="text-sm text-muted-foreground">2024-08-10 at 06:00 AM</p>
-                            </div>
-                            <span className="text-sm text-green-600 font-medium">Completed</span>
-                          </li>
-                          <li className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5 opacity-75">
-                            <div>
-                              <p className="font-semibold flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                                  <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
-                                  <path d="m9 11 3 3L22 4"></path>
-                                </svg>
-                                Push Day Workout
-                              </p>
-                              <p className="text-sm text-muted-foreground">2024-08-08 at 07:30 AM</p>
-                            </div>
-                            <span className="text-sm text-green-600 font-medium">Completed</span>
-                          </li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Fourth Row - Personal Records & Nutrition Summary */}
+            {/* Third Row - Personal Records & Nutrition Summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Personal Records */}
               <div className="transition-transform duration-300 ease-out hover:-translate-y-1">
