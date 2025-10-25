@@ -235,7 +235,7 @@ export default function ExerciseLibraryPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Exercise Library</h1>
-              <p className="text-muted-foreground">Manage your exercise collection and build reusable workouts</p>
+              <p className="text-muted-foreground mt-1">Manage your exercise collection and build reusable workouts</p>
             </div>
             <Button
               onClick={() => setIsCreating(true)}

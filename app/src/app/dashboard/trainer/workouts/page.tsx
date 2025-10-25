@@ -136,8 +136,8 @@ export default function WorkoutLibraryPage() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold">Workout Library</h1>
-              <p className="text-gray-600 mt-1">{workoutTemplates.length} workout{workoutTemplates.length !== 1 ? 's' : ''} total</p>
+              <h1 className="text-2xl font-bold text-foreground">Workout Library</h1>
+              <p className="text-muted-foreground mt-1">Create and manage workout templates • {workoutTemplates.length} workout{workoutTemplates.length !== 1 ? 's' : ''} total</p>
             </div>
             <Link href="/dashboard/trainer/workouts/create">
               <Button>

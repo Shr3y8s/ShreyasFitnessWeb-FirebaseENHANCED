@@ -417,7 +417,7 @@ export default function EnhancedCreateWorkoutPage() {
               <h1 className="text-2xl font-bold text-foreground">
                 {isEditMode ? 'Edit Workout' : 'Create New Workout'}
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground mt-1">
                 {isEditMode ? 'Update your workout template' : 'Build a workout using your exercise library'}
               </p>
             </div>

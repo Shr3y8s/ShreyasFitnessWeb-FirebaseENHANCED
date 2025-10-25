@@ -26,7 +26,8 @@ import {
   Phone,
   Clock,
   User,
-  Reply
+  Reply,
+  Inbox
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TrainerSidebar from '@/components/TrainerSidebar';
@@ -358,13 +359,14 @@ export default function InboxPage() {
       <TrainerSidebar currentPage="inbox" />
 
       {/* Main Content */}
-      <div className="ml-64">
-        {/* Header */}
-        <div className="bg-white border-b sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold">Contact Inbox</h1>
-            
+      <div className="ml-64 p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Contact Inbox</h1>
+              <p className="text-muted-foreground mt-1">Manage contact form submissions and lead communications</p>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -375,35 +377,60 @@ export default function InboxPage() {
             </Button>
           </div>
 
-          {/* Message Counts */}
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-green-600">{messageCounts.unread}</span>
-              <span className="text-gray-600">Unread</span>
+          {/* Message Count Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 rounded-full">
+                  <Mail className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Unread</p>
+                  <p className="text-2xl font-bold">{messageCounts.unread}</p>
+                </div>
+              </div>
             </div>
-            <span className="text-gray-300">|</span>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-blue-600">{messageCounts.read}</span>
-              <span className="text-gray-600">Read</span>
+
+            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <MailOpen className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Read</p>
+                  <p className="text-2xl font-bold">{messageCounts.read}</p>
+                </div>
+              </div>
             </div>
-            <span className="text-gray-300">|</span>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-600">{messageCounts.replied}</span>
-              <span className="text-gray-600">Replied</span>
+
+            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gray-100 rounded-full">
+                  <Reply className="h-6 w-6 text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Replied</p>
+                  <p className="text-2xl font-bold">{messageCounts.replied}</p>
+                </div>
+              </div>
             </div>
-            <span className="text-gray-300">|</span>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold">{messageCounts.total}</span>
-              <span className="text-gray-600">Total</span>
+
+            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <Inbox className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Total Messages</p>
+                  <p className="text-2xl font-bold">{messageCounts.total}</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-        {/* Filters */}
-        <div className="bg-white border-b">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Filters */}
+          <div className="bg-white rounded-xl border p-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -469,18 +496,16 @@ export default function InboxPage() {
                 <option value="PRIORITY">By Priority</option>
               </select>
             </div>
+            </div>
           </div>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Message List */}
-          <div className="lg:col-span-2 space-y-2">
-            {filteredSubmissions.length === 0 ? (
-              <div className="bg-white rounded-lg border p-12 text-center">
-                <Mail className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Message List */}
+            <div className="lg:col-span-2 space-y-2">
+              {filteredSubmissions.length === 0 ? (
+                <div className="bg-white rounded-xl border p-12 text-center">
+                  <Mail className="h-16 w-16 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Messages Found</h3>
                 <p className="text-gray-600">
                   {searchText || statusFilter !== 'ALL' || serviceFilter !== 'ALL'
@@ -493,7 +518,7 @@ export default function InboxPage() {
                 <div
                   key={submission.id}
                   onClick={() => handleSelectMessage(submission)}
-                  className={`bg-white rounded-lg border p-3 cursor-pointer transition-all hover:shadow-md ${
+                  className={`bg-white rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md ${
                     selectedSubmission?.id === submission.id ? 'ring-2 ring-primary' : ''
                   } ${submission.Status === 'Unread' ? 'bg-blue-50' : ''}`}
                 >
@@ -520,10 +545,10 @@ export default function InboxPage() {
             )}
           </div>
 
-          {/* Message Detail */}
-          <div className="lg:col-span-3">
-            {selectedSubmission ? (
-              <div className="bg-white rounded-lg border">
+            {/* Message Detail */}
+            <div className="lg:col-span-3">
+              {selectedSubmission ? (
+                <div className="bg-white rounded-xl border">
                 {/* Ultra-Compact Info-Rich Header */}
                 <div className="p-4 border-b">
                   <div className="flex items-center justify-between">
@@ -723,15 +748,15 @@ export default function InboxPage() {
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-lg border p-12 text-center">
+              ) : (
+                <div className="bg-white rounded-xl border p-12 text-center">
                 <MailOpen className="h-16 w-16 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Message Selected</h3>
                 <p className="text-gray-600">Select a message from the list to view details</p>
               </div>
             )}
+            </div>
           </div>
-        </div>
         </div>
       </div>
     </div>
