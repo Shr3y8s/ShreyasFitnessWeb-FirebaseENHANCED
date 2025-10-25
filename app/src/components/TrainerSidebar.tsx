@@ -174,7 +174,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
         {/* Client Management */}
         <div>
           <p className="text-xs text-gray-500 mb-2 px-2">Client Management</p>
-          <Link href="/dashboard/trainer">
+          <Link href="/dashboard/trainer/clients">
             <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
               currentPage === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
             }`}>
@@ -223,6 +223,22 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
                   currentPage === 'workouts' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
                 }`}>
                   {counts.workouts}
+                </span>
+              </button>
+            </Link>
+            
+            <Link href="/dashboard/trainer/assignments">
+              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                currentPage === 'assignments' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  Assignments
+                </div>
+                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                  currentPage === 'assignments' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {counts.assignments}
                 </span>
               </button>
             </Link>
