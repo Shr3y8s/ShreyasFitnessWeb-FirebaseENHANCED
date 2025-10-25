@@ -10,26 +10,19 @@ import { useAuth } from '@/lib/auth-context';
 import { db, listenToExercises, createExercise, updateExercise, deleteExercise } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
-  ArrowLeft,
   Plus,
   Search,
-  Filter,
   Edit,
   Trash2,
-  Eye,
-  Users,
   Dumbbell,
   Heart,
   Wind,
   Zap,
   Activity,
-  MoreVertical,
   Save,
-  X,
-  BarChart3,
-  Target,
-  User
+  X
 } from 'lucide-react';
+import TrainerSidebar from '@/components/TrainerSidebar';
 import {
   Exercise,
   EXERCISE_CATEGORIES,
@@ -232,78 +225,8 @@ export default function ExerciseLibraryPage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      {/* Trainer Sidebar */}
-      <div className="fixed left-0 top-0 h-screen w-64 bg-white shadow-lg z-50 flex flex-col">
-        {/* Header */}
-        <div className="p-4">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">SF</div>
-            <span className="font-semibold text-lg">TRAINER PORTAL</span>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-6 overflow-auto">
-          {/* Dashboard Section */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Dashboard</p>
-            <Link href="/dashboard/trainer">
-              <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 font-medium text-sm">
-                <BarChart3 className="w-4 h-4" />
-                Overview
-              </button>
-            </Link>
-          </div>
-          
-          {/* Client Management */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Client Management</p>
-            <div className="space-y-1">
-              <Link href="/dashboard/trainer">
-                <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                  <Users className="w-4 h-4" />
-                  All Clients
-                </button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Workout Management */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Workout Management</p>
-            <div className="space-y-1">
-              <button className="w-full flex items-center gap-2 p-2 rounded-md bg-primary text-white text-sm">
-                <Target className="w-4 h-4" />
-                Exercise Library
-              </button>
-              
-              <Link href="/dashboard/trainer">
-                <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                  <Dumbbell className="w-4 h-4" />
-                  Workout Library
-                </button>
-              </Link>
-              
-              <Link href="/dashboard/trainer/workouts/create">
-                <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                  <Plus className="w-4 h-4" />
-                  Create Workout
-                </button>
-              </Link>
-            </div>
-          </div>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <Link href="/dashboard/client">
-            <Button variant="outline" size="sm" className="w-full justify-start">
-              <User className="h-4 w-4 mr-2" />
-              View as Client
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Shared Trainer Sidebar */}
+      <TrainerSidebar currentPage="exercises" />
 
       {/* Main Content */}
       <div className="ml-64 p-8">

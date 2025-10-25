@@ -42,6 +42,7 @@ import {
   MUSCLE_GROUPS,
   EQUIPMENT_OPTIONS
 } from '@/types/workout';
+import TrainerSidebar from '@/components/TrainerSidebar';
 
 interface WorkoutExercise {
   type: 'library' | 'custom';
@@ -405,25 +406,20 @@ export default function EnhancedCreateWorkoutPage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
+      {/* Shared Trainer Sidebar */}
+      <TrainerSidebar currentPage="workouts" />
+      
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b ml-64">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard/trainer">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {isEditMode ? 'Edit Workout' : 'Create New Workout'}
-                </h1>
-                <p className="text-muted-foreground">
-                  {isEditMode ? 'Update your workout template' : 'Build a workout using your exercise library'}
-                </p>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {isEditMode ? 'Edit Workout' : 'Create New Workout'}
+              </h1>
+              <p className="text-muted-foreground">
+                {isEditMode ? 'Update your workout template' : 'Build a workout using your exercise library'}
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <Button
@@ -447,7 +443,7 @@ export default function EnhancedCreateWorkoutPage() {
       </div>
 
       {/* Progress Steps */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b ml-64">
         <div className="max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center gap-8">
             <button
@@ -484,7 +480,7 @@ export default function EnhancedCreateWorkoutPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8 ml-64">
         {/* Basic Information Step */}
         {currentStep === 'basic' && (
           <div className="bg-white rounded-xl border p-8">

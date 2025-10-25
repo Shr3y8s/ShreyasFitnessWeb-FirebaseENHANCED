@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db, listenToWorkoutTemplates, deleteWorkoutTemplate } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
+import TrainerSidebar from '@/components/TrainerSidebar';
 import { 
   Users,
   Dumbbell,
@@ -39,7 +40,8 @@ import {
   Wind,
   Activity,
   Copy,
-  X
+  X,
+  Inbox
 } from 'lucide-react';
 
 interface UserData {
@@ -407,249 +409,96 @@ export default function TrainerDashboardPage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      {/* Trainer Sidebar */}
-      <div className="fixed left-0 top-0 h-screen w-64 bg-white shadow-lg z-50 flex flex-col">
-        {/* Header */}
-        <div className="p-4">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">SF</div>
-            <span className="font-semibold text-lg">TRAINER PORTAL</span>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-6 overflow-auto">
-          {/* Dashboard Section */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Dashboard</p>
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`w-full flex items-center gap-2 p-2 rounded-md font-medium text-sm ${
-                activeTab === 'overview' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              Overview
-            </button>
-          </div>
-          
-          {/* Client Management */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Client Management</p>
-            <button
-              onClick={() => setActiveTab('clients')}
-              className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                activeTab === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                All Clients
-              </div>
-              <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                activeTab === 'clients' ? 'bg-white text-primary' : 'bg-primary text-white'
-              }`}>
-                {clients.length}
-              </span>
-            </button>
-          </div>
-
-          {/* Workout Management */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Workout Management</p>
-            <div className="space-y-1">
-              <button
-                onClick={() => setActiveTab('exercises')}
-                className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                  activeTab === 'exercises' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Exercise Library
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  activeTab === 'exercises' ? 'bg-white text-primary' : 'bg-primary text-white'
-                }`}>
-                  {exercises.length}
-                </span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('workouts')}
-                className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                  activeTab === 'workouts' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Dumbbell className="w-4 h-4" />
-                  Workout Library
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  activeTab === 'workouts' ? 'bg-white text-primary' : 'bg-primary text-white'
-                }`}>
-                  {workoutTemplates.length}
-                </span>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('assignments')}
-                className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                  activeTab === 'assignments' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Assignments
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  activeTab === 'assignments' ? 'bg-white text-primary' : 'bg-primary text-white'
-                }`}>
-                  {assignments.length}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Admin Section */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2 px-2">Administration</p>
-            <div className="space-y-1">
-              <button className="w-full flex items-center justify-between p-2 rounded-md hover:bg-gray-100 text-sm">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-4 h-4" />
-                  Contact Inbox
-                </div>
-                <span className="text-xs w-5 h-5 rounded-full flex items-center justify-center bg-red-500 text-white">
-                  0
-                </span>
-              </button>
-              
-              <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                <Settings className="w-4 h-4" />
-                System Settings
-              </button>
-              
-              <button className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 text-sm">
-                <BarChart3 className="w-4 h-4" />
-                Reports & Analytics
-              </button>
-            </div>
-          </div>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white flex-shrink-0">
-                {userData?.name?.charAt(0) || 'T'}
-              </div>
-              <div>
-                <p className="font-semibold">{userData?.name || 'Trainer'}</p>
-                <p className="text-sm text-primary font-semibold">trainer/admin</p>
-              </div>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="p-2 hover:bg-gray-100 rounded-md"
-            >
-              <LogOut className="w-5 h-5 text-primary" />
-            </button>
-          </div>
-          
-          <Link href="/dashboard/client">
-            <Button variant="outline" size="sm" className="w-full justify-start">
-              <User className="h-4 w-4 mr-2" />
-              View as Client
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Shared Trainer Sidebar */}
+      <TrainerSidebar currentPage={activeTab} />
 
       {/* Main Content */}
       <div className="ml-64 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-                Trainer Dashboard
-              </h1>
-              <p className="text-muted-foreground mt-2">Manage your clients, workouts, and track progress</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleTheme}
-                className="text-primary hover:bg-primary/10"
-              >
-                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="relative text-primary hover:bg-primary/10"
-              >
-                <Bell className="h-4 w-4" />
-                <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">
-                  2
-                </div>
-              </Button>
-            </div>
-          </div>
-
-          {/* Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+          {/* Header - Only show in Overview and Clients tabs */}
+          {(activeTab === 'overview' || activeTab === 'clients') && (
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                  Trainer Dashboard
+                </h1>
+                <p className="text-muted-foreground mt-2">Manage your clients, workouts, and track progress</p>
+              </div>
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="text-primary hover:bg-primary/10"
+                >
+                  {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="relative text-primary hover:bg-primary/10"
+                >
+                  <Bell className="h-4 w-4" />
+                  <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">
+                    2
+                  </div>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Dashboard Stats - Only show in Overview and Clients tabs */}
+          {(activeTab === 'overview' || activeTab === 'clients') && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-full">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Total Clients</p>
+                    <p className="text-2xl font-bold">{dashboardStats.totalClients}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Clients</p>
-                  <p className="text-2xl font-bold">{dashboardStats.totalClients}</p>
+              </div>
+
+              <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-100 rounded-full">
+                    <Dumbbell className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Active Workouts</p>
+                    <p className="text-2xl font-bold">{dashboardStats.activeWorkouts}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-100 rounded-full">
+                    <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Completed Today</p>
+                    <p className="text-2xl font-bold">{dashboardStats.completedToday}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-orange-100 rounded-full">
+                    <Clock className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Pending Assignments</p>
+                    <p className="text-2xl font-bold">{dashboardStats.pendingAssignments}</p>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Dumbbell className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Active Workouts</p>
-                  <p className="text-2xl font-bold">{dashboardStats.activeWorkouts}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 rounded-full">
-                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Completed Today</p>
-                  <p className="text-2xl font-bold">{dashboardStats.completedToday}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-100 rounded-full">
-                  <Clock className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Pending Assignments</p>
-                  <p className="text-2xl font-bold">{dashboardStats.pendingAssignments}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* Main Content Area */}
           {activeTab === 'overview' && (

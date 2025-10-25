@@ -24,6 +24,12 @@ service cloud.firestore {
     match /contact_form_submissions/{submissionId} {
       allow create: if true;  // Allow public contact form submissions
       allow read, update, delete: if isTrainerOrAdmin();  // Only trainers/admins can manage submissions
+      
+      // Replies subcollection for trainer responses
+      match /replies/{replyId} {
+        allow read: if isTrainerOrAdmin();
+        allow create, update, delete: if isTrainerOrAdmin();
+      }
     }
     
     // Enhanced user profile rules for dashboard
