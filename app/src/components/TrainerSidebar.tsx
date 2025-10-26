@@ -11,11 +11,12 @@ import {
   Users,
   Dumbbell,
   Target,
-  BarChart3,
+  LayoutDashboard,
   Inbox,
   User,
   LogOut,
-  Mail
+  Mail,
+  CalendarCheck
 } from 'lucide-react';
 
 interface TrainerSidebarProps {
@@ -143,7 +144,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
             <button className={`w-full flex items-center gap-2 p-2 rounded-md font-medium text-sm ${
               currentPage === 'overview' ? 'bg-primary text-white' : 'hover:bg-gray-100'
             }`}>
-              <BarChart3 className="w-4 h-4" />
+              <LayoutDashboard className="w-4 h-4" />
               Overview
             </button>
           </Link>
@@ -210,6 +211,22 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
                 )}
               </button>
             </Link>
+            
+            <Link href="/dashboard/trainer/assignments">
+              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                currentPage === 'assignments' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <CalendarCheck className="w-4 h-4" />
+                  Workout Assignments
+                </div>
+                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                  currentPage === 'assignments' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {counts.assignments}
+                </span>
+              </button>
+            </Link>
           </div>
         </div>
 
@@ -245,22 +262,6 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
                   currentPage === 'workouts' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
                 }`}>
                   {counts.workouts}
-                </span>
-              </button>
-            </Link>
-            
-            <Link href="/dashboard/trainer/assignments">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'assignments' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  Workout Assignments
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  currentPage === 'assignments' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  {counts.assignments}
                 </span>
               </button>
             </Link>

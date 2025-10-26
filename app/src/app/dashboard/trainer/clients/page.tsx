@@ -457,12 +457,7 @@ export default function ClientsPage() {
                         </p>
                         <Button 
                           onClick={() => {
-                            if (workoutTemplates.length === 0) {
-                              alert('Please create a workout template first before assigning to clients.');
-                              return;
-                            }
-                            setSelectedWorkout(workoutTemplates[0]);
-                            setBulkAssignModalOpen(true);
+                            router.push(`/dashboard/trainer/assignments?mode=create&clients=${selectedClientIds.join(',')}`);
                           }}
                         >
                           <Dumbbell className="h-4 w-4 mr-2" />
@@ -536,12 +531,7 @@ export default function ClientsPage() {
                       size="sm" 
                       variant="outline"
                       onClick={() => {
-                        if (workoutTemplates.length === 0) {
-                          alert('Please create a workout template first before assigning to clients.');
-                          return;
-                        }
-                        setSelectedWorkout(workoutTemplates[0]);
-                        setIndividualAssignModalOpen(true);
+                        router.push(`/dashboard/trainer/assignments?mode=create&clients=${activeClient.id}`);
                       }}
                     >
                       <Dumbbell className="h-4 w-4 mr-2" />
