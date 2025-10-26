@@ -23,10 +23,16 @@ interface TrainerSidebarProps {
   currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments';
 }
 
+interface UserData {
+  name?: string;
+  email?: string;
+  role?: string;
+}
+
 export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSidebarProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [counts, setCounts] = useState({
     clients: 0,
     exercises: 0,
@@ -48,7 +54,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
       try {
         const { doc, getDoc } = await import('firebase/firestore');
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        setUserData(userDoc.data());
+        setUserData(userDoc.data() as UserData || null);
 
         // Count clients
         const clientsQuery = query(
