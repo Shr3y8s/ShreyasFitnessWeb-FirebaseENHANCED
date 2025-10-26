@@ -18,9 +18,7 @@ import {
   BarChart3,
   Clock,
   CheckCircle2,
-  AlertCircle,
-  Sun,
-  Moon
+  AlertCircle
 } from 'lucide-react';
 
 interface ClientData {
@@ -40,7 +38,6 @@ export default function TrainerDashboardPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -139,11 +136,6 @@ export default function TrainerDashboardPage() {
     fetchData();
   }, [user, router]);
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -173,26 +165,16 @@ export default function TrainerDashboardPage() {
               </h1>
               <p className="text-muted-foreground mt-2">Manage your clients, workouts, and track progress</p>
             </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleTheme}
-                className="text-primary hover:bg-primary/10"
-              >
-                {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="relative text-primary hover:bg-primary/10"
-              >
-                <Bell className="h-4 w-4" />
-                <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">
-                  2
-                </div>
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="relative text-primary hover:bg-primary/10"
+            >
+              <Bell className="h-4 w-4" />
+              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">
+                2
+              </div>
+            </Button>
           </div>
 
           {/* Dashboard Stats */}
