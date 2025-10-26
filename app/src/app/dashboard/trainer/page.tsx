@@ -39,6 +39,7 @@ export default function TrainerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
@@ -75,9 +76,13 @@ export default function TrainerDashboardPage() {
               id: doc.id,
               ...data,
               completedAt: data.completedAt?.toDate(),
-              assignedDate: data.assignedDate?.toDate()
+              assignedDate: data.assignedDate?.toDate(),
+              dueDate: data.dueDate?.toDate()
             });
           });
+          
+          // Store assignments in state
+          setAssignments(allAssignments);
           
           const clientsData: ClientData[] = [];
           
@@ -315,27 +320,96 @@ export default function TrainerDashboardPage() {
                 </Link>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center gap-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <AlertCircle className="h-5 w-5 text-orange-500" />
-                  <div className="flex-1">
-                    <p className="font-medium">Upper Body Strength - John Doe</p>
-                    <p className="text-sm text-gray-600">Due tomorrow</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <Clock className="h-5 w-5 text-yellow-500" />
-                  <div className="flex-1">
-                    <p className="font-medium">Cardio Session - Jane Smith</p>
-                    <p className="text-sm text-gray-600">Due in 2 days</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <Calendar className="h-5 w-5 text-blue-500" />
-                  <div className="flex-1">
-                    <p className="font-medium">Full Body Workout - Mike Johnson</p>
-                    <p className="text-sm text-gray-600">Due in 3 days</p>
-                  </div>
-                </div>
+                {(() => {
+                  // Filter for upcoming assignments (not completed, has due date in future or near future)
+                  const upcomingAssignments = assignments
+                    .filter(assignment => {
+                      if (assignment.status === 'completed') return false;
+                      if (!assignment.dueDate) return false;
+                      return true; // Include all non-completed with due dates
+                    })
+                    .sort((a, b) => {
+                      const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                      const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                      return dateA - dateB;
+                    })
+                    .slice(0, 3); // Show top 3
+
+                  if (upcomingAssignments.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>No upcoming deadlines</p>
+                      </div>
+                    );
+                  }
+
+                  return upcomingAssignments.map((assignment) => {
+                    const client = clients.find(c => c.id === assignment.clientId);
+                    const workout = workoutTemplates.find(w => w.id === assignment.templateId);
+                    const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
+                    const now = new Date();
+                    
+                    // Calculate days until due
+                    let daysUntil = 0;
+                    let dueDateText = '';
+                    let urgencyColor = 'blue';
+                    let UrgencyIcon = Calendar;
+                    
+                    if (dueDate) {
+                      const timeDiff = dueDate.getTime() - now.getTime();
+                      daysUntil = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                      
+                      if (daysUntil < 0) {
+                        dueDateText = `Overdue by ${Math.abs(daysUntil)} day${Math.abs(daysUntil) !== 1 ? 's' : ''}`;
+                        urgencyColor = 'red';
+                        UrgencyIcon = AlertCircle;
+                      } else if (daysUntil === 0) {
+                        dueDateText = 'Due today';
+                        urgencyColor = 'red';
+                        UrgencyIcon = AlertCircle;
+                      } else if (daysUntil === 1) {
+                        dueDateText = 'Due tomorrow';
+                        urgencyColor = 'orange';
+                        UrgencyIcon = AlertCircle;
+                      } else if (daysUntil <= 3) {
+                        dueDateText = `Due in ${daysUntil} days`;
+                        urgencyColor = 'yellow';
+                        UrgencyIcon = Clock;
+                      } else if (daysUntil <= 7) {
+                        dueDateText = `Due in ${daysUntil} days`;
+                        urgencyColor = 'blue';
+                        UrgencyIcon = Calendar;
+                      } else {
+                        dueDateText = `Due ${dueDate.toLocaleDateString()}`;
+                        urgencyColor = 'blue';
+                        UrgencyIcon = Calendar;
+                      }
+                    }
+
+                    const bgColor = urgencyColor === 'red' ? 'bg-red-50 border-red-200' :
+                                   urgencyColor === 'orange' ? 'bg-orange-50 border-orange-200' :
+                                   urgencyColor === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+                                   'bg-blue-50 border-blue-200';
+                    
+                    const iconColor = urgencyColor === 'red' ? 'text-red-500' :
+                                     urgencyColor === 'orange' ? 'text-orange-500' :
+                                     urgencyColor === 'yellow' ? 'text-yellow-500' :
+                                     'text-blue-500';
+
+                    return (
+                      <div key={assignment.id} className={`flex items-center gap-4 p-3 rounded-lg border ${bgColor}`}>
+                        <UrgencyIcon className={`h-5 w-5 ${iconColor}`} />
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {workout?.name || 'Unknown Workout'} - {client?.name || 'Unknown Client'}
+                          </p>
+                          <p className="text-sm text-gray-600">{dueDateText}</p>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>

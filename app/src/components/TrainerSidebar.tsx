@@ -157,7 +157,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
               }`}>
                 <div className="flex items-center gap-2">
                   <Inbox className="w-4 h-4" />
-                  Contact Inbox
+                  Lead Inbox
                 </div>
                 {counts.unreadMessages > 0 && (
                   <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
@@ -233,7 +233,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
               }`}>
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" />
-                  Assignments
+                  Workout Assignments
                 </div>
                 <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
                   currentPage === 'assignments' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
