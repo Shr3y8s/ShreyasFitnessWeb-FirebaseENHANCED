@@ -14,11 +14,12 @@ import {
   BarChart3,
   Inbox,
   User,
-  LogOut
+  LogOut,
+  Mail
 } from 'lucide-react';
 
 interface TrainerSidebarProps {
-  currentPage?: 'overview' | 'inbox' | 'clients' | 'exercises' | 'workouts' | 'assignments';
+  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments';
 }
 
 export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSidebarProps) {
@@ -30,7 +31,8 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
     exercises: 0,
     workouts: 0,
     assignments: 0,
-    unreadMessages: 0
+    unreadMessages: 0,
+    unreadClientMessages: 0
   });
 
   // Fetch user data and counts
@@ -174,21 +176,41 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
         {/* Client Management */}
         <div>
           <p className="text-xs text-gray-500 mb-2 px-2">Client Management</p>
-          <Link href="/dashboard/trainer/clients">
-            <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-              currentPage === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-            }`}>
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                All Clients
-              </div>
-              <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                currentPage === 'clients' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
+          <div className="space-y-1">
+            <Link href="/dashboard/trainer/clients">
+              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                currentPage === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
               }`}>
-                {counts.clients}
-              </span>
-            </button>
-          </Link>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Clients
+                </div>
+                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                  currentPage === 'clients' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
+                }`}>
+                  {counts.clients}
+                </span>
+              </button>
+            </Link>
+            
+            <Link href="/dashboard/trainer/clients-messages">
+              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                currentPage === 'messages' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Client Inbox
+                </div>
+                {counts.unreadClientMessages > 0 && (
+                  <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                    currentPage === 'messages' ? 'bg-white text-primary' : 'bg-blue-500 text-white'
+                  }`}>
+                    {counts.unreadClientMessages}
+                  </span>
+                )}
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Workout Management */}

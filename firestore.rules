@@ -185,6 +185,43 @@ service cloud.firestore {
                          request.auth.uid == resource.data.clientId;
     }
 
+    // CLIENT MESSAGING SYSTEM - Phase 3
+    match /client_messages/{messageId} {
+      // Trainers can read and send messages
+      allow read: if isTrainerOrAdmin();
+      allow create: if isTrainerOrAdmin() && 
+                    request.resource.data.senderId == request.auth.uid;
+      
+      // Clients can read messages in their own conversations and send messages
+      allow read: if isAuthenticated() && 
+                  (request.auth.uid in resource.data.conversationId.split('_'));
+      allow create: if isAuthenticated() && 
+                    request.resource.data.senderId == request.auth.uid &&
+                    (request.auth.uid in request.resource.data.conversationId.split('_'));
+      
+      // Message validation
+      function validateMessage() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['conversationId', 'senderId', 'senderName', 'recipientId', 'content', 'createdAt']) &&
+               data.conversationId is string &&
+               data.senderId is string &&
+               data.senderName is string &&
+               data.recipientId is string &&
+               data.content is string && data.content.size() > 0 &&
+               data.content.size() <= 2000; // Max 2000 characters
+      }
+      
+      // Apply validation on create
+      allow create: if (isTrainerOrAdmin() || isAuthenticated()) && 
+                    validateMessage() &&
+                    request.resource.data.senderId == request.auth.uid;
+      
+      // Allow marking as read
+      allow update: if isAuthenticated() && 
+                    request.auth.uid == resource.data.recipientId &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+    
     // TEMPORARY rules for Stripe collections during development
     match /stripe_products/{document=**} {
       allow read: if true;  // Allow public reads for testing

@@ -524,7 +524,11 @@ export default function ClientsPage() {
                   
                   {/* Quick Actions */}
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => alert('Client messaging coming in Phase 3!')}>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
+                    >
                       <Mail className="h-4 w-4 mr-2" />
                       Message
                     </Button>
@@ -722,7 +726,11 @@ export default function ClientsPage() {
                         </div>
                       </div>
 
-                      <Button variant="outline" className="w-full">
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
+                      >
                         <Users className="h-4 w-4 mr-2" />
                         Send New Message
                       </Button>
