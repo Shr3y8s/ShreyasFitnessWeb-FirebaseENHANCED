@@ -42,11 +42,11 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
   return (
     <Sidebar variant="floating">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-3 py-3">
+        <div className="flex items-center gap-3 px-3 py-2">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
             SF
           </div>
-          <span className="font-semibold text-base text-sidebar-foreground">SHREY.FIT</span>
+          <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
         </div>
       </SidebarHeader>
 
@@ -60,7 +60,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild className="bg-primary text-white hover:bg-primary/90">
                   <Link href="/">
                     <House className="w-4 h-4" />
-                    <span>Dashboard</span>
+                    <span className="font-medium">Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -77,7 +77,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/workouts">
                     <Dumbbell className="w-4 h-4" />
-                    <span>My Workouts</span>
+                    <span className="font-medium">My Workouts</span>
                     <span className="ml-auto bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
                       2
                     </span>
@@ -88,7 +88,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/progress">
                     <TrendingUp className="w-4 h-4" />
-                    <span>Progress & Analytics</span>
+                    <span className="font-medium">Progress & Analytics</span>
                     <span className="ml-auto bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
                       1
                     </span>
@@ -99,7 +99,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/sessions">
                     <Calendar className="w-4 h-4" />
-                    <span>Sessions & Schedule</span>
+                    <span className="font-medium">Sessions & Schedule</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -107,7 +107,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/nutrition">
                     <HeartPulse className="w-4 h-4" />
-                    <span>Nutrition Hub</span>
+                    <span className="font-medium">Nutrition Hub</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -115,7 +115,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/goals">
                     <Goal className="w-4 h-4" />
-                    <span>Goals & Milestones</span>
+                    <span className="font-medium">Goals & Milestones</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -132,7 +132,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/communication">
                     <MessageSquare className="w-4 h-4" />
-                    <span>Communication</span>
+                    <span className="font-medium">Communication</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -140,7 +140,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/resources">
                     <BookOpen className="w-4 h-4" />
-                    <span>Resources</span>
+                    <span className="font-medium">Resources</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -157,7 +157,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/profile">
                     <User className="w-4 h-4" />
-                    <span>Profile</span>
+                    <span className="font-medium">Profile</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -165,7 +165,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/billing">
                     <CreditCard className="w-4 h-4" />
-                    <span>Billing</span>
+                    <span className="font-medium">Billing</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -173,7 +173,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/settings">
                     <Settings className="w-4 h-4" />
-                    <span>Settings</span>
+                    <span className="font-medium">Settings</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -181,7 +181,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/integrations">
                     <Plug className="w-4 h-4" />
-                    <span>Integrations</span>
+                    <span className="font-medium">Integrations</span>
                     <span className="ml-auto border border-primary/50 text-primary text-xs px-2 py-0.5 rounded-full">
                       Coming Soon
                     </span>
@@ -192,7 +192,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
                 <SidebarMenuButton asChild>
                   <Link href="/mobile">
                     <Smartphone className="w-4 h-4" />
-                    <span>Mobile App</span>
+                    <span className="font-medium">Mobile App</span>
                     <span className="ml-auto border border-primary/50 text-primary text-xs px-2 py-0.5 rounded-full">
                       Coming Soon
                     </span>

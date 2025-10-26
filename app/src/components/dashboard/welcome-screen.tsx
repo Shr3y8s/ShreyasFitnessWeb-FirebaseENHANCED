@@ -30,7 +30,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-xl border bg-card p-6 space-y-3 shadow-sm hover:shadow-lg transition-shadow">
+          <div className="rounded-xl border bg-card p-6 space-y-3 shadow-sm hover:shadow-glow transition-shadow">
             <div className="flex items-center gap-2">
               <Dumbbell className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-xl font-semibold">Personalized Workouts</h3>
@@ -39,7 +39,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
               Access daily workouts tailored to your goals, complete with instructions and video guides.
             </p>
           </div>
-          <div className="rounded-xl border bg-card p-6 space-y-3 shadow-sm hover:shadow-lg transition-shadow">
+          <div className="rounded-xl border bg-card p-6 space-y-3 shadow-sm hover:shadow-glow transition-shadow">
             <div className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-xl font-semibold">Track Your Progress</h3>
@@ -48,7 +48,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
               Log your weights, reps, and sets to monitor strength gains and stay motivated.
             </p>
           </div>
-          <div className="rounded-xl border bg-card p-6 space-y-3 shadow-sm hover:shadow-lg transition-shadow">
+          <div className="rounded-xl border bg-card p-6 space-y-3 shadow-sm hover:shadow-glow transition-shadow">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
               <h3 className="text-xl font-semibold">Visualize Your Journey</h3>

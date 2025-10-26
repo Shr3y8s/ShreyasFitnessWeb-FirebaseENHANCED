@@ -10,7 +10,7 @@ interface OnboardingChecklistProps {
 
 export function OnboardingChecklist({ onDismiss, onSchedule }: OnboardingChecklistProps) {
   return (
-    <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-lg">
+    <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-glow">
       {onDismiss && (
         <Button
           variant="ghost"
