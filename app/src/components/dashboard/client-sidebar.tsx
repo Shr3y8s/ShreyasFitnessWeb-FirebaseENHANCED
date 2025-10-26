@@ -40,20 +40,20 @@ interface ClientSidebarProps {
 
 export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in-person-training', onLogout, onShowWelcome }: ClientSidebarProps) {
   return (
-    <Sidebar>
+    <Sidebar variant="floating">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-2 py-2">
+        <div className="flex items-center gap-3 px-3 py-3">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
             SF
           </div>
-          <span className="font-semibold text-lg">SHREY.FIT</span>
+          <span className="font-semibold text-base text-sidebar-foreground">SHREY.FIT</span>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         {/* General Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>General</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">General</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -70,7 +70,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
 
         {/* Tracking Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Tracking</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Tracking</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -125,7 +125,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
 
         {/* Support Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Support</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Support</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -150,7 +150,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
 
         {/* Account Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Account</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Account</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -205,7 +205,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="p-4 border-t border-border space-y-3">
+        <div className="p-3 border-t border-white/10 space-y-3">
           {/* Test Welcome Screen Button */}
           {onShowWelcome && (
             <Button
@@ -221,16 +221,16 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
           {/* User Info */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white flex-shrink-0">
+              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
                 SA
               </div>
-              <div>
-                <p className="font-semibold text-sm">{userName}</p>
-                <p className="text-xs text-primary font-semibold">{userTier}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-sidebar-foreground truncate">{userName}</p>
+                <p className="text-xs text-primary font-medium truncate">{userTier}</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onLogout} className="hover:bg-gray-100">
-              <LogOut className="w-5 h-5 text-primary" />
+            <Button variant="ghost" size="icon" onClick={onLogout} className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
