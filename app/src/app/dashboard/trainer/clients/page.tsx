@@ -436,7 +436,9 @@ export default function ClientsPage() {
                         <p className="text-gray-600 text-sm mb-4">
                           Send an announcement, reminder, or update to all selected clients at once.
                         </p>
-                        <Button onClick={() => alert('Group messaging coming in Phase 3!')}>
+                        <Button onClick={() => {
+                          router.push(`/dashboard/trainer/clients-messages?mode=compose&clients=${selectedClientIds.join(',')}`);
+                        }}>
                           <Mail className="h-4 w-4 mr-2" />
                           Compose Message
                         </Button>
