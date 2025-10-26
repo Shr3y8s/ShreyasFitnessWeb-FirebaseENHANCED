@@ -86,6 +86,7 @@ export default function ClientMessagesPage() {
   // Filter state
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [conversationSearchQuery, setConversationSearchQuery] = useState('');
+  const [messageSearchResults, setMessageSearchResults] = useState<Set<string>>(new Set());
   
   // UI state
   const [messageContent, setMessageContent] = useState('');
@@ -240,6 +241,54 @@ export default function ClientMessagesPage() {
     loadConversations();
   }, [user, clients, messages]);
 
+  // Search through all messages (debounced)
+  useEffect(() => {
+    if (!user || !conversationSearchQuery.trim() || mode !== 'view') {
+      setMessageSearchResults(new Set());
+      return;
+    }
+
+    const searchMessages = async () => {
+      const searchTerm = conversationSearchQuery.toLowerCase();
+      const matchingClientIds = new Set<string>();
+
+      // Search through all conversations
+      for (const client of clients) {
+        const conversationId = [user.uid, client.id].sort().join('_');
+        
+        try {
+          const messagesQuery = query(
+            collection(db, 'client_messages'),
+            where('conversationId', '==', conversationId)
+          );
+          
+          const snapshot = await getDocs(messagesQuery);
+          
+          // Check if any message in this conversation matches the search
+          const hasMatch = snapshot.docs.some(doc => {
+            const data = doc.data();
+            return data.content?.toLowerCase().includes(searchTerm);
+          });
+          
+          if (hasMatch) {
+            matchingClientIds.add(client.id);
+          }
+        } catch (error) {
+          console.error(`Error searching messages for ${client.name}:`, error);
+        }
+      }
+      
+      setMessageSearchResults(matchingClientIds);
+    };
+
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      searchMessages();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [user, conversationSearchQuery, clients, mode]);
+
   // Filter clients (compose mode)
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
@@ -250,10 +299,21 @@ export default function ClientMessagesPage() {
 
   // Filter conversations (view mode)
   const filteredConversations = clients.filter(client => {
-    const matchesSearch = 
-      client.name.toLowerCase().includes(conversationSearchQuery.toLowerCase()) ||
-      client.email.toLowerCase().includes(conversationSearchQuery.toLowerCase());
-    return matchesSearch;
+    const conversation = conversations.get(client.id);
+    const query = conversationSearchQuery.toLowerCase();
+    
+    // Quick matches (instant)
+    const matchesNameOrEmail = 
+      client.name.toLowerCase().includes(query) ||
+      client.email.toLowerCase().includes(query);
+    
+    const matchesLastMessage = 
+      conversation?.lastMessage?.toLowerCase().includes(query) ?? false;
+    
+    // Full message history match (from async search)
+    const matchesMessageHistory = messageSearchResults.has(client.id);
+    
+    return matchesNameOrEmail || matchesLastMessage || matchesMessageHistory;
   });
 
   // Selection handlers (compose mode)
