@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   House,
@@ -39,6 +40,8 @@ interface ClientSidebarProps {
 }
 
 export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in-person-training', onLogout, onShowWelcome }: ClientSidebarProps) {
+  const pathname = usePathname();
+  
   return (
     <Sidebar variant="floating">
       <SidebarHeader>
@@ -57,7 +60,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className="bg-primary text-white hover:bg-primary/90">
+                <SidebarMenuButton asChild className={pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/client' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/">
                     <House className="w-4 h-4" />
                     <span className="font-medium">Dashboard</span>
@@ -74,7 +77,7 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className={pathname === '/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/workouts">
                     <Dumbbell className="w-4 h-4" />
                     <span className="font-medium">My Workouts</span>
