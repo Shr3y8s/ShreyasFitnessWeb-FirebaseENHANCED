@@ -70,11 +70,9 @@ export function CoachUpdates() {
   const { coachUpdates, removeCoachUpdate, clearCoachUpdates } = useCoachUpdates();
   const router = useRouter();
 
-  const handleViewChanges = (type: NotificationType, id: number) => {
+  const handleViewChanges = (type: NotificationType) => {
     const route = updateConfig[type].route;
     router.push(route);
-    // Optionally dismiss after viewing
-    // removeCoachUpdate(id);
   };
 
   const handleDismiss = (id: number) => {
@@ -133,7 +131,7 @@ export function CoachUpdates() {
                         variant="link"
                         size="sm"
                         className="h-auto p-0 text-xs text-green-600 hover:text-green-700 cursor-pointer"
-                        onClick={() => handleViewChanges(update.type, update.id)}
+                        onClick={() => handleViewChanges(update.type)}
                       >
                         View Changes
                       </Button>
