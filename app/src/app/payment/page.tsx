@@ -103,12 +103,17 @@ export default function PaymentPage() {
           return;
         }
 
-        // Find recurring price for subscription
-        let recurringPrice: PriceInfo | null = null;
+        // Determine if this tier is a subscription or one-time payment
+        const productDetails = getProductDetails(data.tier);
+        const isSubscription = productDetails.isSubscription;
+        const expectedPriceType = isSubscription ? 'recurring' : 'one_time';
+
+        // Find the appropriate price based on payment type
+        let selectedPrice: PriceInfo | null = null;
         pricesSnapshot.forEach(doc => {
           const priceData = doc.data();
-          if (priceData.type === 'recurring') {
-            recurringPrice = {
+          if (priceData.type === expectedPriceType) {
+            selectedPrice = {
               id: doc.id,
               amount: priceData.unit_amount || 0,
               currency: priceData.currency || 'usd'
@@ -116,13 +121,13 @@ export default function PaymentPage() {
           }
         });
 
-        if (!recurringPrice) {
-          setError('Price information not available');
+        if (!selectedPrice) {
+          setError(`Price information not available for ${isSubscription ? 'subscription' : 'one-time payment'}`);
           setLoading(false);
           return;
         }
 
-        setPriceInfo(recurringPrice);
+        setPriceInfo(selectedPrice);
         setLoading(false);
 
       } catch (err) {
@@ -144,13 +149,19 @@ export default function PaymentPage() {
     try {
       console.log('Creating checkout session via Extension...');
       
+      // Determine checkout mode based on product type
+      const productDetails = getProductDetails(userData.tier);
+      const checkoutMode = productDetails.isSubscription ? 'subscription' : 'payment';
+      
+      console.log(`Creating ${checkoutMode} checkout for ${userData.tierName}`);
+      
       // PROPER APPROACH: Use Extension's checkout_sessions collection
       // The Extension watches this collection and creates the Stripe session
       const checkoutSessionData: any = {
         price: priceInfo.id,
         success_url: `${window.location.origin}/dashboard?payment=success`,
         cancel_url: `${window.location.origin}/payment`,
-        mode: 'subscription',
+        mode: checkoutMode,
         allow_promotion_codes: true,
         metadata: {
           userId: user.uid,
@@ -295,7 +306,9 @@ export default function PaymentPage() {
                     <div className="text-3xl font-bold text-emerald-600">
                       {formatCurrency(priceInfo.amount)}
                     </div>
-                    <div className="text-sm text-gray-600">per month</div>
+                    <div className="text-sm text-gray-600">
+                      {productDetails.isSubscription ? 'per month' : 'one-time'}
+                    </div>
                   </div>
                 </div>
                 
@@ -305,7 +318,12 @@ export default function PaymentPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 text-lg">{userData.tierName}</p>
-                    <p className="text-sm text-gray-600">Monthly subscription • Cancel anytime</p>
+                    <p className="text-sm text-gray-600">
+                      {productDetails.isSubscription 
+                        ? 'Monthly subscription • Cancel anytime'
+                        : 'One-time payment • No recurring charges'
+                      }
+                    </p>
                   </div>
                 </div>
 
@@ -344,7 +362,9 @@ export default function PaymentPage() {
                     Processing...
                   </div>
                 ) : (
-                  `Complete Payment • ${formatCurrency(priceInfo.amount)}/month`
+                  productDetails.isSubscription
+                    ? `Complete Payment • ${formatCurrency(priceInfo.amount)}/month`
+                    : `Complete Payment • ${formatCurrency(priceInfo.amount)}`
                 )}
               </Button>
 

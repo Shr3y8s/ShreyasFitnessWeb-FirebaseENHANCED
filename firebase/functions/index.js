@@ -189,6 +189,65 @@ exports.createPortalSession = onCall({
  */
 
 /**
+ * Firestore trigger to sync ONE-TIME payment status from stripe_customers to users
+ * This handles one-time payments like 4-pack sessions or single training sessions
+ * Triggered whenever a payment document is created or updated in the payments subcollection
+ */
+exports.syncPaymentToUser = onDocumentWritten({
+  document: "stripe_customers/{userId}/payments/{paymentId}",
+  region: "us-west1",
+}, async (event) => {
+  const change = event.data;
+  const userId = event.params.userId;
+  const paymentId = event.params.paymentId;
+
+  try {
+    // If payment was deleted
+    if (!change.after.exists) {
+      logger.info("Payment deleted", {userId, paymentId});
+      return null;
+    }
+
+    const paymentData = change.after.data();
+    const status = paymentData.status;
+
+    logger.info("One-time payment detected, syncing to user", {
+      userId,
+      paymentId,
+      status,
+      amount: paymentData.amount,
+    });
+
+    // For one-time payments, if status is 'succeeded', mark user as active
+    if (status === "succeeded") {
+      await admin.firestore().collection("users").doc(userId).update({
+        paymentStatus: "active",
+        lastPaymentId: paymentId,
+        lastPaymentAmount: paymentData.amount || 0,
+        lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      logger.info("User payment status synced successfully (one-time payment)", {
+        userId,
+        paymentStatus: "active",
+        paymentId,
+      });
+    }
+
+    return null;
+  } catch (error) {
+    logger.error("Error syncing one-time payment to user", {
+      error: error.message,
+      userId,
+      paymentId,
+    });
+    // Don't throw - this is a trigger function
+    return null;
+  }
+});
+
+/**
  * Firestore trigger to sync subscription status from stripe_customers to users
  * This bridges the Stripe Extension (which updates stripe_customers)
  * with our users collection (which tracks paymentStatus)
