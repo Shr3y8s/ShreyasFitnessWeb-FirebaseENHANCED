@@ -1,6 +1,58 @@
 // src/lib/firebase.ts
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
+
+/**
+ * Translates Firebase error codes to user-friendly messages
+ * @param error - Firebase error object or error message string
+ * @returns User-friendly error message
+ */
+export function getFirebaseErrorMessage(error: any): string {
+  // Extract error code from Firebase error
+  const errorCode = error?.code || error?.message || '';
+  const errorString = String(errorCode).toLowerCase();
+
+  // Map Firebase error codes to user-friendly messages
+  if (errorString.includes('invalid-credential') || errorString.includes('invalid-login-credentials')) {
+    return 'Invalid email or password. Please check your credentials and try again.';
+  }
+  if (errorString.includes('user-not-found')) {
+    return 'No account found with this email address. Please sign up first.';
+  }
+  if (errorString.includes('wrong-password')) {
+    return 'Incorrect password. Please try again.';
+  }
+  if (errorString.includes('email-already-in-use')) {
+    return 'An account with this email already exists. Please sign in instead.';
+  }
+  if (errorString.includes('weak-password')) {
+    return 'Password is too weak. Please use at least 6 characters.';
+  }
+  if (errorString.includes('invalid-email')) {
+    return 'Please enter a valid email address.';
+  }
+  if (errorString.includes('too-many-requests')) {
+    return 'Too many failed login attempts. Please try again later or reset your password.';
+  }
+  if (errorString.includes('user-disabled')) {
+    return 'This account has been disabled. Please contact support for assistance.';
+  }
+  if (errorString.includes('network-request-failed')) {
+    return 'Network error. Please check your internet connection and try again.';
+  }
+  if (errorString.includes('operation-not-allowed')) {
+    return 'This sign-in method is not enabled. Please contact support.';
+  }
+  if (errorString.includes('popup-closed-by-user')) {
+    return 'Sign-in cancelled. Please try again.';
+  }
+  if (errorString.includes('cancelled-popup-request')) {
+    return 'Only one sign-in popup allowed at a time.';
+  }
+
+  // Default message for unknown errors
+  return 'An error occurred. Please try again or contact support if the problem persists.';
+}
 import { 
   getAuth, 
   createUserWithEmailAndPassword,

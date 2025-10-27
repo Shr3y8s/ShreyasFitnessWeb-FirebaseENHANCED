@@ -5,11 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createUserWithTier, auth } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Check, UserPlus, Crown, CreditCard, CheckCircle, Star, Target, Clock } from 'lucide-react';
+import { Check, UserPlus, Crown, Star, Target, Clock } from 'lucide-react';
 import AccountInfoStep from './components/AccountInfoStep';
 import ServiceTierStep from './components/ServiceTierStep';
-import PaymentStep from './components/PaymentStep';
-import ConfirmationStep from './components/ConfirmationStep';
 
 // Service tier type - matching Firebase interface
 export interface ServiceTier {

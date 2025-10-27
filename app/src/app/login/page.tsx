@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInUser, signInWithGoogleAuth } from '@/lib/firebase';
+import { signInUser, signInWithGoogleAuth, getFirebaseErrorMessage } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +29,10 @@ export default function LoginPage() {
       if (result.success) {
         router.push('/dashboard');
       } else {
-        setError(result.error?.message || 'Login failed');
+        setError(getFirebaseErrorMessage(result.error));
       }
     } catch (err) {
-      setError((err as Error).message || 'An unexpected error occurred');
+      setError(getFirebaseErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +46,7 @@ export default function LoginPage() {
       await signInWithGoogleAuth();
       router.push('/dashboard');
     } catch (err) {
-      setError((err as Error).message || 'Google sign-in failed');
+      setError(getFirebaseErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

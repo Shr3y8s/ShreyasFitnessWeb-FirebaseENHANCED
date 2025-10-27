@@ -11,7 +11,6 @@ import { Dumbbell, Target, TrendingUp, Sparkles, RefreshCcw, CircleCheckBig, Clo
 export default function DashboardWelcomePage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [hideWelcome, setHideWelcome] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,7 +62,9 @@ export default function DashboardWelcomePage() {
   };
 
   const handleContinueToDashboard = async () => {
-    if (hideWelcome && user) {
+    // ALWAYS set hideWelcomeDashboard to true after viewing welcome screen once
+    // This prevents the duplicate welcome screen issue in /dashboard/client
+    if (user) {
       try {
         await setDoc(doc(db, 'users', user.uid), 
           { hideWelcomeDashboard: true }, 
@@ -211,29 +212,13 @@ export default function DashboardWelcomePage() {
         </div>
 
         {/* Continue Button */}
-        <div className="text-center space-y-4">
+        <div className="text-center">
           <Button 
             onClick={handleContinueToDashboard}
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 rounded-md px-8"
           >
             Continue to My Dashboard
           </Button>
-          
-          <div className="flex items-center justify-center space-x-2">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={hideWelcome}
-              onClick={() => setHideWelcome(!hideWelcome)}
-              className={`peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                hideWelcome ? 'bg-primary text-primary-foreground' : ''
-              }`}
-              id="show-welcome"
-            />
-            <label htmlFor="show-welcome" className="text-sm font-medium leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Don&apos;t show this welcome screen again
-            </label>
-          </div>
         </div>
       </div>
     </div>
