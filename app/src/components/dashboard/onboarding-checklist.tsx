@@ -1,7 +1,15 @@
 "use client";
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, X, ArrowRight } from 'lucide-react';
+import { ClipboardList, X, ArrowRight, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const onboardingSteps = [
+  { id: 'schedule', label: 'Schedule your 30-minute planning consultation' },
+  { id: 'complete', label: 'Complete your consultation' },
+  { id: 'receive', label: 'Receive your personalized fitness plan' },
+];
 
 interface OnboardingChecklistProps {
   onDismiss?: () => void;
@@ -9,8 +17,13 @@ interface OnboardingChecklistProps {
 }
 
 export function OnboardingChecklist({ onDismiss, onSchedule }: OnboardingChecklistProps) {
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+
+  const handleCheckedChange = (id: string) => {
+    setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
   return (
-    <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-lg">
+    <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-glow">
       {onDismiss && (
         <Button
           variant="ghost"
@@ -45,24 +58,42 @@ export function OnboardingChecklist({ onDismiss, onSchedule }: OnboardingCheckli
       </div>
       <div className="p-6 pt-0">
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="h-4 w-4 rounded-sm border border-primary"></div>
-            <label className="text-sm font-medium cursor-pointer">
-              Schedule your 30-minute planning consultation
-            </label>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-4 w-4 rounded-sm border border-primary"></div>
-            <label className="text-sm font-medium cursor-pointer">
-              Complete your consultation
-            </label>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="h-4 w-4 rounded-sm border border-primary"></div>
-            <label className="text-sm font-medium cursor-pointer">
-              Receive your personalized fitness plan
-            </label>
-          </div>
+          {onboardingSteps.map((step) => (
+            <div key={step.id} className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id={step.id}
+                checked={!!checkedItems[step.id]}
+                onChange={() => handleCheckedChange(step.id)}
+                className="sr-only"
+              />
+              <label
+                htmlFor={step.id}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div
+                  className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                    checkedItems[step.id]
+                      ? "bg-primary border-primary"
+                      : "border-primary bg-transparent"
+                  )}
+                >
+                  {checkedItems[step.id] && (
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "text-sm font-medium transition-colors select-text",
+                    checkedItems[step.id] ? "text-muted-foreground line-through" : "text-foreground"
+                  )}
+                >
+                  {step.label}
+                </span>
+              </label>
+            </div>
+          ))}
         </div>
       </div>
     </div>

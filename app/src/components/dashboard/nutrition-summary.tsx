@@ -10,7 +10,7 @@ interface NutritionSummaryProps {
 
 export function NutritionSummary({ onLogMeal, onAddWater }: NutritionSummaryProps) {
   return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg">
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-glow">
       <div className="flex p-6 flex-row items-start justify-between">
         <div>
           <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">

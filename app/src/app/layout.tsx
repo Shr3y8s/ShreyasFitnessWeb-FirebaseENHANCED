@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth-context';
+import { CoachUpdatesProvider } from '@/context/CoachUpdatesContext';
 
 export const metadata: Metadata = {
   title: 'SHREY.FIT',
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          {children}
+          <CoachUpdatesProvider>
+            {children}
+          </CoachUpdatesProvider>
         </AuthProvider>
       </body>
     </html>

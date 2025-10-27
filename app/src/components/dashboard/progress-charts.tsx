@@ -14,7 +14,7 @@ const chartData = [
 
 export function ProgressCharts() {
   return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg">
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-glow">
       <div className="flex flex-col space-y-1.5 p-6">
         <div className="flex items-center gap-3">
           <Activity className="w-6 h-6 text-primary" />

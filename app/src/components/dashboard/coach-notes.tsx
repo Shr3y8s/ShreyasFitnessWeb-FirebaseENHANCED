@@ -9,7 +9,7 @@ interface CoachNotesProps {
 
 export function CoachNotes({ coachName, message }: CoachNotesProps) {
   return (
-    <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/5 border-primary/50 hover:shadow-lg">
+    <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/5 border-primary/50 hover:shadow-glow">
       <div className="flex flex-col space-y-1.5 p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">

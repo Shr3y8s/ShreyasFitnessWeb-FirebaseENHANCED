@@ -15,7 +15,7 @@ interface UpcomingWorkoutReminderProps {
 
 export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProps) {
   return (
-    <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/10 border-primary/50 flex flex-col hover:shadow-lg">
+    <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/10 border-primary/50 flex flex-col hover:shadow-glow">
       <div className="flex p-6 flex-row gap-4 items-center">
         <div className="p-3 bg-primary/20 rounded-full">
           <Calendar className="text-primary w-6 h-6" />

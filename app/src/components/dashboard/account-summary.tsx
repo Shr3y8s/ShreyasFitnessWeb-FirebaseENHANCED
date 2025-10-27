@@ -4,7 +4,7 @@ import { User, Calendar, CreditCard, CircleCheckBig } from 'lucide-react';
 
 export function AccountSummary() {
   return (
-    <div className="rounded-xl border text-card-foreground shadow-sm bg-secondary/30 flex flex-col h-full hover:shadow-lg">
+    <div className="rounded-xl border text-card-foreground shadow-sm bg-secondary/30 flex flex-col h-full hover:shadow-glow">
       <div className="flex flex-col space-y-1.5 p-6">
         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <User className="h-5 w-5 text-primary" />

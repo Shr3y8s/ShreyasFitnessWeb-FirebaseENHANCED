@@ -1,20 +1,37 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
 
   // If user is logged in, redirect to dashboard
   useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
+    if (!loading) {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        setIsChecking(false);
+      }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+
+  // Show loading state while checking auth
+  if (loading || isChecking) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-stone-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6">
