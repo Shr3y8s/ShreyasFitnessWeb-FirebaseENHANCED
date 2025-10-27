@@ -1,6 +1,11 @@
 const {onRequest, onCall} = require("firebase-functions/v2/https");
+const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {defineSecret} = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
+const admin = require("firebase-admin");
+
+// Initialize Firebase Admin
+admin.initializeApp();
 
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
@@ -41,6 +46,7 @@ exports.basicCallable = onCall({
 exports.createPaymentIntent = onCall({
   region: "us-west1",
   secrets: [stripeKey],
+  cors: true,
 }, async (request) => {
   try {
     logger.info("Starting payment intent creation");
@@ -128,43 +134,64 @@ exports.createPaymentIntent = onCall({
 /**
  * Create a checkout session for subscriptions
  * This redirects the user to the Stripe Checkout page
- * @param {Object} request - The callable function request
- * @return {Object} Session ID for redirect
+ * HTTP endpoint with full CORS support for unauthenticated calls
+ * @param {Object} req - The HTTP request
+ * @param {Object} res - The HTTP response
+ * @return {Object} HTTP response
  */
-exports.createCheckoutSession = onCall({
+exports.createCheckoutSession = onRequest({
   region: "us-west1",
   secrets: [stripeKey],
-}, async (request) => {
+}, async (req, res) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Max-Age", "3600");
+    res.status(204).send("");
+    return;
+  }
+
+  // Set CORS headers for actual request
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
   try {
+    // Only allow POST requests
+    if (req.method !== "POST") {
+      return res.status(405).json({error: "Method not allowed"});
+    }
+
+    // Parse request body
+    const data = req.body;
+
     // Validate input data
-    const hasValidLineItems = request.data && request.data.line_items &&
-      Array.isArray(request.data.line_items) && request.data.line_items.length > 0;
+    const hasValidLineItems = data && data.line_items &&
+      Array.isArray(data.line_items) && data.line_items.length > 0;
 
     if (!hasValidLineItems) {
-      const error = new Error("Missing or invalid required parameter: line_items");
       logger.error("Checkout session creation failed - invalid line_items", {
-        requestData: request.data,
+        requestData: data,
       });
-      throw error;
+      return res.status(400).json({
+        error: "Missing or invalid required parameter: line_items",
+      });
     }
 
-    // For development/testing: Allow unauthenticated calls with testing flag
-    const isTestMode = request.data && request.data.isTestMode;
-    if (!request.auth && !isTestMode) {
-      const error = new Error("The function must be called while authenticated.");
-      logger.error("Checkout session creation failed - not authenticated", {
-        isTestMode: isTestMode,
-      });
-      throw error;
-    }
+    // Allow unauthenticated calls for new account creation (payment-first flow)
+    const isNewSignup = data.metadata && data.metadata.createAccount === "true";
+    const isTestMode = data.isTestMode;
 
-    // Get user ID (or use test-user-id for testing)
-    const userId = request.auth ? request.auth.uid : "test-user-id";
+    // Get user ID (use email for new signups, otherwise would use auth)
+    const userId = isNewSignup ? `pending-${data.customer_email}` : "test-user-id";
 
     logger.info("Creating checkout session", {
       userId: userId,
-      lineItems: request.data.line_items,
+      lineItems: data.line_items,
       isTestMode: isTestMode,
+      isNewSignup: isNewSignup,
     });
 
     // Initialize Stripe with the secret key
@@ -175,117 +202,191 @@ exports.createCheckoutSession = onCall({
     // Create the checkout session with provided line items
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      line_items: request.data.line_items,
+      line_items: data.line_items,
       mode: "subscription",
-      success_url: request.data.success_url ||
+      success_url: data.success_url ||
         `${process.env.PUBLIC_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: request.data.cancel_url ||
+      cancel_url: data.cancel_url ||
         `${process.env.PUBLIC_URL}/canceled`,
       client_reference_id: userId,
-      customer_email: request.data.customer_email || "test@example.com",
-      billing_address_collection: request.data.billing_address_collection ||
+      customer_email: data.customer_email || "test@example.com",
+      billing_address_collection: data.billing_address_collection ||
         "required",
-      allow_promotion_codes: request.data.allow_promotion_codes || true,
-      metadata: request.data.metadata || {},
+      allow_promotion_codes: data.allow_promotion_codes !== false,
+      metadata: data.metadata || {},
       subscription_data: {
         metadata: {
           userId: userId,
           isTestMode: isTestMode || false,
-          ...request.data.metadata,
+          ...data.metadata,
         },
       },
     });
 
     logger.info("Checkout session created successfully", {
       sessionId: session.id,
+      url: session.url,
+      userId: userId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      url: session.url,
+    });
+  } catch (error) {
+    logger.error("Error creating checkout session", {
+      error: error.message,
+      stack: error.stack,
+    });
+
+    return res.status(500).json({
+      error: `Checkout session creation failed: ${error.message}`,
+    });
+  }
+});
+
+/**
+ * Create a customer portal session for subscription management
+ * This allows customers to manage their subscriptions, update payment methods, etc.
+ * @param {Object} request - The callable function request
+ * @return {Object} Portal session URL
+ */
+exports.createPortalSession = onCall({
+  region: "us-west1",
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Validate input data
+    if (!request.data || !request.data.customerId) {
+      const error = new Error("Missing required parameter: customerId");
+      logger.error("Portal session creation failed - missing customerId", {
+        requestData: request.data,
+      });
+      throw error;
+    }
+
+    // Require authentication
+    if (!request.auth) {
+      const error = new Error("The function must be called while authenticated.");
+      logger.error("Portal session creation failed - not authenticated");
+      throw error;
+    }
+
+    const userId = request.auth.uid;
+
+    logger.info("Creating customer portal session", {
+      userId: userId,
+      customerId: request.data.customerId,
+    });
+
+    // Initialize Stripe with the secret key
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2025-07-30.basil",
+    });
+
+    // Create the customer portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: request.data.customerId,
+      return_url: request.data.return_url ||
+        `${process.env.PUBLIC_URL}/dashboard`,
+    });
+
+    logger.info("Customer portal session created successfully", {
+      sessionId: session.id,
+      url: session.url,
       userId: userId,
     });
 
     return {
       success: true,
-      sessionId: session.id,
+      url: session.url,
     };
   } catch (error) {
-    logger.error("Error creating checkout session", {
+    logger.error("Error creating customer portal session", {
       error: error.message,
       stack: error.stack,
       requestData: request.data,
     });
 
     // Re-throw with proper callable function error handling
-    throw new Error(`Checkout session creation failed: ${error.message}`);
+    throw new Error(`Portal session creation failed: ${error.message}`);
   }
 });
 
 /**
- * Webhook handler for Stripe events
- * This ensures data consistency between Stripe and Firebase
- * @param {Object} req - The HTTP request
- * @param {Object} res - The HTTP response
- * @return {Object} HTTP response
+ * REMOVED: Custom webhook handler
+ * 
+ * This function has been removed because we're now using the Stripe Extension's
+ * built-in webhook handler which properly manages all webhook events.
+ * 
+ * The Extension handles:
+ * - checkout.session.completed
+ * - customer.subscription.created/updated/deleted
+ * - invoice.payment_succeeded/failed
+ * 
+ * Our syncSubscriptionToUser trigger below handles copying subscription status
+ * from stripe_customers to the users collection.
  */
-exports.stripeWebhook = onRequest({
-  region: "us-west1",
-  secrets: [stripeKey],
-}, (req, res) => {
-  // Handle preflight requests for CORS directly
-  if (req.method === "OPTIONS") {
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Methods", "POST");
-    res.set("Access-Control-Allow-Headers", "Content-Type, stripe-signature");
-    res.set("Access-Control-Max-Age", "3600");
-    res.status(204).send("");
-    return;
-  }
 
-  // Initialize Stripe with the secret key
-  const stripe = require("stripe")(stripeKey.value(), {
-    apiVersion: "2025-07-30.basil",
-  });
+/**
+ * Firestore trigger to sync subscription status from stripe_customers to users
+ * This bridges the Stripe Extension (which updates stripe_customers)
+ * with our users collection (which tracks paymentStatus)
+ * Triggered whenever a subscription document is created or updated
+ */
+exports.syncSubscriptionToUser = onDocumentWritten({
+  document: "stripe_customers/{userId}/subscriptions/{subscriptionId}",
+  region: "us-west1",
+}, async (event) => {
+  const change = event.data;
+  const userId = event.params.userId;
+  const subscriptionId = event.params.subscriptionId;
 
   try {
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || stripeKey.value();
-
-    if (!webhookSecret) {
-      logger.error("Webhook secret not configured");
-      return res.status(500).json({error: "Webhook secret not configured"});
+    // If subscription was deleted
+    if (!change.after.exists) {
+      logger.info("Subscription deleted, updating user", {userId, subscriptionId});
+      await admin.firestore().collection("users").doc(userId).update({
+        paymentStatus: "cancelled",
+        subscriptionEndedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return null;
     }
 
-    const sig = req.headers["stripe-signature"];
+    const subscriptionData = change.after.data();
+    const status = subscriptionData.status;
 
-    // Verify and construct the event
-    const event = stripe.webhooks.constructEvent(req.rawBody, sig, webhookSecret);
+    logger.info("Subscription change detected, syncing to user", {
+      userId,
+      subscriptionId,
+      status,
+    });
 
-    logger.info(`Webhook received: ${event.type}`);
+    // Update the users collection with payment status
+    // Only update paymentStatus - don't duplicate stripeId/stripeLink
+    await admin.firestore().collection("users").doc(userId).update({
+      paymentStatus: status === "active" ? "active" : "pending",
+      subscriptionId: subscriptionId,
+      subscriptionStatus: status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-    // Handle the event based on its type
-    switch (event.type) {
-      case "payment_intent.succeeded": {
-        const paymentIntent = event.data.object;
-        logger.info("Payment succeeded:", paymentIntent.id);
-        break;
-      }
+    logger.info("User payment status synced successfully", {
+      userId,
+      paymentStatus: status === "active" ? "active" : "pending",
+      subscriptionId,
+    });
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-      case "invoice.payment_succeeded":
-      case "invoice.payment_failed":
-        // Log event details
-        logger.info(`${event.type} event received:`, {
-          id: event.data.object.id,
-          customer: event.data.object.customer,
-        });
-        break;
-
-      default:
-        logger.info(`Unhandled event type: ${event.type}`);
-    }
-
-    // Return a 200 response to acknowledge receipt of the event
-    return res.status(200).json({received: true});
-  } catch (err) {
-    logger.error(`Webhook Error: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    return null;
+  } catch (error) {
+    logger.error("Error syncing subscription to user", {
+      error: error.message,
+      userId,
+      subscriptionId,
+    });
+    // Don't throw - this is a trigger function
+    return null;
   }
 });

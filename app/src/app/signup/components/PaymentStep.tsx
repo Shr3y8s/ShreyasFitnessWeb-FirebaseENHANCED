@@ -17,7 +17,7 @@ interface PaymentIntentResponse {
 }
 
 interface CheckoutSessionResponse {
-  sessionId: string;
+  url: string;
 }
 
 interface PriceInfo {
@@ -61,34 +61,40 @@ function SubscriptionPaymentForm({
     setIsProcessing(true);
     setPaymentError('');
 
-    if (!currentUser) {
-      setPaymentError('Payment system not ready. Please try again.');
-      setIsProcessing(false);
-      return;
-    }
-
     try {
-      // Subscription flow: Create Stripe Checkout session and redirect
-      const createCheckoutSession = httpsCallable(functions, 'createCheckoutSession');
-      
-      const result = await createCheckoutSession({
-        line_items: [{ price: priceInfo.fullPrice, quantity: 1 }],
-        success_url: `${window.location.origin}/payment-success`,
-        cancel_url: `${window.location.origin}/signup`,
-        billing_address_collection: 'required',
-        client_reference_id: currentUser.uid,
-        customer_email: formData.email,
-        allow_promotion_codes: true,
-        metadata: {
-          tier: formData.tier?.id || ''
-        }
+      // Subscription flow: Create Stripe Checkout session via HTTP endpoint
+      const response = await fetch('https://us-west1-shreyfitweb.cloudfunctions.net/createCheckoutSession', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          line_items: [{ price: priceInfo.fullPrice, quantity: 1 }],
+          success_url: `${window.location.origin}/account-setup?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${window.location.origin}/signup`,
+          billing_address_collection: 'required',
+          customer_email: formData.email,
+          allow_promotion_codes: true,
+          metadata: {
+            userName: formData.name,
+            userEmail: formData.email,
+            tierName: formData.tier?.name || 'Unknown',
+            tierId: formData.tier?.id || 'unknown',
+            createAccount: 'true'
+          }
+        })
       });
 
-      const data = result.data as CheckoutSessionResponse;
-      const { sessionId } = data;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
+      const data = await response.json();
+      const { url } = data;
       
-      // Redirect to Stripe Checkout using window.location for subscriptions
-      window.location.href = `https://checkout.stripe.com/pay/${sessionId}`;
+      // Redirect to Stripe Checkout using the URL from the session
+      window.location.href = url;
       
     } catch (err) {
       console.error('Payment error:', err);

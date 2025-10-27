@@ -108,8 +108,18 @@ export async function createUserWithTier(email: string, password: string, name: 
       name: name,
       email: email,
       phone: phone || null,
-      tier: tier,
+      tier: tier.id,
+      tierName: tier.name,
+      paymentStatus: 'pending', // Account created, payment not yet completed
       role: 'client',
+      createdAt: serverTimestamp()
+    });
+    
+    // CRITICAL: Create stripe_customers document for Stripe Extension
+    // The Extension expects this document to exist for webhooks to work
+    await setDoc(doc(db, 'stripe_customers', userId), {
+      email: email,
+      name: name,
       createdAt: serverTimestamp()
     });
     

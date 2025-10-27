@@ -70,19 +70,34 @@ export default function SignupPage() {
   const nextStep = () => setCurrentStep(currentStep + 1);
   const prevStep = () => setCurrentStep(currentStep - 1);
 
-  // Create user account before proceeding to payment
-  const handleCreateAccount = async () => {
+  // Create account after tier selection, then redirect to payment
+  const handleCreateAccountAndRedirect = async () => {
+    setIsSubmitting(true);
+    setError('');
+    
+    if (!formData.tier) {
+      setError('Please select a service tier');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    // Validate all required fields
+    if (!formData.email || !formData.name || !formData.password) {
+      setError('Please fill in all required fields');
+      setIsSubmitting(false);
+      return;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setIsSubmitting(false);
+      return;
+    }
+    
     try {
-      setIsSubmitting(true);
-      setError('');
+      console.log("Creating account with pending payment status");
       
-      if (!formData.tier) {
-        setError('Please select a service tier');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Create user with tier info
+      // Create Firebase Auth account with paymentStatus: "pending"
       const result = await createUserWithTier(
         formData.email,
         formData.password,
@@ -92,74 +107,22 @@ export default function SignupPage() {
       );
       
       if (!result.success) {
-        // Handle specific Firebase auth errors
-        const errorCode = result.error?.message || '';
-        
-        if (errorCode.includes('auth/email-already-in-use')) {
-          setError('This email is already registered. Please sign in instead or use a different email address.');
-        } else if (errorCode.includes('auth/weak-password')) {
-          setError('Password is too weak. Please choose a stronger password (at least 6 characters).');
-        } else if (errorCode.includes('auth/invalid-email')) {
-          setError('Please enter a valid email address.');
-        } else if (errorCode.includes('auth/operation-not-allowed')) {
-          setError('Email/password accounts are not enabled. Please contact support.');
-        } else {
-          setError(result.error?.message || 'Failed to create account. Please try again.');
-        }
-        
-        setIsSubmitting(false);
-        return; // Stop the signup process
+        throw result.error || new Error('Failed to create account');
       }
       
-      console.log("Account created successfully");
-      setIsSubmitting(false);
-      nextStep(); // Proceed to payment step
+      console.log("Account created successfully, redirecting to payment");
+      
+      // Redirect to payment page
+      router.push('/payment');
+      
     } catch (error) {
       console.error('Account creation error:', error);
-      
-      // Handle unexpected errors
-      const errorMessage = (error as Error).message;
-      
-      if (errorMessage.includes('auth/email-already-in-use')) {
-        setError('This email is already registered. Please sign in instead or use a different email address.');
-      } else if (errorMessage.includes('auth/weak-password')) {
-        setError('Password is too weak. Please choose a stronger password (at least 6 characters).');
-      } else if (errorMessage.includes('auth/invalid-email')) {
-        setError('Please enter a valid email address.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-      
-      setIsSubmitting(false);
-    }
-  };
-
-  // Function to handle payment completion
-  const handlePaymentComplete = () => {
-    console.log("Payment completed successfully");
-    // State update removed: setPaymentComplete(true);
-    nextStep();
-  };
-
-  // Final submit after payment and confirmation
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setError('');
-    
-    try {
-      console.log("Signup flow complete");
-      
-      // Redirect to dashboard
-      router.push('/dashboard');
-      
-    } catch (error) {
-      console.error('Signup error:', error);
       setError((error as Error).message);
       setIsSubmitting(false);
     }
   };
 
-  // Render the current step
+  // Render the current step (only 2 steps now: Account Info → Tier Selection)
   const renderStep = () => {
     switch(currentStep) {
       case 1:
@@ -176,31 +139,10 @@ export default function SignupPage() {
           <ServiceTierStep 
             formData={formData} 
             updateFormData={updateFormData} 
-            nextStep={handleCreateAccount} 
+            nextStep={handleCreateAccountAndRedirect} 
             prevStep={prevStep}
             error={error}
             isSubmitting={isSubmitting}
-          />
-        );
-      case 3:
-        return (
-          <PaymentStep 
-            formData={formData} 
-            updateFormData={updateFormData} 
-            nextStep={handlePaymentComplete} 
-            prevStep={prevStep}
-            error={error}
-            currentUser={currentUser}
-          />
-        );
-      case 4:
-        return (
-          <ConfirmationStep 
-            formData={formData} 
-            handleSubmit={handleSubmit} 
-            prevStep={prevStep}
-            isSubmitting={isSubmitting}
-            error={error}
           />
         );
       default:
@@ -215,8 +157,8 @@ export default function SignupPage() {
     }
   };
 
-  const stepIcons = [UserPlus, Crown, CreditCard, CheckCircle];
-  const stepTitles = ['Account', 'Select Plan', 'Payment', 'Confirm'];
+  const stepIcons = [UserPlus, Crown];
+  const stepTitles = ['Account Info', 'Select Plan'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -293,8 +235,8 @@ export default function SignupPage() {
                 <CardHeader className="pb-6">
                   {/* Progress indicator */}
                   <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                      {[1, 2, 3, 4].map((step, index) => {
+                    <div className="flex items-center justify-center gap-8">
+                      {[1, 2].map((step, index) => {
                         const StepIcon = stepIcons[index];
                         return (
                           <div key={step} className="flex items-center">
@@ -316,9 +258,9 @@ export default function SignupPage() {
                                 {stepTitles[index]}
                               </div>
                             </div>
-                            {step < 4 && (
+                            {step < 2 && (
                               <div className={`
-                                w-16 h-0.5 mx-4 transition-all duration-200
+                                w-24 h-0.5 transition-all duration-200
                                 ${currentStep > step 
                                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
                                   : 'bg-gray-200'

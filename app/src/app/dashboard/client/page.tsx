@@ -75,16 +75,45 @@ export default function ClientDashboardPage() {
     const fetchUserData = async () => {
       if (user) {
         try {
+          console.log('[ClientDashboard] Fetching data for user:', user.uid);
           const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (!userDoc.exists()) {
+            console.error('[ClientDashboard] User document does not exist in Firestore!');
+            console.error('[ClientDashboard] User UID:', user.uid);
+            console.error('[ClientDashboard] User email:', user.email);
+            setUserData(null);
+            setLoading(false);
+            return;
+          }
+          
           const data = userDoc.data() as UserData;
+          console.log('[ClientDashboard] User data loaded:', { 
+            name: data?.name, 
+            email: data?.email, 
+            role: data?.role,
+            tier: data?.tier
+          });
+          
+          // CRITICAL: Check payment status before allowing dashboard access
+          if (data?.role === 'client' && (data as any)?.paymentStatus !== 'active') {
+            console.log('[ClientDashboard] Payment not complete, redirecting to payment');
+            router.push('/payment');
+            return;
+          }
+          
           setUserData(data || null);
+          
           // Check if we should show welcome screen
           if (!data?.hideWelcomeDashboard) {
+            console.log('[ClientDashboard] Showing welcome screen');
             setShowWelcomeScreen(true);
           }
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          console.error('[ClientDashboard] Error fetching user data:', error);
         }
+      } else {
+        console.log('[ClientDashboard] No user authenticated');
       }
       setLoading(false);
     };

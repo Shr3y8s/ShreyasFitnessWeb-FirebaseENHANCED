@@ -21,6 +21,13 @@ export default function DashboardWelcomePage() {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           const userData = userDoc.data();
           
+          // CRITICAL: Check payment status FIRST
+          if (userData?.role === 'client' && userData?.paymentStatus !== 'active') {
+            // Redirect to payment if not paid
+            router.push('/payment');
+            return;
+          }
+          
           // Check user role and redirect appropriately
           if (userData?.role === 'trainer' || userData?.role === 'admin') {
             router.push('/dashboard/trainer');

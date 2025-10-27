@@ -41,12 +41,15 @@ service cloud.firestore {
       allow read: if isTrainerOrAdmin();
       
       // Allow users to update their own profile with validation
+      // IMPORTANT: Users cannot modify role, createdAt, or paymentStatus (only Stripe Extension can update paymentStatus)
       allow update: if isOwner(userId) &&
                     (!request.resource.data.diff(resource.data).affectedKeys()
-                      .hasAny(['role', 'createdAt'])); // Prevent changing role or creation date
+                      .hasAny(['role', 'createdAt', 'paymentStatus', 'stripeCustomerId', 'subscriptionId']));
                       
       // Allow initial creation of user documents (for signup process)
-      allow create: if isOwner(userId);
+      // Users can create their account with paymentStatus: "pending"
+      allow create: if isOwner(userId) &&
+                    request.resource.data.paymentStatus == 'pending';
     
       // Dashboard data collection
       match /dashboard_data/{docId} {
@@ -222,13 +225,38 @@ service cloud.firestore {
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
     
-    // TEMPORARY rules for Stripe collections during development
+    // Stripe Products - Public read access
     match /stripe_products/{document=**} {
-      allow read: if true;  // Allow public reads for testing
+      allow read: if true;  // Allow public reads for product/price info
     }
     
-    match /stripe_customers/{customerId}/{document=**} {
-      allow read: if true;  // Allow public reads for testing
+    // Stripe Customers - User-specific access with Extension support
+    match /stripe_customers/{userId} {
+      // Users can create their own customer document during signup
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can read their own customer data
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Only Extension/Admin can update (Extension uses admin SDK so bypasses rules)
+      allow update, delete: if false;
+      
+      // Subscriptions subcollection - managed by Extension
+      match /subscriptions/{subscriptionId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow write: if false; // Only Extension can write
+      }
+      
+      // Payments subcollection - managed by Extension
+      match /payments/{paymentId} {
+        allow read: if isAuthenticated() && request.auth.uid == userId;
+        allow write: if false; // Only Extension can write
+      }
+      
+      // Checkout sessions - managed by Extension
+      match /checkout_sessions/{sessionId} {
+        allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      }
     }
     
     // Global configuration accessible to all authenticated users

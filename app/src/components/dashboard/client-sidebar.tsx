@@ -38,7 +38,7 @@ interface ClientSidebarProps {
   onShowWelcome?: () => void;
 }
 
-export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in-person-training', onLogout, onShowWelcome }: ClientSidebarProps) {
+export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: ClientSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader>
@@ -222,11 +222,11 @@ export function ClientSidebar({ userName = 'Shreyas Annapureddy', userTier = 'in
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white flex-shrink-0">
-                SA
+                {userName ? userName.charAt(0).toUpperCase() : 'U'}
               </div>
               <div>
-                <p className="font-semibold text-sm">{userName}</p>
-                <p className="text-xs text-primary font-semibold">{userTier}</p>
+                <p className="font-semibold text-sm">{userName || 'User'}</p>
+                <p className="text-xs text-primary font-semibold">{userTier || 'client'}</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={onLogout} className="hover:bg-gray-100">
