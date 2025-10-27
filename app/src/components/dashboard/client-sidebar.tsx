@@ -30,7 +30,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuBadge,
 } from '@/components/ui/sidebar';
+import { useCoachUpdates } from '@/context/CoachUpdatesContext';
 
 interface ClientSidebarProps {
   userName?: string;
@@ -41,6 +43,39 @@ interface ClientSidebarProps {
 
 export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: ClientSidebarProps) {
   const pathname = usePathname();
+  const { coachUpdates } = useCoachUpdates();
+  
+  // Filter notifications by type to get counts for each section
+  const workoutUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'workout'
+  ).length;
+  const progressUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'progress'
+  ).length;
+  const sessionsUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'sessions'
+  ).length;
+  const nutritionUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'nutrition'
+  ).length;
+  const goalsUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'goals'
+  ).length;
+  const communicationUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'communication'
+  ).length;
+  const resourcesUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'resources'
+  ).length;
+  const profileUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'profile'
+  ).length;
+  const billingUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'billing'
+  ).length;
+  const settingsUpdatesCount = coachUpdates.filter(
+    (update) => update.type === 'settings'
+  ).length;
   
   return (
     <Sidebar variant="floating">
@@ -81,9 +116,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/workouts">
                     <Dumbbell className="w-4 h-4" />
                     <span className="font-medium">My Workouts</span>
-                    <span className="ml-auto bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                      2
-                    </span>
+                    {workoutUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {workoutUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -92,9 +129,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/progress">
                     <TrendingUp className="w-4 h-4" />
                     <span className="font-medium">Progress & Analytics</span>
-                    <span className="ml-auto bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                      1
-                    </span>
+                    {progressUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {progressUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -103,6 +142,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/sessions">
                     <Calendar className="w-4 h-4" />
                     <span className="font-medium">Sessions & Schedule</span>
+                    {sessionsUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {sessionsUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -111,6 +155,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/nutrition">
                     <HeartPulse className="w-4 h-4" />
                     <span className="font-medium">Nutrition Hub</span>
+                    {nutritionUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {nutritionUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -119,6 +168,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/goals">
                     <Goal className="w-4 h-4" />
                     <span className="font-medium">Goals & Milestones</span>
+                    {goalsUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {goalsUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -136,6 +190,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/communication">
                     <MessageSquare className="w-4 h-4" />
                     <span className="font-medium">Communication</span>
+                    {communicationUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {communicationUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -144,6 +203,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/resources">
                     <BookOpen className="w-4 h-4" />
                     <span className="font-medium">Resources</span>
+                    {resourcesUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {resourcesUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -161,6 +225,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/profile">
                     <User className="w-4 h-4" />
                     <span className="font-medium">Profile</span>
+                    {profileUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {profileUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -169,6 +238,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/billing">
                     <CreditCard className="w-4 h-4" />
                     <span className="font-medium">Billing</span>
+                    {billingUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {billingUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -177,6 +251,11 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/settings">
                     <Settings className="w-4 h-4" />
                     <span className="font-medium">Settings</span>
+                    {settingsUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {settingsUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

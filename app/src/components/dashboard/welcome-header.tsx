@@ -1,7 +1,8 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { Sun, Moon, Bell } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
+import { CoachUpdates } from '@/components/dashboard/coach-updates';
 
 interface WelcomeHeaderProps {
   name: string;
@@ -41,17 +42,7 @@ export function WelcomeHeader({ name, isDarkMode = false, onToggleTheme }: Welco
             <span className="sr-only">Toggle theme</span>
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="icon"
-          className="relative text-primary hover:bg-primary/10 hover:text-primary border-primary/50 animate-pulse"
-        >
-          <Bell className="h-5 w-5" />
-          <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-            3
-          </div>
-          <span className="sr-only">Open notifications</span>
-        </Button>
+        <CoachUpdates />
       </div>
     </div>
   );
