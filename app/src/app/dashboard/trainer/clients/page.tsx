@@ -27,6 +27,8 @@ interface ClientData {
   lastWorkout?: Date;
   workoutsCompleted: number;
   status: 'active' | 'inactive' | 'pending';
+  paymentStatus?: string;
+  subscriptionStatus?: string;
 }
 
 export default function ClientsPage() {
@@ -150,7 +152,9 @@ export default function ClientsPage() {
               tier: clientInfo.tier,
               lastWorkout: lastCompletedWorkout?.completedAt || null,
               workoutsCompleted: completedAssignments.length,
-              status: status
+              status: status,
+              paymentStatus: clientInfo.paymentStatus || 'unknown',
+              subscriptionStatus: clientInfo.subscriptionStatus || 'unknown'
             });
           });
           
@@ -510,13 +514,28 @@ export default function ClientsPage() {
                         <p className="text-gray-600">{activeClient.email}</p>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      activeClient.status === 'active' ? 'bg-green-100 text-green-800' :
-                      activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {activeClient.status}
-                    </span>
+                    <div className="flex gap-2">
+                      {/* Payment Status Badge */}
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        activeClient.paymentStatus === 'active' ? 'bg-green-100 text-green-800' :
+                        activeClient.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        💳 {activeClient.paymentStatus === 'active' ? 'Paid' : 
+                            activeClient.paymentStatus === 'pending' ? 'Payment Pending' : 
+                            activeClient.paymentStatus || 'Unknown'}
+                      </span>
+                      {/* Workout Status Badge */}
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        activeClient.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                        activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        💪 {activeClient.status === 'active' ? 'Training' :
+                            activeClient.status === 'inactive' ? 'Inactive' :
+                            'No Workouts'}
+                      </span>
+                    </div>
                   </div>
                   
                   {/* Quick Actions */}
@@ -562,15 +581,15 @@ export default function ClientsPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Status</p>
+                          <p className="text-sm text-gray-600">Payment Status</p>
                           <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                            activeClient.status === 'active' ? 'bg-green-100 text-green-800' :
-                            activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            activeClient.paymentStatus === 'active' ? 'bg-green-100 text-green-800' :
+                            activeClient.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
                           }`}>
-                            {activeClient.status === 'active' ? '✅ Active' :
-                             activeClient.status === 'inactive' ? '❌ Inactive' :
-                             '⏳ Pending'}
+                            {activeClient.paymentStatus === 'active' ? '✅ Active' :
+                             activeClient.paymentStatus === 'pending' ? '⏳ Pending' :
+                             activeClient.paymentStatus || 'Unknown'}
                           </span>
                         </div>
                       </div>
