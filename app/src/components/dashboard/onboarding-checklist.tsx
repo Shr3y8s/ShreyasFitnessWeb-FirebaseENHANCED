@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ClipboardList, X, ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,26 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
     setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Auto-dismiss when all items are checked
+  useEffect(() => {
+    const allChecked = onboardingSteps.every(step => checkedItems[step.id]);
+    
+    if (allChecked && onDismiss) {
+      // Small delay for better UX - let user see the last checkbox animate
+      setTimeout(() => {
+        onDismiss();
+        
+        // TODO: Firebase Integration
+        // When ready to implement, save onboarding completion to Firestore:
+        // await setDoc(doc(db, 'users', userId), {
+        //   onboardingCompleted: true,
+        //   onboardingCompletedAt: serverTimestamp()
+        // }, { merge: true });
+        // This will allow the coach dashboard to track which clients have completed onboarding
+      }, 800);
+    }
+  }, [checkedItems, onDismiss]);
+
   const handleSchedule = () => {
     window.open('https://calendly.com/shreyas-annapureddy/30min', '_blank');
   };
@@ -32,7 +52,7 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
           variant="ghost"
           size="icon"
           onClick={onDismiss}
-          className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:bg-primary/10"
+          className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:bg-primary/10 cursor-pointer"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Dismiss</span>
