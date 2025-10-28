@@ -103,27 +103,22 @@ export default function EnhancedCreateWorkoutPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const userData = userDoc.data();
-          
-          if (userData?.role !== 'trainer' && userData?.role !== 'admin') {
-            router.push('/dashboard/client');
-            return;
-          }
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
-          // Listen to trainer's exercise library
-          const unsubscribe = listenToExercises(user.uid, (exerciseList) => {
-            setLibraryExercises(exerciseList);
-            setFilteredLibraryExercises(exerciseList);
-          });
+      try {
+        // Listen to trainer's exercise library
+        const unsubscribe = listenToExercises(user.uid, (exerciseList) => {
+          setLibraryExercises(exerciseList);
+          setFilteredLibraryExercises(exerciseList);
+        });
 
-          setLoading(false);
-          return () => unsubscribe();
-        } catch (error) {
-          console.error('Error checking access:', error);
-        }
+        setLoading(false);
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('Error checking access:', error);
       }
     };
 

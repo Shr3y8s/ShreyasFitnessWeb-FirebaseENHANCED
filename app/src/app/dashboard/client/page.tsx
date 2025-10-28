@@ -63,13 +63,6 @@ export default function ClientDashboardPage() {
       return;
     }
 
-    // Redirect non-clients to their proper dashboard
-    if (userDataFromAuth.role === 'trainer' || userDataFromAuth.role === 'admin') {
-      console.log('[ClientDashboard] User is trainer/admin, redirecting to trainer dashboard');
-      router.push('/dashboard/trainer');
-      return;
-    }
-
     // CRITICAL: Check payment status before allowing dashboard access
     if (userDataFromAuth.role === 'client' && userDataFromAuth.paymentStatus !== 'active') {
       console.log('[ClientDashboard] Payment not complete, redirecting to payment');

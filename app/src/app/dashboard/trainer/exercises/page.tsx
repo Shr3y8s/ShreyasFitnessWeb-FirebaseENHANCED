@@ -63,27 +63,22 @@ export default function ExerciseLibraryPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const userData = userDoc.data();
-          
-          if (userData?.role !== 'trainer' && userData?.role !== 'admin') {
-            router.push('/dashboard/client');
-            return;
-          }
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
-          // Listen to exercises
-          const unsubscribe = listenToExercises(user.uid, (exerciseList) => {
-            setExercises(exerciseList);
-            setFilteredExercises(exerciseList);
-          });
+      try {
+        // Listen to exercises
+        const unsubscribe = listenToExercises(user.uid, (exerciseList) => {
+          setExercises(exerciseList);
+          setFilteredExercises(exerciseList);
+        });
 
-          setLoading(false);
-          return () => unsubscribe();
-        } catch (error) {
-          console.error('Error checking access:', error);
-        }
+        setLoading(false);
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('Error checking access:', error);
       }
     };
 

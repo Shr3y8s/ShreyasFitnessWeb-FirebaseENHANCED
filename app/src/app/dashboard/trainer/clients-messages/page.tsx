@@ -119,45 +119,41 @@ export default function ClientMessagesPage() {
   // Fetch clients
   useEffect(() => {
     const fetchClients = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const data = userDoc.data();
-          
-          if (data?.role !== 'trainer' && data?.role !== 'admin') {
-            router.push('/dashboard/client');
-            return;
-          }
-          
-          const clientsQuery = query(
-            collection(db, 'users'),
-            where('role', '==', 'client'),
-            orderBy('createdAt', 'desc')
-          );
-          
-          const clientsSnapshot = await getDocs(clientsQuery);
-          const clientsData: ClientData[] = [];
-          
-          clientsSnapshot.forEach((doc) => {
-            const clientInfo = doc.data();
-            clientsData.push({
-              id: doc.id,
-              name: clientInfo.name,
-              email: clientInfo.email,
-              tier: clientInfo.tier
-            });
-          });
-          
-          setClients(clientsData);
-          
-          // Auto-select first client in view mode if none selected
-          if (clientsData.length > 0 && !activeClientId && mode === 'view') {
-            setActiveClientId(clientsData[0].id);
-          }
-        } catch (error) {
-          console.error('Error fetching clients:', error);
-        }
+      if (!user) {
+        router.push('/login');
+        return;
       }
+      
+      try {
+        const clientsQuery = query(
+          collection(db, 'users'),
+          where('role', '==', 'client'),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const clientsSnapshot = await getDocs(clientsQuery);
+        const clientsData: ClientData[] = [];
+        
+        clientsSnapshot.forEach((doc) => {
+          const clientInfo = doc.data();
+          clientsData.push({
+            id: doc.id,
+            name: clientInfo.name,
+            email: clientInfo.email,
+            tier: clientInfo.tier
+          });
+        });
+        
+        setClients(clientsData);
+        
+        // Auto-select first client in view mode if none selected
+        if (clientsData.length > 0 && !activeClientId && mode === 'view') {
+          setActiveClientId(clientsData[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+      }
+      
       setLoading(false);
     };
 

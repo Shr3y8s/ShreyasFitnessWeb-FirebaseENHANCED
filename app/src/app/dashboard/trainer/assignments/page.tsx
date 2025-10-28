@@ -115,17 +115,12 @@ export default function WorkoutAssignmentsPage() {
   // Fetch all data
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return;
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const userData = userDoc.data();
-        
-        if (userData?.role !== 'trainer' && userData?.role !== 'admin') {
-          router.push('/dashboard/client');
-          return;
-        }
-
         // Fetch clients
         const clientsQuery = query(
           collection(db, 'users'),

@@ -38,27 +38,22 @@ export default function WorkoutLibraryPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const userData = userDoc.data();
-          
-          if (userData?.role !== 'trainer' && userData?.role !== 'admin') {
-            router.push('/dashboard/client');
-            return;
-          }
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
-          // Listen to workout templates
-          const unsubscribe = listenToWorkoutTemplates(user.uid, (templates) => {
-            setWorkoutTemplates(templates);
-            setFilteredWorkouts(templates);
-          });
+      try {
+        // Listen to workout templates
+        const unsubscribe = listenToWorkoutTemplates(user.uid, (templates) => {
+          setWorkoutTemplates(templates);
+          setFilteredWorkouts(templates);
+        });
 
-          setLoading(false);
-          return () => unsubscribe();
-        } catch (error) {
-          console.error('Error checking access:', error);
-        }
+        setLoading(false);
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('Error checking access:', error);
       }
     };
 

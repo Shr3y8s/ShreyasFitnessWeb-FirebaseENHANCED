@@ -85,22 +85,18 @@ export default function ClientsPage() {
 
   useEffect(() => {
     const fetchClients = async () => {
-      if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const data = userDoc.data();
-          
-          if (data?.role !== 'trainer' && data?.role !== 'admin') {
-            router.push('/dashboard/client');
-            return;
-          }
-          
-          // Fetch clients
-          const clientsQuery = query(
-            collection(db, 'users'),
-            where('role', '==', 'client'),
-            orderBy('createdAt', 'desc')
-          );
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      
+      try {
+        // Fetch clients
+        const clientsQuery = query(
+          collection(db, 'users'),
+          where('role', '==', 'client'),
+          orderBy('createdAt', 'desc')
+        );
           
           const clientsSnapshot = await getDocs(clientsQuery);
           
@@ -167,12 +163,12 @@ export default function ClientsPage() {
         } catch (error) {
           console.error('Error fetching clients:', error);
         }
-      }
-      setLoading(false);
-    };
+        
+        setLoading(false);
+      };
 
-    fetchClients();
-  }, [user, router]);
+      fetchClients();
+    }, [user, router]);
 
   // Load workout templates
   useEffect(() => {
