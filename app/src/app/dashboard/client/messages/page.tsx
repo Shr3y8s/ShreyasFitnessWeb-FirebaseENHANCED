@@ -46,6 +46,7 @@ export default function ClientMessagesPage() {
   const [trainerData, setTrainerData] = useState<TrainerData | null>(null);
   const [messageContent, setMessageContent] = useState('');
   const [sending, setSending] = useState(false);
+  const messageInputRef = React.useRef<HTMLInputElement>(null);
 
   // Find the trainer for this client
   useEffect(() => {
@@ -109,8 +110,10 @@ export default function ClientMessagesPage() {
       orderBy('createdAt', 'asc')
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
       const messagesData: Message[] = [];
+      const unreadMessages: string[] = [];
+      
       snapshot.forEach((doc) => {
         const data = doc.data();
         messagesData.push({
@@ -122,8 +125,28 @@ export default function ClientMessagesPage() {
           createdAt: data.createdAt?.toDate() || new Date(),
           read: data.read || false
         });
+        
+        // Collect unread messages from the trainer that need to be marked as read
+        if (!data.read && data.senderId === trainerData.id) {
+          unreadMessages.push(doc.id);
+        }
       });
+      
       setMessages(messagesData);
+      
+      // Mark trainer's messages as read (client has now viewed them)
+      if (unreadMessages.length > 0) {
+        const { doc: firestoreDoc, updateDoc } = await import('firebase/firestore');
+        try {
+          await Promise.all(
+            unreadMessages.map(messageId =>
+              updateDoc(firestoreDoc(db, 'client_messages', messageId), { read: true })
+            )
+          );
+        } catch (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      }
       
       // Auto-scroll to bottom when new messages arrive
       setTimeout(() => {
@@ -158,6 +181,13 @@ export default function ClientMessagesPage() {
     setMessages(prev => [...prev, optimisticMessage]);
     setMessageContent('');
     
+    // Multiple focus attempts to overcome Firestore re-render timing issues
+    setTimeout(() => messageInputRef.current?.focus(), 10);
+    setTimeout(() => messageInputRef.current?.focus(), 50);
+    setTimeout(() => messageInputRef.current?.focus(), 100);
+    setTimeout(() => messageInputRef.current?.focus(), 200);
+    
+    // Scroll to bottom
     setTimeout(() => {
       const container = document.querySelector('.messages-container');
       if (container) {
@@ -318,6 +348,7 @@ export default function ClientMessagesPage() {
           <div className="p-4 border-t bg-gray-50 flex-shrink-0">
             <div className="flex gap-2">
               <input
+                ref={messageInputRef}
                 type="text"
                 value={messageContent}
                 onChange={(e) => setMessageContent(e.target.value)}

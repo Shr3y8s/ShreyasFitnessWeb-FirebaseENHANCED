@@ -90,6 +90,7 @@ export default function ClientMessagesPage() {
   // UI state
   const [messageContent, setMessageContent] = useState('');
   const [sending, setSending] = useState(false);
+  const messageInputRef = React.useRef<HTMLInputElement>(null);
 
   const activeClient = clients.find(c => c.id === activeClientId);
 
@@ -171,8 +172,10 @@ export default function ClientMessagesPage() {
       orderBy('createdAt', 'asc')
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
       const messagesData: Message[] = [];
+      const unreadMessages: string[] = [];
+      
       snapshot.forEach((doc) => {
         const data = doc.data();
         messagesData.push({
@@ -184,57 +187,91 @@ export default function ClientMessagesPage() {
           createdAt: data.createdAt?.toDate() || new Date(),
           read: data.read || false
         });
+        
+        // Collect unread messages from the client that need to be marked as read
+        if (!data.read && data.senderId === activeClientId) {
+          unreadMessages.push(doc.id);
+        }
       });
+      
       setMessages(messagesData);
+      
+      // Mark client's messages as read (trainer has now viewed them)
+      if (unreadMessages.length > 0) {
+        const { doc: firestoreDoc, updateDoc } = await import('firebase/firestore');
+        try {
+          await Promise.all(
+            unreadMessages.map(messageId =>
+              updateDoc(firestoreDoc(db, 'client_messages', messageId), { read: true })
+            )
+          );
+        } catch (error) {
+          console.error('Error marking messages as read:', error);
+        }
+      }
     });
 
     return () => unsubscribe();
   }, [user, activeClientId, mode]);
 
-  // Load conversation summaries
+  // Load conversation summaries with real-time updates
   useEffect(() => {
     if (!user || clients.length === 0) return;
 
-    const loadConversations = async () => {
-      const convMap = new Map<string, Conversation>();
+    const unsubscribers: (() => void)[] = [];
+    
+    // Create stable client list
+    const clientList = clients.map(c => ({ id: c.id, name: c.name }));
+    
+    clientList.forEach((client) => {
+      const conversationId = [user.uid, client.id].sort().join('_');
       
-      for (const client of clients) {
-        const conversationId = [user.uid, client.id].sort().join('_');
-        
-        try {
-          const messagesQuery = query(
-            collection(db, 'client_messages'),
-            where('conversationId', '==', conversationId),
-            orderBy('createdAt', 'desc')
-          );
+      const messagesQuery = query(
+        collection(db, 'client_messages'),
+        where('conversationId', '==', conversationId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      // Real-time listener for each conversation
+      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+        if (!snapshot.empty) {
+          const lastMsg = snapshot.docs[0].data();
+          const unreadCount = snapshot.docs.filter(doc => {
+            const data = doc.data();
+            return !data.read && data.senderId === client.id;
+          }).length;
           
-          const snapshot = await getDocs(messagesQuery);
-          
-          if (!snapshot.empty) {
-            const lastMsg = snapshot.docs[0].data();
-            const unreadCount = snapshot.docs.filter(doc => {
-              const data = doc.data();
-              return !data.read && data.senderId === client.id;
-            }).length;
-            
-            convMap.set(client.id, {
+          setConversations(prev => {
+            const newMap = new Map(prev);
+            newMap.set(client.id, {
               clientId: client.id,
               clientName: client.name,
               lastMessage: lastMsg.content,
               lastMessageTime: lastMsg.createdAt?.toDate() || new Date(),
               unreadCount
             });
-          }
-        } catch (error) {
-          console.error(`Error loading conversation for ${client.name}:`, error);
+            return newMap;
+          });
+        } else {
+          // Remove conversation if no messages
+          setConversations(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(client.id);
+            return newMap;
+          });
         }
-      }
+      }, (error) => {
+        console.error(`Error listening to conversation for ${client.name}:`, error);
+      });
       
-      setConversations(convMap);
-    };
+      unsubscribers.push(unsubscribe);
+    });
 
-    loadConversations();
-  }, [user, clients, messages]);
+    // Cleanup all listeners
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [user, clients.length]); // Use clients.length instead of clients array
 
   // Search through all messages (debounced)
   useEffect(() => {
@@ -392,6 +429,13 @@ export default function ClientMessagesPage() {
     setMessages(prev => [...prev, optimisticMessage]);
     setMessageContent('');
     
+    // Multiple focus attempts to overcome Firestore re-render timing issues
+    setTimeout(() => messageInputRef.current?.focus(), 10);
+    setTimeout(() => messageInputRef.current?.focus(), 50);
+    setTimeout(() => messageInputRef.current?.focus(), 100);
+    setTimeout(() => messageInputRef.current?.focus(), 200);
+    
+    // Scroll to bottom
     setTimeout(() => {
       const container = document.querySelector('.messages-container');
       if (container) {
@@ -799,6 +843,7 @@ export default function ClientMessagesPage() {
                   <div className="p-4 border-t bg-gray-50 flex-shrink-0">
                     <div className="flex gap-2">
                       <input
+                        ref={messageInputRef}
                         type="text"
                         value={messageContent}
                         onChange={(e) => setMessageContent(e.target.value)}
