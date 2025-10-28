@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
 import { WelcomeScreen } from '@/components/dashboard/welcome-screen';
@@ -23,24 +23,6 @@ import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { TodoList } from '@/components/dashboard/todo-list';
 import { CurrentGoals } from '@/components/dashboard/current-goals';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
-
-interface ServiceTier {
-  id: string;
-  name: string;
-  price: number;
-  features: string[];
-}
-
-interface UserData {
-  name: string;
-  email: string;
-  phone?: string;
-  tier?: ServiceTier;
-  role: string;
-  createdAt: Timestamp | Date;
-  hideWelcomeDashboard?: boolean;
-  paymentStatus?: string;
-}
 
 // Mock data for sessions
 const upcomingSessions = [
@@ -175,7 +157,7 @@ export default function ClientDashboardPage() {
     <SidebarProvider>
       <ClientSidebar
         userName={userDataFromAuth?.name}
-        userTier={userDataFromAuth?.tier?.name}
+        userTier={userDataFromAuth?.tier}
         onLogout={handleLogout}
         onShowWelcome={() => setShowWelcomeScreen(true)}
       />
