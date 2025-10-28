@@ -245,7 +245,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
           className={cn(
-            "flex h-full w-full flex-col shadow-glow group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-gray-200 group-data-[variant=floating]:bg-background/95 group-data-[variant=floating]:backdrop-blur-lg",
+            "flex h-full w-full flex-col shadow-glow group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-primary/50 group-data-[variant=floating]:bg-background/95 group-data-[variant=floating]:backdrop-blur-lg",
             variant === "floating" && ""
           )}
         >

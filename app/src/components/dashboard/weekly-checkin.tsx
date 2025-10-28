@@ -3,11 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { CalendarCheck } from 'lucide-react';
 
-interface WeeklyCheckinProps {
-  onSchedule?: () => void;
-}
+export function WeeklyCheckin() {
+  const handleSchedule = () => {
+    window.open('https://calendly.com/shreyas-annapureddy/30min', '_blank');
+  };
 
-export function WeeklyCheckin({ onSchedule }: WeeklyCheckinProps) {
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-glow">
       <div className="flex flex-col space-y-1.5 p-6">
@@ -21,8 +21,8 @@ export function WeeklyCheckin({ onSchedule }: WeeklyCheckinProps) {
       </div>
       <div className="flex items-center p-6 pt-0">
         <Button
-          onClick={onSchedule}
-          className="w-full transition-transform hover:-translate-y-1 hover:shadow-lg"
+          onClick={handleSchedule}
+          className="w-full transition-transform hover:-translate-y-1 hover:shadow-lg cursor-pointer"
         >
           Schedule Now
         </Button>

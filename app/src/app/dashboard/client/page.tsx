@@ -40,6 +40,7 @@ interface UserData {
   role: string;
   createdAt: Timestamp | Date;
   hideWelcomeDashboard?: boolean;
+  paymentStatus?: string;
 }
 
 // Mock data for sessions
@@ -96,7 +97,7 @@ export default function ClientDashboardPage() {
           });
           
           // CRITICAL: Check payment status before allowing dashboard access
-          if (data?.role === 'client' && (data as any)?.paymentStatus !== 'active') {
+          if (data?.role === 'client' && data?.paymentStatus !== 'active') {
             console.log('[ClientDashboard] Payment not complete, redirecting to payment');
             router.push('/payment');
             return;
@@ -210,24 +211,32 @@ export default function ClientDashboardPage() {
               onToggleTheme={toggleTheme}
             />
 
-            {/* First Row - Upcoming Session & Onboarding */}
+            {/* First Row - Upcoming Session & Onboarding/(Coach Notes + Current Goals) */}
             <div
-              className={cn(
-                'grid grid-cols-1 gap-6',
-                showOnboarding ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
-              )}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               style={{ perspective: '1000px' }}
             >
-              <InteractiveCard className={cn(!showOnboarding && 'lg:col-span-1')}>
+              <InteractiveCard>
                 <UpcomingWorkoutReminder workout={nextWorkout} />
               </InteractiveCard>
-              {showOnboarding && (
+              {showOnboarding ? (
                 <InteractiveCard>
                   <OnboardingChecklist
                     onDismiss={() => setShowOnboarding(false)}
-                    onSchedule={handleScheduleConsultation}
                   />
                 </InteractiveCard>
+              ) : (
+                <div className="space-y-6">
+                  <InteractiveCard>
+                    <CoachNotes
+                      coachName={coachNote.coachName}
+                      message={coachNote.message}
+                    />
+                  </InteractiveCard>
+                  <InteractiveCard>
+                    <CurrentGoals />
+                  </InteractiveCard>
+                </div>
               )}
             </div>
 
@@ -246,12 +255,6 @@ export default function ClientDashboardPage() {
                 </InteractiveCard>
                 <InteractiveCard>
                   <ProgressCharts />
-                </InteractiveCard>
-                <InteractiveCard>
-                  <WorkoutCalendar
-                    upcomingSessions={upcomingSessions}
-                    completedSessions={completedSessions}
-                  />
                 </InteractiveCard>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <InteractiveCard>
@@ -272,19 +275,16 @@ export default function ClientDashboardPage() {
                   <AccountSummary />
                 </InteractiveCard>
                 <InteractiveCard>
-                  <CoachNotes
-                    coachName={coachNote.coachName}
-                    message={coachNote.message}
+                  <WeeklyCheckin />
+                </InteractiveCard>
+                <InteractiveCard>
+                  <WorkoutCalendar
+                    upcomingSessions={upcomingSessions}
+                    completedSessions={completedSessions}
                   />
                 </InteractiveCard>
                 <InteractiveCard>
-                  <WeeklyCheckin onSchedule={handleScheduleWeeklyCheckin} />
-                </InteractiveCard>
-                <InteractiveCard>
                   <TodoList />
-                </InteractiveCard>
-                <InteractiveCard>
-                  <CurrentGoals />
                 </InteractiveCard>
               </div>
             </div>

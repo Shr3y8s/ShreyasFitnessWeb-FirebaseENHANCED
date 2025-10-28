@@ -60,7 +60,7 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
         <div className="grid grid-cols-2 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
           <button
             onClick={() => setActiveTab('upcoming')}
-            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all cursor-pointer ${
               activeTab === 'upcoming'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'hover:bg-primary/10'
@@ -71,7 +71,7 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
           </button>
           <button
             onClick={() => setActiveTab('completed')}
-            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all cursor-pointer ${
               activeTab === 'completed'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'hover:bg-primary/10'

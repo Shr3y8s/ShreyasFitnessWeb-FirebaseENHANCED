@@ -13,14 +13,17 @@ const onboardingSteps = [
 
 interface OnboardingChecklistProps {
   onDismiss?: () => void;
-  onSchedule?: () => void;
 }
 
-export function OnboardingChecklist({ onDismiss, onSchedule }: OnboardingChecklistProps) {
+export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 
   const handleCheckedChange = (id: string) => {
     setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleSchedule = () => {
+    window.open('https://calendly.com/shreyas-annapureddy/30min', '_blank');
   };
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-glow">
@@ -48,8 +51,8 @@ export function OnboardingChecklist({ onDismiss, onSchedule }: OnboardingCheckli
             we&apos;ll create your personalized fitness plan and set you up for success.
           </p>
           <Button
-            onClick={onSchedule}
-            className="mt-4 transition-transform hover:-translate-y-1 hover:shadow-lg"
+            onClick={handleSchedule}
+            className="mt-4 transition-transform hover:-translate-y-1 hover:shadow-lg cursor-pointer"
           >
             Schedule Your Consultation
             <ArrowRight className="ml-2 h-4 w-4" />
