@@ -47,29 +47,120 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  // State removed: const [paymentComplete, setPaymentComplete] = useState(false);
   const router = useRouter();
 
-  // Track authentication state
+  // Check URL parameters and load data (from sessionStorage or existing user)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const stepParam = searchParams.get('step');
+    
+    // First, check if there's pending signup data in sessionStorage
+    const pendingData = sessionStorage.getItem('pendingSignup');
+    if (pendingData) {
+      console.log("Loading pending signup data from sessionStorage");
+      const savedData = JSON.parse(pendingData);
+      setFormData({
+        name: savedData.name,
+        email: savedData.email,
+        phone: savedData.phone,
+        password: savedData.password,
+        confirmPassword: savedData.password, // Set same as password
+        tier: savedData.tier && savedData.tierName ? {
+          id: savedData.tier,
+          name: savedData.tierName,
+          price: 0,
+          features: []
+        } : null,
+        paymentInfo: null
+      });
+    }
+    
+    // If step parameter exists, start at that step
+    if (stepParam) {
+      const step = parseInt(stepParam);
+      if (step === 2) {
+        setCurrentStep(2);
+      }
+    }
+  }, []);
+
+  // Track authentication state and load existing data for package changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       console.log("Auth state changed:", user ? "User authenticated" : "No user");
+      
+      // If user is logged in and on signup page, load their existing data
+      if (user) {
+        try {
+          const { db } = await import('@/lib/firebase');
+          const { doc, getDoc } = await import('firebase/firestore');
+          
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            console.log("Loading existing user data for package change");
+            
+            // Pre-fill form with existing data (not passwords)
+            setFormData(prev => ({
+              ...prev,
+              name: userData.name || '',
+              email: userData.email || user.email || '',
+              phone: userData.phone || ''
+            }));
+          }
+        } catch (error) {
+          console.error("Error loading user data:", error);
+        }
+      }
     });
     
     return () => unsubscribe();
   }, []);
 
   const updateFormData = (data: Partial<FormData>) => {
-    setFormData({ ...formData, ...data });
+    const newFormData = { ...formData, ...data };
+    setFormData(newFormData);
     setError(''); // Clear errors when form data changes
+    
+    // Update sessionStorage whenever form data changes
+    // This ensures data persists when navigating back and forth
+    if (newFormData.name && newFormData.email) {
+      const pendingData = {
+        name: newFormData.name,
+        email: newFormData.email,
+        phone: newFormData.phone,
+        password: newFormData.password,
+        tier: newFormData.tier?.id || '',
+        tierName: newFormData.tier?.name || ''
+      };
+      sessionStorage.setItem('pendingSignup', JSON.stringify(pendingData));
+      console.log("Updated sessionStorage with form data");
+    }
   };
 
-  const nextStep = () => setCurrentStep(currentStep + 1);
+  const nextStep = () => {
+    // Save current form data to sessionStorage before moving to next step
+    if (formData.name && formData.email) {
+      const pendingData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        tier: formData.tier?.id || '',
+        tierName: formData.tier?.name || ''
+      };
+      sessionStorage.setItem('pendingSignup', JSON.stringify(pendingData));
+      console.log("Saved form data to sessionStorage on nextStep");
+    }
+    setCurrentStep(currentStep + 1);
+  };
+  
   const prevStep = () => setCurrentStep(currentStep - 1);
 
-  // Create account after tier selection, then redirect to payment
-  const handleCreateAccountAndRedirect = async () => {
+  // Store signup data and redirect to payment (account created later)
+  const handleTierSelectionComplete = async () => {
     setIsSubmitting(true);
     setError('');
     
@@ -93,28 +184,26 @@ export default function SignupPage() {
     }
     
     try {
-      console.log("Creating account with pending payment status");
+      console.log("Tier selected, proceeding to payment page");
       
-      // Create Firebase Auth account with paymentStatus: "pending"
-      const result = await createUserWithTier(
-        formData.email,
-        formData.password,
-        formData.name,
-        formData.phone,
-        formData.tier
-      );
+      // Store signup data in sessionStorage for payment page
+      // Account will be created when user clicks "Complete Payment"
+      sessionStorage.setItem('pendingSignup', JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        tier: formData.tier.id,
+        tierName: formData.tier.name
+      }));
       
-      if (!result.success) {
-        throw result.error || new Error('Failed to create account');
-      }
+      console.log("Redirecting to payment page");
       
-      console.log("Account created successfully, redirecting to payment");
-      
-      // Redirect to payment page
+      // Redirect to payment page (no account created yet)
       router.push('/payment');
       
     } catch (error) {
-      console.error('Account creation error:', error);
+      console.error('Navigation error:', error);
       setError((error as Error).message);
       setIsSubmitting(false);
     }
@@ -137,7 +226,7 @@ export default function SignupPage() {
           <ServiceTierStep 
             formData={formData} 
             updateFormData={updateFormData} 
-            nextStep={handleCreateAccountAndRedirect} 
+            nextStep={handleTierSelectionComplete} 
             prevStep={prevStep}
             error={error}
             isSubmitting={isSubmitting}

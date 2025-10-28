@@ -1,5 +1,6 @@
 const {onRequest, onCall} = require("firebase-functions/v2/https");
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+const {onSchedule} = require("firebase-functions/v2/scheduler");
 const {defineSecret} = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
@@ -308,3 +309,14 @@ exports.syncSubscriptionToUser = onDocumentWritten({
     return null;
   }
 });
+
+/**
+ * NOTE: Cleanup function removed - no longer needed!
+ * 
+ * With payment-first flow, accounts are only created when user clicks "Complete Payment"
+ * This means:
+ * - No abandoned pending accounts
+ * - No database bloat
+ * - No cleanup needed
+ * - Account creation = payment commitment
+ */

@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, getDocs, addDoc, onSnapshot } from 'firebase/firestore';
+import { db, auth as firebaseAuth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, collection, getDocs, addDoc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
@@ -15,12 +16,17 @@ interface UserData {
   email: string;
   tier: string;
   tierName: string;
-  paymentStatus: string;
+  paymentStatus?: string;
+  phone?: string;
 }
 
-interface StripeCustomerData {
-  stripeId?: string;
-  email?: string;
+interface PendingSignupData {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  tier: string;
+  tierName: string;
 }
 
 interface PriceInfo {
@@ -33,130 +39,194 @@ export default function PaymentPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
+  const [pendingSignup, setPendingSignup] = useState<PendingSignupData | null>(null);
   const [priceInfo, setPriceInfo] = useState<PriceInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const loadUserAndPrice = async () => {
-      if (!user) {
-        router.push('/login');
+    const loadPaymentData = async () => {
+      // Check if there's a pending signup (from signup page)
+      const pendingData = sessionStorage.getItem('pendingSignup');
+      
+      if (pendingData) {
+        // New signup - not yet created account
+        console.log("Loading pending signup data");
+        const signup = JSON.parse(pendingData) as PendingSignupData;
+        setPendingSignup(signup);
+        
+        // Load price for the selected tier
+        await loadPriceForTier(signup.tier);
+        
+      } else if (user) {
+        // Existing user changing package
+        console.log("Loading existing user data");
+        await loadExistingUserData();
+        
+      } else {
+        // No data - redirect to signup
+        console.log("No data found, redirecting to signup");
+        router.push('/signup');
+        return;
+      }
+      
+      setLoading(false);
+    };
+
+    loadPaymentData();
+  }, [user, router]);
+
+  const loadExistingUserData = async () => {
+    if (!user) return;
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        setError('User profile not found');
         return;
       }
 
-      try {
-        // Load user document
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
-        if (!userDoc.exists()) {
-          setError('User profile not found. Please contact support.');
-          setLoading(false);
-          return;
-        }
-
-        const data = userDoc.data() as UserData;
-        setUserData(data);
-
-        // Check if already paid
-        if (data.paymentStatus === 'active') {
-          router.push('/dashboard');
-          return;
-        }
-
-        // CRITICAL FIX: Load existing Stripe customer ID from stripe_customers collection
-        const stripeCustomerDoc = await getDoc(doc(db, 'stripe_customers', user.uid));
-        if (stripeCustomerDoc.exists()) {
-          const customerData = stripeCustomerDoc.data() as StripeCustomerData;
-          if (customerData.stripeId) {
-            setStripeCustomerId(customerData.stripeId);
-            console.log('Found existing Stripe customer:', customerData.stripeId);
-          }
-        }
-
-        // Load price from Stripe products in Firestore
-        const productId = STRIPE_PRODUCT_IDS[data.tier as keyof typeof STRIPE_PRODUCT_IDS];
-        
-        if (!productId) {
-          setError('Invalid product selected');
-          setLoading(false);
-          return;
-        }
-
-        const productRef = doc(db, 'stripe_products', productId);
-        const productSnap = await getDoc(productRef);
-        
-        if (!productSnap.exists()) {
-          setError('Product not found');
-          setLoading(false);
-          return;
-        }
-
-        // Get prices
-        const pricesCollection = collection(db, 'stripe_products', productId, 'prices');
-        const pricesSnapshot = await getDocs(pricesCollection);
-        
-        if (pricesSnapshot.empty) {
-          setError('No prices available');
-          setLoading(false);
-          return;
-        }
-
-        // Determine if this tier is a subscription or one-time payment
-        const productDetails = getProductDetails(data.tier);
-        const isSubscription = productDetails.isSubscription;
-        const expectedPriceType = isSubscription ? 'recurring' : 'one_time';
-
-        // Find the appropriate price based on payment type
-        let selectedPrice: PriceInfo | null = null;
-        pricesSnapshot.forEach(doc => {
-          const priceData = doc.data();
-          if (priceData.type === expectedPriceType) {
-            selectedPrice = {
-              id: doc.id,
-              amount: priceData.unit_amount || 0,
-              currency: priceData.currency || 'usd'
-            };
-          }
-        });
-
-        if (!selectedPrice) {
-          setError(`Price information not available for ${isSubscription ? 'subscription' : 'one-time payment'}`);
-          setLoading(false);
-          return;
-        }
-
-        setPriceInfo(selectedPrice);
-        setLoading(false);
-
-      } catch (err) {
-        console.error('Error loading payment info:', err);
-        setError('Failed to load payment information');
-        setLoading(false);
+      const data = userDoc.data() as UserData;
+      
+      // Check if already paid
+      if (data.paymentStatus === 'active') {
+        router.push('/dashboard');
+        return;
       }
-    };
 
-    loadUserAndPrice();
-  }, [user, router]);
+      setUserData(data);
+      await loadPriceForTier(data.tier);
+      
+    } catch (err) {
+      console.error('Error loading user data:', err);
+      setError('Failed to load user information');
+    }
+  };
+
+  const loadPriceForTier = async (tierId: string) => {
+    try {
+      const productId = STRIPE_PRODUCT_IDS[tierId as keyof typeof STRIPE_PRODUCT_IDS];
+      
+      if (!productId) {
+        setError('Invalid product selected');
+        return;
+      }
+
+      const productRef = doc(db, 'stripe_products', productId);
+      const productSnap = await getDoc(productRef);
+      
+      if (!productSnap.exists()) {
+        setError('Product not found');
+        return;
+      }
+
+      // Get prices
+      const pricesCollection = collection(db, 'stripe_products', productId, 'prices');
+      const pricesSnapshot = await getDocs(pricesCollection);
+      
+      if (pricesSnapshot.empty) {
+        setError('No prices available');
+        return;
+      }
+
+      // Determine price type
+      const productDetails = getProductDetails(tierId);
+      const expectedPriceType = productDetails.isSubscription ? 'recurring' : 'one_time';
+
+      // Find the appropriate price
+      let selectedPrice: PriceInfo | null = null;
+      pricesSnapshot.forEach(doc => {
+        const priceData = doc.data();
+        if (priceData.type === expectedPriceType) {
+          selectedPrice = {
+            id: doc.id,
+            amount: priceData.unit_amount || 0,
+            currency: priceData.currency || 'usd'
+          };
+        }
+      });
+
+      if (!selectedPrice) {
+        setError(`Price not available for this package`);
+        return;
+      }
+
+      setPriceInfo(selectedPrice);
+      
+    } catch (err) {
+      console.error('Error loading price:', err);
+      setError('Failed to load pricing information');
+    }
+  };
 
   const handlePayment = async () => {
-    if (!priceInfo || !userData || !user) return;
+    if (!priceInfo) return;
 
     setIsProcessing(true);
     setError('');
 
     try {
-      console.log('Creating checkout session via Extension...');
+      let userId: string;
+      let userEmail: string;
+      let userName: string;
+      let tierName: string;
+      let tierId: string;
+
+      // Step 1: Create account if this is a pending signup
+      if (pendingSignup) {
+        console.log("Creating new account before payment...");
+        
+        // Create Firebase Auth account
+        const userCredential = await createUserWithEmailAndPassword(
+          firebaseAuth,
+          pendingSignup.email,
+          pendingSignup.password
+        );
+        
+        userId = userCredential.user.uid;
+        userEmail = pendingSignup.email;
+        userName = pendingSignup.name;
+        tierName = pendingSignup.tierName;
+        tierId = pendingSignup.tier;
+        
+        // Create Firestore user document
+        await setDoc(doc(db, 'users', userId), {
+          name: pendingSignup.name,
+          email: pendingSignup.email,
+          phone: pendingSignup.phone,
+          tier: pendingSignup.tier,
+          tierName: pendingSignup.tierName,
+          paymentStatus: 'pending',
+          role: 'client',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        
+        console.log("Account created successfully:", userId);
+        
+        // Clear pending signup data
+        sessionStorage.removeItem('pendingSignup');
+        
+      } else if (user && userData) {
+        // Existing user
+        userId = user.uid;
+        userEmail = userData.email;
+        userName = userData.name;
+        tierName = userData.tierName;
+        tierId = userData.tier;
+        
+      } else {
+        throw new Error('No user data available');
+      }
+
+      // Step 2: Create Stripe checkout session
+      console.log("Creating Stripe checkout session...");
       
-      // Determine checkout mode based on product type
-      const productDetails = getProductDetails(userData.tier);
+      const productDetails = getProductDetails(tierId);
       const checkoutMode = productDetails.isSubscription ? 'subscription' : 'payment';
       
-      console.log(`Creating ${checkoutMode} checkout for ${userData.tierName}`);
-      
-      // PROPER APPROACH: Use Extension's checkout_sessions collection
-      // The Extension watches this collection and creates the Stripe session
       const checkoutSessionData: any = {
         price: priceInfo.id,
         success_url: `${window.location.origin}/dashboard?payment=success`,
@@ -164,40 +234,32 @@ export default function PaymentPage() {
         mode: checkoutMode,
         allow_promotion_codes: true,
         metadata: {
-          userId: user.uid,
-          userName: userData.name,
-          userEmail: userData.email,
-          tierName: userData.tierName,
-          tierId: userData.tier
+          userId,
+          userName,
+          userEmail,
+          tierName,
+          tierId
         }
       };
 
-      // CRITICAL: If customer exists, pass customer ID to use existing customer
-      if (stripeCustomerId) {
-        checkoutSessionData.customer = stripeCustomerId;
-        console.log('Using existing Stripe customer:', stripeCustomerId);
-      }
-
       // Write to Extension's checkout_sessions collection
       const checkoutSessionRef = await addDoc(
-        collection(db, 'stripe_customers', user.uid, 'checkout_sessions'),
+        collection(db, 'stripe_customers', userId, 'checkout_sessions'),
         checkoutSessionData
       );
 
       console.log('Checkout session document created:', checkoutSessionRef.id);
 
-      // Listen for the Extension to add the checkout URL
+      // Step 3: Listen for checkout URL from Extension
       const unsubscribe = onSnapshot(checkoutSessionRef, (snap) => {
         const data = snap.data();
         
         if (data?.error) {
-          // Extension encountered an error
           console.error('Checkout session error:', data.error);
           setError(data.error.message || 'Failed to create checkout session');
           setIsProcessing(false);
           unsubscribe();
         } else if (data?.url) {
-          // Extension created the session and added the URL
           console.log('Checkout URL received, redirecting...');
           unsubscribe();
           // Redirect to Stripe Checkout
@@ -248,10 +310,10 @@ export default function PaymentPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Error</h2>
               <p className="text-gray-600 mb-6">{error}</p>
               <Button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/signup')}
                 className="bg-gradient-to-r from-emerald-600 to-teal-600"
               >
-                Go to Dashboard
+                Back to Signup
               </Button>
             </div>
           </CardContent>
@@ -260,9 +322,10 @@ export default function PaymentPage() {
     );
   }
 
-  if (!userData || !priceInfo) return null;
+  if (!priceInfo || (!userData && !pendingSignup)) return null;
 
-  const productDetails = getProductDetails(userData.tier);
+  const displayData = userData || pendingSignup!;
+  const productDetails = getProductDetails(displayData.tier);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -284,15 +347,27 @@ export default function PaymentPage() {
             <CardHeader className="border-b border-gray-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">Order Summary</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.back()}
-                  className="text-gray-600"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
+                <div className="flex gap-2">
+                  {userData && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push('/signup?step=2')}
+                      className="text-emerald-600 hover:text-emerald-700"
+                    >
+                      Change Package
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/signup?step=2')}
+                    className="text-gray-600"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                </div>
               </div>
             </CardHeader>
 
@@ -317,7 +392,7 @@ export default function PaymentPage() {
                     <CreditCard className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-lg">{userData.tierName}</p>
+                    <p className="font-semibold text-gray-900 text-lg">{displayData.tierName}</p>
                     <p className="text-sm text-gray-600">
                       {productDetails.isSubscription 
                         ? 'Monthly subscription • Cancel anytime'
@@ -333,8 +408,8 @@ export default function PaymentPage() {
               <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
                 <h4 className="font-medium text-gray-900 mb-2">Account Information</h4>
                 <div className="space-y-1 text-sm text-gray-600">
-                  <p><span className="font-medium text-gray-700">Name:</span> {userData.name}</p>
-                  <p><span className="font-medium text-gray-700">Email:</span> {userData.email}</p>
+                  <p><span className="font-medium text-gray-700">Name:</span> {displayData.name}</p>
+                  <p><span className="font-medium text-gray-700">Email:</span> {displayData.email}</p>
                 </div>
               </div>
 
@@ -344,8 +419,10 @@ export default function PaymentPage() {
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">Secure Payment</h4>
                   <p className="text-sm text-blue-700">
-                    You'll be redirected to Stripe Checkout to complete your payment securely. 
-                    Your payment information is encrypted and never stored on our servers.
+                    {pendingSignup 
+                      ? "Your account will be created and you'll be redirected to Stripe Checkout to complete your payment securely."
+                      : "You'll be redirected to Stripe Checkout to complete your payment securely."
+                    } Your payment information is encrypted and never stored on our servers.
                   </p>
                 </div>
               </div>
@@ -359,7 +436,7 @@ export default function PaymentPage() {
                 {isProcessing ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Processing...
+                    {pendingSignup ? 'Creating Account...' : 'Processing...'}
                   </div>
                 ) : (
                   productDetails.isSubscription
