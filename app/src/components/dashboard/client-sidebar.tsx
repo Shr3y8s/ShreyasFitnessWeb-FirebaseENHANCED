@@ -34,14 +34,40 @@ import {
 } from '@/components/ui/sidebar';
 import { useCoachUpdates } from '@/context/CoachUpdatesContext';
 
+interface ServiceTier {
+  id: string;
+  name: string;
+  price: number;
+  features?: string[];
+}
+
 interface ClientSidebarProps {
   userName?: string;
-  userTier?: string;
+  userTier?: ServiceTier | string;
   onLogout?: () => void;
   onShowWelcome?: () => void;
 }
 
 export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: ClientSidebarProps) {
+  // Helper function to map tier ID to service type label
+  const getServiceType = (tier?: ServiceTier | string): string => {
+    if (!tier) return 'Client';
+    
+    // Handle if tier is a string (current Firestore structure)
+    const tierId = typeof tier === 'string' ? tier : tier.id;
+    
+    switch (tierId) {
+      case 'in-person-training':
+      case '4-pack-training':
+        return 'In-Person';
+      case 'online-coaching':
+        return 'Online';
+      case 'complete-transformation':
+        return 'Hybrid';
+      default:
+        return 'Client';
+    }
+  };
   const pathname = usePathname();
   const { coachUpdates } = useCoachUpdates();
   
@@ -308,7 +334,7 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-sidebar-foreground truncate">{userName || 'User'}</p>
-                <p className="text-xs text-primary font-medium truncate">{userTier || 'Client'}</p>
+                <p className="text-xs text-primary font-medium truncate">{getServiceType(userTier)}</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={onLogout} className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0">

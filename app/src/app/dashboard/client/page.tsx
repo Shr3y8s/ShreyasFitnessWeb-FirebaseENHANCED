@@ -23,7 +23,6 @@ import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { TodoList } from '@/components/dashboard/todo-list';
 import { CurrentGoals } from '@/components/dashboard/current-goals';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
-import { cn } from '@/lib/utils';
 
 interface ServiceTier {
   id: string;
@@ -120,7 +119,7 @@ export default function ClientDashboardPage() {
     };
 
     fetchUserData();
-  }, [user]);
+  }, [user, router]);
 
   const handleLogout = async () => {
     try {
@@ -156,11 +155,6 @@ export default function ClientDashboardPage() {
   };
 
   // Button handlers
-  const handleScheduleConsultation = () => {
-    console.log('Schedule Consultation clicked');
-    alert('Scheduling feature coming soon!');
-  };
-
   const handleLogMeal = () => {
     console.log('Log Meal clicked');
     alert('Meal logging feature coming soon!');
@@ -169,11 +163,6 @@ export default function ClientDashboardPage() {
   const handleAddWater = () => {
     console.log('Add Water clicked');
     alert('Water tracking feature coming soon!');
-  };
-
-  const handleScheduleWeeklyCheckin = () => {
-    console.log('Schedule Weekly Check-in clicked');
-    alert('Weekly check-in scheduling coming soon!');
   };
 
   if (loading) {
@@ -197,7 +186,7 @@ export default function ClientDashboardPage() {
     <SidebarProvider>
       <ClientSidebar
         userName={userData?.name}
-        userTier={userData?.tier?.name}
+        userTier={userData?.tier}
         onLogout={handleLogout}
         onShowWelcome={() => setShowWelcomeScreen(true)}
       />

@@ -6,7 +6,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   ChartContainer,
@@ -43,11 +42,11 @@ interface CustomTooltipProps {
   label?: string;
 }
 
-const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="p-2 bg-card/80 backdrop-blur-sm rounded-lg border border-border/50 shadow-lg min-w-[150px]">
+        <div className="p-2 bg-card/60 backdrop-blur-sm rounded-lg border border-border/50 shadow-lg min-w-[150px]">
             <p className="text-sm font-semibold mb-1 text-primary">{data.date}</p>
             <div className="space-y-1 text-xs">
                 <div>
@@ -79,7 +78,7 @@ export function ProgressCharts() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="w-full h-[300px]">
+        <ChartContainer config={chartConfig}>
           <AreaChart
             accessibilityLayer
             data={chartData}
