@@ -48,10 +48,8 @@ export default function ClientDashboardPage() {
   const router = useRouter();
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [welcomeScreenEvaluated, setWelcomeScreenEvaluated] = useState(false);
 
   useEffect(() => {
     if (authLoading) {
@@ -88,17 +86,8 @@ export default function ClientDashboardPage() {
       role: userDataFromAuth?.role
     });
 
-    // Check if we should show welcome screen (only evaluate once)
-    if (!welcomeScreenEvaluated) {
-      if (!userDataFromAuth?.hideWelcomeDashboard) {
-        console.log('[ClientDashboard] Showing welcome screen');
-        setShowWelcomeScreen(true);
-      }
-      setWelcomeScreenEvaluated(true);
-    }
-
     setLoading(false);
-  }, [userDataFromAuth, authLoading, router, welcomeScreenEvaluated]);
+  }, [userDataFromAuth, authLoading, router]);
 
   const handleLogout = async () => {
     try {
@@ -111,21 +100,6 @@ export default function ClientDashboardPage() {
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
-
-  const handleContinueFromWelcome = async (dontShowAgain?: boolean) => {
-    if (user && dontShowAgain) {
-      try {
-        await setDoc(
-          doc(db, 'users', user.uid),
-          { hideWelcomeDashboard: true },
-          { merge: true }
-        );
-      } catch (error) {
-        console.error('Error updating user preference:', error);
-      }
-    }
-    setShowWelcomeScreen(false);
   };
 
   const toggleTheme = () => {
@@ -152,10 +126,6 @@ export default function ClientDashboardPage() {
     );
   }
 
-  if (showWelcomeScreen) {
-    return <WelcomeScreen onContinue={handleContinueFromWelcome} />;
-  }
-
   const coachNote = {
     coachName: 'Shreyas',
     message: `Amazing job on your last deadlift session, ${userDataFromAuth?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
@@ -167,7 +137,6 @@ export default function ClientDashboardPage() {
         userName={userDataFromAuth?.name}
         userTier={userDataFromAuth?.tier}
         onLogout={handleLogout}
-        onShowWelcome={() => setShowWelcomeScreen(true)}
       />
       <SidebarInset>
         <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
