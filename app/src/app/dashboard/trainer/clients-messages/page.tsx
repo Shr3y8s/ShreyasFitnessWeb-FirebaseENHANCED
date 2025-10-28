@@ -79,7 +79,6 @@ export default function ClientMessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   
   // Compose mode state
-  const [messageSubject, setMessageSubject] = useState('');
   const [messageBody, setMessageBody] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -331,14 +330,13 @@ export default function ClientMessagesPage() {
 
   const clearSelection = () => {
     setSelectedClientIds([]);
-    setMessageSubject('');
     setMessageBody('');
     setShowPreSelectionBanner(false);
   };
 
   // Send group message (compose mode)
   const handleSendGroupMessage = async () => {
-    if (!user || selectedClientIds.length === 0 || !messageSubject.trim() || !messageBody.trim()) return;
+    if (!user || selectedClientIds.length === 0 || !messageBody.trim()) return;
 
     setIsProcessing(true);
     try {
@@ -351,7 +349,6 @@ export default function ClientMessagesPage() {
           senderId: user.uid,
           senderName: 'Trainer',
           recipientId: clientId,
-          subject: messageSubject.trim(),
           content: messageBody.trim(),
           createdAt: serverTimestamp(),
           read: false,
@@ -710,38 +707,18 @@ export default function ClientMessagesPage() {
                   {/* Composer */}
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div>
-                      <label className="font-semibold mb-2 block">Subject *</label>
-                      <input
-                        type="text"
-                        value={messageSubject}
-                        onChange={(e) => setMessageSubject(e.target.value)}
-                        placeholder="Enter message subject..."
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      />
-                    </div>
-
-                    <div>
                       <label className="font-semibold mb-2 block">Message *</label>
                       <textarea
                         value={messageBody}
                         onChange={(e) => setMessageBody(e.target.value)}
-                        placeholder="Type your message..."
-                        rows={12}
+                        placeholder="Type your message to send to all selected clients..."
+                        rows={16}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
                       />
                       <p className="text-sm text-gray-500 mt-2">
-                        {messageBody.length} characters
+                        {messageBody.length} characters • {selectedClientIds.length} recipient{selectedClientIds.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-
-                    {messageSubject && messageBody && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-sm text-blue-800">
-                          <strong>Summary:</strong> Sending "{messageSubject}" to{' '}
-                          <strong>{selectedClientIds.length} recipient{selectedClientIds.length !== 1 ? 's' : ''}</strong>
-                        </p>
-                      </div>
-                    )}
                   </div>
 
                   {/* Footer */}
@@ -756,7 +733,7 @@ export default function ClientMessagesPage() {
                     </Button>
                     <Button
                       className="flex-1"
-                      disabled={!messageSubject.trim() || !messageBody.trim() || isProcessing}
+                      disabled={!messageBody.trim() || isProcessing}
                       onClick={handleSendGroupMessage}
                     >
                       <Send className="h-4 w-4 mr-2" />

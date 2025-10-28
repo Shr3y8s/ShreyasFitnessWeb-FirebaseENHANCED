@@ -51,6 +51,7 @@ export default function ClientDashboardPage() {
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [welcomeScreenEvaluated, setWelcomeScreenEvaluated] = useState(false);
 
   useEffect(() => {
     if (authLoading) {
@@ -87,14 +88,17 @@ export default function ClientDashboardPage() {
       role: userDataFromAuth?.role
     });
 
-    // Check if we should show welcome screen
-    if (!userDataFromAuth?.hideWelcomeDashboard) {
-      console.log('[ClientDashboard] Showing welcome screen');
-      setShowWelcomeScreen(true);
+    // Check if we should show welcome screen (only evaluate once)
+    if (!welcomeScreenEvaluated) {
+      if (!userDataFromAuth?.hideWelcomeDashboard) {
+        console.log('[ClientDashboard] Showing welcome screen');
+        setShowWelcomeScreen(true);
+      }
+      setWelcomeScreenEvaluated(true);
     }
 
     setLoading(false);
-  }, [userDataFromAuth, authLoading, router]);
+  }, [userDataFromAuth, authLoading, router, welcomeScreenEvaluated]);
 
   const handleLogout = async () => {
     try {

@@ -221,18 +221,52 @@ exports.syncPaymentToUser = onDocumentWritten({
 
     // For one-time payments, if status is 'succeeded', mark user as active
     if (status === "succeeded") {
-      await admin.firestore().collection("users").doc(userId).update({
+      const updateData = {
         paymentStatus: "active",
         lastPaymentId: paymentId,
         lastPaymentAmount: paymentData.amount || 0,
         lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Assign trainer if not already assigned
+      const userDoc = await admin.firestore().collection("users").doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (!userData || !userData.assignedTrainerId) {
+        logger.info("Assigning trainer to one-time payment customer", {userId});
+        
+        // Get first admin/trainer from admins collection
+        const adminsSnapshot = await admin.firestore()
+          .collection("admins")
+          .limit(1)
+          .get();
+        
+        if (!adminsSnapshot.empty) {
+          const trainerDoc = adminsSnapshot.docs[0];
+          const trainerData = trainerDoc.data();
+          
+          updateData.assignedTrainerId = trainerDoc.id;
+          updateData.assignedTrainerName = trainerData.name || "Your Coach";
+          updateData.assignedAt = admin.firestore.FieldValue.serverTimestamp();
+          
+          logger.info("Trainer assigned to user", {
+            userId,
+            trainerId: trainerDoc.id,
+            trainerName: trainerData.name,
+          });
+        } else {
+          logger.warn("No trainer found in admins collection", {userId});
+        }
+      }
+
+      await admin.firestore().collection("users").doc(userId).update(updateData);
 
       logger.info("User payment status synced successfully (one-time payment)", {
         userId,
         paymentStatus: "active",
         paymentId,
+        trainerAssigned: !!updateData.assignedTrainerId,
       });
     }
 
@@ -283,19 +317,55 @@ exports.syncSubscriptionToUser = onDocumentWritten({
       status,
     });
 
-    // Update the users collection with payment status
-    // Only update paymentStatus - don't duplicate stripeId/stripeLink
-    await admin.firestore().collection("users").doc(userId).update({
+    // Prepare update object
+    const updateData = {
       paymentStatus: status === "active" ? "active" : "pending",
       subscriptionId: subscriptionId,
       subscriptionStatus: status,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+
+    // If subscription is active and user doesn't have a trainer assigned, assign one
+    if (status === "active") {
+      const userDoc = await admin.firestore().collection("users").doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (!userData || !userData.assignedTrainerId) {
+        logger.info("Assigning trainer to new active subscriber", {userId});
+        
+        // Get first admin/trainer from admins collection
+        const adminsSnapshot = await admin.firestore()
+          .collection("admins")
+          .limit(1)
+          .get();
+        
+        if (!adminsSnapshot.empty) {
+          const trainerDoc = adminsSnapshot.docs[0];
+          const trainerData = trainerDoc.data();
+          
+          updateData.assignedTrainerId = trainerDoc.id;
+          updateData.assignedTrainerName = trainerData.name || "Your Coach";
+          updateData.assignedAt = admin.firestore.FieldValue.serverTimestamp();
+          
+          logger.info("Trainer assigned to user", {
+            userId,
+            trainerId: trainerDoc.id,
+            trainerName: trainerData.name,
+          });
+        } else {
+          logger.warn("No trainer found in admins collection", {userId});
+        }
+      }
+    }
+
+    // Update the users collection with payment status and trainer assignment
+    await admin.firestore().collection("users").doc(userId).update(updateData);
 
     logger.info("User payment status synced successfully", {
       userId,
       paymentStatus: status === "active" ? "active" : "pending",
       subscriptionId,
+      trainerAssigned: !!updateData.assignedTrainerId,
     });
 
     return null;

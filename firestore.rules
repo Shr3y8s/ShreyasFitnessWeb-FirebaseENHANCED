@@ -49,6 +49,9 @@ service cloud.firestore {
       // Admins can read their own profile
       allow read: if request.auth.uid == adminId;
       
+      // CLIENT MESSAGING: Allow authenticated clients to read admin profiles (to find their coach)
+      allow read: if isAuthenticated();
+      
       // Admin profiles are manually created/managed only
       allow write: if false;
     }
@@ -60,6 +63,10 @@ service cloud.firestore {
       
       // TRAINER DASHBOARD: Allow trainers to read all client profiles for management
       allow read: if isTrainerOrAdmin();
+      
+      // CLIENT MESSAGING: Allow clients to read trainer/admin profiles (to find their coach)
+      allow read: if isAuthenticated() && 
+                  resource.data.role in ['trainer', 'admin'];
       
       // Allow users to update their own profile with validation
       // IMPORTANT: Users cannot modify role, createdAt, or paymentStatus (only Stripe Extension can update paymentStatus)

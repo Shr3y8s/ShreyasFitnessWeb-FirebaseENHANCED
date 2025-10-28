@@ -1,15 +1,47 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Circle, Dumbbell, TrendingUp, BarChart3, User, Zap } from 'lucide-react';
+import { CheckCircle2, Circle, Dumbbell, TrendingUp, BarChart3, User, Zap, MessageSquare } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { useAuth } from '@/lib/auth-context';
 
 interface WelcomeScreenProps {
   onContinue: (dontShowAgain?: boolean) => void;
 }
 
+interface TrainerInfo {
+  name: string;
+  email: string;
+}
+
 export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [trainerInfo, setTrainerInfo] = useState<TrainerInfo | null>(null);
+  const { userData } = useAuth();
+
+  // Fetch trainer information
+  useEffect(() => {
+    const fetchTrainer = async () => {
+      if (!userData?.assignedTrainerId) return;
+
+      try {
+        const trainerDoc = await getDoc(doc(db, 'admins', userData.assignedTrainerId));
+        if (trainerDoc.exists()) {
+          const data = trainerDoc.data();
+          setTrainerInfo({
+            name: data.name || 'Your Coach',
+            email: data.email || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching trainer:', error);
+      }
+    };
+
+    fetchTrainer();
+  }, [userData]);
 
   const handleContinue = () => {
     onContinue(dontShowAgain);
@@ -27,6 +59,33 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
             Everything you need to crush your fitness goals, all in one place.
           </p>
         </div>
+
+        {/* Meet Your Coach Section */}
+        {trainerInfo && (
+          <div className="rounded-xl border-2 border-primary bg-gradient-to-br from-primary/5 to-primary/10 p-8 space-y-4 shadow-lg">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                  {trainerInfo.name.charAt(0)}
+                </div>
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-primary mb-2">
+                  🎉 Meet Your Coach - {trainerInfo.name}
+                </h2>
+                <p className="text-lg text-foreground italic">
+                  "Welcome to Shrey.Fit! I'm excited to help you achieve your fitness goals and transform your life."
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <MessageSquare className="w-4 h-4" />
+                <p className="text-sm">
+                  Your coach will reach out soon to get started on your personalized program
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

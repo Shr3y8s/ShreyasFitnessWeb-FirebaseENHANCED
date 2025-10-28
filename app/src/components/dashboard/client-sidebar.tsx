@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '@/lib/auth-context';
 import {
   House,
   User,
@@ -68,8 +72,63 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
         return 'Client';
     }
   };
+  
   const pathname = usePathname();
   const { coachUpdates } = useCoachUpdates();
+  const { user, userData } = useAuth();
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  
+  // Listen for unread messages from trainer
+  useEffect(() => {
+    if (!user || !userData?.assignedTrainerId) {
+      // Reset count if no user or trainer
+      setUnreadMessagesCount(0);
+      return;
+    }
+    
+    let unsubscribe: (() => void) | null = null;
+    
+    const setupMessageListener = async () => {
+      try {
+        // Use assigned trainer ID from user profile
+        const trainerId = userData.assignedTrainerId;
+        const conversationId = [user.uid, trainerId].sort().join('_');
+        
+        // Listen for unread messages
+        const messagesQuery = query(
+          collection(db, 'client_messages'),
+          where('conversationId', '==', conversationId),
+          where('senderId', '==', trainerId),
+          where('read', '==', false)
+        );
+        
+        unsubscribe = onSnapshot(
+          messagesQuery,
+          (snapshot) => {
+            setUnreadMessagesCount(snapshot.size);
+          },
+          (error) => {
+            // Handle permission errors gracefully (e.g., after logout)
+            console.log('Message listener error:', error.code);
+            if (error.code === 'permission-denied') {
+              setUnreadMessagesCount(0);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Error setting up message listener:', error);
+      }
+    };
+    
+    setupMessageListener();
+    
+    // Cleanup function to unsubscribe when component unmounts or dependencies change
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user, userData]);
   
   // Filter notifications by type to get counts for each section
   const workoutUpdatesCount = coachUpdates.filter(
@@ -212,13 +271,13 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/communication">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/messages' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/messages">
                     <MessageSquare className="w-4 h-4" />
-                    <span className="font-medium">Communication</span>
-                    {communicationUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {communicationUpdatesCount}
+                    <span className="font-medium">Coach Inbox</span>
+                    {unreadMessagesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-red-500 text-white flex items-center justify-center w-5 h-5 p-0">
+                        {unreadMessagesCount}
                       </SidebarMenuBadge>
                     )}
                   </Link>
