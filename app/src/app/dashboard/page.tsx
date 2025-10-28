@@ -10,30 +10,27 @@ import { Dumbbell, Target, TrendingUp, Sparkles, RefreshCcw, CircleCheckBig, Clo
 
 export default function DashboardWelcomePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkUserPreference = async () => {
-      if (user) {
+      if (!authLoading && user && userData) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const userData = userDoc.data();
-          
           // CRITICAL: Check payment status FIRST
-          if (userData?.role === 'client' && userData?.paymentStatus !== 'active') {
+          if (userData.role === 'client' && userData.paymentStatus !== 'active') {
             // Redirect to payment if not paid
             router.push('/payment');
             return;
           }
           
           // Check user role and redirect appropriately
-          if (userData?.role === 'trainer' || userData?.role === 'admin') {
+          if (userData.role === 'trainer' || userData.role === 'admin') {
             router.push('/dashboard/trainer');
             return;
           }
           
-          if (userData?.hideWelcomeDashboard) {
+          if (userData.hideWelcomeDashboard) {
             // If user has chosen to hide welcome screen, redirect to client dashboard
             router.push('/dashboard/client');
             return;
@@ -42,11 +39,11 @@ export default function DashboardWelcomePage() {
           console.error('Error checking user preferences:', error);
         }
       }
-      setLoading(false);
+      setLoading(authLoading);
     };
 
     checkUserPreference();
-  }, [user, router]);
+  }, [user, userData, authLoading, router]);
 
   const handleLogout = async () => {
     try {

@@ -11,13 +11,25 @@ service cloud.firestore {
     }
     
     function isTrainer() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
+      return isAuthenticated() && (
+        // Check admins collection first
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['trainer', 'admin']) ||
+        // Fall back to users collection
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'])
+      );
     }
     
     function isTrainerOrAdmin() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'];
+      return isAuthenticated() && (
+        // Check admins collection first
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['trainer', 'admin']) ||
+        // Fall back to users collection
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'])
+      );
     }
 
     // Contact Form Submissions - New collection for contact form
@@ -30,6 +42,15 @@ service cloud.firestore {
         allow read: if isTrainerOrAdmin();
         allow create, update, delete: if isTrainerOrAdmin();
       }
+    }
+    
+    // ADMIN COLLECTION: Protected collection for admin accounts
+    match /admins/{adminId} {
+      // Admins can read their own profile
+      allow read: if request.auth.uid == adminId;
+      
+      // Admin profiles are manually created/managed only
+      allow write: if false;
     }
     
     // Enhanced user profile rules for dashboard

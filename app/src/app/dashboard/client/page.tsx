@@ -65,62 +65,51 @@ const nextWorkout = {
 
 export default function ClientDashboardPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState<UserData | null>(null);
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (user) {
-        try {
-          console.log('[ClientDashboard] Fetching data for user:', user.uid);
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          
-          if (!userDoc.exists()) {
-            console.error('[ClientDashboard] User document does not exist in Firestore!');
-            console.error('[ClientDashboard] User UID:', user.uid);
-            console.error('[ClientDashboard] User email:', user.email);
-            setUserData(null);
-            setLoading(false);
-            return;
-          }
-          
-          const data = userDoc.data() as UserData;
-          console.log('[ClientDashboard] User data loaded:', { 
-            name: data?.name, 
-            email: data?.email, 
-            role: data?.role,
-            tier: data?.tier
-          });
-          
-          // CRITICAL: Check payment status before allowing dashboard access
-          if (data?.role === 'client' && data?.paymentStatus !== 'active') {
-            console.log('[ClientDashboard] Payment not complete, redirecting to payment');
-            router.push('/payment');
-            return;
-          }
-          
-          setUserData(data || null);
-          
-          // Check if we should show welcome screen
-          if (!data?.hideWelcomeDashboard) {
-            console.log('[ClientDashboard] Showing welcome screen');
-            setShowWelcomeScreen(true);
-          }
-        } catch (error) {
-          console.error('[ClientDashboard] Error fetching user data:', error);
-        }
-      } else {
-        console.log('[ClientDashboard] No user authenticated');
-      }
-      setLoading(false);
-    };
+    if (authLoading) {
+      return;
+    }
 
-    fetchUserData();
-  }, [user]);
+    if (!userDataFromAuth) {
+      console.log('[ClientDashboard] No user data, redirecting to login');
+      router.push('/login');
+      return;
+    }
+
+    // Redirect non-clients to their proper dashboard
+    if (userDataFromAuth.role === 'trainer' || userDataFromAuth.role === 'admin') {
+      console.log('[ClientDashboard] User is trainer/admin, redirecting to trainer dashboard');
+      router.push('/dashboard/trainer');
+      return;
+    }
+
+    // CRITICAL: Check payment status before allowing dashboard access
+    if (userDataFromAuth.role === 'client' && userDataFromAuth.paymentStatus !== 'active') {
+      console.log('[ClientDashboard] Payment not complete, redirecting to payment');
+      router.push('/payment');
+      return;
+    }
+
+    console.log('[ClientDashboard] User data loaded:', { 
+      name: userDataFromAuth?.name, 
+      email: userDataFromAuth?.email, 
+      role: userDataFromAuth?.role
+    });
+
+    // Check if we should show welcome screen
+    if (!userDataFromAuth?.hideWelcomeDashboard) {
+      console.log('[ClientDashboard] Showing welcome screen');
+      setShowWelcomeScreen(true);
+    }
+
+    setLoading(false);
+  }, [userDataFromAuth, authLoading, router]);
 
   const handleLogout = async () => {
     try {
@@ -190,14 +179,14 @@ export default function ClientDashboardPage() {
 
   const coachNote = {
     coachName: 'Shreyas',
-    message: `Amazing job on your last deadlift session, ${userData?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
+    message: `Amazing job on your last deadlift session, ${userDataFromAuth?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
   };
 
   return (
     <SidebarProvider>
       <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier?.name}
+        userName={userDataFromAuth?.name}
+        userTier={userDataFromAuth?.tier?.name}
         onLogout={handleLogout}
         onShowWelcome={() => setShowWelcomeScreen(true)}
       />
@@ -206,7 +195,7 @@ export default function ClientDashboardPage() {
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <WelcomeHeader
-              name={userData?.name || 'Alex'}
+              name={userDataFromAuth?.name || 'Alex'}
               isDarkMode={isDarkMode}
               onToggleTheme={toggleTheme}
             />

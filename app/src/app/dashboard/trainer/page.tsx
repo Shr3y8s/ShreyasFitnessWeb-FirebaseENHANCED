@@ -33,7 +33,7 @@ interface ClientData {
 
 export default function TrainerDashboardPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
@@ -41,15 +41,22 @@ export default function TrainerDashboardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (authLoading) {
+        return;
+      }
+
+      if (!userData) {
+        router.push('/login');
+        return;
+      }
+
+      if (userData.role !== 'trainer' && userData.role !== 'admin') {
+        router.push('/dashboard');
+        return;
+      }
+
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          const data = userDoc.data();
-          
-          if (data?.role !== 'trainer' && data?.role !== 'admin') {
-            router.push('/dashboard/client');
-            return;
-          }
           
           // Fetch clients
           const clientsQuery = query(

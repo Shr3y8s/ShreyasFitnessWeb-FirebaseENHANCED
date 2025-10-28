@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 interface TrainerSidebarProps {
-  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments';
+  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments' | 'business' | 'pending-accounts';
 }
 
 interface UserData {
@@ -39,7 +39,8 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
     workouts: 0,
     assignments: 0,
     unreadMessages: 0,
-    unreadClientMessages: 0
+    unreadClientMessages: 0,
+    pendingAccounts: 0
   });
 
   // Fetch user data and counts
@@ -110,6 +111,16 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
         setCounts(prev => ({ ...prev, unreadMessages: snapshot.size }));
       });
       unsubscribers.push(unsubContacts);
+
+      // Listen to pending accounts
+      const pendingAccountsQuery = query(
+        collection(db, 'users'),
+        where('paymentStatus', '==', 'pending')
+      );
+      const unsubPending = onSnapshot(pendingAccountsQuery, (snapshot) => {
+        setCounts(prev => ({ ...prev, pendingAccounts: snapshot.size }));
+      });
+      unsubscribers.push(unsubPending);
     } catch (error) {
       console.error('Error setting up listeners:', error);
     }
@@ -236,6 +247,40 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
           </div>
         </div>
 
+        {/* Business Management */}
+        <div>
+          <p className="text-xs text-gray-500 mb-2 px-2">Business Management</p>
+          <div className="space-y-1">
+            <Link href="/dashboard/trainer/business">
+              <button className={`w-full flex items-center gap-2 p-2 rounded-md text-sm ${
+                currentPage === 'business' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              }`}>
+                <Users className="w-4 h-4" />
+                Overview
+              </button>
+            </Link>
+            
+            <Link href="/dashboard/trainer/pending-accounts">
+              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
+                currentPage === 'pending-accounts' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Pending Accounts
+                </div>
+                {counts.pendingAccounts > 0 && (
+                  <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
+                    currentPage === 'pending-accounts' ? 'bg-white text-primary' : 
+                    counts.pendingAccounts > 10 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
+                  }`}>
+                    {counts.pendingAccounts}
+                  </span>
+                )}
+              </button>
+            </Link>
+          </div>
+        </div>
+        
         {/* Workout Management */}
         <div>
           <p className="text-xs text-gray-500 mb-2 px-2">Workout Management</p>
@@ -295,12 +340,21 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
           </button>
         </div>
         
-        <Link href="/dashboard/client">
-          <Button variant="outline" size="sm" className="w-full justify-start">
-            <User className="h-4 w-4 mr-2" />
-            View as Client
-          </Button>
-        </Link>
+        <div className="space-y-2">
+          <Link href="/dashboard/settings">
+            <Button variant="outline" size="sm" className="w-full justify-start">
+              <User className="h-4 w-4 mr-2" />
+              Account Settings
+            </Button>
+          </Link>
+          
+          <Link href="/dashboard/client">
+            <Button variant="outline" size="sm" className="w-full justify-start">
+              <User className="h-4 w-4 mr-2" />
+              View as Client
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
