@@ -311,12 +311,178 @@ exports.syncSubscriptionToUser = onDocumentWritten({
 });
 
 /**
- * NOTE: Cleanup function removed - no longer needed!
- * 
- * With payment-first flow, accounts are only created when user clicks "Complete Payment"
- * This means:
- * - No abandoned pending accounts
- * - No database bloat
- * - No cleanup needed
- * - Account creation = payment commitment
+ * Firestore trigger to verify reCAPTCHA token for new user signups
+ * Triggered when a new user document is created with a reCAPTCHA token
+ * Verifies the token with Google and updates the user document with the score
  */
+exports.verifyRecaptcha = onDocumentWritten({
+  document: "users/{userId}",
+  region: "us-west1",
+}, async (event) => {
+  const change = event.data;
+  const userId = event.params.userId;
+
+  try {
+    // Only process new documents with reCAPTCHA tokens
+    if (!change.after.exists || change.before.exists) {
+      return null;
+    }
+
+    const userData = change.after.data();
+    
+    // Skip if no reCAPTCHA token or already verified
+    if (!userData.recaptchaToken || userData.recaptchaVerified) {
+      return null;
+    }
+
+    logger.info("Verifying reCAPTCHA for new user", {userId});
+
+    // Get reCAPTCHA secret from environment
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!secretKey) {
+      logger.error("reCAPTCHA secret key not configured");
+      return null;
+    }
+
+    // Verify token with Google reCAPTCHA API
+    const verificationUrl = "https://www.google.com/recaptcha/api/siteverify";
+    const response = await fetch(verificationUrl, {
+      method: "POST",
+      headers: {"Content-Type": "application/x-www-form-urlencoded"},
+      body: `secret=${secretKey}&response=${userData.recaptchaToken}`,
+    });
+
+    const result = await response.json();
+
+    logger.info("reCAPTCHA verification result", {
+      userId,
+      success: result.success,
+      score: result.score,
+      action: result.action,
+    });
+
+    // Update user document with verification result
+    await admin.firestore().collection("users").doc(userId).update({
+      recaptchaVerified: result.success,
+      recaptchaScore: result.score || 0,
+      recaptchaAction: result.action || null,
+      recaptchaToken: admin.firestore.FieldValue.delete(), // Remove token after verification
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Log suspicious accounts (score < 0.5)
+    if (result.success && result.score < 0.5) {
+      logger.warn("Suspicious account detected - low reCAPTCHA score", {
+        userId,
+        email: userData.email,
+        score: result.score,
+      });
+      
+      // Optionally, you could flag the account or notify admins
+      await admin.firestore().collection("users").doc(userId).update({
+        accountFlags: admin.firestore.FieldValue.arrayUnion("low-recaptcha-score"),
+      });
+    }
+
+    return null;
+  } catch (error) {
+    logger.error("Error verifying reCAPTCHA", {
+      error: error.message,
+      userId,
+    });
+    return null;
+  }
+});
+
+/**
+ * Scheduled function to clean up abandoned pending accounts
+ * Runs daily at 2 AM UTC to remove accounts that:
+ * - Have paymentStatus === "pending"
+ * - Were created more than 48 hours ago
+ * - Have no successful payments
+ * 
+ * This prevents database bloat from abandoned signups and test accounts
+ */
+exports.cleanupPendingAccounts = onSchedule({
+  schedule: "0 2 * * *", // Every day at 2 AM UTC
+  timeZone: "UTC",
+  region: "us-west1",
+}, async (event) => {
+  try {
+    logger.info("Starting pending account cleanup job");
+
+    const now = admin.firestore.Timestamp.now();
+    const fortyEightHoursAgo = admin.firestore.Timestamp.fromMillis(
+        now.toMillis() - (48 * 60 * 60 * 1000),
+    );
+
+    // Find pending accounts older than 48 hours
+    const usersRef = admin.firestore().collection("users");
+    const pendingAccountsQuery = usersRef
+        .where("paymentStatus", "==", "pending")
+        .where("createdAt", "<", fortyEightHoursAgo);
+
+    const snapshot = await pendingAccountsQuery.get();
+
+    if (snapshot.empty) {
+      logger.info("No pending accounts to clean up");
+      return null;
+    }
+
+    logger.info(`Found ${snapshot.size} pending accounts to clean up`);
+
+    const batch = admin.firestore().batch();
+    let deleteCount = 0;
+
+    for (const doc of snapshot.docs) {
+      const userData = doc.data();
+      const userId = doc.id;
+
+      logger.info("Deleting pending account", {
+        userId,
+        email: userData.email,
+        createdAt: userData.createdAt,
+        daysSinceCreation: Math.floor(
+            (now.toMillis() - userData.createdAt.toMillis()) / (24 * 60 * 60 * 1000),
+        ),
+      });
+
+      // Delete user document
+      batch.delete(doc.ref);
+      deleteCount++;
+
+      // Also delete from Firebase Auth
+      try {
+        await admin.auth().deleteUser(userId);
+        logger.info("Deleted Firebase Auth user", {userId});
+      } catch (authError) {
+        logger.warn("Failed to delete Firebase Auth user (may not exist)", {
+          userId,
+          error: authError.message,
+        });
+      }
+
+      // Note: stripe_customers collection will be cleaned up by Stripe Extension
+      // if configured with DELETE_STRIPE_CUSTOMERS = Auto delete
+    }
+
+    // Commit the batch
+    await batch.commit();
+
+    logger.info("Pending account cleanup completed", {
+      accountsDeleted: deleteCount,
+    });
+
+    return {
+      success: true,
+      accountsDeleted: deleteCount,
+    };
+  } catch (error) {
+    logger.error("Error in pending account cleanup", {
+      error: error.message,
+      stack: error.stack,
+    });
+    // Don't throw - this is a scheduled function
+    return null;
+  }
+});

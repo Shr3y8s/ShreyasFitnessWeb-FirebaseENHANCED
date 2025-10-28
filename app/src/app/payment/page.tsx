@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
 import { getProductDetails, formatCurrency, STRIPE_PRODUCT_IDS } from '@/lib/stripe';
+import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 
 interface UserData {
   name: string;
@@ -69,6 +70,15 @@ export default function PaymentPage() {
         console.log("No data found, redirecting to signup");
         router.push('/signup');
         return;
+      }
+      
+      // Load reCAPTCHA script
+      try {
+        await loadRecaptcha();
+        console.log("reCAPTCHA loaded successfully");
+      } catch (err) {
+        console.error("Failed to load reCAPTCHA:", err);
+        // Continue without reCAPTCHA - it's not critical for existing users
       }
       
       setLoading(false);
@@ -168,6 +178,21 @@ export default function PaymentPage() {
     setError('');
 
     try {
+      // Execute reCAPTCHA verification for new signups
+      let recaptchaToken: string | null = null;
+      if (pendingSignup) {
+        try {
+          console.log("Executing reCAPTCHA verification...");
+          recaptchaToken = await executeRecaptcha('create_account');
+          console.log("reCAPTCHA token obtained");
+        } catch (recaptchaError) {
+          console.error("reCAPTCHA failed:", recaptchaError);
+          setError('Security verification failed. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+      }
+
       let userId: string;
       let userEmail: string;
       let userName: string;
@@ -191,7 +216,7 @@ export default function PaymentPage() {
         tierName = pendingSignup.tierName;
         tierId = pendingSignup.tier;
         
-        // Create Firestore user document
+        // Create Firestore user document with reCAPTCHA token
         await setDoc(doc(db, 'users', userId), {
           name: pendingSignup.name,
           email: pendingSignup.email,
@@ -200,6 +225,8 @@ export default function PaymentPage() {
           tierName: pendingSignup.tierName,
           paymentStatus: 'pending',
           role: 'client',
+          recaptchaToken: recaptchaToken || null,
+          recaptchaVerified: false, // Will be verified by backend
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
