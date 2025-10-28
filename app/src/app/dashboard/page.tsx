@@ -35,11 +35,14 @@ export default function DashboardWelcomePage() {
             router.push('/dashboard/client');
             return;
           }
+          
+          // Only show welcome screen for clients who haven't seen it yet
+          setLoading(false);
         } catch (error) {
           console.error('Error checking user preferences:', error);
+          setLoading(false);
         }
       }
-      setLoading(authLoading);
     };
 
     checkUserPreference();
@@ -74,10 +77,19 @@ export default function DashboardWelcomePage() {
     router.push('/dashboard/client');
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
+      </div>
+    );
+  }
+  
+  // Don't render anything if redirecting (user is trainer/admin or has seen welcome)
+  if (!user || !userData || userData.role !== 'client' || userData.hideWelcomeDashboard) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-stone-600">Redirecting...</div>
       </div>
     );
   }
