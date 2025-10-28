@@ -16,7 +16,8 @@ import {
   User,
   LogOut,
   Mail,
-  CalendarCheck
+  CalendarCheck,
+  Briefcase
 } from 'lucide-react';
 
 interface TrainerSidebarProps {
@@ -125,7 +126,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
       console.error('Error setting up listeners:', error);
     }
 
-    // Return cleanup function directly from useEffect
+    // Return cleanup function
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
@@ -143,46 +144,46 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
   };
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 bg-white shadow-lg z-50 flex flex-col">
+    <div className="fixed left-4 top-4 bottom-4 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-emerald-200/60 z-50 flex flex-col">
       {/* Header */}
-      <div className="p-4">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">SF</div>
-          <span className="font-semibold text-lg">TRAINER PORTAL</span>
+      <div className="flex items-center gap-3 px-6 py-5">
+        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+          SF
         </div>
+        <span className="font-bold text-lg text-sidebar-foreground">TRAINER PORTAL</span>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-6 overflow-auto">
+      <nav className="flex-1 px-4 py-4 space-y-6 overflow-auto">
         {/* Dashboard Section */}
         <div>
-          <p className="text-xs text-gray-500 mb-2 px-2">Dashboard</p>
+          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Dashboard</p>
           <Link href="/dashboard/trainer">
-            <button className={`w-full flex items-center gap-2 p-2 rounded-md font-medium text-sm ${
-              currentPage === 'overview' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+            <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+              currentPage === 'overview' 
+                ? 'bg-primary text-white hover:bg-primary/90' 
+                : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
             }`}>
-              <LayoutDashboard className="w-4 h-4" />
-              Overview
+              <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+              <span>Overview</span>
             </button>
           </Link>
         </div>
         
         {/* Lead Management */}
         <div>
-          <p className="text-xs text-gray-500 mb-2 px-2">Lead Management</p>
+          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Lead Management</p>
           <div className="space-y-1">
             <Link href="/dashboard/trainer/inbox">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'inbox' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'inbox' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <Inbox className="w-4 h-4" />
-                  Lead Inbox
-                </div>
+                <Inbox className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Lead Inbox</span>
                 {counts.unreadMessages > 0 && (
-                  <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                    currentPage === 'inbox' ? 'bg-white text-primary' : 'bg-red-500 text-white'
-                  }`}>
+                  <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
                     {counts.unreadMessages}
                   </span>
                 )}
@@ -193,36 +194,34 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
         
         {/* Client Management */}
         <div>
-          <p className="text-xs text-gray-500 mb-2 px-2">Client Management</p>
+          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Client Management</p>
           <div className="space-y-1">
             <Link href="/dashboard/trainer/clients">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'clients' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'clients' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Clients
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  currentPage === 'clients' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  {counts.clients}
-                </span>
+                <Users className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Clients</span>
+                {counts.clients > 0 && (
+                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {counts.clients}
+                  </span>
+                )}
               </button>
             </Link>
             
             <Link href="/dashboard/trainer/clients-messages">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'messages' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'messages' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  Client Inbox
-                </div>
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Client Inbox</span>
                 {counts.unreadClientMessages > 0 && (
-                  <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                    currentPage === 'messages' ? 'bg-white text-primary' : 'bg-blue-500 text-white'
-                  }`}>
+                  <span className="ml-auto bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
                     {counts.unreadClientMessages}
                   </span>
                 )}
@@ -230,18 +229,18 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
             </Link>
             
             <Link href="/dashboard/trainer/assignments">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'assignments' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'assignments' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <CalendarCheck className="w-4 h-4" />
-                  Workout Assignments
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  currentPage === 'assignments' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  {counts.assignments}
-                </span>
+                <CalendarCheck className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Workout Assignments</span>
+                {counts.assignments > 0 && (
+                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {counts.assignments}
+                  </span>
+                )}
               </button>
             </Link>
           </div>
@@ -249,28 +248,29 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
 
         {/* Business Management */}
         <div>
-          <p className="text-xs text-gray-500 mb-2 px-2">Business Management</p>
+          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Business Management</p>
           <div className="space-y-1">
             <Link href="/dashboard/trainer/business">
-              <button className={`w-full flex items-center gap-2 p-2 rounded-md text-sm ${
-                currentPage === 'business' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'business' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <Users className="w-4 h-4" />
-                Overview
+                <Briefcase className="w-4 h-4 flex-shrink-0" />
+                <span>Overview</span>
               </button>
             </Link>
             
             <Link href="/dashboard/trainer/pending-accounts">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'pending-accounts' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'pending-accounts' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Pending Accounts
-                </div>
+                <User className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Pending Accounts</span>
                 {counts.pendingAccounts > 0 && (
-                  <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                    currentPage === 'pending-accounts' ? 'bg-white text-primary' : 
+                  <span className={`ml-auto text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
                     counts.pendingAccounts > 10 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
                   }`}>
                     {counts.pendingAccounts}
@@ -283,37 +283,37 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
         
         {/* Workout Management */}
         <div>
-          <p className="text-xs text-gray-500 mb-2 px-2">Workout Management</p>
+          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Workout Management</p>
           <div className="space-y-1">
             <Link href="/dashboard/trainer/exercises">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'exercises' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'exercises' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  Exercise Library
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  currentPage === 'exercises' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  {counts.exercises}
-                </span>
+                <Target className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Exercise Library</span>
+                {counts.exercises > 0 && (
+                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {counts.exercises}
+                  </span>
+                )}
               </button>
             </Link>
             
             <Link href="/dashboard/trainer/workouts">
-              <button className={`w-full flex items-center justify-between p-2 rounded-md text-sm ${
-                currentPage === 'workouts' ? 'bg-primary text-white' : 'hover:bg-gray-100'
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'workouts' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               }`}>
-                <div className="flex items-center gap-2">
-                  <Dumbbell className="w-4 h-4" />
-                  Workout Library
-                </div>
-                <span className={`text-xs w-5 h-5 rounded-full flex items-center justify-center ${
-                  currentPage === 'workouts' ? 'bg-white text-primary' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  {counts.workouts}
-                </span>
+                <Dumbbell className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left">Workout Library</span>
+                {counts.workouts > 0 && (
+                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                    {counts.workouts}
+                  </span>
+                )}
               </button>
             </Link>
           </div>
@@ -321,39 +321,25 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white flex-shrink-0">
-              {userData?.name?.charAt(0) || 'T'}
+      <div className="p-4 border-t border-emerald-100/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+              {userData?.name ? userData.name.charAt(0).toUpperCase() : 'T'}
             </div>
-            <div>
-              <p className="font-semibold text-sm">{userData?.name || 'Trainer'}</p>
-              <p className="text-xs text-primary font-semibold">trainer/admin</p>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-sidebar-foreground truncate">{userData?.name || 'Trainer'}</p>
+              <p className="text-xs text-primary font-medium truncate">trainer/admin</p>
             </div>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="p-2 hover:bg-gray-100 rounded-md"
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout} 
+            className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
           >
-            <LogOut className="w-5 h-5 text-primary" />
-          </button>
-        </div>
-        
-        <div className="space-y-2">
-          <Link href="/dashboard/settings">
-            <Button variant="outline" size="sm" className="w-full justify-start">
-              <User className="h-4 w-4 mr-2" />
-              Account Settings
-            </Button>
-          </Link>
-          
-          <Link href="/dashboard/client">
-            <Button variant="outline" size="sm" className="w-full justify-start">
-              <User className="h-4 w-4 mr-2" />
-              View as Client
-            </Button>
-          </Link>
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </div>

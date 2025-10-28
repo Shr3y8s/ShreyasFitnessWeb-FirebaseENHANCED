@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, collectionGroup, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { 
   Users,
@@ -18,7 +18,9 @@ import {
   BarChart3,
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  DollarSign,
+  CreditCard
 } from 'lucide-react';
 
 interface ClientData {
@@ -38,6 +40,10 @@ export default function TrainerDashboardPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [mrr, setMrr] = useState(0);
+  const [pendingAccountsCount, setPendingAccountsCount] = useState(0);
+  const [failedPaymentsCount, setFailedPaymentsCount] = useState(0);
+  const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -133,6 +139,9 @@ export default function TrainerDashboardPage() {
             workoutsData.push({ id: doc.id, ...doc.data() });
           });
           setWorkoutTemplates(workoutsData);
+
+          // Load financial metrics
+          await loadFinancialMetrics();
         } catch (error) {
           console.error('Error fetching data:', error);
         }
@@ -140,8 +149,75 @@ export default function TrainerDashboardPage() {
       setLoading(false);
     };
 
+    const loadFinancialMetrics = async () => {
+      try {
+        // Load MRR from active subscriptions
+        try {
+          const subsQuery = query(
+            collectionGroup(db, 'subscriptions'),
+            where('status', '==', 'active')
+          );
+          const subsSnapshot = await getDocs(subsQuery);
+          let totalMrr = 0;
+          let activeSubsCount = 0;
+          
+          subsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.items && data.items.length > 0) {
+              data.items.forEach((item: any) => {
+                const amount = (item.price?.unit_amount || 0) / 100;
+                const interval = item.price?.recurring?.interval || 'month';
+                
+                let monthlyAmount = amount;
+                if (interval === 'year') {
+                  monthlyAmount = amount / 12;
+                }
+                
+                totalMrr += monthlyAmount;
+                activeSubsCount++;
+              });
+            }
+          });
+          
+          setMrr(totalMrr);
+          setActiveSubscriptionsCount(activeSubsCount);
+        } catch (subError) {
+          console.log('Subscriptions data not available yet (indexes may still be building):', subError);
+        }
+
+        // Load pending accounts count
+        try {
+          const pendingQuery = query(
+            collection(db, 'users'),
+            where('paymentStatus', '==', 'pending')
+          );
+          const pendingSnapshot = await getDocs(pendingQuery);
+          setPendingAccountsCount(pendingSnapshot.size);
+        } catch (pendingError) {
+          console.log('Pending accounts data not available yet (indexes may still be building):', pendingError);
+        }
+
+        // Load failed payments count
+        try {
+          const failedInvoicesQuery = query(
+            collectionGroup(db, 'invoices'),
+            where('status', 'in', ['open', 'uncollectible']),
+            limit(50)
+          );
+          const failedSnapshot = await getDocs(failedInvoicesQuery);
+          setFailedPaymentsCount(failedSnapshot.size);
+        } catch (invoiceError) {
+          console.log('Invoice data not available yet (indexes may still be building):', invoiceError);
+        }
+
+      } catch (error) {
+        console.error('Error loading financial metrics:', error);
+        // Don't throw - allow dashboard to load even if financial metrics fail
+      }
+    };
+
     fetchData();
-  }, [user, router]);
+  }, [user, userData, authLoading, router]);
 
   if (loading) {
     return (
@@ -159,7 +235,7 @@ export default function TrainerDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <TrainerSidebar currentPage="overview" />
 
       <div className="ml-64 p-8">
@@ -185,84 +261,200 @@ export default function TrainerDashboardPage() {
           </div>
 
           {/* Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Total Clients</p>
-                  <p className="text-2xl font-bold">{dashboardStats.totalClients}</p>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Client Metrics</h3>
+              <Link href="/dashboard/trainer/clients">
+                <Button variant="outline" size="sm">
+                  View All Clients
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Total Clients</p>
+                    <p className="text-xl font-bold text-gray-900">{dashboardStats.totalClients}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Dumbbell className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Active Workouts</p>
-                  <p className="text-2xl font-bold">{dashboardStats.activeWorkouts}</p>
+              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Dumbbell className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Active Workouts</p>
+                    <p className="text-xl font-bold text-gray-900">{dashboardStats.activeWorkouts}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-100 rounded-full">
-                  <CheckCircle2 className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Completed Today</p>
-                  <p className="text-2xl font-bold">{dashboardStats.completedToday}</p>
+              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Completed Today</p>
+                    <p className="text-xl font-bold text-gray-900">{dashboardStats.completedToday}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-xl border p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-100 rounded-full">
-                  <Clock className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Pending Assignments</p>
-                  <p className="text-2xl font-bold">{dashboardStats.pendingAssignments}</p>
+              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Pending Assignments</p>
+                    <p className="text-xl font-bold text-gray-900">{dashboardStats.pendingAssignments}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Financial Stats Row */}
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Business Metrics</h3>
+              <Link href="/dashboard/trainer/business">
+                <Button variant="outline" size="sm">
+                  View All Metrics
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link href="/dashboard/trainer/business">
+                <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">MRR</p>
+                      <p className="text-xl font-bold text-gray-900">${mrr.toFixed(0)}</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/trainer/pending-accounts">
+                <div className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                  pendingAccountsCount > 10 ? 'border-orange-300 bg-orange-50' : ''
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      pendingAccountsCount > 10 ? 'bg-orange-100' : 'bg-yellow-100'
+                    }`}>
+                      <Clock className={`h-5 w-5 ${
+                        pendingAccountsCount > 10 ? 'text-orange-600' : 'text-yellow-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Pending Accounts</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {pendingAccountsCount}
+                        {pendingAccountsCount > 10 && <span className="text-orange-600"> ⚠️</span>}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/trainer/business">
+                <div className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                  failedPaymentsCount > 0 ? 'border-red-300 bg-red-50' : ''
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      failedPaymentsCount > 0 ? 'bg-red-100' : 'bg-gray-100'
+                    }`}>
+                      <AlertCircle className={`h-5 w-5 ${
+                        failedPaymentsCount > 0 ? 'text-red-600' : 'text-gray-400'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Failed Payments</p>
+                      <p className="text-xl font-bold text-gray-900">{failedPaymentsCount}</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/dashboard/trainer/business">
+                <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <CreditCard className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600">Active Subscriptions</p>
+                      <p className="text-xl font-bold text-gray-900">{activeSubscriptionsCount}</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
+
+          {/* Pending Accounts Alert */}
+          {pendingAccountsCount > 10 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    High Number of Pending Accounts
+                  </h3>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    You have <strong>{pendingAccountsCount}</strong> pending accounts that haven't completed payment.
+                  </p>
+                  <Link href="/dashboard/trainer/pending-accounts">
+                    <Button variant="outline" size="sm" className="mt-2 border-yellow-600 text-yellow-700 hover:bg-yellow-100">
+                      Review Pending Accounts
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Quick Actions */}
-          <div className="bg-white rounded-xl border p-6">
-            <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Link href="/dashboard/trainer/workouts/create">
-                <Button className="w-full justify-start h-auto p-4 flex-col items-start">
-                  <Plus className="h-6 w-6 mb-2" />
+                <Button className="w-full justify-start h-auto p-4 flex-col items-start bg-white hover:bg-gray-50 text-gray-900 border border-gray-200">
+                  <Plus className="h-5 w-5 mb-2 text-purple-600" />
                   <span className="font-semibold">Create New Workout</span>
-                  <span className="text-sm opacity-80">Build a custom workout template</span>
+                  <span className="text-sm text-gray-600 mt-1">Build a custom workout template</span>
                 </Button>
               </Link>
               
               <Link href="/dashboard/trainer/clients">
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start h-auto p-4 flex-col items-start"
+                  className="w-full justify-start h-auto p-4 flex-col items-start bg-white hover:bg-gray-50"
                 >
-                  <Users className="h-6 w-6 mb-2" />
+                  <Users className="h-5 w-5 mb-2 text-blue-600" />
                   <span className="font-semibold">Manage Clients</span>
-                  <span className="text-sm opacity-80">View and manage your clients</span>
+                  <span className="text-sm text-gray-600 mt-1">View and manage your clients</span>
                 </Button>
               </Link>
               
               <Link href="/dashboard/trainer/assignments">
-                <Button variant="outline" className="w-full justify-start h-auto p-4 flex-col items-start">
-                  <TrendingUp className="h-6 w-6 mb-2" />
+                <Button variant="outline" className="w-full justify-start h-auto p-4 flex-col items-start bg-white hover:bg-gray-50">
+                  <TrendingUp className="h-5 w-5 mb-2 text-green-600" />
                   <span className="font-semibold">View Progress</span>
-                  <span className="text-sm opacity-80">Check client workout completion</span>
+                  <span className="text-sm text-gray-600 mt-1">Check client workout completion</span>
                 </Button>
               </Link>
             </div>

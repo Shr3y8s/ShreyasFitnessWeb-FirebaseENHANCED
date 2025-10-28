@@ -251,26 +251,55 @@ service cloud.firestore {
       allow read: if true;  // Allow public reads for product/price info
     }
     
+    // CollectionGroup rules for Stripe subcollections (for business dashboard analytics)
+    match /{path=**}/subscriptions/{subscriptionId} {
+      // Allow trainers/admins to read all subscriptions for MRR calculations
+      allow read: if isTrainerOrAdmin();
+    }
+    
+    match /{path=**}/payments/{paymentId} {
+      // Allow trainers/admins to read all payments for revenue tracking
+      allow read: if isTrainerOrAdmin();
+    }
+    
+    match /{path=**}/invoices/{invoiceId} {
+      // Allow trainers/admins to read all invoices for failed payment monitoring
+      allow read: if isTrainerOrAdmin();
+    }
+    
     // Stripe Customers - User-specific access with Extension support
     match /stripe_customers/{userId} {
       // Users can create their own customer document during signup
       allow create: if isAuthenticated() && request.auth.uid == userId;
       
       // Users can read their own customer data
-      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // Trainers/admins can read all customer data for business analytics
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
       
       // Only Extension/Admin can update (Extension uses admin SDK so bypasses rules)
       allow update, delete: if false;
       
       // Subscriptions subcollection - managed by Extension
       match /subscriptions/{subscriptionId} {
-        allow read: if isAuthenticated() && request.auth.uid == userId;
+        // Users can read their own subscriptions
+        // Trainers/admins can read all subscriptions for business dashboard (MRR, etc.)
+        allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
         allow write: if false; // Only Extension can write
       }
       
       // Payments subcollection - managed by Extension
       match /payments/{paymentId} {
-        allow read: if isAuthenticated() && request.auth.uid == userId;
+        // Users can read their own payments
+        // Trainers/admins can read all payments for business dashboard (revenue tracking)
+        allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
+        allow write: if false; // Only Extension can write
+      }
+      
+      // Invoices subcollection - managed by Extension
+      match /invoices/{invoiceId} {
+        // Users can read their own invoices
+        // Trainers/admins can read all invoices for business dashboard (failed payments tracking)
+        allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
         allow write: if false; // Only Extension can write
       }
       

@@ -347,14 +347,14 @@ export default function InboxPage() {
 
   if (loading && submissions.length === 0) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="text-stone-600">Loading inbox...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* Shared Trainer Sidebar */}
       <TrainerSidebar currentPage="inbox" />
 

@@ -325,14 +325,14 @@ export default function WorkoutAssignmentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <TrainerSidebar currentPage="assignments" />
 
       <div className="ml-64 p-8">

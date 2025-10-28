@@ -63,8 +63,19 @@ export default function ClientDashboardPage() {
       return;
     }
 
+    // CRITICAL: Only clients should access client dashboard
+    if (userDataFromAuth.role !== 'client') {
+      console.log('[ClientDashboard] User is not a client, redirecting to appropriate dashboard');
+      if (userDataFromAuth.role === 'trainer' || userDataFromAuth.role === 'admin') {
+        router.push('/dashboard/trainer');
+      } else {
+        router.push('/dashboard');
+      }
+      return;
+    }
+
     // CRITICAL: Check payment status before allowing dashboard access
-    if (userDataFromAuth.role === 'client' && userDataFromAuth.paymentStatus !== 'active') {
+    if (userDataFromAuth.paymentStatus !== 'active') {
       console.log('[ClientDashboard] Payment not complete, redirecting to payment');
       router.push('/payment');
       return;
