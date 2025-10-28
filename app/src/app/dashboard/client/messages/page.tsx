@@ -39,7 +39,7 @@ interface TrainerData {
 
 export default function ClientMessagesPage() {
   const router = useRouter();
-  const { user, userData } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -51,6 +51,11 @@ export default function ClientMessagesPage() {
   // Find the trainer for this client
   useEffect(() => {
     const findTrainer = async () => {
+      // Wait for auth to finish loading (prevents redirect on page refresh)
+      if (authLoading) {
+        return;
+      }
+      
       if (!user) {
         router.push('/login');
         return;
@@ -96,7 +101,7 @@ export default function ClientMessagesPage() {
     };
 
     findTrainer();
-  }, [user, userData, router]);
+  }, [user, userData, router, authLoading]);
 
   // Subscribe to messages
   useEffect(() => {
@@ -231,7 +236,7 @@ export default function ClientMessagesPage() {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
@@ -280,13 +285,6 @@ export default function ClientMessagesPage() {
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-              <button 
-                onClick={() => router.push('/dashboard/client')}
-                className="flex items-center text-sm text-gray-600 hover:text-primary transition-colors mb-2 cursor-pointer"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Dashboard
-              </button>
               <h1 className="text-2xl font-bold text-foreground">Coach Inbox</h1>
               <p className="text-muted-foreground mt-1">
                 Message your coach directly

@@ -60,7 +60,7 @@ interface Conversation {
 export default function ClientMessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   // Mode state
   const [mode, setMode] = useState<'compose' | 'view'>('view');
@@ -119,6 +119,11 @@ export default function ClientMessagesPage() {
   // Fetch clients
   useEffect(() => {
     const fetchClients = async () => {
+      // Wait for auth to finish loading (prevents redirect on page refresh)
+      if (authLoading) {
+        return;
+      }
+      
       if (!user) {
         router.push('/login');
         return;
@@ -158,7 +163,7 @@ export default function ClientMessagesPage() {
     };
 
     fetchClients();
-  }, [user, router]);
+  }, [user, router, authLoading]);
 
   // Subscribe to messages for active client (view mode)
   useEffect(() => {
@@ -478,7 +483,7 @@ export default function ClientMessagesPage() {
     }
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
