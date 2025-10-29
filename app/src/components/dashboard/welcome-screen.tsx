@@ -8,7 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 
 interface WelcomeScreenProps {
-  onContinue: (dontShowAgain?: boolean) => void;
+  onContinue: () => void;
 }
 
 interface TrainerInfo {
@@ -17,7 +17,6 @@ interface TrainerInfo {
 }
 
 export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
-  const [dontShowAgain, setDontShowAgain] = useState(false);
   const [trainerInfo, setTrainerInfo] = useState<TrainerInfo | null>(null);
   const { userData } = useAuth();
 
@@ -43,9 +42,6 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
     fetchTrainer();
   }, [userData]);
 
-  const handleContinue = () => {
-    onContinue(dontShowAgain);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-primary/5 flex items-center justify-center p-4 overflow-y-auto">
@@ -189,25 +185,14 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col items-center space-y-4">
+        <div className="flex flex-col items-center">
           <Button
-            onClick={handleContinue}
+            onClick={onContinue}
             size="lg"
             className="text-lg px-8 py-6 transition-transform hover:-translate-y-1 hover:shadow-xl"
           >
             Continue to My Dashboard
           </Button>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={dontShowAgain}
-              onChange={(e) => setDontShowAgain(e.target.checked)}
-              className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
-            />
-            <span className="text-sm text-muted-foreground">
-              Don&apos;t show this welcome screen again
-            </span>
-          </label>
         </div>
       </div>
     </div>
