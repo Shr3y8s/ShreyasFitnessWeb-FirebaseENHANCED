@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Loader2 } from 'lucide-react';
 
 interface AddressData {
+  street: string;
   city: string;
   state: string;
   country: string;
@@ -112,6 +113,7 @@ export function AddressAutocomplete({ onAddressSelect }: AddressAutocompleteProp
       
       // Call the parent callback with extracted address data
       onAddressSelect({
+        street: addressData.street || '',
         city: addressData.city || '',
         state: addressData.state || '',
         country: addressData.country || '',

@@ -44,6 +44,7 @@ export default function ProfilePage() {
 
   // Location edit state
   const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [editedStreet, setEditedStreet] = useState('');
   const [editedCity, setEditedCity] = useState('');
   const [editedState, setEditedState] = useState('');
   const [editedCountry, setEditedCountry] = useState('');
@@ -52,6 +53,7 @@ export default function ProfilePage() {
 
   // Local state for immediate location display
   const [currentLocationInfo, setCurrentLocationInfo] = useState<{
+    street?: string | null;
     city?: string | null;
     state?: string | null;
     country?: string | null;
@@ -250,6 +252,7 @@ export default function ProfilePage() {
 
   const handleEditLocation = () => {
     // Load current values from nested address object
+    setEditedStreet(userData?.address?.street || '');
     setEditedCity(userData?.address?.city || '');
     setEditedState(userData?.address?.state || '');
     setEditedCountry(userData?.address?.country || '');
@@ -258,12 +261,14 @@ export default function ProfilePage() {
   };
 
   const handleAddressSelect = (addressData: {
+    street: string;
     city: string;
     state: string;
     country: string;
     zipCode: string;
   }) => {
     // Auto-populate fields from autocomplete
+    setEditedStreet(addressData.street);
     setEditedCity(addressData.city);
     setEditedState(addressData.state);
     setEditedCountry(addressData.country);
@@ -273,6 +278,7 @@ export default function ProfilePage() {
   const handleCancelLocation = () => {
     setIsEditingLocation(false);
     // Clear edit state
+    setEditedStreet('');
     setEditedCity('');
     setEditedState('');
     setEditedCountry('');
@@ -285,6 +291,7 @@ export default function ProfilePage() {
     setSavingLocation(true);
     try {
       const updatedData = {
+        street: editedStreet.trim() || null,
         city: editedCity.trim() || null,
         state: editedState || null,
         country: editedCountry || null,
@@ -590,6 +597,18 @@ export default function ProfilePage() {
 
                       {/* Manual Edit Fields (auto-filled by autocomplete) */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Street Address
+                          </label>
+                          <input
+                            type="text"
+                            value={editedStreet}
+                            onChange={(e) => setEditedStreet(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="1600 Pennsylvania Avenue NW"
+                          />
+                        </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">
                             City
@@ -665,6 +684,10 @@ export default function ProfilePage() {
                   <>
                     {/* View Mode */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-muted-foreground">Street Address</label>
+                        <p className="text-base font-medium">{currentLocationInfo?.street || userData?.address?.street || 'Not set'}</p>
+                      </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">City</label>
                         <p className="text-base font-medium">{currentLocationInfo?.city || userData?.address?.city || 'Not set'}</p>

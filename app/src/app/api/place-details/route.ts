@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     
     // Extract address components
     const addressData = {
+      street: '',
       city: '',
       state: '',
       country: '',
@@ -40,10 +41,20 @@ export async function POST(request: NextRequest) {
       formattedAddress: data.formattedAddress || '',
     };
 
+    // Track street components separately to combine them
+    let streetNumber = '';
+    let route = '';
+
     if (data.addressComponents) {
       data.addressComponents.forEach((component: any) => {
         const types = component.types || [];
 
+        if (types.includes('street_number')) {
+          streetNumber = component.longText || '';
+        }
+        if (types.includes('route')) {
+          route = component.longText || '';
+        }
         if (types.includes('locality')) {
           addressData.city = component.longText || '';
         }
@@ -57,6 +68,9 @@ export async function POST(request: NextRequest) {
           addressData.zipCode = component.longText || '';
         }
       });
+
+      // Combine street number and route
+      addressData.street = [streetNumber, route].filter(Boolean).join(' ');
     }
 
     return NextResponse.json(addressData);
