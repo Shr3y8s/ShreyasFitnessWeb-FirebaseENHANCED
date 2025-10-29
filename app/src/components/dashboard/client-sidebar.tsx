@@ -306,8 +306,8 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/profile">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/profile' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/profile">
                     <User className="w-4 h-4" />
                     <span className="font-medium">Profile</span>
                     {profileUpdatesCount > 0 && (
