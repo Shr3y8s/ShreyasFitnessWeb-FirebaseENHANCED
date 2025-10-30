@@ -60,6 +60,22 @@ export default function ProfilePage() {
     zipCode?: string | null;
   } | null>(null);
 
+  // Emergency Contact edit state
+  const [isEditingEmergency, setIsEditingEmergency] = useState(false);
+  const [editedEmergencyName, setEditedEmergencyName] = useState('');
+  const [editedEmergencyPhone, setEditedEmergencyPhone] = useState('');
+  const [editedEmergencyRelationship, setEditedEmergencyRelationship] = useState('');
+  const [editedEmergencyMedicalNotes, setEditedEmergencyMedicalNotes] = useState('');
+  const [savingEmergency, setSavingEmergency] = useState(false);
+
+  // Local state for immediate emergency contact display
+  const [currentEmergencyInfo, setCurrentEmergencyInfo] = useState<{
+    name?: string | null;
+    phone?: string | null;
+    relationship?: string | null;
+    medicalNotes?: string | null;
+  } | null>(null);
+
   useEffect(() => {
     if (authLoading) {
       return;
@@ -313,6 +329,54 @@ export default function ProfilePage() {
       alert('Failed to update. Please try again.');
     } finally {
       setSavingLocation(false);
+    }
+  };
+
+  const handleEditEmergency = () => {
+    // Load current values from nested emergencyContact object
+    setEditedEmergencyName(userData?.emergencyContact?.name || '');
+    setEditedEmergencyPhone(userData?.emergencyContact?.phone || '');
+    setEditedEmergencyRelationship(userData?.emergencyContact?.relationship || '');
+    setEditedEmergencyMedicalNotes(userData?.emergencyContact?.medicalNotes || '');
+    setIsEditingEmergency(true);
+  };
+
+  const handleCancelEmergency = () => {
+    setIsEditingEmergency(false);
+    // Clear edit state
+    setEditedEmergencyName('');
+    setEditedEmergencyPhone('');
+    setEditedEmergencyRelationship('');
+    setEditedEmergencyMedicalNotes('');
+  };
+
+  const handleSaveEmergency = async () => {
+    if (!user) return;
+
+    setSavingEmergency(true);
+    try {
+      const updatedData = {
+        name: editedEmergencyName.trim() || null,
+        phone: editedEmergencyPhone.trim() || null,
+        relationship: editedEmergencyRelationship.trim() || null,
+        medicalNotes: editedEmergencyMedicalNotes.trim() || null,
+      };
+
+      // Store in nested emergencyContact object
+      await updateDoc(doc(db, 'users', user.uid), {
+        emergencyContact: updatedData,
+      });
+
+      // Update local state immediately for instant display
+      setCurrentEmergencyInfo(updatedData);
+
+      alert('Emergency contact information updated successfully!');
+      setIsEditingEmergency(false);
+    } catch (error) {
+      console.error('Error updating emergency contact:', error);
+      alert('Failed to update. Please try again.');
+    } finally {
+      setSavingEmergency(false);
     }
   };
 
@@ -726,13 +790,149 @@ export default function ProfilePage() {
             {/* Emergency Contact Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="h-5 w-5 text-primary" />
-                  Emergency Contact
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5 text-primary" />
+                    Emergency Contact
+                  </CardTitle>
+                  {!isEditingEmergency && (
+                    <button
+                      onClick={handleEditEmergency}
+                      className="text-sm text-primary hover:text-primary/80 font-medium"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground italic">Emergency contact information - Coming soon</p>
+              <CardContent className="space-y-4">
+                {isEditingEmergency ? (
+                  <>
+                    {/* Edit Mode */}
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        This information will be used in case of an emergency during training sessions.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Emergency Contact Name
+                          </label>
+                          <input
+                            type="text"
+                            value={editedEmergencyName}
+                            onChange={(e) => setEditedEmergencyName(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Jane Doe"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Emergency Contact Phone
+                          </label>
+                          <input
+                            type="tel"
+                            value={editedEmergencyPhone}
+                            onChange={(e) => setEditedEmergencyPhone(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="(555) 987-6543"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Relationship
+                          </label>
+                          <select
+                            value={editedEmergencyRelationship}
+                            onChange={(e) => setEditedEmergencyRelationship(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                          >
+                            <option value="">Select...</option>
+                            <option value="spouse">Spouse</option>
+                            <option value="partner">Partner</option>
+                            <option value="parent">Parent</option>
+                            <option value="sibling">Sibling</option>
+                            <option value="child">Child</option>
+                            <option value="friend">Friend</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Medical Notes (Optional)
+                          </label>
+                          <textarea
+                            value={editedEmergencyMedicalNotes}
+                            onChange={(e) => setEditedEmergencyMedicalNotes(e.target.value)}
+                            rows={3}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                            placeholder="Allergies, medical conditions, medications, or other important health information..."
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Any relevant medical information your trainer should know
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button
+                        onClick={handleCancelEmergency}
+                        disabled={savingEmergency}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEmergency}
+                        disabled={savingEmergency}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {savingEmergency && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {savingEmergency ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* View Mode */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Contact Name</label>
+                          <p className="text-base font-medium">
+                            {currentEmergencyInfo?.name || userData?.emergencyContact?.name || 'Not set'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Contact Phone</label>
+                          <p className="text-base font-medium">
+                            {currentEmergencyInfo?.phone || userData?.emergencyContact?.phone || 'Not set'}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Relationship</label>
+                          <p className="text-base font-medium capitalize">
+                            {currentEmergencyInfo?.relationship || userData?.emergencyContact?.relationship || 'Not set'}
+                          </p>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium text-muted-foreground">Medical Notes</label>
+                          <p className="text-base">
+                            {currentEmergencyInfo?.medicalNotes || userData?.emergencyContact?.medicalNotes || 'None provided'}
+                          </p>
+                        </div>
+                      </div>
+                      {(!currentEmergencyInfo?.name && !userData?.emergencyContact?.name) && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                          <p className="text-sm text-amber-800">
+                            <strong>Recommendation:</strong> Please add emergency contact information for safety during training sessions.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
