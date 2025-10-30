@@ -409,6 +409,17 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
+          
+          {/* Legal Links */}
+          <div className="text-xs text-center text-muted-foreground pt-2 border-t border-white/10">
+            <Link href="/legal/terms" className="hover:text-primary transition-colors">
+              Terms
+            </Link>
+            <span className="mx-2">•</span>
+            <Link href="/legal/privacy" className="hover:text-primary transition-colors">
+              Privacy
+            </Link>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

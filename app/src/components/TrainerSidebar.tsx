@@ -321,7 +321,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-emerald-100/30">
+      <div className="p-4 border-t border-emerald-100/30 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
@@ -340,6 +340,17 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
           >
             <LogOut className="w-4 h-4" />
           </Button>
+        </div>
+        
+        {/* Legal Links */}
+        <div className="text-xs text-center text-muted-foreground pt-2 border-t border-emerald-100/30">
+          <Link href="/legal/terms" className="hover:text-primary transition-colors">
+            Terms
+          </Link>
+          <span className="mx-2">•</span>
+          <Link href="/legal/privacy" className="hover:text-primary transition-colors">
+            Privacy
+          </Link>
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { AlertCircle, Mail, Lock, Eye, EyeOff, Shield, Clock, Users, Award, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { Footer } from '@/components/Footer';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -251,6 +252,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

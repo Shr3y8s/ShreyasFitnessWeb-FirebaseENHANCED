@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { signOutUser, db, auth } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,6 +96,17 @@ export default function ProfilePage() {
     marketing?: boolean;
     frequency?: string;
   } | null>(null);
+
+  // Security Settings edit state
+  const [isEditingSecurity, setIsEditingSecurity] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingSecurity, setSavingSecurity] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  // Account & Data Management state
+  const [downloadingData, setDownloadingData] = useState(false);
 
   useEffect(() => {
     if (authLoading) {
@@ -451,6 +463,130 @@ export default function ProfilePage() {
       alert('Failed to update. Please try again.');
     } finally {
       setSavingPreferences(false);
+    }
+  };
+
+  const handleEditSecurity = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setIsEditingSecurity(true);
+  };
+
+  const handleCancelSecurity = () => {
+    setIsEditingSecurity(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const handleChangePassword = async () => {
+    if (!user || !user.email) return;
+
+    // Clear previous errors
+    setPasswordError('');
+
+    // Validate passwords
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from current password');
+      return;
+    }
+
+    setSavingSecurity(true);
+    try {
+      // Re-authenticate user with current password
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update password
+      await updatePassword(user, newPassword);
+
+      alert('Password updated successfully!');
+      setIsEditingSecurity(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      
+      // Handle specific error codes
+      if (error.code === 'auth/wrong-password') {
+        setPasswordError('Current password is incorrect');
+      } else if (error.code === 'auth/too-many-requests') {
+        setPasswordError('Too many attempts. Please try again later');
+      } else if (error.code === 'auth/requires-recent-login') {
+        setPasswordError('Please log out and log back in, then try again');
+      } else {
+        setPasswordError('Failed to update password. Please try again');
+      }
+    } finally {
+      setSavingSecurity(false);
+    }
+  };
+
+  const handleDownloadData = async () => {
+    if (!user || !userData) return;
+
+    setDownloadingData(true);
+    try {
+      // Compile all user data
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        profile: {
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          dateOfBirth: userData.dateOfBirth,
+          gender: userData.gender,
+          tier: userData.tier,
+          createdAt: userData.createdAt,
+        },
+        address: userData.address || {},
+        emergencyContact: userData.emergencyContact || {},
+        notificationPreferences: userData.notificationPreferences || {},
+        subscription: {
+          tier: userData.tier,
+          paymentStatus: userData.paymentStatus,
+        },
+      };
+
+      // Create JSON blob
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+      // Create download link
+      const url = window.URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `my-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      alert('Your data has been downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading data:', error);
+      alert('Failed to download data. Please try again.');
+    } finally {
+      setDownloadingData(false);
     }
   };
 
@@ -1327,26 +1463,246 @@ export default function ProfilePage() {
             {/* Security Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Security
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    Security
+                  </CardTitle>
+                  {!isEditingSecurity && (
+                    <button
+                      onClick={handleEditSecurity}
+                      className="text-sm text-primary hover:text-primary/80 font-medium"
+                    >
+                      Change Password
+                    </button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground italic">Password and security settings - Coming soon</p>
+              <CardContent className="space-y-6">
+                {isEditingSecurity ? (
+                  <>
+                    {/* Edit Mode - Password Change */}
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Enter your current password and choose a new password for your account.
+                      </p>
+                      
+                      {/* Error Message */}
+                      {passwordError && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <p className="text-sm text-red-800">{passwordError}</p>
+                        </div>
+                      )}
+
+                      <div className="space-y-4 max-w-md">
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Current Password <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Enter current password"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            New Password <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Enter new password (min 6 characters)"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            Confirm New Password <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            placeholder="Confirm new password"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button
+                        onClick={handleCancelSecurity}
+                        disabled={savingSecurity}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleChangePassword}
+                        disabled={savingSecurity}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {savingSecurity && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {savingSecurity ? 'Updating...' : 'Update Password'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* View Mode */}
+                    <div className="space-y-6">
+                      {/* Password Section */}
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-2">Password</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Last changed: Never (or recently if you just changed it)
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Click "Change Password" above to update your password
+                        </p>
+                      </div>
+
+                      {/* Coming Soon Features */}
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-3">Additional Security (Coming Soon)</h3>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="w-4 h-4 rounded flex items-center justify-center bg-gray-100 text-gray-400">✗</div>
+                            <span>Two-Factor Authentication</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="w-4 h-4 rounded flex items-center justify-center bg-gray-100 text-gray-400">✗</div>
+                            <span>Active Sessions Management</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="w-4 h-4 rounded flex items-center justify-center bg-gray-100 text-gray-400">✗</div>
+                            <span>Login History</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <div className="w-4 h-4 rounded flex items-center justify-center bg-gray-100 text-gray-400">✗</div>
+                            <span>Security Alerts</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
-            {/* Danger Zone */}
-            <Card className="border-red-200">
+            {/* Account & Data Management */}
+            <Card className="border-amber-200">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-600">
+                <CardTitle className="flex items-center gap-2 text-amber-700">
                   <AlertTriangle className="h-5 w-5" />
-                  Danger Zone
+                  Account & Data Management
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">Account deactivation and data download options - Coming soon</p>
+              <CardContent className="space-y-6">
+                {/* Download My Data */}
+                <div className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:border-primary/50 transition-colors">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground mb-1">Download My Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Export all your personal data in JSON format (GDPR compliant)
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDownloadData}
+                    disabled={downloadingData}
+                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2 ml-4"
+                  >
+                    {downloadingData && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {downloadingData ? 'Downloading...' : 'Download'}
+                  </button>
+                </div>
+
+                {/* Subscription Management - Coming Soon */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-foreground">Subscription Management</h3>
+                  
+                  {/* Pause Subscription */}
+                  <div className="flex items-start justify-between p-4 border border-gray-200 rounded-lg opacity-60">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-foreground">Pause Subscription</h4>
+                        <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">Coming Soon</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Temporarily pause billing for 1-3 months (vacation, medical, etc.)
+                      </p>
+                    </div>
+                    <button
+                      disabled
+                      className="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed ml-4"
+                    >
+                      Pause
+                    </button>
+                  </div>
+
+                  {/* Cancel Subscription */}
+                  <div className="flex items-start justify-between p-4 border border-gray-200 rounded-lg opacity-60">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-foreground">Cancel Subscription</h4>
+                        <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">Coming Soon</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Stop billing but keep account and data (access until period end)
+                      </p>
+                    </div>
+                    <button
+                      disabled
+                      className="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed ml-4"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {/* Delete Account */}
+                  <div className="flex items-start justify-between p-4 border border-red-200 rounded-lg opacity-60">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium text-red-600">Delete Account</h4>
+                        <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">Coming Soon</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete all data (cannot be undone, no refunds)
+                      </p>
+                    </div>
+                    <button
+                      disabled
+                      className="px-4 py-2 bg-gray-300 text-gray-500 rounded-md cursor-not-allowed ml-4"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                {/* Info Banner */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> Subscription management features (Pause, Cancel, Delete) require Stripe integration and will be implemented in Phase 2. 
+                    Your "Download My Data" feature is fully functional now.
+                  </p>
+                </div>
+
+                {/* Refund Policy Link */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-700">
+                    <strong>Refund Policy:</strong> All sales are final. No refunds for cancelled subscriptions or unused sessions. 
+                    Case-by-case exceptions for medical emergencies and billing errors.{' '}
+                    <a href="/legal/terms" target="_blank" className="text-primary hover:underline">
+                      View full Terms of Service →
+                    </a>
+                  </p>
+                </div>
               </CardContent>
             </Card>
 

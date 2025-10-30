@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Check, UserPlus, Crown, Star, Target, Clock } from 'lucide-react';
 import AccountInfoStep from './components/AccountInfoStep';
 import ServiceTierStep from './components/ServiceTierStep';
+import { Footer } from '@/components/Footer';
 
 // Service tier type - matching Firebase interface
 export interface ServiceTier {
@@ -370,6 +371,7 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

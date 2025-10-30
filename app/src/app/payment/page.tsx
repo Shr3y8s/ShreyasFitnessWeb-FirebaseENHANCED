@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
 import { getProductDetails, formatCurrency, STRIPE_PRODUCT_IDS } from '@/lib/stripe';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
+import { Footer } from '@/components/Footer';
 
 interface UserData {
   name: string;
@@ -482,6 +483,7 @@ export default function PaymentPage() {
           </Card>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
