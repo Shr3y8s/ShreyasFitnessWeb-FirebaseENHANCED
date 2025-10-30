@@ -22,6 +22,7 @@ import {
   Plug,
   Smartphone,
   LogOut,
+  ClipboardList,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -181,9 +182,17 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/client' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/dashboard/client">
+                  <Link href="/">
                     <House className="w-4 h-4" />
                     <span className="font-medium">Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/plan">
+                    <ClipboardList className="w-4 h-4" />
+                    <span className="font-medium">My Plan</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
