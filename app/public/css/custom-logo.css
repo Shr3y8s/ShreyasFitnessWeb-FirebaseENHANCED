@@ -1,0 +1,44 @@
+/* Custom Logo Styling */
+
+.custom-logo {
+    max-width: 70%;
+    max-height: 70%;
+    object-fit: contain;
+    z-index: 10;
+    position: relative;
+}
+
+/* Adjusting fitness-graphic container for the logo */
+.hero .fitness-graphic {
+    background: var(--primary);
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--box-shadow);
+    animation: pulse 2s infinite;
+}
+
+/* Keep the pulse ring but make it more subtle */
+.hero .pulse-ring {
+    border-color: rgba(76, 175, 80, 0.3);
+    width: 100%;
+    height: 100%;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .hero .fitness-graphic {
+        width: 180px;
+        height: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero .fitness-graphic {
+        width: 160px;
+        height: 160px;
+    }
+}

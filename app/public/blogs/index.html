@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - SHREY.FIT</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .page-header .container {
+            text-align: left;
+            max-width: 1000px;
+            padding: 0 20px;
+        }
+        
+        .page-header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .page-header h1:after {
+            content: "";
+            display: block;
+            width: 80px;
+            height: 3px;
+            background-color: var(--primary);
+            margin: 15px 0;
+        }
+        
+        .header-subtitle {
+            max-width: 800px;
+            margin: 0;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: var(--dark-gray);
+            font-weight: 400;
+        }
+        
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 2.2rem;
+            }
+            
+            .header-subtitle {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="../index.html" class="logo-link">
+                    <div class="logo-container">
+                        <div class="logo-text">
+                            <span class="brand-name">SHREY<span class="brand-dot">.</span>FIT</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="../index.html" class="nav-link">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../about.html" class="nav-link">About Me</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../services.html" class="nav-link">Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../connect.html" class="nav-link">Connect</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../faq.html" class="nav-link">FAQ</a>
+                </li>
+                <li class="nav-item">
+                    <a href="index.html" class="nav-link active">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/login" class="nav-link account-btn">Sign Up / Login</a>
+                </li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <h1>Welcome to my <span style="color: var(--primary); font-weight: 700;">Fitness Journey</span> Blog!</h1>
+            <p class="header-subtitle">Where I share evidence-based advice, practical tips, and motivational content to help you on your fitness journey. Whether you're just starting out or looking to take your fitness to the next level, you'll find valuable information here to support your goals.</p>
+        </div>
+    </section>
+
+    <!-- Featured Article -->
+    <section class="featured-article">
+        <div class="container">
+            <div class="featured-article-content">
+                <div class="featured-image">
+                    <div class="article-image-placeholder">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <span class="featured-tag">Featured</span>
+                </div>
+                <div class="featured-text">
+                    <span class="article-date">August 18, 2025</span>
+                    <h2>The 40/60 Rule: Why What You Do Outside the Gym Matters Most</h2>
+                    <p>What if I told you that your workouts—even the most intense ones—account for only about 40% of your results? After years of working with clients, I've discovered that what you do during the other 23 hours of your day matters more than what you do during your workout hour.</p>
+                    <p>Learn how small daily choices about movement, food, and your environment have a greater impact on your fitness results than your workouts alone, and how to optimize the 60% that happens outside the gym.</p>
+                    <a href="blog-forty-sixty-rule.html" class="btn-secondary">Read Full Article</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Blog Articles -->
+    <section class="blog-articles">
+        <div class="container">
+            <div class="blog-grid">
+                <article class="blog-card">
+                    <div class="blog-image">
+                        <i class="fas fa-seedling"></i>
+                    </div>
+                    <div class="blog-content">
+                        <span class="article-date">July 26, 2025</span>
+                        <h3>The Control-First Approach Most Trainers Miss</h3>
+                        <p>Master control and proper form before chasing heavy weights. This approach builds better muscle connection, prevents injuries, and delivers superior results compared to the typical "lift heavy" mentality most trainers push.</p>
+                        <div class="blog-meta">
+                            <div class="blog-categories">
+                            </div>
+                            <a href="blog-control-first.html" class="btn-secondary">Read More</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="blog-card">
+                    <div class="blog-image">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="blog-content">
+                        <span class="article-date">June 24, 2025</span>
+                        <h3>Why I Never Let Clients Chase Numbers</h3>
+                        <p>Developing a strong mind-muscle connection is far more important than lifting heavy weights. Learn to feel each exercise in the target muscles rather than just moving weight from point A to point B.</p>
+                        <div class="blog-meta">
+                            <div class="blog-categories">
+                            </div>
+                            <a href="blog-mind-muscle.html" class="btn-secondary">Read More</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="blog-card">
+                    <div class="blog-image">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="blog-content">
+                        <span class="article-date">May 22, 2025</span>
+                        <h3>The Sustainable Approach I Learned After Years of Failure</h3>
+                        <p>Consistency with a "good enough" program you enjoy will always beat sporadic adherence to the "perfect" program you dread. Find workouts you actually look forward to rather than those that look impressive on paper.</p>
+                        <div class="blog-meta">
+                            <div class="blog-categories">
+                            </div>
+                            <a href="blog-sustainable-approach.html" class="btn-secondary">Read More</a>
+                        </div>
+                    </div>
+                </article>
+                
+                <article class="blog-card">
+                    <div class="blog-image">
+                        <i class="fas fa-apple-alt"></i>
+                    </div>
+                    <div class="blog-content">
+                        <span class="article-date">April 20, 2025</span>
+                        <h3>The 'Less Is More' Nutrition Framework</h3>
+                        <p>Simplify nutrition by focusing on a few key principles rather than complex rules. Prioritize protein, focus on whole foods, and follow the 80/20 rule for sustainable eating habits that don't require obsession.</p>
+                        <div class="blog-meta">
+                            <div class="blog-categories">
+                            </div>
+                            <a href="blog-nutrition-framework.html" class="btn-secondary">Read More</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>SHREY.FIT</h3>
+                    <p>Your certified fitness professional dedicated to helping you achieve your goals through personalized training and coaching.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Services</h4>
+                    <ul>
+                        <li><a href="../services.html">In-Person Training</a></li>
+                        <li><a href="../services.html">Online Coaching</a></li>
+                        <li><a href="../services.html">Complete Transformation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="../about.html">About Me</a></li>
+                        <li><a href="../blogs/">Blog</a></li>
+                        <li><a href="../connect.html">Contact</a></li>
+                        <li><a href="../faq.html">FAQ</a></li>
+                        <li><a href="/login">My Account</a></li>
+                        <li><a href="/legal/terms">Terms of Service</a></li>
+                        <li><a href="/legal/privacy">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 SHREY.FIT. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <script src="../js/script.js"></script>
+</body>
+</html>

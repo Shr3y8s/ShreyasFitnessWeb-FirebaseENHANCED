@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { getMarketingUrl } from '@/lib/config';
 
 export function Footer() {
   return (
-    <footer className="bg-gray-900 text-white py-12 mt-auto">
-      <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+    <footer className="bg-gray-900 text-white py-12 !py-12 mt-auto">
+      <div className="container mx-auto px-6 !px-6">
+        <div className="grid md:grid-cols-3 gap-8 mb-8 !mb-8">
           {/* Brand Section */}
           <div>
             <h3 className="text-2xl font-bold mb-4">SHREY.FIT</h3>
@@ -19,19 +18,19 @@ export function Footer() {
             <h4 className="text-lg font-semibold mb-4">Services</h4>
             <ul className="space-y-2">
               <li>
-                <a href="/services.html" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/services" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   In-Person Training
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/services.html" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/services" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   Online Coaching
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/services.html" className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/services" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   Complete Transformation
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -41,60 +40,50 @@ export function Footer() {
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2">
               <li>
-                <a href={getMarketingUrl('/about.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/about" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   About Me
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={getMarketingUrl('/blogs/')} className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/blog" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   Blog
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={getMarketingUrl('/connect.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/connect" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   Contact
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={getMarketingUrl('/faq.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
+                <Link href="/faq" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
-                <a href={getMarketingUrl('/services.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
-                  In-Person Training
-                </a>
-              </li>
-              <li>
-                <a href={getMarketingUrl('/services.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Online Coaching
-                </a>
-              </li>
-              <li>
-                <a href={getMarketingUrl('/services.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
-                  Complete Transformation
-                </a>
+                <Link href="/login" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
+                  My Account
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-gray-700 pt-6">
+        <div className="border-t border-gray-700 pt-6 !pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400 text-sm">
               &copy; {new Date().getFullYear()} SHREY.FIT. All rights reserved.
             </p>
             <div className="flex gap-6">
-              <Link href="/legal/terms" className="text-gray-400 hover:text-white transition-colors text-sm">
-                Terms
+              <Link href="/legal/terms" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
+                Terms of Service
               </Link>
-              <Link href="/legal/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">
-                Privacy
+              <Link href="/legal/privacy" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
+                Privacy Policy
               </Link>
-              <a href={getMarketingUrl('/connect.html')} className="text-gray-400 hover:text-white transition-colors text-sm">
+              <Link href="/connect" className="text-gray-400 hover:text-white transition-colors text-sm !text-gray-400 hover:!text-white">
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         </div>
