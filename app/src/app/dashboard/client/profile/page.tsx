@@ -76,6 +76,26 @@ export default function ProfilePage() {
     medicalNotes?: string | null;
   } | null>(null);
 
+  // Contact Preferences edit state
+  const [isEditingPreferences, setIsEditingPreferences] = useState(false);
+  const [editedWorkoutReminders, setEditedWorkoutReminders] = useState(true);
+  const [editedNewAssignments, setEditedNewAssignments] = useState(true);
+  const [editedProgressUpdates, setEditedProgressUpdates] = useState(true);
+  const [editedTrainerMessages, setEditedTrainerMessages] = useState(true);
+  const [editedMarketing, setEditedMarketing] = useState(false);
+  const [editedFrequency, setEditedFrequency] = useState('real-time');
+  const [savingPreferences, setSavingPreferences] = useState(false);
+
+  // Local state for immediate preferences display
+  const [currentPreferences, setCurrentPreferences] = useState<{
+    workoutReminders?: boolean;
+    newAssignments?: boolean;
+    progressUpdates?: boolean;
+    trainerMessages?: boolean;
+    marketing?: boolean;
+    frequency?: string;
+  } | null>(null);
+
   useEffect(() => {
     if (authLoading) {
       return;
@@ -377,6 +397,60 @@ export default function ProfilePage() {
       alert('Failed to update. Please try again.');
     } finally {
       setSavingEmergency(false);
+    }
+  };
+
+  const handleEditPreferences = () => {
+    // Load current values from nested notificationPreferences object
+    setEditedWorkoutReminders(userData?.notificationPreferences?.workoutReminders ?? true);
+    setEditedNewAssignments(userData?.notificationPreferences?.newAssignments ?? true);
+    setEditedProgressUpdates(userData?.notificationPreferences?.progressUpdates ?? true);
+    setEditedTrainerMessages(userData?.notificationPreferences?.trainerMessages ?? true);
+    setEditedMarketing(userData?.notificationPreferences?.marketing ?? false);
+    setEditedFrequency(userData?.notificationPreferences?.frequency || 'real-time');
+    setIsEditingPreferences(true);
+  };
+
+  const handleCancelPreferences = () => {
+    setIsEditingPreferences(false);
+    // Clear edit state
+    setEditedWorkoutReminders(true);
+    setEditedNewAssignments(true);
+    setEditedProgressUpdates(true);
+    setEditedTrainerMessages(true);
+    setEditedMarketing(false);
+    setEditedFrequency('real-time');
+  };
+
+  const handleSavePreferences = async () => {
+    if (!user) return;
+
+    setSavingPreferences(true);
+    try {
+      const updatedData = {
+        workoutReminders: editedWorkoutReminders,
+        newAssignments: editedNewAssignments,
+        progressUpdates: editedProgressUpdates,
+        trainerMessages: editedTrainerMessages,
+        marketing: editedMarketing,
+        frequency: editedFrequency,
+      };
+
+      // Store in nested notificationPreferences object
+      await updateDoc(doc(db, 'users', user.uid), {
+        notificationPreferences: updatedData,
+      });
+
+      // Update local state immediately for instant display
+      setCurrentPreferences(updatedData);
+
+      alert('Contact preferences updated successfully!');
+      setIsEditingPreferences(false);
+    } catch (error) {
+      console.error('Error updating contact preferences:', error);
+      alert('Failed to update. Please try again.');
+    } finally {
+      setSavingPreferences(false);
     }
   };
 
@@ -777,13 +851,327 @@ export default function ProfilePage() {
             {/* Contact Preferences Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-primary" />
-                  Contact Preferences
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-primary" />
+                    Contact Preferences
+                  </CardTitle>
+                  {!isEditingPreferences && (
+                    <button
+                      onClick={handleEditPreferences}
+                      className="text-sm text-primary hover:text-primary/80 font-medium"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground italic">Notification settings - Coming soon</p>
+              <CardContent className="space-y-6">
+                {isEditingPreferences ? (
+                  <>
+                    {/* Edit Mode */}
+                    <div className="space-y-6">
+                      {/* Email Notifications */}
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-3">Email Notifications</h3>
+                        <div className="space-y-3">
+                          {/* Workout Reminders */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={editedWorkoutReminders}
+                              onChange={(e) => setEditedWorkoutReminders(e.target.checked)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                Workout Reminders
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Get notified about upcoming workouts and scheduled sessions
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* New Assignments */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={editedNewAssignments}
+                              onChange={(e) => setEditedNewAssignments(e.target.checked)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                New Workout Assignments
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Receive alerts when your trainer assigns new workouts
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Progress Updates */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={editedProgressUpdates}
+                              onChange={(e) => setEditedProgressUpdates(e.target.checked)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                Progress Updates
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Get notified about milestones, achievements, and progress reports
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Trainer Messages */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={editedTrainerMessages}
+                              onChange={(e) => setEditedTrainerMessages(e.target.checked)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                Trainer Messages
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Receive notifications when your trainer sends you messages
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Marketing */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={editedMarketing}
+                              onChange={(e) => setEditedMarketing(e.target.checked)}
+                              className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                Marketing & Promotions
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Receive newsletters, fitness tips, and special offers
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Notification Frequency */}
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-3">Notification Frequency</h3>
+                        <div className="space-y-3">
+                          {/* Real-time */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="radio"
+                              name="frequency"
+                              value="real-time"
+                              checked={editedFrequency === 'real-time'}
+                              onChange={(e) => setEditedFrequency(e.target.value)}
+                              className="mt-1 h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                Real-time
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Receive notifications immediately as they happen
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Daily Digest - Disabled */}
+                          <label className="flex items-start gap-3 opacity-50 cursor-not-allowed">
+                            <input
+                              type="radio"
+                              name="frequency"
+                              value="daily"
+                              disabled
+                              className="mt-1 h-4 w-4 border-gray-300"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-500 flex items-center gap-2">
+                                Daily Digest
+                                <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-normal">
+                                  Coming Soon
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                Receive a summary email once per day
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Weekly Digest - Disabled */}
+                          <label className="flex items-start gap-3 opacity-50 cursor-not-allowed">
+                            <input
+                              type="radio"
+                              name="frequency"
+                              value="weekly"
+                              disabled
+                              className="mt-1 h-4 w-4 border-gray-300"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-500 flex items-center gap-2">
+                                Weekly Digest
+                                <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-normal">
+                                  Coming Soon
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                Receive a summary email once per week
+                              </div>
+                            </div>
+                          </label>
+
+                          {/* Off */}
+                          <label className="flex items-start gap-3 cursor-pointer group">
+                            <input
+                              type="radio"
+                              name="frequency"
+                              value="off"
+                              checked={editedFrequency === 'off'}
+                              onChange={(e) => setEditedFrequency(e.target.value)}
+                              className="mt-1 h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-foreground group-hover:text-primary transition-colors">
+                                Off
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Pause all email notifications
+                              </div>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Info Banner */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex gap-2">
+                          <Bell className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-blue-800">
+                            <strong>Note:</strong> Email notifications require email service integration (Phase 2). 
+                            Your preferences are saved and will be applied once email notifications are enabled.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button
+                        onClick={handleCancelPreferences}
+                        disabled={savingPreferences}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSavePreferences}
+                        disabled={savingPreferences}
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {savingPreferences && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {savingPreferences ? 'Saving...' : 'Save Preferences'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* View Mode */}
+                    <div className="space-y-6">
+                      {/* Email Notifications Summary */}
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-3">Email Notifications</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                              (currentPreferences?.workoutReminders ?? userData?.notificationPreferences?.workoutReminders ?? true)
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {(currentPreferences?.workoutReminders ?? userData?.notificationPreferences?.workoutReminders ?? true) ? '✓' : '✗'}
+                            </div>
+                            <span className="text-sm">Workout Reminders</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                              (currentPreferences?.newAssignments ?? userData?.notificationPreferences?.newAssignments ?? true)
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {(currentPreferences?.newAssignments ?? userData?.notificationPreferences?.newAssignments ?? true) ? '✓' : '✗'}
+                            </div>
+                            <span className="text-sm">New Assignments</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                              (currentPreferences?.progressUpdates ?? userData?.notificationPreferences?.progressUpdates ?? true)
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {(currentPreferences?.progressUpdates ?? userData?.notificationPreferences?.progressUpdates ?? true) ? '✓' : '✗'}
+                            </div>
+                            <span className="text-sm">Progress Updates</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                              (currentPreferences?.trainerMessages ?? userData?.notificationPreferences?.trainerMessages ?? true)
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {(currentPreferences?.trainerMessages ?? userData?.notificationPreferences?.trainerMessages ?? true) ? '✓' : '✗'}
+                            </div>
+                            <span className="text-sm">Trainer Messages</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded flex items-center justify-center ${
+                              (currentPreferences?.marketing ?? userData?.notificationPreferences?.marketing ?? false)
+                                ? 'bg-green-100 text-green-600'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {(currentPreferences?.marketing ?? userData?.notificationPreferences?.marketing ?? false) ? '✓' : '✗'}
+                            </div>
+                            <span className="text-sm">Marketing & Promotions</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Frequency Display */}
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-2">Notification Frequency</h3>
+                        <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-primary/10 text-primary">
+                          <span className="text-sm font-medium capitalize">
+                            {(currentPreferences?.frequency || userData?.notificationPreferences?.frequency || 'real-time').replace('-', ' ')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Info Banner - Email service not set up */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex gap-2">
+                          <Bell className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-amber-800">
+                            <strong>Status:</strong> Email notifications are not yet configured. 
+                            Your preferences are saved and will be applied once the email service is set up (Phase 2).
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
