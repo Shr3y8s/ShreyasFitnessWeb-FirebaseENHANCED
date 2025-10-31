@@ -22,5 +22,11 @@
 /* Connect page styles */
 @import 'connect.css';
 
+/* Blog page styles */
+@import 'blog.css';
+
+/* FAQ page styles */
+@import 'faq.css';
+
 /* Media queries for responsive design */
 @import 'responsive.css';

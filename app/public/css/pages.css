@@ -1686,7 +1686,7 @@
 }
 
 .blog-content p {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .blog-content h3 {
@@ -1984,6 +1984,10 @@
 
 .featured-text {
     padding: 40px;
+}
+
+.featured-text p {
+    margin-bottom: 25px;
 }
 
 .article-date {

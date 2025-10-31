@@ -75,7 +75,7 @@ export default function ServicesPage() {
   }, []);
   
   return (
-    <>
+    <div className="marketing-content">
       <link rel="stylesheet" href="/css/services.css" />
       
       {/* Services Introduction */}
@@ -676,6 +676,6 @@ export default function ServicesPage() {
           transform-origin: bottom left;
         }
       `}</style>
-    </>
+    </div>
   );
 }

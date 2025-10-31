@@ -122,7 +122,7 @@ export default function ConnectPage() {
   };
 
   return (
-    <>
+    <div className="marketing-content">
       <link rel="stylesheet" href="/css/styles.css" />
       <link rel="stylesheet" href="/css/connect.css" />
 
@@ -459,6 +459,6 @@ export default function ConnectPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

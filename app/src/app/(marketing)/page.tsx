@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function HomePage() {
   return (
-    <>
+    <div className="marketing-content">
       {/* Hero Section */}
       <section id="home" className="hero">
         <div className="hero-container">
@@ -135,6 +135,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

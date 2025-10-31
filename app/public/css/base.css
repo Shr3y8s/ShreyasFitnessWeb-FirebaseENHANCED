@@ -1,4 +1,6 @@
-/* Global Styles and Variables */
+/* Global Styles and Variables - SCOPED VERSION */
+/* All styles scoped to .marketing-content to prevent global conflicts */
+
 :root {
     --primary: #4CAF50;
     --primary-dark: #388E3C;
@@ -14,61 +16,170 @@
     --transition: all 0.3s ease;
 }
 
-* {
+.marketing-content * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
+.marketing-content {
     font-family: 'Inter', sans-serif;
     line-height: 1.6;
     color: var(--secondary);
     background-color: var(--white);
-    overflow-x: hidden;
+    padding-top: 80px; /* Account for fixed navbar height */
 }
 
-h1, h2, h3, h4, h5, h6 {
+.marketing-content h1,
+.marketing-content h2,
+.marketing-content h3,
+.marketing-content h4,
+.marketing-content h5,
+.marketing-content h6 {
     margin-bottom: 15px;
     font-weight: 600;
     line-height: 1.3;
 }
 
-h1 {
+.marketing-content h1 {
     font-size: 3rem;
     font-weight: 700;
 }
 
-h2 {
+.marketing-content h2 {
     font-size: 2.2rem;
 }
 
-h3 {
+.marketing-content h3 {
     font-size: 1.5rem;
 }
 
-p {
+.marketing-content p {
     margin-bottom: 15px;
 }
 
-a {
+.marketing-content a {
     text-decoration: none;
     color: var(--secondary);
     transition: var(--transition);
 }
 
-ul {
+.marketing-content ul {
     list-style: none;
 }
 
-img {
+.marketing-content img {
     max-width: 100%;
 }
 
-.hidden {
+.marketing-content .hidden {
     display: none;
 }
 
-.full-width {
+.marketing-content .full-width {
     width: 100%;
+}
+
+/* Layout Styles - Scoped */
+.marketing-content .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.marketing-content section {
+    padding: 60px 0;
+}
+
+.marketing-content .featured-services {
+    padding-top: 40px;
+}
+
+.marketing-content .section-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.marketing-content .section-header p {
+    max-width: 600px;
+    margin: 0 auto;
+    color: var(--dark-gray);
+}
+
+.marketing-content .page-header {
+    padding-top: 150px;
+    padding-bottom: 50px;
+    text-align: center;
+    background: linear-gradient(135deg, #f4f9f4 0%, #ffffff 100%);
+}
+
+/* Grid Layouts - Scoped */
+.marketing-content .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+}
+
+.marketing-content .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.marketing-content .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+}
+
+.marketing-content .flex {
+    display: flex;
+}
+
+.marketing-content .flex-column {
+    flex-direction: column;
+}
+
+.marketing-content .justify-between {
+    justify-content: space-between;
+}
+
+.marketing-content .justify-center {
+    justify-content: center;
+}
+
+.marketing-content .align-center {
+    align-items: center;
+}
+
+.marketing-content .gap-20 {
+    gap: 20px;
+}
+
+.marketing-content .gap-30 {
+    gap: 30px;
+}
+
+.marketing-content .auto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .marketing-content .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .marketing-content .grid-2, 
+    .marketing-content .grid-3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .marketing-content section {
+        padding: 60px 0;
+    }
 }

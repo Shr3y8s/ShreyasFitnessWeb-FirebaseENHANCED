@@ -175,7 +175,7 @@ export default function FAQPage() {
   }, []);
   
   return (
-    <>
+    <div className="marketing-content">
       <link rel="stylesheet" href="/css/styles.css" />
       <link rel="stylesheet" href="/css/faq.css" />
       
@@ -464,6 +464,6 @@ export default function FAQPage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
