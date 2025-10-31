@@ -63,9 +63,9 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back to SHREY.FIT</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Sign In to SHREY.FIT</h1>
           <p className="text-gray-600 max-w-md mx-auto">
-            Access your personalized fitness dashboard and continue your transformation journey
+            Access your personalized fitness dashboard and training programs
           </p>
         </div>
 
@@ -211,10 +211,10 @@ export default function LoginPage() {
             <div className="order-1 lg:order-2 space-y-8">
               <div className="text-center lg:text-left">
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  Your Fitness Journey Awaits
+                  Your Transformation Hub
                 </h3>
                 <p className="text-gray-600 text-lg leading-relaxed">
-                  Get back to your personalized dashboard where real transformation happens through sustainable habits.
+                  Everything you need to achieve your fitness goals - workouts, progress tracking, and direct coaching support.
                 </p>
               </div>
 

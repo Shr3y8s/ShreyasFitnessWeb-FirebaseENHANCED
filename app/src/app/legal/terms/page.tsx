@@ -2,28 +2,19 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { MarketingNav } from '@/components/MarketingNav';
+import { Footer } from '@/components/Footer';
 
 export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-primary hover:text-primary/80">
-              The Shreyas Method
-            </Link>
-            <div className="flex gap-4 text-sm">
-              <Link href="/legal/privacy" className="text-gray-600 hover:text-primary">
-                Privacy Policy
-              </Link>
-              <Link href="/" className="text-primary hover:text-primary/80 font-medium">
-                Back to Home
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+      <link rel="stylesheet" href="/css/styles.css" />
+      
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        {/* Header */}
+        <MarketingNav />
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -39,9 +30,9 @@ export default function TermsOfServicePage() {
 
           {/* Welcome */}
           <section className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to The Shreyas Method</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to SHREY.FIT</h2>
             <p className="text-gray-700 leading-relaxed">
-              These Terms of Service ("Terms") govern your use of The Shreyas Method fitness coaching platform ("Service") operated by The Shreyas Method ("we," "us," or "our"). By accessing or using our Service, you agree to be bound by these Terms.
+              These Terms of Service ("Terms") govern your use of SHREY.FIT fitness coaching platform ("Service") operated by SHREY.FIT ("we," "us," or "our"). By accessing or using our Service, you agree to be bound by these Terms.
             </p>
             <p className="text-gray-700 leading-relaxed font-semibold">
               Please read these Terms carefully before using our Service.
@@ -59,7 +50,7 @@ export default function TermsOfServicePage() {
           {/* 2. Description of Service */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Description of Service</h2>
-            <p className="text-gray-700 leading-relaxed mb-3">The Shreyas Method provides:</p>
+            <p className="text-gray-700 leading-relaxed mb-3">SHREY.FIT provides:</p>
             <ul className="list-disc pl-6 space-y-2 text-gray-700">
               <li><strong>Personal fitness coaching</strong> from certified trainers</li>
               <li><strong>Customized workout programs</strong> tailored to your goals</li>
@@ -151,7 +142,7 @@ export default function TermsOfServicePage() {
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">7.3 Requesting a Refund</h3>
             <p className="text-gray-700 leading-relaxed">
-              To request a refund, email: <a href="mailto:support@shreyasmethod.com" className="text-blue-600 hover:underline">support@shreyasmethod.com</a>
+              To request a refund, email: <a href="mailto:support@shrey.fit" className="text-blue-600 hover:underline">support@shrey.fit</a>
             </p>
           </section>
 
@@ -187,8 +178,8 @@ export default function TermsOfServicePage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Contact Us</h2>
             <p className="text-gray-700 leading-relaxed mb-2">For questions about these Terms:</p>
             <ul className="space-y-1 text-gray-700">
-              <li><strong>Email:</strong> <a href="mailto:legal@shreyasmethod.com" className="text-blue-600 hover:underline">legal@shreyasmethod.com</a></li>
-              <li><strong>Support:</strong> <a href="mailto:support@shreyasmethod.com" className="text-blue-600 hover:underline">support@shreyasmethod.com</a></li>
+              <li><strong>Email:</strong> <a href="mailto:legal@shrey.fit" className="text-blue-600 hover:underline">legal@shrey.fit</a></li>
+              <li><strong>Support:</strong> <a href="mailto:support@shrey.fit" className="text-blue-600 hover:underline">support@shrey.fit</a></li>
             </ul>
           </section>
 
@@ -199,7 +190,7 @@ export default function TermsOfServicePage() {
               BY CLICKING "I AGREE" OR BY ACCESSING OR USING OUR SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE.
             </p>
             <p className="text-gray-700 leading-relaxed font-semibold mt-4">
-              YOU FURTHER ACKNOWLEDGE THAT YOU ASSUME ALL RISKS ASSOCIATED WITH PHYSICAL EXERCISE AND THAT THE SHREYAS METHOD IS NOT LIABLE FOR ANY INJURIES OR DAMAGES ARISING FROM YOUR USE OF THE SERVICE.
+              YOU FURTHER ACKNOWLEDGE THAT YOU ASSUME ALL RISKS ASSOCIATED WITH PHYSICAL EXERCISE AND THAT SHREY.FIT IS NOT LIABLE FOR ANY INJURIES OR DAMAGES ARISING FROM YOUR USE OF THE SERVICE.
             </p>
           </section>
 
@@ -225,23 +216,9 @@ export default function TermsOfServicePage() {
         </article>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400">© 2025 The Shreyas Method. All rights reserved.</p>
-          <div className="mt-4 space-x-4">
-            <Link href="/legal/terms" className="text-gray-400 hover:text-white text-sm">
-              Terms of Service
-            </Link>
-            <Link href="/legal/privacy" className="text-gray-400 hover:text-white text-sm">
-              Privacy Policy
-            </Link>
-            <Link href="/contact" className="text-gray-400 hover:text-white text-sm">
-              Contact
-            </Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+        {/* Footer */}
+        <Footer />
+      </div>
+    </>
   );
 }

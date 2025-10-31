@@ -2,9 +2,26 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
+import { signOutUser } from '@/lib/firebase';
 
 export function MarketingNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
+  const { user, userData, loading } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      const result = await signOutUser();
+      if (result.success) {
+        setIsOpen(false); // Close mobile menu if open
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <nav className="navbar">
@@ -37,9 +54,29 @@ export function MarketingNav() {
           <li className="nav-item">
             <Link href="/blog" className="nav-link">Blog</Link>
           </li>
-          <li className="nav-item">
-            <Link href="/login" className="nav-link account-btn">Sign Up / Login</Link>
-          </li>
+          {!loading && (
+            user ? (
+              // Logged in - show Dashboard and Logout
+              <>
+                <li className="nav-item">
+                  <Link href="/dashboard" className="nav-link">Dashboard</Link>
+                </li>
+                <li className="nav-item">
+                  <button onClick={handleLogout} className="nav-link account-btn">Logout</button>
+                </li>
+              </>
+            ) : (
+              // Logged out - show Login and Sign Up
+              <>
+                <li className="nav-item">
+                  <Link href="/login" className="nav-link">Login</Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/signup" className="nav-link account-btn">Sign Up</Link>
+                </li>
+              </>
+            )
+          )}
         </ul>
         <div 
           className={`hamburger ${isOpen ? 'active' : ''}`}

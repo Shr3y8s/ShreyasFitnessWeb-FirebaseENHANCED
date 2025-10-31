@@ -2,28 +2,19 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { MarketingNav } from '@/components/MarketingNav';
+import { Footer } from '@/components/Footer';
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-primary hover:text-primary/80">
-              The Shreyas Method
-            </Link>
-            <div className="flex gap-4 text-sm">
-              <Link href="/legal/terms" className="text-gray-600 hover:text-primary">
-                Terms of Service
-              </Link>
-              <Link href="/" className="text-primary hover:text-primary/80 font-medium">
-                Back to Home
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+    <>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+      <link rel="stylesheet" href="/css/styles.css" />
+      
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+        {/* Header */}
+        <MarketingNav />
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -41,7 +32,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
             <p className="text-gray-700 leading-relaxed">
-              The Shreyas Method ("we," "us," or "our") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform ("Service").
+              SHREY.FIT ("we," "us," or "our") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform ("Service").
             </p>
             <p className="text-gray-700 leading-relaxed font-semibold mt-4">
               Please read this Privacy Policy carefully. By using our Service, you consent to the practices described in this policy.
@@ -256,21 +247,21 @@ export default function PrivacyPolicyPage() {
             <ul className="space-y-2 text-gray-700">
               <li>
                 <strong>Privacy Inquiries:</strong>{' '}
-                <a href="mailto:privacy@shreyasmethod.com" className="text-blue-600 hover:underline">
-                  privacy@shreyasmethod.com
+                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:underline">
+                  privacy@shrey.fit
                 </a>
               </li>
               <li>
                 <strong>Data Requests:</strong>{' '}
-                <a href="mailto:privacy@shreyasmethod.com" className="text-blue-600 hover:underline">
-                  privacy@shreyasmethod.com
+                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:underline">
+                  privacy@shrey.fit
                 </a>{' '}
                 (Response time: 30 days)
               </li>
               <li>
                 <strong>Data Protection Officer:</strong>{' '}
-                <a href="mailto:dpo@shreyasmethod.com" className="text-blue-600 hover:underline">
-                  dpo@shreyasmethod.com
+                <a href="mailto:dpo@shrey.fit" className="text-blue-600 hover:underline">
+                  dpo@shrey.fit
                 </a>
               </li>
             </ul>
@@ -345,23 +336,9 @@ export default function PrivacyPolicyPage() {
         </article>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400">© 2025 The Shreyas Method. All rights reserved.</p>
-          <div className="mt-4 space-x-4">
-            <Link href="/legal/terms" className="text-gray-400 hover:text-white text-sm">
-              Terms of Service
-            </Link>
-            <Link href="/legal/privacy" className="text-gray-400 hover:text-white text-sm">
-              Privacy Policy
-            </Link>
-            <Link href="/contact" className="text-gray-400 hover:text-white text-sm">
-              Contact
-            </Link>
-          </div>
-        </div>
-      </footer>
-    </div>
+        {/* Footer */}
+        <Footer />
+      </div>
+    </>
   );
 }
