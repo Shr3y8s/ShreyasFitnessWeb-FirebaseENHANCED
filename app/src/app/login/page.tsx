@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { AlertCircle, Mail, Lock, Eye, EyeOff, Shield, Clock, Users, Award, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
+import { AuthHeader } from '@/components/AuthHeader';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -55,6 +56,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <AuthHeader />
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">

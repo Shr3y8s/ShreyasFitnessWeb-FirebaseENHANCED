@@ -23,7 +23,7 @@ export function MarketingNav() {
             <Link href="/" className="nav-link">Home</Link>
           </li>
           <li className="nav-item">
-            <Link href="/about" className="nav-link">About Me</Link>
+            <Link href="/about" className="nav-link">About</Link>
           </li>
           <li className="nav-item">
             <Link href="/services" className="nav-link">Services</Link>

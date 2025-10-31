@@ -9,6 +9,7 @@ import { Check, UserPlus, Crown, Star, Target, Clock } from 'lucide-react';
 import AccountInfoStep from './components/AccountInfoStep';
 import ServiceTierStep from './components/ServiceTierStep';
 import { Footer } from '@/components/Footer';
+import { AuthHeader } from '@/components/AuthHeader';
 
 // Service tier type - matching Firebase interface
 export interface ServiceTier {
@@ -250,6 +251,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <AuthHeader />
       <div className="container mx-auto px-4 py-8">
         
         {/* Header Section */}

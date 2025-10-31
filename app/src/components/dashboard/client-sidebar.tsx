@@ -182,7 +182,7 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/client' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/">
+                  <Link href="/dashboard/client">
                     <House className="w-4 h-4" />
                     <span className="font-medium">Dashboard</span>
                   </Link>

@@ -8,7 +8,9 @@ export function Footer() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           {/* Brand */}
           <div className="flex items-center">
-            <h3 className="text-xl font-bold tracking-tight">SHREY.FIT</h3>
+            <Link href="/" className="text-xl font-bold tracking-tight !text-white hover:!text-green-500 transition-colors">
+              SHREY<span className="!text-emerald-600">.</span>FIT
+            </Link>
           </div>
 
           {/* Navigation Links */}
