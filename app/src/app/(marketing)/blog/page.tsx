@@ -71,7 +71,7 @@ export default function BlogPage() {
               <h2>The 40/60 Rule: Why What You Do Outside the Gym Matters Most</h2>
               <p>What if I told you that your workouts—even the most intense ones—account for only about 40% of your results? After years of working with clients, I&apos;ve discovered that what you do during the other 23 hours of your day matters more than what you do during your workout hour.</p>
               <p>Learn how small daily choices about movement, food, and your environment have a greater impact on your fitness results than your workouts alone, and how to optimize the 60% that happens outside the gym.</p>
-              <a href="/blogs/blog-forty-sixty-rule.html" className="btn-secondary">Read Full Article</a>
+              <Link href="/blog/forty-sixty-rule" className="btn-secondary">Read Full Article</Link>
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function BlogPage() {
                 <div className="blog-meta">
                   <div className="blog-categories">
                   </div>
-                  <a href="/blogs/blog-control-first.html" className="btn-secondary">Read More</a>
+                  <Link href="/blog/control-first" className="btn-secondary">Read More</Link>
                 </div>
               </div>
             </article>
@@ -108,7 +108,7 @@ export default function BlogPage() {
                 <div className="blog-meta">
                   <div className="blog-categories">
                   </div>
-                  <a href="/blogs/blog-mind-muscle.html" className="btn-secondary">Read More</a>
+                  <Link href="/blog/mind-muscle" className="btn-secondary">Read More</Link>
                 </div>
               </div>
             </article>
@@ -124,7 +124,7 @@ export default function BlogPage() {
                 <div className="blog-meta">
                   <div className="blog-categories">
                   </div>
-                  <a href="/blogs/blog-sustainable-approach.html" className="btn-secondary">Read More</a>
+                  <Link href="/blog/sustainable-approach" className="btn-secondary">Read More</Link>
                 </div>
               </div>
             </article>
@@ -140,7 +140,7 @@ export default function BlogPage() {
                 <div className="blog-meta">
                   <div className="blog-categories">
                   </div>
-                  <a href="/blogs/blog-nutrition-framework.html" className="btn-secondary">Read More</a>
+                  <Link href="/blog/nutrition-framework" className="btn-secondary">Read More</Link>
                 </div>
               </div>
             </article>
