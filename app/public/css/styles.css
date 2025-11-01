@@ -10,9 +10,6 @@
 /* Reusable components */
 @import 'components.css';
 
-/* Navigation and Footer */
-@import 'navigation.css';
-
 /* Page-specific styles */
 @import 'pages.css';
 

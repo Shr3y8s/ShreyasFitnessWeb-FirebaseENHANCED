@@ -7,6 +7,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        'brand-green': {
+          DEFAULT: '#4CAF50',
+          dark: '#388E3C',
+          light: '#81C784',
+        },
+      },
       boxShadow: {
         'glow': '0 0 20px rgba(34, 197, 94, 0.3), 4px 0 25px rgba(34, 197, 94, 0.5), 8px 0 35px rgba(34, 197, 94, 0.3), 12px 0 50px rgba(34, 197, 94, 0.2)',
       },
