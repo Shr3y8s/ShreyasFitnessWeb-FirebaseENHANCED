@@ -7,21 +7,14 @@ import { Footer } from '@/components/Footer';
 
 export default function TermsOfServicePage() {
   return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-      <link rel="stylesheet" href="/css/styles.css" />
-      
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-        {/* Header */}
-        <MarketingNav />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <MarketingNav />
 
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <article className="prose prose-slate max-w-none">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <article className="bg-white rounded-xl shadow-lg p-8 md:p-12">
           {/* Title */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Terms of Service</h1>
+          <div className="mb-8 pb-6 border-b border-gray-200">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Terms of Service</h1>
             <p className="text-gray-600">
               <strong>Effective Date:</strong> January 1, 2026<br />
               <strong>Last Updated:</strong> October 29, 2025
@@ -31,7 +24,7 @@ export default function TermsOfServicePage() {
           {/* Welcome */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to SHREY.FIT</h2>
-            <p className="text-gray-700 leading-relaxed">
+            <p className="text-gray-700 leading-relaxed mb-4">
               These Terms of Service ("Terms") govern your use of SHREY.FIT fitness coaching platform ("Service") operated by SHREY.FIT ("we," "us," or "our"). By accessing or using our Service, you agree to be bound by these Terms.
             </p>
             <p className="text-gray-700 leading-relaxed font-semibold">
@@ -81,13 +74,13 @@ export default function TermsOfServicePage() {
           </section>
 
           {/* 6. Subscription Management */}
-          <section className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded">
+          <section className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Subscription Management</h2>
             
             <h3 className="text-xl font-semibold text-gray-800 mb-3">6.1 Pause Subscription</h3>
             <p className="text-gray-700 leading-relaxed mb-3">You may pause your subscription for 1-3 months:</p>
             <p className="font-semibold text-gray-800 mb-2">Terms:</p>
-            <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-3">
+            <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
               <li>Maximum pause duration: 3 months</li>
               <li>Maximum pauses per year: 3</li>
               <li>Billing automatically stops during pause period</li>
@@ -97,7 +90,7 @@ export default function TermsOfServicePage() {
             <h3 className="text-xl font-semibold text-gray-800 mb-3 mt-6">6.2 Cancel Subscription</h3>
             <p className="text-gray-700 leading-relaxed mb-3">You may cancel your subscription at any time:</p>
             <p className="font-semibold text-gray-800 mb-2">Terms:</p>
-            <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-3">
+            <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
               <li>No future billing after cancellation</li>
               <li>Access continues until end of current billing period</li>
               <li><strong className="text-red-600">NO REFUNDS</strong> for unused time in current billing period</li>
@@ -116,7 +109,7 @@ export default function TermsOfServicePage() {
           </section>
 
           {/* 7. Refund Policy */}
-          <section className="mb-8 bg-amber-50 border-l-4 border-amber-500 p-6 rounded">
+          <section className="mb-8 bg-amber-50 border-l-4 border-amber-500 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Refund Policy</h2>
             <h3 className="text-xl font-semibold text-gray-800 mb-3">7.1 No Refunds Policy</h3>
             <p className="text-gray-700 leading-relaxed mb-3">
@@ -133,7 +126,7 @@ export default function TermsOfServicePage() {
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">7.2 Exceptions</h3>
             <p className="text-gray-700 leading-relaxed mb-2">Refunds may be issued at our sole discretion for:</p>
-            <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-3">
+            <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
               <li><strong>Medical Emergencies:</strong> With valid medical documentation</li>
               <li><strong>Service Unavailability:</strong> Due to our fault (extended outage, trainer unavailability)</li>
               <li><strong>Billing Errors:</strong> Incorrect charges or duplicate transactions</li>
@@ -142,12 +135,12 @@ export default function TermsOfServicePage() {
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">7.3 Requesting a Refund</h3>
             <p className="text-gray-700 leading-relaxed">
-              To request a refund, email: <a href="mailto:support@shrey.fit" className="text-blue-600 hover:underline">support@shrey.fit</a>
+              To request a refund, email: <a href="mailto:support@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">support@shrey.fit</a>
             </p>
           </section>
 
           {/* 14. Disclaimers */}
-          <section className="mb-8 bg-red-50 border-l-4 border-red-500 p-6 rounded">
+          <section className="mb-8 bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">14. Disclaimers and Limitation of Liability</h2>
             
             <h3 className="text-xl font-semibold text-gray-800 mb-3">14.1 No Medical Advice</h3>
@@ -174,34 +167,34 @@ export default function TermsOfServicePage() {
           </section>
 
           {/* Contact */}
-          <section className="mb-8 bg-gray-50 p-6 rounded">
+          <section className="mb-8 bg-gray-50 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Contact Us</h2>
-            <p className="text-gray-700 leading-relaxed mb-2">For questions about these Terms:</p>
-            <ul className="space-y-1 text-gray-700">
-              <li><strong>Email:</strong> <a href="mailto:legal@shrey.fit" className="text-blue-600 hover:underline">legal@shrey.fit</a></li>
-              <li><strong>Support:</strong> <a href="mailto:support@shrey.fit" className="text-blue-600 hover:underline">support@shrey.fit</a></li>
+            <p className="text-gray-700 leading-relaxed mb-3">For questions about these Terms:</p>
+            <ul className="space-y-2 text-gray-700">
+              <li><strong>Email:</strong> <a href="mailto:legal@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">legal@shrey.fit</a></li>
+              <li><strong>Support:</strong> <a href="mailto:support@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">support@shrey.fit</a></li>
             </ul>
           </section>
 
           {/* Acknowledgment */}
-          <section className="mb-8 border-2 border-gray-300 p-6 rounded bg-gray-50">
+          <section className="mb-8 border-2 border-gray-300 p-6 rounded-lg bg-gray-50">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Acknowledgment</h2>
-            <p className="text-gray-700 leading-relaxed font-semibold">
+            <p className="text-gray-700 leading-relaxed font-semibold mb-4">
               BY CLICKING "I AGREE" OR BY ACCESSING OR USING OUR SERVICE, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THESE TERMS OF SERVICE.
             </p>
-            <p className="text-gray-700 leading-relaxed font-semibold mt-4">
+            <p className="text-gray-700 leading-relaxed font-semibold">
               YOU FURTHER ACKNOWLEDGE THAT YOU ASSUME ALL RISKS ASSOCIATED WITH PHYSICAL EXERCISE AND THAT SHREY.FIT IS NOT LIABLE FOR ANY INJURIES OR DAMAGES ARISING FROM YOUR USE OF THE SERVICE.
             </p>
           </section>
 
           {/* Footer Info */}
           <div className="text-center text-gray-600 text-sm pt-8 border-t border-gray-200">
-            <p><strong>Last Updated:</strong> October 29, 2025</p>
-            <p><strong>Version:</strong> 1.0</p>
-            <p className="mt-4">
-              <Link href="/legal/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
+            <p className="mb-2"><strong>Last Updated:</strong> October 29, 2025</p>
+            <p className="mb-4"><strong>Version:</strong> 1.0</p>
+            <p>
+              <Link href="/legal/privacy" className="text-blue-600 hover:text-blue-700 underline">Privacy Policy</Link>
               {' | '}
-              <Link href="/" className="text-blue-600 hover:underline">Back to Home</Link>
+              <Link href="/" className="text-blue-600 hover:text-blue-700 underline">Back to Home</Link>
             </p>
           </div>
 
@@ -210,15 +203,13 @@ export default function TermsOfServicePage() {
             <p className="font-semibold mb-2">📄 Full Terms Available</p>
             <p>
               This page highlights key sections of our Terms of Service. For the complete document, please see:{' '}
-              <code className="bg-blue-100 px-1 py-0.5 rounded">docs/03-legal/terms-of-service.md</code>
+              <code className="bg-blue-100 px-2 py-1 rounded">docs/03-legal/terms-of-service.md</code>
             </p>
           </div>
         </article>
       </main>
 
-        {/* Footer */}
-        <Footer />
-      </div>
-    </>
+      <Footer />
+    </div>
   );
 }

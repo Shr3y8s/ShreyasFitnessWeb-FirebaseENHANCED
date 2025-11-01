@@ -7,21 +7,14 @@ import { Footer } from '@/components/Footer';
 
 export default function PrivacyPolicyPage() {
   return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-      <link rel="stylesheet" href="/css/styles.css" />
-      
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-        {/* Header */}
-        <MarketingNav />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <MarketingNav />
 
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <article className="prose prose-slate max-w-none">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <article className="bg-white rounded-xl shadow-lg p-8 md:p-12">
           {/* Title */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
+          <div className="mb-8 pb-6 border-b border-gray-200">
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
             <p className="text-gray-600">
               <strong>Effective Date:</strong> January 1, 2026<br />
               <strong>Last Updated:</strong> October 29, 2025
@@ -31,10 +24,10 @@ export default function PrivacyPolicyPage() {
           {/* Introduction */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
-            <p className="text-gray-700 leading-relaxed">
+            <p className="text-gray-700 leading-relaxed mb-4">
               SHREY.FIT ("we," "us," or "our") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform ("Service").
             </p>
-            <p className="text-gray-700 leading-relaxed font-semibold mt-4">
+            <p className="text-gray-700 leading-relaxed font-semibold">
               Please read this Privacy Policy carefully. By using our Service, you consent to the practices described in this policy.
             </p>
           </section>
@@ -121,31 +114,6 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          {/* 5. Your Privacy Rights */}
-          <section className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Your Privacy Rights</h2>
-            
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Access</h3>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              Request a copy of your personal data and review what information we have.
-            </p>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Data Portability</h3>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              Download your data in JSON format using the "Download My Data" feature in your profile.
-            </p>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Erasure ("Right to be Forgotten")</h3>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              Request deletion of your personal data using the "Delete Account" feature. We will delete within 30 days.
-            </p>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Object</h3>
-            <p className="text-gray-700 leading-relaxed">
-              Object to processing for marketing purposes. Opt out of marketing communications anytime.
-            </p>
-          </section>
-
           {/* Data Sharing */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">4. How We Share Your Information</h2>
@@ -169,15 +137,75 @@ export default function PrivacyPolicyPage() {
               <li><strong>Analytics Providers:</strong> Usage analytics (anonymized)</li>
             </ul>
 
-            <div className="bg-green-50 border border-green-200 rounded p-4 mt-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
               <p className="text-green-800 font-semibold">
                 ✓ We will NEVER sell your personal information to third parties.
               </p>
             </div>
           </section>
 
+          {/* 5. Your Privacy Rights */}
+          <section className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Your Privacy Rights</h2>
+            
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Access</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Request a copy of your personal data and review what information we have.
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Data Portability</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Download your data in JSON format using the "Download My Data" feature in your profile.
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Erasure ("Right to be Forgotten")</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              Request deletion of your personal data using the "Delete Account" feature. We will delete within 30 days.
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Object</h3>
+            <p className="text-gray-700 leading-relaxed">
+              Object to processing for marketing purposes. Opt out of marketing communications anytime.
+            </p>
+          </section>
+
+          {/* Data Retention */}
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Data Retention</h2>
+            
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Active Accounts</h3>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              We retain your data while your account is active (profile, workouts, messages, etc.).
+            </p>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">After Account Deletion</h3>
+            <ul className="list-disc pl-6 space-y-1 text-gray-700">
+              <li>Personal data: Deleted within 30 days</li>
+              <li>Payment records: Retained for 7 years (legal requirement)</li>
+              <li>Aggregated data: May be retained indefinitely</li>
+              <li>Backup data: Deleted within 90 days</li>
+            </ul>
+          </section>
+
+          {/* Data Security */}
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Data Security</h2>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              We implement industry-standard security measures:
+            </p>
+            <ul className="list-disc pl-6 space-y-2 text-gray-700 mb-4">
+              <li><strong>Encryption:</strong> TLS/SSL in transit, AES-256 at rest</li>
+              <li><strong>Authentication:</strong> Secure Firebase Auth with password hashing</li>
+              <li><strong>Access Controls:</strong> Limited employee access with permissions</li>
+              <li><strong>Regular Audits:</strong> Security audits and updates</li>
+            </ul>
+            <p className="text-gray-700 leading-relaxed font-semibold">
+              Important: No method of transmission or storage is 100% secure. While we strive to protect your data, we cannot guarantee absolute security.
+            </p>
+          </section>
+
           {/* GDPR & CCPA */}
-          <section className="mb-8 bg-purple-50 border-l-4 border-purple-500 p-6 rounded">
+          <section className="mb-8 bg-purple-50 border-l-4 border-purple-500 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Privacy Rights by Region</h2>
             
             <h3 className="text-xl font-semibold text-gray-800 mb-3">European Union (GDPR)</h3>
@@ -203,43 +231,8 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
-          {/* Data Security */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Data Security</h2>
-            <p className="text-gray-700 leading-relaxed mb-3">
-              We implement industry-standard security measures:
-            </p>
-            <ul className="list-disc pl-6 space-y-2 text-gray-700">
-              <li><strong>Encryption:</strong> TLS/SSL in transit, AES-256 at rest</li>
-              <li><strong>Authentication:</strong> Secure Firebase Auth with password hashing</li>
-              <li><strong>Access Controls:</strong> Limited employee access with permissions</li>
-              <li><strong>Regular Audits:</strong> Security audits and updates</li>
-            </ul>
-            <p className="text-gray-700 leading-relaxed mt-4 font-semibold">
-              Important: No method of transmission or storage is 100% secure. While we strive to protect your data, we cannot guarantee absolute security.
-            </p>
-          </section>
-
-          {/* Data Retention */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Data Retention</h2>
-            
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Active Accounts</h3>
-            <p className="text-gray-700 leading-relaxed mb-4">
-              We retain your data while your account is active (profile, workouts, messages, etc.).
-            </p>
-
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">After Account Deletion</h3>
-            <ul className="list-disc pl-6 space-y-1 text-gray-700">
-              <li>Personal data: Deleted within 30 days</li>
-              <li>Payment records: Retained for 7 years (legal requirement)</li>
-              <li>Aggregated data: May be retained indefinitely</li>
-              <li>Backup data: Deleted within 90 days</li>
-            </ul>
-          </section>
-
           {/* Contact */}
-          <section className="mb-8 bg-gray-50 p-6 rounded">
+          <section className="mb-8 bg-gray-50 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Contact Us</h2>
             <p className="text-gray-700 leading-relaxed mb-3">
               For privacy-related questions or to exercise your rights:
@@ -247,20 +240,20 @@ export default function PrivacyPolicyPage() {
             <ul className="space-y-2 text-gray-700">
               <li>
                 <strong>Privacy Inquiries:</strong>{' '}
-                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:underline">
+                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
                   privacy@shrey.fit
                 </a>
               </li>
               <li>
                 <strong>Data Requests:</strong>{' '}
-                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:underline">
+                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
                   privacy@shrey.fit
                 </a>{' '}
                 (Response time: 30 days)
               </li>
               <li>
                 <strong>Data Protection Officer:</strong>{' '}
-                <a href="mailto:dpo@shrey.fit" className="text-blue-600 hover:underline">
+                <a href="mailto:dpo@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
                   dpo@shrey.fit
                 </a>
               </li>
@@ -268,7 +261,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           {/* Summary */}
-          <section className="mb-8 border-2 border-gray-300 p-6 rounded bg-gradient-to-br from-blue-50 to-purple-50">
+          <section className="mb-8 border-2 border-gray-300 p-6 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Summary</h2>
             
             <div className="grid md:grid-cols-2 gap-6">
@@ -316,12 +309,12 @@ export default function PrivacyPolicyPage() {
 
           {/* Footer Info */}
           <div className="text-center text-gray-600 text-sm pt-8 border-t border-gray-200">
-            <p><strong>Last Updated:</strong> October 29, 2025</p>
-            <p><strong>Version:</strong> 1.0</p>
-            <p className="mt-4">
-              <Link href="/legal/terms" className="text-blue-600 hover:underline">Terms of Service</Link>
+            <p className="mb-2"><strong>Last Updated:</strong> October 29, 2025</p>
+            <p className="mb-4"><strong>Version:</strong> 1.0</p>
+            <p>
+              <Link href="/legal/terms" className="text-blue-600 hover:text-blue-700 underline">Terms of Service</Link>
               {' | '}
-              <Link href="/" className="text-blue-600 hover:underline">Back to Home</Link>
+              <Link href="/" className="text-blue-600 hover:text-blue-700 underline">Back to Home</Link>
             </p>
           </div>
 
@@ -330,15 +323,13 @@ export default function PrivacyPolicyPage() {
             <p className="font-semibold mb-2">📄 Full Privacy Policy Available</p>
             <p>
               This page highlights key sections of our Privacy Policy. For the complete document, please see:{' '}
-              <code className="bg-blue-100 px-1 py-0.5 rounded">docs/03-legal/privacy-policy.md</code>
+              <code className="bg-blue-100 px-2 py-1 rounded">docs/03-legal/privacy-policy.md</code>
             </p>
           </div>
         </article>
       </main>
 
-        {/* Footer */}
-        <Footer />
-      </div>
-    </>
+      <Footer />
+    </div>
   );
 }
