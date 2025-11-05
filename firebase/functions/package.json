@@ -2,6 +2,7 @@
   "name": "functions",
   "description": "Cloud Functions for Firebase",
   "scripts": {
+    "copy-config": "node -e \"require('fs').copyFileSync('../../firebase-config.json', './firebase-config.json')\"",
     "lint": "echo 'Skipping lint check for debugging tools'",
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",

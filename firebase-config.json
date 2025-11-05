@@ -1,0 +1,5 @@
+{
+  "region": "us-west1",
+  "projectId": "shreyfitweb",
+  "_comment": "This configuration is used by both front-end (Vercel) and Cloud Functions (Google Cloud). Change region here to affect both deployments."
+}

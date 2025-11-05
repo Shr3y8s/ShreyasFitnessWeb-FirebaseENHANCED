@@ -106,6 +106,7 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 │   └── setup-stripe-webhook.cmd        # Stripe webhook setup
 ├── 
 ├── # Configuration
+├── firebase-config.json        # 🔥 Firebase region configuration (IMPORTANT!)
 ├── .firebaserc                 # Firebase project config
 ├── firebase.json               # Firebase settings
 ├── firestore.rules            # Database security rules
@@ -146,7 +147,38 @@ ShreyasFitnessWeb-FirebaseENHANCED/
 **Configuration:**
 - Production config in Firebase Console
 - Local config in `app/.env.local`
+- **Region config:** `firebase-config.json` (see below)
 - Firebase CLI for deployment
+
+### ⚙️ Firebase Region Configuration (CRITICAL)
+
+The `firebase-config.json` file at the project root is the **single source of truth** for Firebase Functions region configuration:
+
+```json
+{
+  "region": "us-west1",
+  "projectId": "shreyfitweb"
+}
+```
+
+**Why this matters:**
+- Ensures front-end and back-end use the **same region**
+- Prevents CORS errors from region mismatch
+- Single place to change deployment region
+
+**How it works:**
+1. **Next.js (Front-end):** `app/next.config.ts` reads this file at build time
+2. **Cloud Functions (Back-end):** `firebase/functions/index.js` reads this file at deploy time
+3. Both systems automatically use the same region
+
+**To change regions:**
+1. Edit `firebase-config.json` - change `"region"` value
+2. Redeploy Cloud Functions: `firebase deploy --only functions`
+3. Restart Next.js dev server: `cd app && npm run dev`
+
+**📖 Full Documentation:** See `/docs/02-implementation/region-configuration-guide.md`
+
+**⚠️ IMPORTANT:** Always ensure this file is committed to Git so all team members and deployments use the same region.
 
 ## 📖 Documentation
 
@@ -180,6 +212,10 @@ npm run dev
 firebase login
 firebase deploy --only functions
 firebase deploy --only firestore:rules
+
+# After changing firebase-config.json region
+firebase deploy --only functions  # Deploy to new region
+cd app && npm run dev              # Restart to pick up new region
 ```
 
 ## 🎯 Integration Flow

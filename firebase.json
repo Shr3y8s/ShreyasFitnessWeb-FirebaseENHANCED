@@ -17,6 +17,7 @@
         "*.local"
       ],
       "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run copy-config",
         "npm --prefix \"$RESOURCE_DIR\" run lint"
       ]
     }

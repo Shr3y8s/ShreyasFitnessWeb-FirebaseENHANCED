@@ -328,8 +328,8 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/billing">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/billing' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/billing">
                     <CreditCard className="w-4 h-4" />
                     <span className="font-medium">Billing</span>
                     {billingUpdatesCount > 0 && (

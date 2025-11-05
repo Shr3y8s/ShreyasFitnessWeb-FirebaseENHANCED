@@ -260,6 +260,7 @@ export default function PaymentPage() {
         success_url: `${window.location.origin}/dashboard?payment=success`,
         cancel_url: `${window.location.origin}/payment`,
         mode: checkoutMode,
+        payment_method_collection: 'always',
         allow_promotion_codes: true,
         metadata: {
           userId,

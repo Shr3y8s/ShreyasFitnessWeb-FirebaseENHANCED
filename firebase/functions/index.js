@@ -8,6 +8,9 @@ const admin = require("firebase-admin");
 // Initialize Firebase Admin
 admin.initializeApp();
 
+// Load shared configuration (copied from root by predeploy hook)
+const sharedConfig = require("./firebase-config.json");
+
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
 
@@ -18,7 +21,7 @@ const stripeKey = defineSecret("STRIPE_KEY");
  * @return {Object} Payment intent client secret
  */
 exports.createPaymentIntent = onCall({
-  region: "us-west1",
+  region: sharedConfig.region,
   secrets: [stripeKey],
   cors: true,
 }, async (request) => {
@@ -112,7 +115,7 @@ exports.createPaymentIntent = onCall({
  * @return {Object} Portal session URL
  */
 exports.createPortalSession = onCall({
-  region: "us-west1",
+  region: sharedConfig.region,
   secrets: [stripeKey],
   cors: true,
 }, async (request) => {
@@ -196,7 +199,7 @@ exports.createPortalSession = onCall({
  */
 exports.syncPaymentToUser = onDocumentWritten({
   document: "stripe_customers/{userId}/payments/{paymentId}",
-  region: "us-west1",
+  region: sharedConfig.region,
 }, async (event) => {
   const change = event.data;
   const userId = event.params.userId;
@@ -290,7 +293,7 @@ exports.syncPaymentToUser = onDocumentWritten({
  */
 exports.syncSubscriptionToUser = onDocumentWritten({
   document: "stripe_customers/{userId}/subscriptions/{subscriptionId}",
-  region: "us-west1",
+  region: sharedConfig.region,
 }, async (event) => {
   const change = event.data;
   const userId = event.params.userId;
@@ -387,7 +390,7 @@ exports.syncSubscriptionToUser = onDocumentWritten({
  */
 exports.verifyRecaptcha = onDocumentWritten({
   document: "users/{userId}",
-  region: "us-west1",
+  region: sharedConfig.region,
 }, async (event) => {
   const change = event.data;
   const userId = event.params.userId;
@@ -476,7 +479,7 @@ exports.verifyRecaptcha = onDocumentWritten({
 exports.cleanupPendingAccounts = onSchedule({
   schedule: "0 2 * * *", // Every day at 2 AM UTC
   timeZone: "UTC",
-  region: "us-west1",
+  region: sharedConfig.region,
 }, async (event) => {
   try {
     logger.info("Starting pending account cleanup job");

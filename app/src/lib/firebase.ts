@@ -2,6 +2,7 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 /**
  * Translates Firebase error codes to user-friendly messages
@@ -151,6 +152,12 @@ if (!getApps().length) {
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Get Functions instance with region from shared config file
+// The region is read from firebase-config.json at build time via next.config.ts
+// and exposed as an environment variable
+const functionsRegion = process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION || 'us-central1';
+export const functions = getFunctions(app, functionsRegion);
 
 // Function to create a user with tier information
 export async function createUserWithTier(email: string, password: string, name: string, phone: string, tier: ServiceTier): Promise<UserCreationResult> {

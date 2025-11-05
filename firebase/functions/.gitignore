@@ -1,5 +1,8 @@
 node_modules/
 
+# Copied config file (auto-generated from root firebase-config.json)
+firebase-config.json
+
 # Local Stripe configuration with sensitive keys
 .runtimeconfig.json
 
