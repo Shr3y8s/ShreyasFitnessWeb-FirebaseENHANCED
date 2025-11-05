@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -103,18 +103,17 @@ export default function BillingPage() {
 
     const fetchBillingData = async () => {
       try {
-        // Get Stripe customer ID
-        const customerDoc = await getDocs(
-          query(collection(db, 'stripe_customers'), where('__name__', '==', user.uid))
-        );
+        // Get Stripe customer document directly (avoids permissions issue with collection query)
+        const customerDocRef = doc(db, 'stripe_customers', user.uid);
+        const customerDoc = await getDoc(customerDocRef);
 
-        if (customerDoc.empty) {
+        if (!customerDoc.exists()) {
           console.log('[Billing] No Stripe customer found');
           return;
         }
 
-        // Get the stripeId field from the document data, not the document ID
-        const customerData = customerDoc.docs[0].data();
+        // Get the stripeId field from the document data
+        const customerData = customerDoc.data();
         const customerId = customerData.stripeId;
         
         if (!customerId) {
@@ -127,14 +126,15 @@ export default function BillingPage() {
         console.log('[Billing] Stripe customer ID loaded:', customerId);
 
         // Fetch payments (one-time charges) - only succeeded payments
+        console.log('[Billing] Fetching payments...');
         const paymentsQuery = query(
           collection(db, `stripe_customers/${user.uid}/payments`),
           where('status', '==', 'succeeded'),
-          orderBy('created', 'desc'),
           limit(50)
         );
 
         const paymentsSnapshot = await getDocs(paymentsQuery);
+        console.log('[Billing] Payments fetched:', paymentsSnapshot.docs.length, 'payments');
         const paymentsData = paymentsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -143,20 +143,23 @@ export default function BillingPage() {
         setPayments(paymentsData);
 
         // Fetch invoices (from subscriptions)
+        console.log('[Billing] Fetching subscriptions...');
         const subscriptionsSnapshot = await getDocs(
           collection(db, `stripe_customers/${user.uid}/subscriptions`)
         );
+        console.log('[Billing] Subscriptions fetched:', subscriptionsSnapshot.docs.length, 'subscriptions');
 
         const allInvoices: Invoice[] = [];
 
         for (const subDoc of subscriptionsSnapshot.docs) {
+          console.log('[Billing] Fetching invoices for subscription:', subDoc.id);
           const invoicesQuery = query(
             collection(db, `stripe_customers/${user.uid}/subscriptions/${subDoc.id}/invoices`),
-            orderBy('created', 'desc'),
             limit(50)
           );
 
           const invoicesSnapshot = await getDocs(invoicesQuery);
+          console.log('[Billing] Invoices fetched:', invoicesSnapshot.docs.length, 'invoices');
           const invoicesData = invoicesSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()

@@ -292,20 +292,20 @@ service cloud.firestore {
         // Trainers/admins can read all subscriptions for business dashboard (MRR, etc.)
         allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
         allow write: if false; // Only Extension can write
+        
+        // Invoices nested under subscriptions
+        match /invoices/{invoiceId} {
+          // Users can read their own subscription invoices
+          // Trainers/admins can read all invoices for business dashboard
+          allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
+          allow write: if false; // Only Extension can write
+        }
       }
       
       // Payments subcollection - managed by Extension
       match /payments/{paymentId} {
         // Users can read their own payments
         // Trainers/admins can read all payments for business dashboard (revenue tracking)
-        allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
-        allow write: if false; // Only Extension can write
-      }
-      
-      // Invoices subcollection - managed by Extension
-      match /invoices/{invoiceId} {
-        // Users can read their own invoices
-        // Trainers/admins can read all invoices for business dashboard (failed payments tracking)
         allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
         allow write: if false; // Only Extension can write
       }
