@@ -13,6 +13,7 @@ import { User, MapPin, Bell, Phone, Shield, AlertTriangle, Camera, Loader2 } fro
 import { ImageCropModal } from '@/components/profile/ImageCropModal';
 import { AddressAutocomplete } from '@/components/profile/AddressAutocomplete';
 import { processAndUploadProfilePhoto } from '@/lib/imageUtils';
+import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function ProfilePage() {
   const [editedName, setEditedName] = useState('');
   const [editedPreferredName, setEditedPreferredName] = useState('');
   const [editedPhone, setEditedPhone] = useState('');
+  const [editedPhoneError, setEditedPhoneError] = useState<string | null>(null);
   const [editedDateOfBirth, setEditedDateOfBirth] = useState('');
   const [editedGender, setEditedGender] = useState('');
   const [savingPersonal, setSavingPersonal] = useState(false);
@@ -65,6 +67,7 @@ export default function ProfilePage() {
   const [isEditingEmergency, setIsEditingEmergency] = useState(false);
   const [editedEmergencyName, setEditedEmergencyName] = useState('');
   const [editedEmergencyPhone, setEditedEmergencyPhone] = useState('');
+  const [editedEmergencyPhoneError, setEditedEmergencyPhoneError] = useState<string | null>(null);
   const [editedEmergencyRelationship, setEditedEmergencyRelationship] = useState('');
   const [editedEmergencyMedicalNotes, setEditedEmergencyMedicalNotes] = useState('');
   const [savingEmergency, setSavingEmergency] = useState(false);
@@ -260,8 +263,35 @@ export default function ProfilePage() {
     setEditedName('');
     setEditedPreferredName('');
     setEditedPhone('');
+    setEditedPhoneError(null);
     setEditedDateOfBirth('');
     setEditedGender('');
+  };
+
+  const handlePersonalPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEditedPhone(value);
+    
+    // Clear error on change
+    if (editedPhoneError) {
+      setEditedPhoneError(null);
+    }
+  };
+
+  const handlePersonalPhoneBlur = () => {
+    if (!editedPhone.trim()) {
+      setEditedPhoneError(null);
+      return;
+    }
+
+    const validation = validateAndFormatPhone(editedPhone);
+    if (!validation.isValid) {
+      setEditedPhoneError(validation.errorMessage || 'Invalid phone number');
+    } else {
+      setEditedPhoneError(null);
+      // Auto-format on blur
+      setEditedPhone(validation.formatted);
+    }
   };
 
   const handleSavePersonal = async () => {
@@ -273,23 +303,40 @@ export default function ProfilePage() {
       return;
     }
 
+    // Validate phone if provided
+    if (editedPhone.trim()) {
+      const phoneValidation = validateAndFormatPhone(editedPhone);
+      if (!phoneValidation.isValid) {
+        setEditedPhoneError(phoneValidation.errorMessage || 'Invalid phone number');
+        return;
+      }
+    }
+
     setSavingPersonal(true);
     try {
+      // Use E.164 format for storage or null if empty
+      const phoneValidation = validateAndFormatPhone(editedPhone);
+      const phoneToStore = phoneValidation.isValid ? phoneValidation.e164 : null;
+
       const updatedData = {
         name: editedName.trim(),
         preferredName: editedPreferredName.trim() || null,
-        phone: editedPhone.trim() || null,
+        phone: phoneToStore,
         dateOfBirth: editedDateOfBirth || null,
         gender: editedGender || null,
       };
 
       await updateDoc(doc(db, 'users', user.uid), updatedData);
 
-      // Update local state immediately for instant display
-      setCurrentPersonalInfo(updatedData);
+      // Update local state with formatted display version
+      setCurrentPersonalInfo({
+        ...updatedData,
+        phone: phoneValidation.isValid ? phoneValidation.formatted : null,
+      });
 
       alert('Personal information updated successfully!');
       setIsEditingPersonal(false);
+      setEditedPhoneError(null);
     } catch (error) {
       console.error('Error updating personal information:', error);
       alert('Failed to update. Please try again.');
@@ -378,18 +425,58 @@ export default function ProfilePage() {
     // Clear edit state
     setEditedEmergencyName('');
     setEditedEmergencyPhone('');
+    setEditedEmergencyPhoneError(null);
     setEditedEmergencyRelationship('');
     setEditedEmergencyMedicalNotes('');
+  };
+
+  const handleEmergencyPhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEditedEmergencyPhone(value);
+    
+    // Clear error on change
+    if (editedEmergencyPhoneError) {
+      setEditedEmergencyPhoneError(null);
+    }
+  };
+
+  const handleEmergencyPhoneBlur = () => {
+    if (!editedEmergencyPhone.trim()) {
+      setEditedEmergencyPhoneError(null);
+      return;
+    }
+
+    const validation = validateAndFormatPhone(editedEmergencyPhone);
+    if (!validation.isValid) {
+      setEditedEmergencyPhoneError(validation.errorMessage || 'Invalid phone number');
+    } else {
+      setEditedEmergencyPhoneError(null);
+      // Auto-format on blur
+      setEditedEmergencyPhone(validation.formatted);
+    }
   };
 
   const handleSaveEmergency = async () => {
     if (!user) return;
 
+    // Validate phone if provided
+    if (editedEmergencyPhone.trim()) {
+      const phoneValidation = validateAndFormatPhone(editedEmergencyPhone);
+      if (!phoneValidation.isValid) {
+        setEditedEmergencyPhoneError(phoneValidation.errorMessage || 'Invalid phone number');
+        return;
+      }
+    }
+
     setSavingEmergency(true);
     try {
+      // Use E.164 format for storage or null if empty
+      const phoneValidation = validateAndFormatPhone(editedEmergencyPhone);
+      const phoneToStore = phoneValidation.isValid ? phoneValidation.e164 : null;
+
       const updatedData = {
         name: editedEmergencyName.trim() || null,
-        phone: editedEmergencyPhone.trim() || null,
+        phone: phoneToStore,
         relationship: editedEmergencyRelationship.trim() || null,
         medicalNotes: editedEmergencyMedicalNotes.trim() || null,
       };
@@ -399,11 +486,15 @@ export default function ProfilePage() {
         emergencyContact: updatedData,
       });
 
-      // Update local state immediately for instant display
-      setCurrentEmergencyInfo(updatedData);
+      // Update local state with formatted display version
+      setCurrentEmergencyInfo({
+        ...updatedData,
+        phone: phoneValidation.isValid ? phoneValidation.formatted : null,
+      });
 
       alert('Emergency contact information updated successfully!');
       setIsEditingEmergency(false);
+      setEditedEmergencyPhoneError(null);
     } catch (error) {
       console.error('Error updating emergency contact:', error);
       alert('Failed to update. Please try again.');
@@ -743,10 +834,16 @@ export default function ProfilePage() {
                         <input
                           type="tel"
                           value={editedPhone}
-                          onChange={(e) => setEditedPhone(e.target.value)}
-                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                          onChange={handlePersonalPhoneChange}
+                          onBlur={handlePersonalPhoneBlur}
+                          className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                            editedPhoneError ? 'border-red-500' : 'border-gray-300'
+                          }`}
                           placeholder="(555) 123-4567"
                         />
+                        {editedPhoneError && (
+                          <p className="text-xs text-red-600 mt-1">{editedPhoneError}</p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">
@@ -1357,10 +1454,16 @@ export default function ProfilePage() {
                           <input
                             type="tel"
                             value={editedEmergencyPhone}
-                            onChange={(e) => setEditedEmergencyPhone(e.target.value)}
-                            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                            onChange={handleEmergencyPhoneChange}
+                            onBlur={handleEmergencyPhoneBlur}
+                            className={`w-full mt-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                              editedEmergencyPhoneError ? 'border-red-500' : 'border-gray-300'
+                            }`}
                             placeholder="(555) 987-6543"
                           />
+                          {editedEmergencyPhoneError && (
+                            <p className="text-xs text-red-600 mt-1">{editedEmergencyPhoneError}</p>
+                          )}
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">

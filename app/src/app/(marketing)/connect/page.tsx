@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState, FormEvent } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { validateAndFormatPhone } from '@/lib/phoneUtils';
 
 export default function ConnectPage() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'message'>('schedule');
@@ -15,6 +16,7 @@ export default function ConnectPage() {
     message: '',
     newsletter: false
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -47,19 +49,30 @@ export default function ConnectPage() {
     return re.test(String(email).toLowerCase());
   };
 
-  const formatPhoneNumber = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    const limited = cleaned.substring(0, 10);
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, phone: value });
     
-    if (limited.length === 0) return '';
-    if (limited.length < 4) return `(${limited}`;
-    if (limited.length < 7) return `(${limited.substring(0, 3)}) ${limited.substring(3)}`;
-    return `(${limited.substring(0, 3)}) ${limited.substring(3, 6)}-${limited.substring(6)}`;
+    // Clear error on change
+    if (phoneError) {
+      setPhoneError(null);
+    }
   };
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
-    setFormData({ ...formData, phone: formatted });
+  const handlePhoneBlur = () => {
+    if (!formData.phone.trim()) {
+      setPhoneError(null);
+      return;
+    }
+
+    const validation = validateAndFormatPhone(formData.phone);
+    if (!validation.isValid) {
+      setPhoneError(validation.errorMessage || 'Invalid phone number');
+    } else {
+      setPhoneError(null);
+      // Auto-format on blur
+      setFormData({ ...formData, phone: validation.formatted });
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -74,7 +87,21 @@ export default function ConnectPage() {
       return;
     }
 
+    // Validate phone if provided
+    if (formData.phone.trim()) {
+      const phoneValidation = validateAndFormatPhone(formData.phone);
+      if (!phoneValidation.isValid) {
+        setPhoneError(phoneValidation.errorMessage || 'Invalid phone number');
+        setSubmitError('Please correct the errors in the form.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     try {
+      // Format phone for storage (E.164 format)
+      const phoneValidation = validateAndFormatPhone(formData.phone);
+      const phoneToStore = phoneValidation.isValid ? phoneValidation.e164 : null;
       // Get service display text
       const serviceSelect = document.getElementById('service') as HTMLSelectElement;
       const serviceDisplayText = serviceSelect?.options[serviceSelect.selectedIndex]?.text || '';
@@ -84,7 +111,7 @@ export default function ConnectPage() {
         Name: formData.name.trim(),
         Email: formData.email.trim(),
         EmailLower: formData.email.trim().toLowerCase(),
-        Phone: formData.phone || null,
+        Phone: phoneToStore,
         Service: formData.service,
         ServiceDisplayText: serviceDisplayText,
         Message: formData.message.trim(),
@@ -286,10 +313,17 @@ export default function ConnectPage() {
                           type="tel"
                           id="phone"
                           name="phone"
-                          placeholder="(XXX) XXX-XXXX"
+                          placeholder="(555) 123-4567"
                           value={formData.phone}
                           onChange={handlePhoneChange}
+                          onBlur={handlePhoneBlur}
+                          className={phoneError ? 'error' : ''}
                         />
+                        {phoneError && (
+                          <span className="error-text" style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                            {phoneError}
+                          </span>
+                        )}
                       </div>
                       
                       <div className="form-group">
