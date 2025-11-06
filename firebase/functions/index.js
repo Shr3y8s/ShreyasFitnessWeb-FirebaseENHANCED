@@ -59,7 +59,7 @@ exports.createPaymentIntent = onCall({
 
     // Initialize Stripe with the secret key
     const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2025-07-30.basil",
+      apiVersion: "2024-09-30.acacia",
     });
 
     // Get the price from Stripe to verify it exists and get the amount
@@ -145,7 +145,7 @@ exports.createPortalSession = onCall({
 
     // Initialize Stripe with the secret key
     const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2025-07-30.basil",
+      apiVersion: "2024-09-30.acacia",
     });
 
     // Create the customer portal session
@@ -174,6 +174,179 @@ exports.createPortalSession = onCall({
 
     // Re-throw with proper callable function error handling
     throw new Error(`Portal session creation failed: ${error.message}`);
+  }
+});
+
+/**
+ * Get complete billing history from Stripe API
+ * Fetches invoices, charges, subscriptions, and current payment method
+ * This provides full payment details including card brand/last4 for all transactions
+ * @param {Object} request - The callable function request
+ * @return {Object} Complete billing history data
+ */
+exports.getBillingHistory = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Validate input data
+    if (!request.data || !request.data.customerId) {
+      const error = new Error("Missing required parameter: customerId");
+      logger.error("Billing history fetch failed - missing customerId", {
+        requestData: request.data,
+      });
+      throw error;
+    }
+
+    // Require authentication
+    if (!request.auth) {
+      const error = new Error("The function must be called while authenticated.");
+      logger.error("Billing history fetch failed - not authenticated");
+      throw error;
+    }
+
+    const userId = request.auth.uid;
+    const customerId = request.data.customerId;
+
+    logger.info("Fetching billing history from Stripe", {
+      userId,
+      customerId,
+    });
+
+    // Initialize Stripe with the secret key
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Fetch all billing data with proper expansion (Acacia API)
+    const [invoices, subscriptions, customer] = await Promise.all([
+      // Get paid invoices with expanded payment_intent data
+      stripe.invoices.list({
+        customer: customerId,
+        status: "paid",
+        limit: 100,
+        expand: [
+          "data.payment_intent",
+          "data.payment_intent.latest_charge",
+          "data.payment_intent.payment_method",
+        ],
+      }),
+
+      // Get active subscriptions with default payment method
+      stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+        expand: ["data.default_payment_method"],
+      }),
+
+      // Get customer with default payment method
+      stripe.customers.retrieve(customerId, {
+        expand: ["invoice_settings.default_payment_method"],
+      }),
+    ]);
+
+    logger.info("Billing history fetched successfully", {
+      userId,
+      invoiceCount: invoices.data.length,
+      subscriptionCount: subscriptions.data.length,
+    });
+
+    return {
+      success: true,
+      invoices: invoices.data,
+      subscriptions: subscriptions.data,
+      currentPaymentMethod: customer.invoice_settings?.default_payment_method,
+    };
+  } catch (error) {
+    logger.error("Error fetching billing history", {
+      error: error.message,
+      stack: error.stack,
+      requestData: request.data,
+    });
+
+    throw new Error(`Billing history fetch failed: ${error.message}`);
+  }
+});
+
+/**
+ * Create a restricted customer portal session for payment method changes only
+ * This uses a specific portal configuration that only allows payment method updates
+ * preventing customers from canceling subscriptions from the billing page
+ * @param {Object} request - The callable function request
+ * @return {Object} Portal session URL
+ */
+exports.createPaymentMethodPortalSession = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Validate input data
+    if (!request.data || !request.data.customerId) {
+      const error = new Error("Missing required parameter: customerId");
+      logger.error("Payment method portal session creation failed - missing customerId", {
+        requestData: request.data,
+      });
+      throw error;
+    }
+
+    // Require authentication
+    if (!request.auth) {
+      const error = new Error("The function must be called while authenticated.");
+      logger.error("Payment method portal session creation failed - not authenticated");
+      throw error;
+    }
+
+    const userId = request.auth.uid;
+    const customerId = request.data.customerId;
+
+    logger.info("Creating payment method portal session", {
+      userId,
+      customerId,
+    });
+
+    // Initialize Stripe with the secret key
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Create portal session with optional configuration for restricted access
+    const sessionOptions = {
+      customer: customerId,
+      return_url: request.data.return_url ||
+        `${process.env.PUBLIC_URL}/dashboard/client/billing`,
+    };
+
+    // If a restricted configuration ID is provided in environment, use it
+    // This configuration should only allow payment method updates
+    if (process.env.STRIPE_PAYMENT_METHOD_PORTAL_CONFIG_ID) {
+      sessionOptions.configuration = process.env.STRIPE_PAYMENT_METHOD_PORTAL_CONFIG_ID;
+      logger.info("Using restricted portal configuration", {
+        configId: process.env.STRIPE_PAYMENT_METHOD_PORTAL_CONFIG_ID,
+      });
+    }
+
+    const session = await stripe.billingPortal.sessions.create(sessionOptions);
+
+    logger.info("Payment method portal session created successfully", {
+      sessionId: session.id,
+      url: session.url,
+      userId,
+    });
+
+    return {
+      success: true,
+      url: session.url,
+    };
+  } catch (error) {
+    logger.error("Error creating payment method portal session", {
+      error: error.message,
+      stack: error.stack,
+      requestData: request.data,
+    });
+
+    throw new Error(`Payment method portal session creation failed: ${error.message}`);
   }
 });
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, limit, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -15,54 +15,47 @@ import {
   Receipt, 
   Download, 
   ExternalLink, 
-  Clock, 
   CheckCircle2, 
   XCircle, 
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 
-interface Payment {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  created: any;
-  description?: string;
-  payment_method_details?: {
-    type: string;
-    card?: {
-      brand: string;
-      last4: string;
-    };
+interface PaymentMethodDetails {
+  type: string;
+  card?: {
+    brand: string;
+    last4: string;
+    exp_month: number;
+    exp_year: number;
   };
-  charges?: {
-    data: Array<{
-      receipt_url?: string;
-    }>;
+  link?: {
+    email?: string;
   };
 }
 
-interface Invoice {
+interface Transaction {
   id: string;
-  amount_due: number;
-  amount_paid: number;
+  date: number;
+  productName: string;
+  description: string;
+  amount: number;
   currency: string;
   status: string;
-  created: any;
-  invoice_pdf?: string;
-  hosted_invoice_url?: string;
-  description?: string;
-  period_start?: any;
-  period_end?: any;
+  paymentMethod: string;
+  receiptUrl: string | null;
 }
 
 export default function BillingPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [billingData, setBillingData] = useState<any>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [currentPaymentMethod, setCurrentPaymentMethod] = useState<PaymentMethodDetails | null>(null);
+  const [nextPaymentDate, setNextPaymentDate] = useState<Date | null>(null);
+  const [nextPaymentAmount, setNextPaymentAmount] = useState<number | null>(null);
   const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,22 +90,24 @@ export default function BillingPage() {
     setLoading(false);
   }, [userData, authLoading, router]);
 
-  // Fetch payment and invoice data
+  // Fetch billing data from Stripe API
   useEffect(() => {
     if (!user || loading) return;
 
     const fetchBillingData = async () => {
       try {
-        // Get Stripe customer document directly (avoids permissions issue with collection query)
+        setError(null);
+        
+        // Get Stripe customer ID from Firestore
         const customerDocRef = doc(db, 'stripe_customers', user.uid);
         const customerDoc = await getDoc(customerDocRef);
 
         if (!customerDoc.exists()) {
           console.log('[Billing] No Stripe customer found');
+          setError('Stripe customer not found. Please contact support.');
           return;
         }
 
-        // Get the stripeId field from the document data
         const customerData = customerDoc.data();
         const customerId = customerData.stripeId;
         
@@ -123,59 +118,122 @@ export default function BillingPage() {
         }
         
         setStripeCustomerId(customerId);
-        console.log('[Billing] Stripe customer ID loaded:', customerId);
+        console.log('[Billing] Fetching billing history from Stripe API...');
 
-        // Fetch payments (one-time charges) - only succeeded payments
-        console.log('[Billing] Fetching payments...');
-        const paymentsQuery = query(
-          collection(db, `stripe_customers/${user.uid}/payments`),
-          where('status', '==', 'succeeded'),
-          limit(50)
-        );
+        // Call the new Cloud Function to get complete billing data
+        const getBillingHistory = httpsCallable(functions, 'getBillingHistory');
+        const result = await getBillingHistory({ customerId });
 
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        console.log('[Billing] Payments fetched:', paymentsSnapshot.docs.length, 'payments');
-        const paymentsData = paymentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Payment[];
-
-        setPayments(paymentsData);
-
-        // Fetch invoices (from subscriptions)
-        console.log('[Billing] Fetching subscriptions...');
-        const subscriptionsSnapshot = await getDocs(
-          collection(db, `stripe_customers/${user.uid}/subscriptions`)
-        );
-        console.log('[Billing] Subscriptions fetched:', subscriptionsSnapshot.docs.length, 'subscriptions');
-
-        const allInvoices: Invoice[] = [];
-
-        for (const subDoc of subscriptionsSnapshot.docs) {
-          console.log('[Billing] Fetching invoices for subscription:', subDoc.id);
-          const invoicesQuery = query(
-            collection(db, `stripe_customers/${user.uid}/subscriptions/${subDoc.id}/invoices`),
-            limit(50)
-          );
-
-          const invoicesSnapshot = await getDocs(invoicesQuery);
-          console.log('[Billing] Invoices fetched:', invoicesSnapshot.docs.length, 'invoices');
-          const invoicesData = invoicesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Invoice[];
-
-          allInvoices.push(...invoicesData);
+        const data = result.data as any;
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch billing history');
         }
 
-        // Sort all invoices by date
-        allInvoices.sort((a, b) => {
-          const aTime = a.created?.seconds || 0;
-          const bTime = b.created?.seconds || 0;
-          return bTime - aTime;
+        console.log('[Billing] Billing data fetched successfully', {
+          invoices: data.invoices?.length || 0,
+          subscriptions: data.subscriptions?.length || 0,
         });
 
-        setInvoices(allInvoices);
+        // Debug: Log first invoice payment_intent structure
+        if (data.invoices?.[0]) {
+          console.log('[Billing] First invoice payment_intent structure:', {
+            id: data.invoices[0].id,
+            payment_intent: data.invoices[0].payment_intent,
+            latest_charge: data.invoices[0].payment_intent?.latest_charge,
+            payment_method_details: data.invoices[0].payment_intent?.latest_charge?.payment_method_details,
+          });
+        }
+
+        setBillingData(data);
+
+        // Extract current payment method - handle different payment method types
+        let paymentMethod = null;
+        if (data.currentPaymentMethod) {
+          paymentMethod = data.currentPaymentMethod;
+        } else if (data.subscriptions?.[0]?.default_payment_method) {
+          paymentMethod = data.subscriptions[0].default_payment_method;
+        }
+        
+        // Set payment method regardless of type (card, link, etc.)
+        if (paymentMethod) {
+          setCurrentPaymentMethod(paymentMethod);
+        }
+
+        // Extract next payment info from active subscription
+        if (data.subscriptions?.[0]) {
+          const sub = data.subscriptions[0];
+          if (sub.current_period_end) {
+            setNextPaymentDate(new Date(sub.current_period_end * 1000));
+          }
+          // Calculate next payment amount from subscription items
+          const amount = sub.items?.data?.reduce((sum: number, item: any) => {
+            return sum + (item.price?.unit_amount || 0);
+          }, 0);
+          setNextPaymentAmount(amount);
+        }
+
+        // Process transactions - invoices contain all payment data
+        const allTransactions: Transaction[] = [];
+
+        // Process invoices only (they contain complete payment information)
+        if (data.invoices) {
+          data.invoices.forEach((invoice: any) => {
+            // Get payment method details from payment_intent.latest_charge
+            const paymentMethodDetails = invoice.payment_intent?.latest_charge?.payment_method_details;
+            let pmDisplay = 'Payment method';
+            
+            // Handle different payment method types
+            if (paymentMethodDetails?.card) {
+              const brand = paymentMethodDetails.card.brand;
+              const last4 = paymentMethodDetails.card.last4;
+              pmDisplay = `${brand.charAt(0).toUpperCase() + brand.slice(1)} •••• ${last4}`;
+            } else if (paymentMethodDetails?.link) {
+              // Link payment - show country since email isn't available in charge details
+              const country = paymentMethodDetails.link.country;
+              pmDisplay = country ? `Link (${country})` : 'Link';
+            } else if (paymentMethodDetails?.type) {
+              pmDisplay = paymentMethodDetails.type.charAt(0).toUpperCase() + 
+                          paymentMethodDetails.type.slice(1);
+            }
+
+            // Extract product name from metadata (preferred) or description
+            let productName = 'Subscription';
+            if (invoice.lines?.data && invoice.lines.data.length > 0) {
+              const lineItem = invoice.lines.data[0];
+              productName = lineItem.metadata?.tierName || lineItem.description || 'Subscription';
+            }
+
+            // Determine activity type
+            let activity = 'Subscription Payment';
+            if (invoice.billing_reason === 'subscription_create') {
+              activity = 'Subscription Created';
+            } else if (invoice.billing_reason === 'subscription_cycle') {
+              activity = 'Subscription Payment';
+            } else if (invoice.billing_reason === 'subscription_update') {
+              activity = 'Subscription Updated';
+            } else if (invoice.description) {
+              activity = invoice.description;
+            }
+
+            allTransactions.push({
+              id: invoice.id,
+              date: invoice.created,
+              productName: productName,
+              description: activity,
+              amount: invoice.amount_paid,
+              currency: invoice.currency,
+              status: invoice.status,
+              paymentMethod: pmDisplay,
+              receiptUrl: invoice.hosted_invoice_url || invoice.invoice_pdf,
+            });
+          });
+        }
+
+        // Sort by date (newest first)
+        allTransactions.sort((a, b) => b.date - a.date);
+        
+        setTransactions(allTransactions);
       } catch (error) {
         console.error('[Billing] Error fetching billing data:', error);
         setError('Failed to load billing information. Please try again.');
@@ -198,7 +256,7 @@ export default function BillingPage() {
     }
   };
 
-  const handleManagePaymentMethods = async () => {
+  const handleUpdatePaymentMethod = async () => {
     if (!stripeCustomerId) {
       setError('Unable to load payment portal. Please try again.');
       return;
@@ -208,8 +266,8 @@ export default function BillingPage() {
     setError(null);
 
     try {
-      const createPortalSession = httpsCallable(functions, 'createPortalSession');
-      const result = await createPortalSession({
+      const createPaymentMethodPortalSession = httpsCallable(functions, 'createPaymentMethodPortalSession');
+      const result = await createPaymentMethodPortalSession({
         customerId: stripeCustomerId,
         return_url: `${window.location.origin}/dashboard/client/billing`,
       });
@@ -222,7 +280,7 @@ export default function BillingPage() {
         throw new Error('Failed to create portal session');
       }
     } catch (error) {
-      console.error('[Billing] Error opening customer portal:', error);
+      console.error('[Billing] Error opening payment method portal:', error);
       setError('Failed to open payment portal. Please try again.');
     } finally {
       setLoadingPortal(false);
@@ -236,27 +294,26 @@ export default function BillingPage() {
     }).format(amount / 100);
   };
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
-    
-    // Handle different timestamp formats
-    let date: Date;
-    if (typeof timestamp === 'number') {
-      // Plain number: assume Unix timestamp in seconds (from Stripe webhooks)
-      date = new Date(timestamp * 1000);
-    } else if (timestamp?.seconds) {
-      // Firestore Timestamp object
-      date = new Date(timestamp.seconds * 1000);
-    } else {
-      // Fallback: try to convert directly
-      date = new Date(timestamp);
-    }
-    
-    return date.toLocaleDateString('en-US', {
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const formatDateTime = (timestamp: number) => {
+    const date = formatDate(timestamp);
+    const time = formatTime(timestamp);
+    return { date, time };
   };
 
   const getStatusIcon = (status: string) => {
@@ -266,12 +323,12 @@ export default function BillingPage() {
         return <CheckCircle2 className="w-4 h-4 text-green-600" />;
       case 'pending':
       case 'processing':
-        return <Clock className="w-4 h-4 text-yellow-600" />;
+        return <Loader2 className="w-4 h-4 text-yellow-600 animate-spin" />;
       case 'failed':
       case 'canceled':
         return <XCircle className="w-4 h-4 text-red-600" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
+        return <AlertCircle className="w-4 h-4 text-gray-600" />;
     }
   };
 
@@ -291,52 +348,6 @@ export default function BillingPage() {
         return `${baseClasses} bg-gray-100 text-gray-700`;
     }
   };
-
-  const getPaymentMethodDisplay = (payment: Payment) => {
-    if (payment.payment_method_details?.card) {
-      const { brand, last4 } = payment.payment_method_details.card;
-      return `${brand.charAt(0).toUpperCase() + brand.slice(1)} •••• ${last4}`;
-    }
-    return payment.payment_method_details?.type || 'Card';
-  };
-
-  const getReceiptUrl = (payment: Payment) => {
-    // Try to get receipt URL from charges
-    if (payment.charges?.data && payment.charges.data.length > 0) {
-      return payment.charges.data[0].receipt_url || null;
-    }
-    return null;
-  };
-
-  // Combine payments and invoices for a unified history
-  const allTransactions = [
-    ...payments.map(p => ({
-      id: p.id,
-      date: p.created,
-      description: p.description || 'One-time payment',
-      amount: p.amount,
-      currency: p.currency,
-      status: p.status,
-      type: 'payment' as const,
-      paymentMethod: getPaymentMethodDisplay(p),
-      receiptUrl: getReceiptUrl(p),
-    })),
-    ...invoices.map(i => ({
-      id: i.id,
-      date: i.created,
-      description: i.description || 'Subscription payment',
-      amount: i.amount_paid,
-      currency: i.currency,
-      status: i.status,
-      type: 'invoice' as const,
-      paymentMethod: 'Card',
-      receiptUrl: i.hosted_invoice_url || i.invoice_pdf || null,
-    })),
-  ].sort((a, b) => {
-    const aTime = a.date?.seconds || 0;
-    const bTime = b.date?.seconds || 0;
-    return bTime - aTime;
-  });
 
   if (loading || authLoading) {
     return (
@@ -359,9 +370,9 @@ export default function BillingPage() {
             
             {/* Page Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground">Billing & Payment History</h1>
+              <h1 className="text-3xl font-bold text-foreground">Billing & Payment</h1>
               <p className="text-muted-foreground mt-2">
-                Manage your payment methods and view transaction history
+                Manage your payment method and view transaction history
               </p>
             </div>
 
@@ -376,51 +387,94 @@ export default function BillingPage() {
               </div>
             )}
 
-            {/* Payment Methods Card */}
+            {/* Current Payment Method Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-primary" />
-                  Payment Methods
+                  Current Payment Method
                 </CardTitle>
                 <CardDescription>
-                  Manage your payment methods and billing information
+                  This payment method will be used for upcoming charges
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <CreditCard className="w-6 h-6 text-primary" />
+                {currentPaymentMethod ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                          <CreditCard className="w-8 h-8 text-gray-700" />
+                        </div>
+                        <div>
+                          {currentPaymentMethod.type === 'card' && currentPaymentMethod.card ? (
+                            <>
+                              <p className="font-semibold text-lg text-foreground">
+                                {currentPaymentMethod.card.brand.charAt(0).toUpperCase() + 
+                                 currentPaymentMethod.card.brand.slice(1)} •••• {currentPaymentMethod.card.last4}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Expires {currentPaymentMethod.card.exp_month.toString().padStart(2, '0')}/
+                                {currentPaymentMethod.card.exp_year}
+                              </p>
+                            </>
+                          ) : currentPaymentMethod.type === 'link' && currentPaymentMethod.link ? (
+                            <>
+                              <p className="font-semibold text-lg text-foreground">Link</p>
+                              <p className="text-sm text-muted-foreground">
+                                {currentPaymentMethod.link.email || 'Email-based payment'}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-semibold text-lg text-foreground">
+                                {currentPaymentMethod.type ? 
+                                  currentPaymentMethod.type.charAt(0).toUpperCase() + currentPaymentMethod.type.slice(1) : 
+                                  'Payment Method'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">Active payment method</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleUpdatePaymentMethod}
+                        disabled={loadingPortal || !stripeCustomerId}
+                        className="px-6 py-2.5 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors font-medium"
+                      >
+                        {loadingPortal ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Opening...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Update Payment Method</span>
+                            <ExternalLink className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">Stripe Customer Portal</p>
-                      <p className="text-sm text-muted-foreground">
-                        Update payment methods, view invoices, and manage billing
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleManagePaymentMethods}
-                    disabled={loadingPortal || !stripeCustomerId}
-                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
-                  >
-                    {loadingPortal ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Opening...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Manage</span>
-                        <ExternalLink className="w-4 h-4" />
-                      </>
+                    
+                    {nextPaymentDate && nextPaymentAmount && (
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                        <p className="text-sm text-blue-900">
+                          <span className="font-medium">Next payment:</span>{' '}
+                          {formatCurrency(nextPaymentAmount)} on {formatDate(Math.floor(nextPaymentDate.getTime() / 1000))}
+                        </p>
+                      </div>
                     )}
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3 px-4">
-                  You'll be redirected to Stripe's secure portal to manage your payment information
-                </p>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">No payment method on file</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Add a payment method to ensure uninterrupted service
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -432,11 +486,16 @@ export default function BillingPage() {
                   Payment History
                 </CardTitle>
                 <CardDescription>
-                  View all your payments and download invoices
+                  Complete history of all your transactions
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {allTransactions.length === 0 ? (
+                {!billingData ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 text-primary mx-auto mb-4 animate-spin" />
+                    <p className="text-gray-600 font-medium">Loading payment history...</p>
+                  </div>
+                ) : transactions.length === 0 ? (
                   <div className="text-center py-12">
                     <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 font-medium">No payment history yet</p>
@@ -449,8 +508,9 @@ export default function BillingPage() {
                     <table className="w-full">
                       <thead className="border-b">
                         <tr className="text-left">
-                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Date</th>
-                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Description</th>
+                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Date & Time</th>
+                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Product</th>
+                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Activity</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Amount</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Payment Method</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Status</th>
@@ -458,45 +518,52 @@ export default function BillingPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {allTransactions.map((transaction) => (
-                          <tr key={transaction.id} className="hover:bg-gray-50">
-                            <td className="py-4 pr-4 text-sm text-foreground">
-                              {formatDate(transaction.date)}
-                            </td>
-                            <td className="py-4 pr-4 text-sm text-foreground">
-                              <div className="flex items-center gap-2">
-                                {getStatusIcon(transaction.status)}
-                                <span>{transaction.description}</span>
-                              </div>
-                            </td>
-                            <td className="py-4 pr-4 text-sm font-medium text-foreground">
-                              {formatCurrency(transaction.amount, transaction.currency)}
-                            </td>
-                            <td className="py-4 pr-4 text-sm text-muted-foreground">
-                              {transaction.paymentMethod}
-                            </td>
-                            <td className="py-4 pr-4">
-                              <span className={getStatusBadge(transaction.status)}>
-                                {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                              </span>
-                            </td>
-                            <td className="py-4">
-                              {transaction.receiptUrl ? (
-                                <a
-                                  href={transaction.receiptUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
-                                >
-                                  <Download className="w-4 h-4" />
-                                  <span>View</span>
-                                </a>
-                              ) : (
-                                <span className="text-xs text-gray-400">N/A</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {transactions.map((transaction) => {
+                          const { date, time } = formatDateTime(transaction.date);
+                          return (
+                            <tr key={transaction.id} className="hover:bg-gray-50">
+                              <td className="py-4 pr-4 text-sm text-foreground">
+                                <div className="font-medium">{date}</div>
+                                <div className="text-xs text-muted-foreground">{time}</div>
+                              </td>
+                              <td className="py-4 pr-4 text-sm text-foreground font-medium">
+                                {transaction.productName}
+                              </td>
+                              <td className="py-4 pr-4 text-sm text-foreground">
+                                <div className="flex items-center gap-2">
+                                  {getStatusIcon(transaction.status)}
+                                  <span>{transaction.description}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 pr-4 text-sm font-medium text-foreground">
+                                {formatCurrency(transaction.amount, transaction.currency)}
+                              </td>
+                              <td className="py-4 pr-4 text-sm text-muted-foreground">
+                                {transaction.paymentMethod}
+                              </td>
+                              <td className="py-4 pr-4">
+                                <span className={getStatusBadge(transaction.status)}>
+                                  {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                                </span>
+                              </td>
+                              <td className="py-4">
+                                {transaction.receiptUrl ? (
+                                  <a
+                                    href={transaction.receiptUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                    <span>View</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-gray-400">N/A</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -504,7 +571,7 @@ export default function BillingPage() {
               </CardContent>
             </Card>
 
-            {/* Info Banner */}
+            {/* Help Banner */}
             <Card className="border-blue-200 bg-blue-50">
               <CardContent className="pt-6">
                 <div className="flex gap-3">
