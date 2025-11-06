@@ -91,7 +91,7 @@ export function NutritionHabitTracker() {
         <CardContent className="p-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Today's Progress</h3>
+              <h3 className="font-semibold">Today&apos;s Progress</h3>
               <Badge variant={completedCount === habits.length ? "default" : "secondary"}>
                 {completedCount} / {habits.length} Complete
               </Badge>
@@ -100,7 +100,7 @@ export function NutritionHabitTracker() {
             <p className="text-sm text-muted-foreground">
               {completedCount === habits.length
                 ? "🎉 All habits completed today! Amazing work!"
-                : `Keep going! ${habits.length - completedCount} habit${habits.length - completedCount !== 1 ? 's' : ''} remaining.`}
+                : `Keep going! ${habits.length - completedCount} habit${habits.length - completedCount !== 1 ? "s" : ""} remaining.`}
             </p>
           </div>
         </CardContent>

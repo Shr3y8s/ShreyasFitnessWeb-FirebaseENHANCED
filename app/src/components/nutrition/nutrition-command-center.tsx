@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import { PlusCircle, Flame, Droplets, Target, CheckCircle2, UtensilsCrossed, Wheat, Beef } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

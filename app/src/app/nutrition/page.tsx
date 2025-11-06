@@ -9,8 +9,6 @@ import { NutritionHabitTracker } from '@/components/nutrition/nutrition-habit-tr
 import { NutritionResources } from '@/components/nutrition/nutrition-resources';
 import { NutritionCommandCenter } from '@/components/nutrition/nutrition-command-center';
 import { NutritionTrendsCard } from '@/components/nutrition/nutrition-trends-card';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Utensils, Target, Sparkles, BookOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion } from '@/components/ui/accordion';

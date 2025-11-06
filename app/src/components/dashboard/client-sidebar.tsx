@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import {
   House,
@@ -146,9 +146,6 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
   ).length;
   const goalsUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'goals'
-  ).length;
-  const communicationUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'communication'
   ).length;
   const resourcesUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'resources'
