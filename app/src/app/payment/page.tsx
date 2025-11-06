@@ -9,8 +9,8 @@ import { doc, getDoc, collection, getDocs, addDoc, onSnapshot, setDoc, serverTim
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
-import { formatCurrency, getProductId } from '@/lib/stripe';
-import { StripeProduct, StripePrice, selectSignupPrice } from '@/types/stripe';
+import { formatCurrency, selectSignupPrice } from '@/lib/stripe';
+import { StripeProduct, StripePrice } from '@/types/stripe';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 import { Footer } from '@/components/Footer';
 
@@ -111,12 +111,11 @@ export default function PaymentPage() {
     }
   };
 
-  const loadPriceForTier = async (tierId: string) => {
+  const loadPriceForTier = async (productId: string) => {
     try {
-      const productId = getProductId(tierId);
-      
-      if (!productId) {
-        setError('Invalid product selected');
+      // productId should be the actual Stripe product ID (e.g., "prod_SwuHPYlY94VZyY")
+      if (!productId || !productId.startsWith('prod_')) {
+        setError('Invalid product ID format');
         return;
       }
 
@@ -156,6 +155,7 @@ export default function PaymentPage() {
         id: productId,
         name: productInfo.name || '',
         description: productInfo.description,
+        active: productInfo.active || false,
         prices: prices
       };
 

@@ -8,8 +8,8 @@ import { FormData } from '../page';
 import { User } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { stripePromise, appearance, formatCurrency, getProductId } from '@/lib/stripe';
-import { StripeProduct, StripePrice, selectSignupPrice } from '@/types/stripe';
+import { stripePromise, appearance, formatCurrency, selectSignupPrice } from '@/lib/stripe';
+import { StripeProduct, StripePrice } from '@/types/stripe';
 import { Stripe } from '@stripe/stripe-js';
 
 // Types for Firebase Functions responses
@@ -378,7 +378,9 @@ export default function PaymentStep(props: PaymentStepProps) {
       
       try {
         setLoading(true);
-        const productId = getProductId(props.formData.tier.id);
+        
+        // tier.id is now the actual Stripe product ID (e.g., "prod_SwuHPYlY94VZyY")
+        const productId = props.formData.tier.id;
         
         if (!productId) {
           setError('Invalid product selected');
@@ -422,6 +424,7 @@ export default function PaymentStep(props: PaymentStepProps) {
           id: productId,
           name: productData.name || 'Unknown Product',
           description: productData.description,
+          active: productData.active || false,
           prices: prices
         };
 
