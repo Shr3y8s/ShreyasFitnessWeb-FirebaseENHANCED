@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Utensils, Dumbbell, Footprints, Droplets, Check, Trophy, ArrowUp, ArrowDown, ArrowRight } from 'lucide-react';
@@ -153,7 +153,7 @@ export function HabitTracker() {
     const [period, setPeriod] = useState<AdherencePeriod>('today');
 
     return (
-        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+        <Card className="card-hover-lift border-primary/50">
             <CardHeader>
                 <h3 className="text-xl font-semibold leading-none tracking-tight">Habit Adherence</h3>
             </CardHeader>

@@ -69,7 +69,7 @@ const initialMetrics: Metric[] = [
     },
     {
         id: 'workout-streak',
-        icon: <Flame className="h-6 w-6 text-primary" />,
+        icon: <Flame className="h-6 w-6 text-primary animate-flicker" />,
         label: 'Workout Streak',
         value: '5',
         unit: 'days',
@@ -103,11 +103,15 @@ const initialMetrics: Metric[] = [
     },
 ];
 
-const HabitConsistencyCard = () => {
+const HabitConsistencyCard = ({ index }: { index?: number }) => {
     const consistencyScore = 88;
     return (
         <TooltipProvider>
-            <Card className="group flex flex-col transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/20 cursor-pointer bg-primary/5 col-span-1 md:col-span-2 lg:col-span-1">
+            <Card className={cn(
+                "group flex flex-col card-hover-lift border-primary/20 cursor-pointer gradient-accent-gold col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden",
+                "animate-fade-in-up",
+                index !== undefined && `stagger-${Math.min(index + 1, 6)}`
+            )}>
                 <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -126,10 +130,10 @@ const HabitConsistencyCard = () => {
                 </CardHeader>
                 <CardContent className="flex flex-col flex-1 justify-center">
                     <div className="flex items-baseline gap-2">
-                        <p className="text-3xl font-bold">{consistencyScore}%</p>
+                        <p className="text-3xl font-bold number-emphasis animate-count-up">{consistencyScore}%</p>
                     </div>
                     <p className="text-xs text-muted-foreground">Last 7 days</p>
-                    <Progress value={consistencyScore} className="mt-2 h-2" />
+                    <Progress value={consistencyScore} className="mt-2 h-2 progress-bar-animated" />
                 </CardContent>
             </Card>
         </TooltipProvider>
@@ -137,7 +141,7 @@ const HabitConsistencyCard = () => {
 };
 
 
-const MetricCard = ({ metric, onEdit, className }: { metric: Metric, onEdit: (metric: Metric) => void, className?: string }) => {
+const MetricCard = ({ metric, onEdit, className, index }: { metric: Metric, onEdit: (metric: Metric) => void, className?: string, index?: number }) => {
     const TrendIcon = metric.trend === 'up' ? ArrowUp : ArrowDown;
     const isWeightCard = metric.id === 'weight';
     const isStrengthCard = metric.id === 'strength-gain';
@@ -147,11 +151,19 @@ const MetricCard = ({ metric, onEdit, className }: { metric: Metric, onEdit: (me
         <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <Card className={cn("group flex flex-col transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/20 cursor-pointer bg-primary/5", className)}>
+                <Card className={cn(
+                    "group flex flex-col card-hover-lift border-primary/20 cursor-pointer overflow-hidden",
+                    isWeightCard && "gradient-accent-green",
+                    isStrengthCard && "gradient-accent-blue",
+                    !isWeightCard && !isStrengthCard && "bg-primary/5",
+                    "animate-fade-in-up",
+                    index !== undefined && `stagger-${Math.min(index + 1, 6)}`,
+                    className
+                )}>
                     <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                {metric.icon}
+                                <span className="icon-hover-bounce">{metric.icon}</span>
                                 {metric.label}
                             </CardTitle>
                              <div className="flex items-center gap-2">
@@ -185,7 +197,7 @@ const MetricCard = ({ metric, onEdit, className }: { metric: Metric, onEdit: (me
                                         <Badge
                                             className={cn(
                                                 "text-xs font-semibold gap-1",
-                                                metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800'
+                                                metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
                                             )}
                                         >
                                             <TrendIcon className="h-3 w-3" />
@@ -217,7 +229,7 @@ const MetricCard = ({ metric, onEdit, className }: { metric: Metric, onEdit: (me
                                         <Badge
                                             className={cn(
                                                 "text-xs font-semibold gap-1 self-center",
-                                                metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800'
+                                                metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
                                             )}
                                         >
                                             <TrendIcon className="h-3 w-3" />
@@ -327,10 +339,10 @@ export function KeyMetricsOverview() {
                         </AlertDescription>
                     </Alert>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {metrics.map((metric) => (
-                            <MetricCard key={metric.id} metric={metric} onEdit={handleEdit} className="lg:col-span-1"/>
+                        {metrics.map((metric, index) => (
+                            <MetricCard key={metric.id} metric={metric} onEdit={handleEdit} className="lg:col-span-1" index={index}/>
                         ))}
-                        <HabitConsistencyCard />
+                        <HabitConsistencyCard index={metrics.length} />
                     </div>
                 </CardContent>
             </Card>

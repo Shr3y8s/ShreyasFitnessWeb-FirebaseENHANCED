@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Trophy, Award, Target, Zap, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const mockAchievements = [
   {
@@ -49,7 +50,7 @@ const mockAchievements = [
 
 export function Achievements() {
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow border-primary/50">
+    <Card className="card-hover-lift border-primary/50">
       <CardHeader>
         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <Trophy className="h-5 w-5 text-primary" />
@@ -61,32 +62,38 @@ export function Achievements() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {mockAchievements.map((achievement) => {
+          {mockAchievements.map((achievement, index) => {
             const Icon = achievement.icon;
             return (
               <div
                 key={achievement.id}
-                className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border transition-all overflow-hidden relative",
+                  "animate-fade-in-up",
+                  `stagger-${Math.min(index + 1, 6)}`,
                   achievement.earned
-                    ? 'bg-primary/10 border-primary/30'
-                    : 'bg-secondary/50 border-border opacity-60'
-                }`}
+                    ? 'gradient-accent-gold border-amber-300/50 hover:shadow-lg hover:shadow-amber-500/20'
+                    : 'bg-secondary/50 border-border opacity-60 hover:opacity-80'
+                )}
               >
                 <div
-                  className={`p-2 rounded-lg ${
+                  className={cn(
+                    "p-2 rounded-lg transition-transform hover:scale-110",
                     achievement.earned
-                      ? 'bg-primary/20 text-primary'
+                      ? 'bg-gradient-to-br from-amber-400/20 to-amber-600/20 text-amber-600'
                       : 'bg-muted text-muted-foreground'
-                  }`}
+                  )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className={cn("h-5 w-5", achievement.earned && "animate-pulse")} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-sm">{achievement.name}</h4>
+                    <h4 className={cn("font-semibold text-sm", achievement.earned && "text-amber-900 dark:text-amber-100")}>
+                      {achievement.name}
+                    </h4>
                     {achievement.earned && (
-                      <Badge variant="default" className="text-xs">
-                        Earned
+                      <Badge className="text-xs bg-gradient-to-r from-amber-500 to-amber-600 text-white border-0 shadow-md">
+                        ✓ Earned
                       </Badge>
                     )}
                   </div>

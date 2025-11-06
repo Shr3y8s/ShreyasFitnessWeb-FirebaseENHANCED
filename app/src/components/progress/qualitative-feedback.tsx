@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Send, TrendingUp, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info } from "lucide-react"
+import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info } from "lucide-react"
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import Image from "next/image"
@@ -89,7 +89,7 @@ export function QualitativeFeedback() {
 
     return (
         <div className="space-y-6">
-            <Card className="border-primary/50">
+            <Card className="card-hover-lift border-primary/50 animate-fade-in-up">
                 <CardHeader>
                     <h3 className="text-xl font-semibold leading-none tracking-tight">Weekly Subjective Feedback</h3>
                     <CardDescription>Rate your experience over the past week. This helps your coach understand how you&apos;re feeling beyond the numbers.</CardDescription>
@@ -113,7 +113,7 @@ export function QualitativeFeedback() {
                 </CardContent>
             </Card>
 
-             <Card className="border-primary/50">
+             <Card className="card-hover-lift border-primary/50 animate-fade-in-up stagger-1">
                 <CardHeader>
                     <h3 className="text-xl font-semibold leading-none tracking-tight">Program Adherence</h3>
                     <CardDescription>How challenging was it to stick to your plan this week?</CardDescription>
@@ -135,18 +135,18 @@ export function QualitativeFeedback() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <Card className="border-primary/50">
+                 <Card className="card-hover-lift border-primary/50 gradient-accent-green animate-fade-in-up stagger-2">
                     <CardHeader>
-                        <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Check className="text-green-500" /> Wins for the week</h3>
+                        <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Check className="text-green-500 icon-hover-bounce" /> Wins for the week</h3>
                         <CardDescription>What went well? What are you proud of?</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Textarea placeholder="e.g., I hit a new PR on squats, or I stuck to my meal plan every day..." />
                     </CardContent>
                 </Card>
-                 <Card className="border-primary/50">
+                 <Card className="card-hover-lift border-primary/50 bg-red-50/50 dark:bg-red-950/10 animate-fade-in-up stagger-3">
                     <CardHeader>
-                         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Frown className="text-red-500" /> Challenges this week</h3>
+                         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Frown className="text-red-500 icon-hover-bounce" /> Challenges this week</h3>
                         <CardDescription>What was difficult? Where can we improve?</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -155,14 +155,14 @@ export function QualitativeFeedback() {
                 </Card>
             </div>
 
-            <div className="text-center">
-                <Button size="lg" className="w-full max-w-xs">
+            <div className="text-center animate-fade-in-up stagger-4">
+                <Button size="lg" className="w-full max-w-xs animate-pulse-badge shadow-lg hover:shadow-xl transition-all">
                     <Send className="mr-2 h-4 w-4" />
                     Submit Weekly Check-in
                 </Button>
             </div>
 
-            <Card className="border-primary/50 mt-8">
+            <Card className="card-hover-lift border-primary/50 mt-8 animate-fade-in-up stagger-5">
             <CardHeader className="relative">
                 <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
                     Progress Photos (Optional)
@@ -178,21 +178,21 @@ export function QualitativeFeedback() {
                     </TooltipProvider>
                 </h3>
                 <CardDescription>Seeing is believing. Track your transformation visually.</CardDescription>
-                <Button variant="outline" size="sm" className="absolute top-4 right-4">
-                    <UploadCloud className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="absolute top-4 right-4 hover:scale-105 transition-transform">
+                    <UploadCloud className="mr-2 h-4 w-4 icon-hover-bounce" />
                     Upload New Photo
                 </Button>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <div className="aspect-[4/3] relative rounded-lg overflow-hidden border">
+                        <div className="aspect-[4/3] relative rounded-lg overflow-hidden border hover:scale-105 transition-transform duration-300 cursor-pointer">
                              <Image src={placeholderImages.before.src} alt={placeholderImages.before.alt} fill={true} style={{ objectFit: 'cover' }} />
                         </div>
                         <p className="text-center text-sm font-medium text-muted-foreground">July 15, 2024</p>
                     </div>
                      <div className="space-y-2">
-                        <div className="aspect-[4/3] relative rounded-lg overflow-hidden border">
+                        <div className="aspect-[4/3] relative rounded-lg overflow-hidden border hover:scale-105 transition-transform duration-300 cursor-pointer">
                            <Image src={placeholderImages.after.src} alt={placeholderImages.after.alt} fill={true} style={{ objectFit: 'cover' }} />
                         </div>
                         <p className="text-center text-sm font-medium text-muted-foreground">August 15, 2024</p>

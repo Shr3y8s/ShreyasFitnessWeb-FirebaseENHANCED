@@ -9,7 +9,7 @@ import { signOutUser } from '@/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileDown, Share2, TrendingUp, MessageSquare, Activity } from 'lucide-react';
+import { FileDown, Share2, TrendingUp, ClipboardList, Activity } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -30,7 +30,7 @@ export type TimeRange = '7D' | '30D' | '3M' | '6M' | '1Y' | 'ALL';
 
 export default function ProgressPage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading } = useAuth();
+  const { userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('90');
 
@@ -87,10 +87,10 @@ export default function ProgressPage() {
             {/* Header */}
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground animate-fade-in-up">
                   Your Progress Journey
                 </h1>
-                <p className="text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 animate-fade-in-up stagger-1">
                   Celebrating your consistency and the healthy habits you&apos;re building.
                 </p>
               </div>
@@ -125,16 +125,16 @@ export default function ProgressPage() {
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Journey Overview
                 </TabsTrigger>
+                <TabsTrigger value="qualitative">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Weekly Survey
+                </TabsTrigger>
                 <TabsTrigger value="activity" className="relative">
                   <Activity className="mr-2 h-4 w-4" />
                   Activity
                   <Badge variant="outline" className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs border-primary/50 text-primary bg-background">
                     Coming Soon
                   </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="qualitative">
-                  <MessageSquare className="mr-2 h-4 w-4" />
-                  Weekly Reflection
                 </TabsTrigger>
               </TabsList>
 
@@ -154,10 +154,6 @@ export default function ProgressPage() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="activity">
-                <ActivityWellnessTab timeRange={'30D' as TimeRange} />
-              </TabsContent>
-
               <TabsContent value="qualitative">
                 <div className="grid grid-cols-1 lg:grid-cols-8 gap-8 items-start">
                   <div className="lg:col-span-5">
@@ -167,6 +163,10 @@ export default function ProgressPage() {
                     <QualitativeTrends />
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="activity">
+                <ActivityWellnessTab timeRange={'30D' as TimeRange} />
               </TabsContent>
             </Tabs>
           </div>
