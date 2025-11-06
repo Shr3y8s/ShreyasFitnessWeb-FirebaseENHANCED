@@ -7,37 +7,34 @@ import { MealAccordion, FoodItem, MealCategory } from '@/components/nutrition/me
 import { MealPlanView } from '@/components/nutrition/meal-plan-view';
 import { NutritionHabitTracker } from '@/components/nutrition/nutrition-habit-tracker';
 import { NutritionResources } from '@/components/nutrition/nutrition-resources';
-import { NutritionSummary } from '@/components/dashboard/nutrition-summary';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { PlusCircle, Flame, Droplets, Utensils, Target, Sparkles, BookOpen, CheckCircle2 } from 'lucide-react';
+import { NutritionCommandCenter } from '@/components/nutrition/nutrition-command-center';
+import { NutritionTrendsCard } from '@/components/nutrition/nutrition-trends-card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Utensils, Target, Sparkles, BookOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { Accordion } from '@/components/ui/accordion';
-import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
 
 const initialDailyLog: Record<MealCategory, FoodItem[]> = {
   Breakfast: [
-    { id: '1', food: 'Oatmeal with berries and nuts', calories: 450, protein: 20 },
+    { id: '1', food: 'Oatmeal with berries and nuts', calories: 450, protein: 20, carbs: 60, fat: 15 },
   ],
   Lunch: [
-    { id: '2', food: 'Grilled chicken salad', calories: 600, protein: 45 },
+    { id: '2', food: 'Grilled chicken salad', calories: 600, protein: 45, carbs: 30, fat: 30 },
   ],
   Dinner: [
-    { id: '3', food: 'Salmon with quinoa and roasted broccoli', calories: 750, protein: 50 },
+    { id: '3', food: 'Salmon with quinoa and roasted broccoli', calories: 750, protein: 50, carbs: 55, fat: 35 },
   ],
   Snacks: [
-    { id: '4', food: 'Greek yogurt, apple', calories: 400, protein: 25 },
+    { id: '4', food: 'Greek yogurt, apple', calories: 400, protein: 25, carbs: 50, fat: 10 },
   ],
 };
 
 const dailyGoals = {
   calories: 2500,
   protein: 180,
+  carbs: 250,
+  fat: 70,
   water: 8
 };
 
@@ -45,16 +42,18 @@ const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'
 
 export default function NutritionPage() {
   const [dailyLog, setDailyLog] = useState(initialDailyLog);
-  const [caloriesConfirmed, setCaloriesConfirmed] = useState(false);
+  const [dayComplete, setDayComplete] = useState(false);
   const [waterIntake, setWaterIntake] = useState(4);
 
   const dailyTotals = Object.values(dailyLog).flat().reduce(
     (acc, item) => {
       acc.calories += item.calories;
       acc.protein += item.protein;
+      acc.carbs += item.carbs;
+      acc.fat += item.fat;
       return acc;
     },
-    { calories: 0, protein: 0 }
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
   const updateLog = (meal: MealCategory, updatedItems: FoodItem[]) => {
@@ -86,41 +85,21 @@ export default function NutritionPage() {
               </p>
             </div>
             
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <Flame className="w-6 h-6 text-primary" />
-                    <div>
-                      <p className="font-bold text-xl">{dailyTotals.calories.toLocaleString()} <span className="text-sm text-muted-foreground">/ {dailyGoals.calories.toLocaleString()}</span></p>
-                      <p className="text-xs text-muted-foreground">Calories</p>
-                    </div>
-                  </div>
-                  <Separator orientation="vertical" className="h-8" />
-                  <div className="flex items-center gap-3">
-                    <Target className="w-6 h-6 text-primary" />
-                    <div>
-                      <p className="font-bold text-xl">{dailyTotals.protein}g <span className="text-sm text-muted-foreground">/ {dailyGoals.protein}g</span></p>
-                      <p className="text-xs text-muted-foreground">Protein</p>
-                    </div>
-                  </div>
-                  <Separator orientation="vertical" className="h-8" />
-                  <div className="flex items-center gap-3">
-                    <Droplets className="w-6 h-6 text-primary" />
-                    <div>
-                      <p className="font-bold text-xl">{waterIntake} <span className="text-sm text-muted-foreground">/ {dailyGoals.water}</span></p>
-                      <p className="text-xs text-muted-foreground">Glasses Water</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Button onClick={handleAddWater} disabled={waterIntake >= dailyGoals.water}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Log Water
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <NutritionCommandCenter
+              caloriesConsumed={dailyTotals.calories}
+              calorieGoal={dailyGoals.calories}
+              proteinConsumed={dailyTotals.protein}
+              proteinGoal={dailyGoals.protein}
+              carbsConsumed={dailyTotals.carbs}
+              carbsGoal={dailyGoals.carbs}
+              fatsConsumed={dailyTotals.fat}
+              fatsGoal={dailyGoals.fat}
+              waterConsumed={waterIntake}
+              waterGoal={dailyGoals.water}
+              dayComplete={dayComplete}
+              onToggleDayComplete={() => setDayComplete(!dayComplete)}
+              onAddWater={handleAddWater}
+            />
 
             <Tabs defaultValue="tracking">
               <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
@@ -144,41 +123,21 @@ export default function NutritionPage() {
 
               <TabsContent value="tracking" className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                  <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                      <CardContent className="p-6">
-                        <h3 className="text-xl font-semibold mb-4">Today&apos;s Food Log</h3>
-                        <Accordion type="multiple" defaultValue={mealCategories} className="w-full space-y-2">
-                          {mealCategories.map(meal => (
-                            <MealAccordion 
-                              key={meal}
-                              meal={meal}
-                              items={dailyLog[meal]}
-                              onUpdate={(updatedItems) => updateLog(meal, updatedItems)}
-                            />
-                          ))}
-                        </Accordion>
-                      </CardContent>
-                    </Card>
+                  <div className="lg:col-span-2 space-y-4">
+                    <h2 className="text-2xl font-bold">Today&apos;s Food Log</h2>
+                    <Accordion type="multiple" defaultValue={mealCategories} className="w-full space-y-4">
+                      {mealCategories.map(meal => (
+                        <MealAccordion 
+                          key={meal}
+                          meal={meal}
+                          items={dailyLog[meal]}
+                          onUpdate={(updatedItems) => updateLog(meal, updatedItems)}
+                        />
+                      ))}
+                    </Accordion>
                   </div>
                   <div className="lg:col-span-1 space-y-6">
-                    <Card className={cn("border-primary/20", caloriesConfirmed && "border-green-500/50 bg-green-950/20")}>
-                      <CardContent className="p-4 flex items-center gap-2">
-                        <Checkbox 
-                          id="calories-confirmed" 
-                          checked={caloriesConfirmed} 
-                          onCheckedChange={(checked) => setCaloriesConfirmed(!!checked)} 
-                        />
-                        <label 
-                          htmlFor="calories-confirmed" 
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-primary" />
-                          Confirm Calorie Target Hit
-                        </label>
-                      </CardContent>
-                    </Card>
-                    <NutritionSummary />
+                    <NutritionTrendsCard />
                   </div>
                 </div>
               </TabsContent>
