@@ -196,15 +196,6 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Tracking Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Tracking</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/workouts">
@@ -220,25 +211,34 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/progress">
-                    <BarChart3 className="w-4 h-4" />
-                    <span className="font-medium">Metrics</span>
-                    {progressUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {progressUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
                   <Link href="/sessions">
                     <Calendar className="w-4 h-4" />
                     <span className="font-medium">Sessions & Schedule</span>
                     {sessionsUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {sessionsUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Tracking Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Tracking</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/progress">
+                    <BarChart3 className="w-4 h-4" />
+                    <span className="font-medium">Metrics</span>
+                    {progressUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {progressUpdatesCount}
                       </SidebarMenuBadge>
                     )}
                   </Link>
@@ -283,7 +283,7 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/messages' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/messages">
                     <MessageSquare className="w-4 h-4" />
-                    <span className="font-medium">Coach Inbox</span>
+                    <span className="font-medium">Coach Chat</span>
                     {unreadMessagesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-red-500 text-white flex items-center justify-center w-5 h-5 p-0">
                         {unreadMessagesCount}
