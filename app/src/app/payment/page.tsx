@@ -9,7 +9,8 @@ import { doc, getDoc, collection, getDocs, addDoc, onSnapshot, setDoc, serverTim
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
-import { getProductDetails, formatCurrency, STRIPE_PRODUCT_IDS } from '@/lib/stripe';
+import { formatCurrency, getProductId } from '@/lib/stripe';
+import { StripeProduct, StripePrice, selectSignupPrice } from '@/types/stripe';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 import { Footer } from '@/components/Footer';
 
@@ -31,18 +32,12 @@ interface PendingSignupData {
   tierName: string;
 }
 
-interface PriceInfo {
-  id: string;
-  amount: number;
-  currency: string;
-}
-
 export default function PaymentPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [pendingSignup, setPendingSignup] = useState<PendingSignupData | null>(null);
-  const [priceInfo, setPriceInfo] = useState<PriceInfo | null>(null);
+  const [productData, setProductData] = useState<StripeProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -118,7 +113,7 @@ export default function PaymentPage() {
 
   const loadPriceForTier = async (tierId: string) => {
     try {
-      const productId = STRIPE_PRODUCT_IDS[tierId as keyof typeof STRIPE_PRODUCT_IDS];
+      const productId = getProductId(tierId);
       
       if (!productId) {
         setError('Invalid product selected');
@@ -133,7 +128,9 @@ export default function PaymentPage() {
         return;
       }
 
-      // Get prices
+      const productInfo = productSnap.data();
+
+      // Fetch ALL prices for this product from Firestore
       const pricesCollection = collection(db, 'stripe_products', productId, 'prices');
       const pricesSnapshot = await getDocs(pricesCollection);
       
@@ -142,29 +139,27 @@ export default function PaymentPage() {
         return;
       }
 
-      // Determine price type
-      const productDetails = getProductDetails(tierId);
-      const expectedPriceType = productDetails.isSubscription ? 'recurring' : 'one_time';
-
-      // Find the appropriate price
-      let selectedPrice: PriceInfo | null = null;
+      // Collect ALL price documents - maintaining full product structure
+      const prices: StripePrice[] = [];
       pricesSnapshot.forEach(doc => {
         const priceData = doc.data();
-        if (priceData.type === expectedPriceType) {
-          selectedPrice = {
-            id: doc.id,
-            amount: priceData.unit_amount || 0,
-            currency: priceData.currency || 'usd'
-          };
-        }
+        prices.push({
+          id: doc.id,
+          amount: priceData.unit_amount || 0,
+          currency: priceData.currency || 'usd',
+          type: priceData.type || 'one_time'
+        });
       });
 
-      if (!selectedPrice) {
-        setError(`Price not available for this package`);
-        return;
-      }
+      // Store complete product data with ALL prices
+      const product: StripeProduct = {
+        id: productId,
+        name: productInfo.name || '',
+        description: productInfo.description,
+        prices: prices
+      };
 
-      setPriceInfo(selectedPrice);
+      setProductData(product);
       
     } catch (err) {
       console.error('Error loading price:', err);
@@ -173,7 +168,14 @@ export default function PaymentPage() {
   };
 
   const handlePayment = async () => {
-    if (!priceInfo) return;
+    if (!productData) return;
+
+    // Select appropriate price for signup flow
+    const selectedPrice = selectSignupPrice(productData);
+    if (!selectedPrice) {
+      setError('No valid price available for this product');
+      return;
+    }
 
     setIsProcessing(true);
     setError('');
@@ -252,11 +254,14 @@ export default function PaymentPage() {
       // Step 2: Create Stripe checkout session
       console.log("Creating Stripe checkout session...");
       
-      const productDetails = getProductDetails(tierId);
-      const checkoutMode = productDetails.isSubscription ? 'subscription' : 'payment';
+      // Derive checkout mode from the selected price's type (from Firestore)
+      // Stripe requires mode to match price type:
+      // - recurring price → mode: 'subscription'
+      // - one_time price → mode: 'payment'
+      const checkoutMode = selectedPrice.type === 'recurring' ? 'subscription' : 'payment';
       
       const checkoutSessionData: any = {
-        price: priceInfo.id,
+        price: selectedPrice.id,
         success_url: `${window.location.origin}/dashboard?payment=success`,
         cancel_url: `${window.location.origin}/payment`,
         mode: checkoutMode,
@@ -351,10 +356,26 @@ export default function PaymentPage() {
     );
   }
 
-  if (!priceInfo || (!userData && !pendingSignup)) return null;
+  if (!productData || (!userData && !pendingSignup)) return null;
 
   const displayData = userData || pendingSignup!;
-  const productDetails = getProductDetails(displayData.tier);
+  
+  // Select the appropriate price for display (signup flow uses recurring if available)
+  const displayPrice = selectSignupPrice(productData);
+  if (!displayPrice) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-xl">
+          <CardContent className="p-12">
+            <div className="text-center">
+              <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+              <p className="text-gray-600">No valid price found for this product</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -408,10 +429,10 @@ export default function PaymentPage() {
                   <h3 className="text-lg font-semibold text-gray-900">Selected Plan</h3>
                   <div className="text-right">
                     <div className="text-3xl font-bold text-emerald-600">
-                      {formatCurrency(priceInfo.amount)}
+                      {formatCurrency(displayPrice.amount)}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {productDetails.isSubscription ? 'per month' : 'one-time'}
+                      {displayPrice.type === 'recurring' ? 'per month' : 'one-time'}
                     </div>
                   </div>
                 </div>
@@ -423,7 +444,7 @@ export default function PaymentPage() {
                   <div>
                     <p className="font-semibold text-gray-900 text-lg">{displayData.tierName}</p>
                     <p className="text-sm text-gray-600">
-                      {productDetails.isSubscription 
+                      {displayPrice.type === 'recurring'
                         ? 'Monthly subscription • Cancel anytime'
                         : 'One-time payment • No recurring charges'
                       }
@@ -468,9 +489,9 @@ export default function PaymentPage() {
                     {pendingSignup ? 'Creating Account...' : 'Processing...'}
                   </div>
                 ) : (
-                  productDetails.isSubscription
-                    ? `Complete Payment • ${formatCurrency(priceInfo.amount)}/month`
-                    : `Complete Payment • ${formatCurrency(priceInfo.amount)}`
+                  displayPrice.type === 'recurring'
+                    ? `Complete Payment • ${formatCurrency(displayPrice.amount)}/month`
+                    : `Complete Payment • ${formatCurrency(displayPrice.amount)}`
                 )}
               </Button>
 

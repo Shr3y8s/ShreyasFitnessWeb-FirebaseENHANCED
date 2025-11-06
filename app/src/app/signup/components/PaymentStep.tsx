@@ -8,20 +8,13 @@ import { FormData } from '../page';
 import { User } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { stripePromise, appearance, getProductDetails, formatCurrency, STRIPE_PRODUCT_IDS } from '@/lib/stripe';
+import { stripePromise, appearance, formatCurrency, getProductId } from '@/lib/stripe';
+import { StripeProduct, StripePrice, selectSignupPrice } from '@/types/stripe';
 import { Stripe } from '@stripe/stripe-js';
 
 // Types for Firebase Functions responses
 interface PaymentIntentResponse {
   clientSecret: string;
-}
-
-interface CheckoutSessionResponse {
-  url: string;
-}
-
-interface PriceInfo {
-  fullPrice: string;
 }
 
 interface PaymentStepProps {
@@ -46,11 +39,11 @@ function SubscriptionPaymentForm({
   prevStep, 
   error, 
   currentUser,
-  priceInfo,
-  productDetails
+  product,
+  selectedPrice
 }: PaymentStepProps & { 
-  priceInfo: PriceInfo; 
-  productDetails: ReturnType<typeof getProductDetails>;
+  product: StripeProduct; 
+  selectedPrice: StripePrice;
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
@@ -69,7 +62,7 @@ function SubscriptionPaymentForm({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          line_items: [{ price: priceInfo.fullPrice, quantity: 1 }],
+          line_items: [{ price: selectedPrice.id, quantity: 1 }],
           success_url: `${window.location.origin}/account-setup?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${window.location.origin}/signup`,
           billing_address_collection: 'required',
@@ -124,7 +117,7 @@ function SubscriptionPaymentForm({
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-lg font-semibold text-gray-900">Order Summary</h4>
           <div className="text-2xl font-bold text-emerald-600">
-            {formatCurrency(productDetails.amount)}
+            {formatCurrency(selectedPrice.amount)}
             <span className="text-base text-gray-600">/month</span>
           </div>
         </div>
@@ -133,7 +126,7 @@ function SubscriptionPaymentForm({
             <CreditCard className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-medium text-gray-900">{productDetails.name}</p>
+            <p className="font-medium text-gray-900">{product.name}</p>
             <p className="text-sm text-gray-600">Monthly subscription • Cancel anytime</p>
           </div>
         </div>
@@ -197,12 +190,12 @@ function OneTimePaymentForm({
   prevStep, 
   error, 
   currentUser,
-  priceInfo,
-  productDetails,
+  product,
+  selectedPrice,
   clientSecret 
 }: PaymentStepProps & { 
-  priceInfo: PriceInfo; 
-  productDetails: ReturnType<typeof getProductDetails>;
+  product: StripeProduct; 
+  selectedPrice: StripePrice;
   clientSecret?: string;
 }) {
   const stripe = useStripe();
@@ -287,8 +280,8 @@ function OneTimePaymentForm({
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-lg font-semibold text-gray-900">Order Summary</h4>
           <div className="text-2xl font-bold text-emerald-600">
-            {formatCurrency(productDetails.amount)}
-            {productDetails.isSubscription && <span className="text-base text-gray-600">/month</span>}
+            {formatCurrency(selectedPrice.amount)}
+            {selectedPrice.type === 'recurring' && <span className="text-base text-gray-600">/month</span>}
           </div>
         </div>
         <div className="flex items-center space-x-3">
@@ -296,9 +289,9 @@ function OneTimePaymentForm({
             <CreditCard className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-medium text-gray-900">{productDetails.name}</p>
+            <p className="font-medium text-gray-900">{product.name}</p>
             <p className="text-sm text-gray-600">
-              {productDetails.isSubscription ? 'Monthly subscription • Cancel anytime' : 'One-time payment'}
+              {selectedPrice.type === 'recurring' ? 'Monthly subscription • Cancel anytime' : 'One-time payment'}
             </p>
           </div>
         </div>
@@ -358,7 +351,7 @@ function OneTimePaymentForm({
               Processing...
             </div>
           ) : (
-            `Pay ${formatCurrency(productDetails.amount)}`
+            `Pay ${formatCurrency(selectedPrice.amount)}`
           )}
         </Button>
       </div>
@@ -368,7 +361,8 @@ function OneTimePaymentForm({
 
 // Main PaymentStep component with Elements provider
 export default function PaymentStep(props: PaymentStepProps) {
-  const [priceInfo, setPriceInfo] = useState<PriceInfo>({ fullPrice: '' });
+  const [productData, setProductData] = useState<StripeProduct | null>(null);
+  const [selectedPrice, setSelectedPrice] = useState<StripePrice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [clientSecret, setClientSecret] = useState<string>('');
@@ -376,7 +370,6 @@ export default function PaymentStep(props: PaymentStepProps) {
   
   const db = getFirestore();
   const functions = getFunctions(undefined, 'us-west1');
-  const productDetails = getProductDetails(props.formData.tier?.id || '');
 
   // Fetch product prices from Firestore (synced by Invertase extension)
   useEffect(() => {
@@ -385,7 +378,7 @@ export default function PaymentStep(props: PaymentStepProps) {
       
       try {
         setLoading(true);
-        const productId = STRIPE_PRODUCT_IDS[props.formData.tier.id as keyof typeof STRIPE_PRODUCT_IDS];
+        const productId = getProductId(props.formData.tier.id);
         
         if (!productId) {
           setError('Invalid product selected');
@@ -401,6 +394,8 @@ export default function PaymentStep(props: PaymentStepProps) {
           return;
         }
 
+        const productData = productSnap.data();
+
         // Get prices from subcollection
         const pricesCollection = collection(db, 'stripe_products', productId, 'prices');
         const pricesSnapshot = await getDocs(pricesCollection);
@@ -410,18 +405,35 @@ export default function PaymentStep(props: PaymentStepProps) {
           return;
         }
 
-        const prices: Array<{ id: string; type: string; [key: string]: unknown }> = [];
+        // Build StripePrice array
+        const prices: StripePrice[] = [];
         pricesSnapshot.forEach(doc => {
-          const data = doc.data();
-          prices.push({ id: doc.id, type: data.type || '', ...data });
+          const priceData = doc.data();
+          prices.push({
+            id: doc.id,
+            amount: priceData.unit_amount || 0,
+            currency: priceData.currency || 'usd',
+            type: (priceData.type as 'recurring' | 'one_time') || 'one_time'
+          });
         });
 
-        // Find the appropriate price based on subscription type
-        const fullPrice = prices.find(p => 
-          productDetails.isSubscription ? p.type === 'recurring' : p.type === 'one_time'
-        )?.id;
+        // Build StripeProduct
+        const product: StripeProduct = {
+          id: productId,
+          name: productData.name || 'Unknown Product',
+          description: productData.description,
+          prices: prices
+        };
 
-        setPriceInfo({ fullPrice: fullPrice || '' });
+        // Use helper function for price selection
+        const price = selectSignupPrice(product);
+        if (!price) {
+          setError('No valid price found');
+          return;
+        }
+
+        setProductData(product);
+        setSelectedPrice(price);
       } catch (err) {
         console.error('Error fetching prices:', err);
         setError('Could not load pricing information');
@@ -431,18 +443,18 @@ export default function PaymentStep(props: PaymentStepProps) {
     };
 
     fetchPrices();
-  }, [props.formData.tier, db, productDetails.isSubscription]);
+  }, [props.formData.tier, db]);
 
   // Initialize PaymentIntent for one-time payments
   useEffect(() => {
-    if (!priceInfo.fullPrice || !props.currentUser || productDetails.isSubscription || loading) return;
+    if (!selectedPrice || !props.currentUser || selectedPrice.type === 'recurring' || loading) return;
 
     const initializePaymentIntent = async () => {
       try {
         setPaymentSetupLoading(true);
         const createPaymentFn = httpsCallable(functions, 'createPaymentIntent');
         const result = await createPaymentFn({
-          price: priceInfo.fullPrice,
+          price: selectedPrice.id,
           automatic_payment_methods: { enabled: true },
           currency: 'usd'
         });
@@ -458,10 +470,10 @@ export default function PaymentStep(props: PaymentStepProps) {
     };
 
     initializePaymentIntent();
-  }, [priceInfo.fullPrice, props.currentUser, productDetails.isSubscription, loading, functions]);
+  }, [selectedPrice, props.currentUser, loading, functions]);
 
   // Loading state
-  if (loading || (paymentSetupLoading && !productDetails.isSubscription)) {
+  if (loading || (paymentSetupLoading && selectedPrice && selectedPrice.type !== 'recurring')) {
     return (
       <div className="space-y-6 py-4">
         <h3 className="text-xl font-semibold text-gray-900">Payment Information</h3>
@@ -500,7 +512,7 @@ export default function PaymentStep(props: PaymentStepProps) {
   }
 
   // For one-time payments, wrap with Elements that has client secret
-  if (!productDetails.isSubscription) {
+  if (selectedPrice && selectedPrice.type !== 'recurring') {
     // Only render Elements when we have the client secret
     if (!clientSecret) {
       return (
@@ -527,8 +539,8 @@ export default function PaymentStep(props: PaymentStepProps) {
       >
         <OneTimePaymentForm 
           {...props}
-          priceInfo={priceInfo}
-          productDetails={productDetails}
+          product={productData!}
+          selectedPrice={selectedPrice}
           clientSecret={clientSecret}
         />
       </Elements>
@@ -536,11 +548,26 @@ export default function PaymentStep(props: PaymentStepProps) {
   }
 
   // For subscriptions, render directly (no Elements wrapper needed)
+  if (productData && selectedPrice) {
+    return (
+      <SubscriptionPaymentForm 
+        {...props}
+        product={productData}
+        selectedPrice={selectedPrice}
+      />
+    );
+  }
+
+  // Fallback loading state
   return (
-    <SubscriptionPaymentForm 
-      {...props}
-      priceInfo={priceInfo}
-      productDetails={productDetails}
-    />
+    <div className="space-y-6 py-4">
+      <h3 className="text-xl font-semibold text-gray-900">Payment Information</h3>
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -29,7 +29,7 @@ import {
   XCircle,
   Calendar
 } from 'lucide-react';
-import { formatCurrency, getProductDetails } from '@/lib/stripe';
+import { formatCurrency } from '@/lib/stripe';
 
 interface SubscriptionData {
   id: string;
