@@ -67,15 +67,22 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 
 export function ProgressCharts() {
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
-      <CardHeader>
-        <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
-          <Activity className="h-5 w-5 text-primary" />
-          Progress Overview
-        </h3>
-        <CardDescription>
-          Your body composition changes over the last 6 months.
-        </CardDescription>
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="space-y-1">
+          <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Progress Overview
+          </h3>
+          <CardDescription>
+            Your body composition changes over the last 6 months.
+          </CardDescription>
+        </div>
+        {/* Callout Box */}
+        <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 shadow-lg border border-border/50">
+          <p className="text-2xl font-bold text-green-600 dark:text-green-500">-1.8 lbs/week</p>
+          <p className="text-xs text-muted-foreground">Avg. This Month</p>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
