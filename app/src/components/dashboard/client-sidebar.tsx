@@ -11,7 +11,7 @@ import {
   House,
   User,
   Dumbbell,
-  TrendingUp,
+  BarChart3,
   Calendar,
   HeartPulse,
   Goal,
@@ -221,8 +221,8 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link href="/progress">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="font-medium">Progress & Analytics</span>
+                    <BarChart3 className="w-4 h-4" />
+                    <span className="font-medium">Metrics</span>
                     {progressUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {progressUpdatesCount}

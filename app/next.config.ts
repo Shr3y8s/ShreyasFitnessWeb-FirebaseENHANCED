@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
     // Expose Firebase region from shared config file
     NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION: firebaseConfig.region,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

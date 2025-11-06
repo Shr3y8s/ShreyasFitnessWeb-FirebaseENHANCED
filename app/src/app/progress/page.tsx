@@ -7,12 +7,24 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { signOutUser } from '@/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BodyCompositionTab } from '@/components/progress/body-composition-tab';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { FileDown, Share2, TrendingUp, MessageSquare, Activity } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { KeyMetricsOverview } from '@/components/progress/key-metrics-overview';
+import { ProgressCharts } from '@/components/dashboard/progress-charts';
+import { HabitTracker } from '@/components/progress/habit-tracker';
+import { Achievements } from '@/components/progress/achievements';
+import { StrengthTrends } from '@/components/progress/strength-trends';
+import { QualitativeFeedback } from '@/components/progress/qualitative-feedback';
+import { QualitativeTrends } from '@/components/progress/qualitative-trends';
 import { ActivityWellnessTab } from '@/components/progress/activity-wellness-tab';
-import { StrengthProgressTab } from '@/components/progress/strength-progress-tab';
-import { WorkoutAnalyticsTab } from '@/components/progress/workout-analytics-tab';
-import { TimeRangeSelector } from '@/components/progress/time-range-selector';
-import { TrendingUp, Activity, Dumbbell, BarChart3 } from 'lucide-react';
 
 export type TimeRange = '7D' | '30D' | '3M' | '6M' | '1Y' | 'ALL';
 
@@ -20,7 +32,7 @@ export default function ProgressPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState<TimeRange>('30D');
+  const [timeRange, setTimeRange] = useState('90');
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -73,61 +85,88 @@ export default function ProgressPage() {
         <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                  <TrendingUp className="h-8 w-8 text-primary" />
-                  Progress & Analytics
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+                  Your Progress Journey
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                  Track your fitness journey and celebrate your achievements
+                  Celebrating your consistency and the healthy habits you&apos;re building.
                 </p>
               </div>
-              <TimeRangeSelector
-                value={timeRange}
-                onChange={setTimeRange}
-              />
+              <div className="flex items-center gap-2">
+                <Select value={timeRange} onValueChange={setTimeRange}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select a timeframe" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">Last 30 Days</SelectItem>
+                    <SelectItem value="90">Last 90 Days</SelectItem>
+                    <SelectItem value="180">Last 6 Months</SelectItem>
+                    <SelectItem value="365">Last Year</SelectItem>
+                    <SelectItem value="all">All Time</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
+                </Button>
+                <Button>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              </div>
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="body" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto gap-2">
-                <TabsTrigger value="body" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                  <Activity className="h-4 w-4" />
-                  <span className="hidden sm:inline">Body Comp</span>
-                  <span className="sm:hidden">Body</span>
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
+                <TabsTrigger value="overview">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Journey Overview
                 </TabsTrigger>
-                <TabsTrigger value="activity" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                  <Activity className="h-4 w-4" />
-                  <span className="hidden sm:inline">Activity</span>
-                  <span className="sm:hidden">Activity</span>
+                <TabsTrigger value="activity" className="relative">
+                  <Activity className="mr-2 h-4 w-4" />
+                  Activity
+                  <Badge variant="outline" className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs border-primary/50 text-primary bg-background">
+                    Coming Soon
+                  </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="strength" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                  <Dumbbell className="h-4 w-4" />
-                  <span className="hidden sm:inline">Strength</span>
-                  <span className="sm:hidden">Strength</span>
-                </TabsTrigger>
-                <TabsTrigger value="workouts" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-white">
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Workouts</span>
-                  <span className="sm:hidden">Workouts</span>
+                <TabsTrigger value="qualitative">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Weekly Reflection
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="body" className="space-y-6">
-                <BodyCompositionTab timeRange={timeRange} />
+              <TabsContent value="overview">
+                <div className="space-y-6">
+                  <KeyMetricsOverview />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                    <div className="lg:col-span-2 space-y-6">
+                      <ProgressCharts />
+                      <StrengthTrends />
+                    </div>
+                    <div className="lg:col-span-1 space-y-6">
+                      <HabitTracker />
+                      <Achievements />
+                    </div>
+                  </div>
+                </div>
               </TabsContent>
 
-              <TabsContent value="activity" className="space-y-6">
-                <ActivityWellnessTab timeRange={timeRange} />
+              <TabsContent value="activity">
+                <ActivityWellnessTab timeRange={'30D' as TimeRange} />
               </TabsContent>
 
-              <TabsContent value="strength" className="space-y-6">
-                <StrengthProgressTab timeRange={timeRange} />
-              </TabsContent>
-
-              <TabsContent value="workouts" className="space-y-6">
-                <WorkoutAnalyticsTab timeRange={timeRange} />
+              <TabsContent value="qualitative">
+                <div className="grid grid-cols-1 lg:grid-cols-8 gap-8 items-start">
+                  <div className="lg:col-span-5">
+                    <QualitativeFeedback />
+                  </div>
+                  <div className="lg:col-span-3">
+                    <QualitativeTrends />
+                  </div>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
