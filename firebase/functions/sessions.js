@@ -18,8 +18,9 @@ const sharedConfig = require("./firebase-config.json");
 
 const db = admin.firestore();
 
-// Define Stripe secret key (same as other functions use)
+// Define secrets
 const stripeKey = defineSecret("STRIPE_KEY");
+const calendlyPat = defineSecret("CALENDLY_PAT");
 
 /**
  * NOTE: Session package purchases now use Stripe Extension's built-in checkout
@@ -214,6 +215,14 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, userData
     }
 
     const packageToUse = activePackages[0];
+    
+    // Validate session is not scheduled past package expiration
+    if (eventDetails.scheduledDate.toMillis() > packageToUse.expirationDate.toMillis()) {
+      throw new Error(
+        `Cannot schedule session past package expiration date (${packageToUse.expirationDate.toDate().toLocaleDateString()})`
+      );
+    }
+    
     const packageIndex = packages.findIndex(pkg => pkg.id === packageToUse.id);
 
     // Deduct 1 session from package
@@ -327,10 +336,18 @@ exports.expireSessionPackages = onSchedule({
 /**
  * Cancel Session
  * Allows clients or trainers to cancel sessions
+ * 
+ * Features:
+ * - Cancels session in Calendly (sends email notifications)
+ * - Updates session status in Firestore
+ * - Returns credit if >24 hours notice
+ * - Tracks cancellation statistics
+ * - Creates in-app notification
  */
 exports.cancelSession = onCall({
   region: sharedConfig.region,
   cors: true,
+  secrets: [calendlyPat],
 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated");
@@ -341,39 +358,69 @@ exports.cancelSession = onCall({
 
   try {
     const sessionRef = db.collection("sessions").doc(sessionId);
+    const sessionDoc = await sessionRef.get();
     
+    if (!sessionDoc.exists) {
+      throw new HttpsError("not-found", "Session not found");
+    }
+
+    const sessionData = sessionDoc.data();
+    
+    // Verify user can cancel (client or trainer)
+    const userDoc = await db.collection("users").doc(userId).get();
+    const userData = userDoc.data();
+    const isTrainer = userData.role === "trainer" || userData.role === "admin";
+    const isClient = userId === sessionData.clientId;
+    
+    if (!isTrainer && !isClient) {
+      throw new HttpsError("permission-denied", "Not authorized to cancel this session");
+    }
+
+    // Check if already canceled or completed
+    if (sessionData.status !== "scheduled") {
+      throw new HttpsError("failed-precondition", "Session cannot be canceled");
+    }
+
+    // Check cancellation window (24 hours before)
+    const now = admin.firestore.Timestamp.now();
+    const hoursUntilSession = (sessionData.scheduledDate.toMillis() - now.toMillis()) / (1000 * 60 * 60);
+    
+    const creditReturned = hoursUntilSession > 24 || isTrainer;
+    const canceledBy = isTrainer ? "trainer" : "client";
+
+    // 1. Cancel in Calendly (sends email notifications to both parties)
+    try {
+      const calendlyResponse = await fetch(
+        `https://api.calendly.com/scheduled_events/${sessionData.calendlyEventId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${calendlyPat.value()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!calendlyResponse.ok && calendlyResponse.status !== 404) {
+        console.error("Calendly cancellation failed:", calendlyResponse.status);
+        // Continue anyway - Firestore update is more important
+      }
+    } catch (calendlyError) {
+      console.error("Error calling Calendly API:", calendlyError);
+      // Continue - local cancellation is still valid
+    }
+
+    // 2. Update session and user data in transaction
     await db.runTransaction(async (transaction) => {
-      const sessionDoc = await transaction.get(sessionRef);
+      // IMPORTANT: All reads must happen BEFORE any writes in Firestore transactions
       
-      if (!sessionDoc.exists) {
-        throw new HttpsError("not-found", "Session not found");
-      }
+      // Read client data first
+      const clientRef = db.collection("users").doc(sessionData.clientId);
+      const clientDoc = await transaction.get(clientRef);
+      const clientData = clientDoc.data();
 
-      const sessionData = sessionDoc.data();
-      
-      // Verify user can cancel (client or trainer)
-      const userDoc = await transaction.get(db.collection("users").doc(userId));
-      const userData = userDoc.data();
-      const isTrainer = userData.role === "trainer" || userData.role === "admin";
-      const isClient = userId === sessionData.clientId;
-      
-      if (!isTrainer && !isClient) {
-        throw new HttpsError("permission-denied", "Not authorized to cancel this session");
-      }
-
-      // Check if already canceled or completed
-      if (sessionData.status !== "scheduled") {
-        throw new HttpsError("failed-precondition", "Session cannot be canceled");
-      }
-
-      // Check cancellation window (24 hours before)
-      const now = admin.firestore.Timestamp.now();
-      const hoursUntilSession = (sessionData.scheduledDate.toMillis() - now.toMillis()) / (1000 * 60 * 60);
-      
-      const creditReturned = hoursUntilSession > 24 || isTrainer;
-      const canceledBy = isTrainer ? "trainer" : "client";
-
-      // Update session
+      // Now do all writes
+      // Update session status
       transaction.update(sessionRef, {
         status: "canceled",
         canceledBy: canceledBy,
@@ -382,13 +429,9 @@ exports.cancelSession = onCall({
         creditReturned: creditReturned,
         updatedAt: now,
       });
-
-      // If credit returned, add back to package
+      
+      // Return credit if applicable
       if (creditReturned) {
-        const clientRef = db.collection("users").doc(sessionData.clientId);
-        const clientDoc = await transaction.get(clientRef);
-        const clientData = clientDoc.data();
-        
         const packages = clientData.sessionPackages || [];
         const packageIndex = packages.findIndex(pkg => pkg.id === sessionData.packageId);
         
@@ -409,7 +452,42 @@ exports.cancelSession = onCall({
           });
         }
       }
+
+      // Update cancellation statistics
+      const stats = clientData.sessionStats || {};
+      const updatedStats = {
+        totalBooked: stats.totalBooked || 0,
+        totalCompleted: stats.totalCompleted || 0,
+        totalCanceled: (stats.totalCanceled || 0) + 1,
+        canceledWithCredit: (stats.canceledWithCredit || 0) + (creditReturned ? 1 : 0),
+        canceledNoCredit: (stats.canceledNoCredit || 0) + (creditReturned ? 0 : 1),
+        lastCanceled: now,
+      };
+
+      transaction.update(clientRef, {
+        sessionStats: updatedStats,
+      });
+
+      // 3. Create in-app notification
+      const notificationRef = db.collection("notifications").doc();
+      transaction.set(notificationRef, {
+        userId: sessionData.clientId,
+        type: "session_canceled",
+        title: "Session Canceled",
+        message: creditReturned 
+          ? "Your session has been canceled and the credit has been returned to your balance."
+          : "Your session has been canceled. No credit returned (less than 24 hours notice).",
+        data: {
+          sessionId: sessionId,
+          scheduledDate: sessionData.scheduledDate,
+          creditReturned: creditReturned,
+        },
+        read: false,
+        createdAt: now,
+      });
     });
+
+    console.log(`Session ${sessionId} canceled by ${canceledBy}, credit returned: ${creditReturned}`);
 
     return {
       success: true,

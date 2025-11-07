@@ -14,6 +14,9 @@ const sharedConfig = require("./firebase-config.json");
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
 
+// Stripe portal configuration ID for restricted payment method changes only
+const STRIPE_PORTAL_CONFIG_ID = "bpc_1SQLnDBjx3iGODd65BpKI3oK";
+
 /**
  * Create a payment intent for one-time payments
  * This is used by the PaymentElement in the React UI
@@ -311,23 +314,18 @@ exports.createPaymentMethodPortalSession = onCall({
       apiVersion: "2024-09-30.acacia",
     });
 
-    // Create portal session with optional configuration for restricted access
-    const sessionOptions = {
+    // Create portal session with restricted configuration
+    // This configuration only allows payment method updates, not subscription cancellation
+    const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: request.data.return_url ||
         `${process.env.PUBLIC_URL}/dashboard/client/billing`,
-    };
+      configuration: STRIPE_PORTAL_CONFIG_ID,
+    });
 
-    // If a restricted configuration ID is provided in environment, use it
-    // This configuration should only allow payment method updates
-    if (process.env.STRIPE_PAYMENT_METHOD_PORTAL_CONFIG_ID) {
-      sessionOptions.configuration = process.env.STRIPE_PAYMENT_METHOD_PORTAL_CONFIG_ID;
-      logger.info("Using restricted portal configuration", {
-        configId: process.env.STRIPE_PAYMENT_METHOD_PORTAL_CONFIG_ID,
-      });
-    }
-
-    const session = await stripe.billingPortal.sessions.create(sessionOptions);
+    logger.info("Payment method portal session created with restricted config", {
+      configId: STRIPE_PORTAL_CONFIG_ID,
+    });
 
     logger.info("Payment method portal session created successfully", {
       sessionId: session.id,
@@ -506,11 +504,18 @@ async function createSessionPackageFromPayment(userId, paymentData) {
   const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
   const packageType = quantity === 1 ? "single" : (quantity === 4 ? "4-pack" : `${quantity}-pack`);
 
-  // Calculate expiration date (60 days from now)
+  // Calculate expiration date (end of 60th day from purchase)
   const purchaseDate = admin.firestore.Timestamp.now();
-  const expirationDate = admin.firestore.Timestamp.fromMillis(
-    purchaseDate.toMillis() + (60 * 24 * 60 * 60 * 1000) // 60 days
-  );
+  
+  // Create a JavaScript Date object and add 60 days
+  const expirationDateObj = new Date(purchaseDate.toMillis());
+  expirationDateObj.setDate(expirationDateObj.getDate() + 60);
+  
+  // Set to end of day (23:59:59.999)
+  expirationDateObj.setHours(23, 59, 59, 999);
+  
+  // Convert back to Firestore Timestamp
+  const expirationDate = admin.firestore.Timestamp.fromDate(expirationDateObj);
 
   // Create package object
   const packageData = {

@@ -3,52 +3,32 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
 import { Timestamp, collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { signOutUser, db, functions } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { TrainingSession, SessionBalance } from '@/types/session';
 
-const mockUpcomingSessions: TrainingSession[] = [
-  {
-    id: 'sess_1',
-    clientId: 'user_123',
-    clientName: 'John Doe',
-    clientEmail: 'john@example.com',
-    trainerId: 'trainer_1',
-    packageId: 'pkg_1',
-    calendlyEventId: 'evt_123',
-    calendlyEventUri: 'https://calendly.com/...',
-    scheduledDate: Timestamp.fromDate(new Date('2024-11-20T14:00:00')),
-    duration: 60,
-    status: 'scheduled',
-    creditReturned: false,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now()
-  },
-  {
-    id: 'sess_2',
-    clientId: 'user_123',
-    clientName: 'John Doe',
-    clientEmail: 'john@example.com',
-    trainerId: 'trainer_1',
-    packageId: 'pkg_2',
-    calendlyEventId: 'evt_456',
-    calendlyEventUri: 'https://calendly.com/...',
-    scheduledDate: Timestamp.fromDate(new Date('2024-11-27T10:00:00')),
-    duration: 60,
-    status: 'scheduled',
-    creditReturned: false,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now()
+// Declare Calendly types
+declare global {
+  interface Window {
+    Calendly?: {
+      initInlineWidget: (config: {
+        url: string | null;
+        parentElement: HTMLElement;
+      }) => void;
+    };
   }
-];
+}
 
 export default function ScheduleSessionsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [sessionToCancel, setSessionToCancel] = useState<TrainingSession | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionBalance, setSessionBalance] = useState<SessionBalance>({
@@ -58,20 +38,7 @@ export default function ScheduleSessionsPage() {
     expired: 0,
     lastUpdated: Timestamp.now()
   });
-
-  // Load Calendly script
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://assets.calendly.com/assets/external/widget.js';
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
+  const [nextExpirationDate, setNextExpirationDate] = useState<Date | null>(null);
 
   // Listen to user document for real-time session balance
   useEffect(() => {
@@ -81,6 +48,8 @@ export default function ScheduleSessionsPage() {
     const unsubscribe = onSnapshot(userRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        const packages = data.sessionPackages || [];
+        
         setSessionBalance(data.sessionBalance || {
           available: 0,
           purchased: 0,
@@ -88,6 +57,18 @@ export default function ScheduleSessionsPage() {
           expired: 0,
           lastUpdated: Timestamp.now()
         });
+
+        // Calculate earliest expiration date from active packages (FIFO)
+        const activePackages = packages
+          .filter((pkg: any) => !pkg.expired && pkg.remaining > 0)
+          .sort((a: any, b: any) => a.purchaseDate.toMillis() - b.purchaseDate.toMillis());
+
+        if (activePackages.length > 0) {
+          const earliestPackage = activePackages[0];
+          setNextExpirationDate(earliestPackage.expirationDate.toDate());
+        } else {
+          setNextExpirationDate(null);
+        }
       }
     }, (error) => {
       console.error('Error listening to session balance:', error);
@@ -127,6 +108,45 @@ export default function ScheduleSessionsPage() {
     return () => unsubscribe();
   }, [user]);
 
+  // Initialize Calendly widget on component mount
+  useEffect(() => {
+    // Only init if we have session credits available (widget is rendered)
+    if (sessionBalance.available <= 0) return;
+
+    let mounted = true;
+    
+    const initWidget = () => {
+      if (!mounted) return;
+      
+      const widgetEl = document.querySelector('.calendly-inline-widget') as HTMLElement;
+      
+      if (window.Calendly && widgetEl) {
+        // Clear any existing content first to prevent duplicates
+        widgetEl.innerHTML = '';
+        
+        // Initialize the widget
+        window.Calendly.initInlineWidget({
+          url: widgetEl.getAttribute('data-url'),
+          parentElement: widgetEl
+        });
+      } else if (!window.Calendly && mounted) {
+        // Calendly script not loaded yet, retry after a short delay
+        setTimeout(initWidget, 100);
+      }
+    };
+
+    initWidget();
+
+    return () => {
+      mounted = false;
+      // Clean up widget on unmount
+      const widgetEl = document.querySelector('.calendly-inline-widget') as HTMLElement;
+      if (widgetEl) {
+        widgetEl.innerHTML = '';
+      }
+    };
+  }, [sessionBalance.available]); // Re-init when session balance changes
+
   const handleLogout = async () => {
     try {
       const result = await signOutUser();
@@ -138,21 +158,34 @@ export default function ScheduleSessionsPage() {
     }
   };
 
-  const handleCancelSession = async (sessionId: string) => {
-    setCancelling(sessionId);
+  const confirmCancelSession = async () => {
+    if (!sessionToCancel) return;
+    
+    setCancelling(sessionToCancel.id);
     
     try {
-      // TODO: Implement actual cancellation via Cloud Function
-      // const cancelSession = httpsCallable(functions, 'cancelSession');
-      // await cancelSession({ sessionId, canceledBy: 'client' });
+      const cancelSession = httpsCallable(functions, 'cancelSession');
+      const result = await cancelSession({ 
+        sessionId: sessionToCancel.id,
+        reason: '' 
+      });
       
-      // For now, show demo message
-      alert('🎉 This is a UI demo! In production, this will cancel the session and refund the credit if >24h notice.');
+      const data = result.data as { success: boolean; creditReturned: boolean };
+      
+      if (data.success) {
+        // Show success message
+        if (data.creditReturned) {
+          alert('✅ Session canceled successfully! Credit returned to your balance.');
+        } else {
+          alert('✅ Session canceled. No credit returned (less than 24 hours notice).');
+        }
+      }
     } catch (error) {
       console.error('Error canceling session:', error);
       alert('Failed to cancel session. Please try again.');
     } finally {
       setCancelling(null);
+      setSessionToCancel(null);
     }
   };
 
@@ -229,14 +262,19 @@ export default function ScheduleSessionsPage() {
 
   // Has sessions available state
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        onLogout={handleLogout}
+    <>
+      <Script 
+        src="https://assets.calendly.com/assets/external/widget.js"
+        strategy="lazyOnload"
       />
-      <SidebarInset>
-        <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <SidebarProvider>
+        <ClientSidebar
+          userName={userData?.name}
+          userTier={userData?.tier}
+          onLogout={handleLogout}
+        />
+        <SidebarInset>
+          <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
@@ -270,8 +308,8 @@ export default function ScheduleSessionsPage() {
                 {/* Calendly Inline Widget */}
                 <div className="calendly-container">
                   <div 
-                    className="calendly-inline-widget" 
-                    data-url={`https://calendly.com/shreyas-annapureddy/1-1-training-session?hide_gdpr_banner=1&primary_color=4caf50${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${userData?.email ? `&email=${encodeURIComponent(userData.email)}` : ''}`}
+                    className="calendly-inline-widget"
+                    data-url={`https://calendly.com/shreyas-annapureddy/1-1-training-session?hide_gdpr_banner=1&primary_color=4caf50${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${userData?.email ? `&email=${encodeURIComponent(userData.email)}` : ''}${nextExpirationDate ? `&date_range_end=${nextExpirationDate.toISOString().split('T')[0]}` : ''}`}
                     style={{ minWidth: '320px', height: '700px' }}
                   ></div>
                 </div>
@@ -349,7 +387,7 @@ export default function ScheduleSessionsPage() {
                           )}
 
                           <button
-                            onClick={() => handleCancelSession(session.id)}
+                            onClick={() => setSessionToCancel(session)}
                             disabled={cancelling === session.id}
                             className={`w-full text-sm py-2 rounded-lg font-medium transition-colors ${
                               canCancel
@@ -357,8 +395,7 @@ export default function ScheduleSessionsPage() {
                                 : 'bg-muted text-muted-foreground cursor-not-allowed'
                             }`}
                           >
-                            {cancelling === session.id ? 'Cancelling...' : 
-                             canCancel ? 'Cancel Session (Get Refund)' : 'Cancel Session (No Refund)'}
+                            {cancelling === session.id ? 'Cancelling...' : 'Cancel Session'}
                           </button>
                         </div>
                       );
@@ -390,9 +427,63 @@ export default function ScheduleSessionsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Cancel Confirmation Dialog */}
+            {sessionToCancel && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6 border border-border">
+                  <h3 className="text-xl font-bold text-foreground mb-4">⚠️ Cancel This Session?</h3>
+                  
+                  <div className="mb-4 p-4 bg-muted rounded-lg">
+                    <div className="font-semibold text-foreground mb-1">
+                      {formatDate(sessionToCancel.scheduledDate)}
+                    </div>
+                    <div className="text-primary font-medium">
+                      {formatTime(sessionToCancel.scheduledDate)}
+                    </div>
+                  </div>
+
+                  <div className="mb-6 space-y-3 text-sm">
+                    {getHoursUntilSession(sessionToCancel.scheduledDate) > 24 ? (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="font-semibold text-green-800 mb-1">✓ Session Credit Will Be Returned</div>
+                        <div className="text-green-700">You're canceling with more than 24 hours notice. Your session credit will be returned to your balance immediately.</div>
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="font-semibold text-red-800 mb-1">⚠️ No Credit Refund</div>
+                        <div className="text-red-700">Less than 24 hours notice - your session credit will not be returned per our cancellation policy.</div>
+                      </div>
+                    )}
+                    
+                    <div className="text-muted-foreground">
+                      Need to reschedule? Use the "Reschedule" button instead to pick a new time without losing your credit.
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSessionToCancel(null)}
+                      disabled={cancelling !== null}
+                      className="flex-1 px-4 py-2 rounded-lg font-medium border border-border hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      onClick={confirmCancelSession}
+                      disabled={cancelling !== null}
+                      className="flex-1 px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {cancelling ? 'Canceling...' : 'Confirm Cancellation'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </>
   );
 }
