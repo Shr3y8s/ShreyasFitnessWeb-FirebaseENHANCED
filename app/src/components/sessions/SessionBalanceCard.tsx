@@ -19,19 +19,24 @@ export default function SessionBalanceCard({ balance, packages, loading }: Sessi
     );
   }
 
+  // Helper to convert to milliseconds
+  const toMillis = (date: number | any) => {
+    return typeof date === 'number' ? date : date.toMillis();
+  };
+
   // Find next expiration
   const activePackages = packages.filter(pkg => !pkg.expired && pkg.remaining > 0);
   const nextExpiration = activePackages.length > 0
     ? activePackages.reduce((earliest, pkg) => 
-        pkg.expirationDate < earliest ? pkg.expirationDate : earliest
-      , activePackages[0].expirationDate)
+        toMillis(pkg.expirationDate) < toMillis(earliest) ? toMillis(pkg.expirationDate) : toMillis(earliest)
+      , toMillis(activePackages[0].expirationDate))
     : null;
 
   // Find packages expiring soon (within 7 days)
   const now = Date.now();
   const sevenDaysFromNow = now + (7 * 24 * 60 * 60 * 1000);
   const expiringSoon = activePackages.filter(pkg => 
-    pkg.expirationDate <= sevenDaysFromNow
+    toMillis(pkg.expirationDate) <= sevenDaysFromNow
   );
 
   return (

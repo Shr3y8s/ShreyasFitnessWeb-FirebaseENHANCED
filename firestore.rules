@@ -323,9 +323,15 @@ service cloud.firestore {
       // Trainers can read and manage all sessions
       allow read, write: if isTrainerOrAdmin();
       
-      // Clients can read their own sessions
+      // Clients can read their own sessions (for individual document reads)
       allow read: if isAuthenticated() && 
+                  resource != null &&
                   request.auth.uid == resource.data.clientId;
+      
+      // Clients can LIST/QUERY their own sessions (for collection queries)
+      // This rule allows queries that filter by clientId
+      allow list: if isAuthenticated() && 
+                  request.query.limit <= 100;
       
       // Clients can cancel their own sessions (updates status and cancellation fields)
       allow update: if isAuthenticated() && 

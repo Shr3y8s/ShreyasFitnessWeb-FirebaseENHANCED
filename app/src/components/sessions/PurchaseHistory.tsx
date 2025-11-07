@@ -60,7 +60,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
             {packages.map((pkg) => (
               <tr key={pkg.id} className="border-b border-border/50 hover:bg-muted/50">
                 <td className="py-3 px-4 text-sm">
-                  {new Date(pkg.purchaseDate).toLocaleDateString('en-US', {
+                  {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'
@@ -70,7 +70,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   {pkg.type === '4-pack' ? '4-Pack' : 'Single'}
                 </td>
                 <td className="py-3 px-4 text-sm">
-                  {new Date(pkg.expirationDate).toLocaleDateString('en-US', {
+                  {new Date(typeof pkg.expirationDate === 'number' ? pkg.expirationDate : pkg.expirationDate.toMillis()).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'
@@ -99,7 +99,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   {pkg.type === '4-pack' ? '4-Pack' : 'Single'} Sessions
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {new Date(pkg.purchaseDate).toLocaleDateString('en-US', {
+                  {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric'
@@ -115,7 +115,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
             <div className="flex justify-between text-sm mt-1">
               <span className="text-muted-foreground">Expires:</span>
               <span className={pkg.expired ? 'text-red-600' : ''}>
-                {new Date(pkg.expirationDate).toLocaleDateString('en-US', {
+                {new Date(typeof pkg.expirationDate === 'number' ? pkg.expirationDate : pkg.expirationDate.toMillis()).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                   year: 'numeric'

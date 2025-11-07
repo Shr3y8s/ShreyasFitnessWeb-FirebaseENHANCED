@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, functions } from '@/lib/firebase';
+import { signOutUser, functions, db } from '@/lib/firebase';
 import { getSessionPricing, calculateSessionSavings, createStripeCheckoutSession } from '@/lib/stripe';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -22,46 +23,54 @@ export default function BuySessionsPage() {
   const [balance, setBalance] = useState<any>(null);
   const [packages, setPackages] = useState<SessionPackage[]>([]);
   
-  // Load session data on mount
+  // Load session pricing on mount
   useEffect(() => {
-    if (user) {
-      loadSessionData();
-    }
-  }, [user]);
+    const loadPricing = async () => {
+      try {
+        const pricing = await getSessionPricing();
+        const pricingWithSavings = calculateSessionSavings(pricing);
+        setSessionOptions(pricingWithSavings);
+      } catch (error) {
+        console.error('Error loading session pricing:', error);
+        setSessionOptions([]);
+      }
+    };
+    
+    loadPricing();
+  }, []);
 
-  const loadSessionData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load session pricing from Stripe
-      const pricing = await getSessionPricing();
-      const pricingWithSavings = calculateSessionSavings(pricing);
-      setSessionOptions(pricingWithSavings);
-      
-      // Load balance and packages from Cloud Function
-      const getSessionBalance = httpsCallable(functions, 'getSessionBalance');
-      const result = await getSessionBalance();
-      const data = result.data as any;
-      
-      setBalance({
-        available: data.available || 0,
-        purchased: data.packages?.reduce((sum: number, pkg: any) => sum + pkg.quantity, 0) || 0,
-        used: data.packages?.reduce((sum: number, pkg: any) => sum + (pkg.quantity - pkg.remaining), 0) || 0,
-        expired: data.packages?.filter((pkg: any) => pkg.expired).reduce((sum: number, pkg: any) => sum + pkg.remaining, 0) || 0,
-        lastUpdated: Timestamp.now(),
-      });
-      
-      setPackages(data.packages || []);
-    } catch (error) {
-      console.error('Error loading session data:', error);
-      // Set empty state on error
-      setSessionOptions([]);
+  // Set up real-time listener for session balance
+  useEffect(() => {
+    if (!user) return;
+
+    setLoading(true);
+    
+    // Listen to user document for real-time updates
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        const sessionBalance = userData.sessionBalance || { available: 0, purchased: 0, used: 0, expired: 0 };
+        const sessionPackages = userData.sessionPackages || [];
+        
+        setBalance(sessionBalance);
+        setPackages(sessionPackages);
+      } else {
+        // Set empty state if document doesn't exist
+        setBalance({ available: 0, purchased: 0, used: 0, expired: 0, lastUpdated: Timestamp.now() });
+        setPackages([]);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error('Error listening to session balance:', error);
       setBalance({ available: 0, purchased: 0, used: 0, expired: 0, lastUpdated: Timestamp.now() });
       setPackages([]);
-    } finally {
       setLoading(false);
-    }
-  };
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, [user]);
 
   const handleLogout = async () => {
     try {

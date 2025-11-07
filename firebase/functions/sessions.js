@@ -114,19 +114,33 @@ exports.calendlyWebhook = onRequest({
 }, async (req, res) => {
   // TODO: Verify Calendly webhook signature
   
-  const event = req.body;
+  const webhookEvent = req.body;
+  
+  console.log("Received Calendly webhook:", JSON.stringify(webhookEvent, null, 2));
 
   try {
-    if (event.event === "invitee.created") {
-      const inviteeEmail = event.payload.invitee.email;
-      const calendlyEventId = event.payload.event.uuid;
-      const calendlyEventUri = event.payload.event.uri;
+    if (webhookEvent.event === "invitee.created") {
+      const payload = webhookEvent.payload;
+      
+      // Extract data directly from payload (Calendly includes everything)
+      const inviteeEmail = payload.email;
+      const inviteeName = payload.name;
+      const scheduledEvent = payload.scheduled_event;
+      
+      if (!inviteeEmail || !scheduledEvent) {
+        console.error("Missing required data in webhook payload");
+        return res.status(400).json({ error: "Invalid webhook payload" });
+      }
+
+      const calendlyEventId = scheduledEvent.uri.split('/').pop();
       const scheduledDate = admin.firestore.Timestamp.fromDate(
-        new Date(event.payload.event.start_time)
+        new Date(scheduledEvent.start_time)
       );
       const duration = Math.round(
-        (new Date(event.payload.event.end_time) - new Date(event.payload.event.start_time)) / (1000 * 60)
+        (new Date(scheduledEvent.end_time) - new Date(scheduledEvent.start_time)) / (1000 * 60)
       );
+
+      console.log(`Processing booking for ${inviteeEmail} (${inviteeName})`);
 
       // Find user by email
       const usersSnapshot = await db.collection("users")
@@ -150,18 +164,24 @@ exports.calendlyWebhook = onRequest({
         eventDetails: {
           scheduledDate,
           duration,
-          eventUri: calendlyEventUri,
+          eventUri: scheduledEvent.uri,
         },
         userData,
       });
 
+      console.log(`Successfully scheduled session for user ${userId}`);
       res.json({ success: true });
+    } else if (webhookEvent.event === "invitee.canceled") {
+      // Handle cancellation
+      console.log("Invitee canceled:", webhookEvent.payload);
+      res.json({ received: true });
     } else {
+      console.log("Unhandled event type:", webhookEvent.event);
       res.json({ received: true });
     }
   } catch (error) {
     console.error("Error processing Calendly webhook:", error);
-    res.status(500).json({ error: "Webhook processing failed" });
+    res.status(500).json({ error: "Webhook processing failed", details: error.message });
   }
 });
 

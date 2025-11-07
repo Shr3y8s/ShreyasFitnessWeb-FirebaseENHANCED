@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import {
   House,
@@ -78,7 +78,31 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
   const { coachUpdates } = useCoachUpdates();
   const { user, userData } = useAuth();
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [availableSessions, setAvailableSessions] = useState(0);
   
+  // Listen for real-time session balance updates
+  useEffect(() => {
+    if (!user) {
+      setAvailableSessions(0);
+      return;
+    }
+
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setAvailableSessions(data.sessionBalance?.available ?? 0);
+      } else {
+        setAvailableSessions(0);
+      }
+    }, (error) => {
+      console.error('Error listening to session balance:', error);
+      setAvailableSessions(0);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   // Listen for unread messages from trainer
   useEffect(() => {
     if (!user || !userData?.assignedTrainerId) {
@@ -220,9 +244,9 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/dashboard/client/sessions/buy">
                     <CreditCard className="w-4 h-4" />
                     <span className="font-medium">Buy Sessions</span>
-                    {(userData?.sessionBalance?.available ?? 0) > 0 && (
+                    {availableSessions > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-green-600 text-white flex items-center justify-center w-5 h-5 p-0">
-                        {userData?.sessionBalance?.available}
+                        {availableSessions}
                       </SidebarMenuBadge>
                     )}
                   </Link>

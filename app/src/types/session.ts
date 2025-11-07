@@ -17,8 +17,8 @@ export interface SessionPackage {
   type: SessionPackageType;
   quantity: number;
   remaining: number;
-  purchaseDate: number; // Timestamp as milliseconds
-  expirationDate: number; // Timestamp as milliseconds
+  purchaseDate: number | Timestamp; // Timestamp as milliseconds or Firestore Timestamp
+  expirationDate: number | Timestamp; // Timestamp as milliseconds or Firestore Timestamp
   expired: boolean;
   stripePaymentIntentId: string;
   stripePriceId: string;

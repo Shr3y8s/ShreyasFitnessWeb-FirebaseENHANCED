@@ -1,23 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser } from '@/lib/firebase';
+import { signOutUser, db } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { TrainingSession, SessionBalance } from '@/types/session';
-
-// MOCK DATA for testing UI
-const mockBalance: SessionBalance = {
-  available: 3, // Change to 0 to test "no sessions" state
-  purchased: 8,
-  used: 4,
-  expired: 1,
-  lastUpdated: Timestamp.now()
-};
 
 const mockUpcomingSessions: TrainingSession[] = [
   {
@@ -58,6 +49,83 @@ export default function ScheduleSessionsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionBalance, setSessionBalance] = useState<SessionBalance>({
+    available: 0,
+    purchased: 0,
+    used: 0,
+    expired: 0,
+    lastUpdated: Timestamp.now()
+  });
+
+  // Load Calendly script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://assets.calendly.com/assets/external/widget.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Listen to user document for real-time session balance
+  useEffect(() => {
+    if (!user) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSessionBalance(data.sessionBalance || {
+          available: 0,
+          purchased: 0,
+          used: 0,
+          expired: 0,
+          lastUpdated: Timestamp.now()
+        });
+      }
+    }, (error) => {
+      console.error('Error listening to session balance:', error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Fetch real upcoming sessions from Firestore
+  useEffect(() => {
+    if (!user) {
+      setLoadingSessions(false);
+      return;
+    }
+
+    const sessionsRef = collection(db, 'sessions');
+    const q = query(
+      sessionsRef,
+      where('clientId', '==', user.uid),
+      where('status', '==', 'scheduled'),
+      where('scheduledDate', '>=', Timestamp.now()),
+      orderBy('scheduledDate', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as TrainingSession[];
+      setUpcomingSessions(sessions);
+      setLoadingSessions(false);
+    }, (error) => {
+      console.error('Error fetching sessions:', error);
+      setLoadingSessions(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -70,14 +138,22 @@ export default function ScheduleSessionsPage() {
     }
   };
 
-  const handleCancelSession = (sessionId: string) => {
+  const handleCancelSession = async (sessionId: string) => {
     setCancelling(sessionId);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // TODO: Implement actual cancellation via Cloud Function
+      // const cancelSession = httpsCallable(functions, 'cancelSession');
+      // await cancelSession({ sessionId, canceledBy: 'client' });
+      
+      // For now, show demo message
       alert('🎉 This is a UI demo! In production, this will cancel the session and refund the credit if >24h notice.');
+    } catch (error) {
+      console.error('Error canceling session:', error);
+      alert('Failed to cancel session. Please try again.');
+    } finally {
       setCancelling(null);
-    }, 1000);
+    }
   };
 
   const formatDate = (timestamp: Timestamp) => {
@@ -113,7 +189,7 @@ export default function ScheduleSessionsPage() {
   }
 
   // No sessions available state
-  if (mockBalance.available === 0) {
+  if (sessionBalance.available === 0) {
     return (
       <SidebarProvider>
         <ClientSidebar
@@ -171,15 +247,15 @@ export default function ScheduleSessionsPage() {
             </div>
 
             {/* Session Balance Banner */}
-            <div className="bg-primary text-primary-foreground rounded-lg p-6 mb-8">
+            <div className="bg-primary/10 border border-primary/50 rounded-lg p-6 mb-8 shadow-md">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-medium mb-1">Available Sessions</div>
-                  <div className="text-4xl font-bold">{mockBalance.available}</div>
+                  <div className="text-sm font-medium mb-1 text-foreground">Available Sessions</div>
+                  <div className="text-4xl font-bold text-primary">{sessionBalance.available}</div>
                 </div>
                 <Link
                   href="/dashboard/client/sessions/buy"
-                  className="bg-background text-foreground px-6 py-2 rounded-lg font-semibold hover:bg-muted transition-colors"
+                  className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
                 >
                   Buy More
                 </Link>
@@ -187,22 +263,17 @@ export default function ScheduleSessionsPage() {
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Calendly Widget Placeholder */}
+              {/* Calendly Widget */}
               <div className="bg-card rounded-lg shadow-md p-6 border border-border">
                 <h2 className="text-xl font-semibold text-foreground mb-4">Book a Session</h2>
                 
-                {/* Placeholder for Calendly widget */}
-                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center bg-muted/50">
-                  <div className="text-4xl mb-4">📅</div>
-                  <div className="text-lg font-semibold text-foreground mb-2">
-                    Calendly Widget Goes Here
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    In production, this will show the interactive Calendly booking widget
-                  </p>
-                  <div className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium">
-                    🔧 Phase 4: Calendly Integration
-                  </div>
+                {/* Calendly Inline Widget */}
+                <div className="calendly-container">
+                  <div 
+                    className="calendly-inline-widget" 
+                    data-url={`https://calendly.com/shreyas-annapureddy/1-1-training-session?hide_gdpr_banner=1&primary_color=4caf50${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${userData?.email ? `&email=${encodeURIComponent(userData.email)}` : ''}`}
+                    style={{ minWidth: '320px', height: '700px' }}
+                  ></div>
                 </div>
 
                 <div className="mt-6 space-y-3 text-sm text-muted-foreground">
@@ -225,7 +296,12 @@ export default function ScheduleSessionsPage() {
               <div className="bg-card rounded-lg shadow-md p-6 border border-border">
                 <h2 className="text-xl font-semibold text-foreground mb-4">Upcoming Sessions</h2>
                 
-                {mockUpcomingSessions.length === 0 ? (
+                {loadingSessions ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <div className="text-4xl mb-3">⏳</div>
+                    <p>Loading sessions...</p>
+                  </div>
+                ) : upcomingSessions.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <div className="text-4xl mb-3">📅</div>
                     <p>No upcoming sessions scheduled</p>
@@ -233,7 +309,7 @@ export default function ScheduleSessionsPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {mockUpcomingSessions.map((session) => {
+                    {upcomingSessions.map((session) => {
                       const hoursUntil = getHoursUntilSession(session.scheduledDate);
                       const canCancel = hoursUntil > 24;
 
