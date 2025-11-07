@@ -220,9 +220,9 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   <Link href="/dashboard/client/sessions/buy">
                     <CreditCard className="w-4 h-4" />
                     <span className="font-medium">Buy Sessions</span>
-                    {sessionsUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {sessionsUpdatesCount}
+                    {(userData?.sessionBalance?.available ?? 0) > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-green-600 text-white flex items-center justify-center w-5 h-5 p-0">
+                        {userData?.sessionBalance?.available}
                       </SidebarMenuBadge>
                     )}
                   </Link>
