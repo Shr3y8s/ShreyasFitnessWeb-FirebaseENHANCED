@@ -316,6 +316,53 @@ service cloud.firestore {
       }
     }
     
+    // IN-PERSON TRAINING SESSION MANAGEMENT SYSTEM
+    
+    // Training Sessions Collection
+    match /sessions/{sessionId} {
+      // Trainers can read and manage all sessions
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read their own sessions
+      allow read: if isAuthenticated() && 
+                  request.auth.uid == resource.data.clientId;
+      
+      // Clients can cancel their own sessions (updates status and cancellation fields)
+      allow update: if isAuthenticated() && 
+                    request.auth.uid == resource.data.clientId &&
+                    request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['status', 'canceledBy', 'canceledAt', 'cancelReason', 'updatedAt']);
+      
+      // Session validation
+      function validateSession() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['clientId', 'trainerId', 'packageId', 'calendlyEventId', 'scheduledDate', 'status', 'createdAt']) &&
+               data.clientId is string &&
+               data.trainerId is string &&
+               data.packageId is string &&
+               data.calendlyEventId is string &&
+               data.scheduledDate is timestamp &&
+               data.status in ['scheduled', 'completed', 'canceled', 'no-show'] &&
+               data.duration is number && data.duration > 0;
+      }
+      
+      // Cloud Functions can create sessions (bypasses with admin SDK)
+      allow create: if false; // Only Cloud Functions can create
+    }
+    
+    // Session Refunds Collection
+    match /session_refunds/{refundId} {
+      // Trainers can read and manage all refunds
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read their own refund requests
+      allow read: if isAuthenticated() && 
+                  request.auth.uid == resource.data.clientId;
+      
+      // Only trainers can create refund requests
+      allow create: if isTrainerOrAdmin();
+    }
+    
     // Global configuration accessible to all authenticated users
     match /config/{configId} {
       allow read: if request.auth != null;

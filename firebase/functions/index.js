@@ -373,6 +373,7 @@ exports.createPaymentMethodPortalSession = onCall({
 exports.syncPaymentToUser = onDocumentWritten({
   document: "stripe_customers/{userId}/payments/{paymentId}",
   region: sharedConfig.region,
+  secrets: [stripeKey],
 }, async (event) => {
   const change = event.data;
   const userId = event.params.userId;
@@ -444,6 +445,26 @@ exports.syncPaymentToUser = onDocumentWritten({
         paymentId,
         trainerAssigned: !!updateData.assignedTrainerId,
       });
+
+      // Check if this is a session package purchase
+      const metadata = paymentData.metadata || {};
+      if (metadata.type === "session_package") {
+        logger.info("Session package purchase detected, creating package", {
+          userId,
+          paymentId,
+          priceId: paymentData.price,
+        });
+        
+        try {
+          await createSessionPackageFromPayment(userId, paymentData);
+        } catch (error) {
+          logger.error("Failed to create session package", {
+            error: error.message,
+            userId,
+            paymentId,
+          });
+        }
+      }
     }
 
     return null;
@@ -457,6 +478,111 @@ exports.syncPaymentToUser = onDocumentWritten({
     return null;
   }
 });
+
+/**
+ * Helper function to create session package from payment
+ * Called by syncPaymentToUser when session package purchase is detected
+ */
+async function createSessionPackageFromPayment(userId, paymentData) {
+  // Initialize Stripe to get product details
+  const stripe = require("stripe")(stripeKey.value(), {
+    apiVersion: "2024-09-30.acacia",
+  });
+
+  // Extract data from payment document (Stripe Extension format)
+  // The payment document IS the PaymentIntent with items added by extension
+  const priceId = paymentData.items[0].price.id;
+  const productId = paymentData.items[0].price.product;
+  const paymentIntentId = paymentData.id; // Payment intent ID is the document ID
+
+  // Get price and product details from Stripe
+  const price = await stripe.prices.retrieve(priceId);
+  const product = await stripe.products.retrieve(productId);
+
+  // Determine package type and quantity from product name
+  // Expected format: "Single Session" or "4-Pack Training Sessions"
+  const productName = product.name || "";
+  const quantityMatch = productName.match(/(\d+)/);
+  const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
+  const packageType = quantity === 1 ? "single" : (quantity === 4 ? "4-pack" : `${quantity}-pack`);
+
+  // Calculate expiration date (60 days from now)
+  const purchaseDate = admin.firestore.Timestamp.now();
+  const expirationDate = admin.firestore.Timestamp.fromMillis(
+    purchaseDate.toMillis() + (60 * 24 * 60 * 60 * 1000) // 60 days
+  );
+
+  // Create package object
+  const packageData = {
+    id: admin.firestore().collection("users").doc().id, // Generate unique ID
+    type: packageType,
+    quantity: quantity,
+    remaining: quantity,
+    purchaseDate: purchaseDate,
+    expirationDate: expirationDate,
+    expired: false,
+    stripePaymentIntentId: paymentIntentId,
+    stripePriceId: priceId,
+    stripeProductId: product.id,
+    amount: price.unit_amount,
+  };
+
+  // Update user document with new package and balance
+  const userRef = admin.firestore().collection("users").doc(userId);
+  
+  await admin.firestore().runTransaction(async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+    const userData = userDoc.data();
+    
+    // Get current packages and balance
+    const currentPackages = userData.sessionPackages || [];
+    const currentBalance = userData.sessionBalance || {
+      available: 0,
+      purchased: 0,
+      used: 0,
+      expired: 0,
+      lastUpdated: purchaseDate,
+    };
+
+    // Add new package
+    const updatedPackages = [...currentPackages, packageData];
+    
+    // Update balance
+    const updatedBalance = {
+      available: currentBalance.available + quantity,
+      purchased: currentBalance.purchased + quantity,
+      used: currentBalance.used,
+      expired: currentBalance.expired,
+      lastUpdated: purchaseDate,
+    };
+
+    // Update user document
+    transaction.update(userRef, {
+      sessionPackages: updatedPackages,
+      sessionBalance: updatedBalance,
+    });
+  });
+
+  logger.info("Session package created successfully", {
+    userId,
+    packageId: packageData.id,
+    quantity,
+    type: packageType,
+  });
+}
+
+/**
+ * SESSION MANAGEMENT SYSTEM
+ * Import and export session management functions
+ */
+const sessionFunctions = require("./sessions");
+
+// Export session management functions (excluding purchaseSessionPackage and stripeSessionWebhook)
+// Those are now handled by Stripe Extension's built-in checkout and syncPaymentToUser trigger
+exports.getSessionBalance = sessionFunctions.getSessionBalance;
+exports.calendlyWebhook = sessionFunctions.calendlyWebhook;
+exports.expireSessionPackages = sessionFunctions.expireSessionPackages;
+exports.cancelSession = sessionFunctions.cancelSession;
 
 /**
  * Firestore trigger to sync subscription status from stripe_customers to users

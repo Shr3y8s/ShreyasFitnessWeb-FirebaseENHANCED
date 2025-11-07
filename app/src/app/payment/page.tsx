@@ -9,7 +9,7 @@ import { doc, getDoc, collection, getDocs, addDoc, onSnapshot, setDoc, serverTim
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
-import { formatCurrency, selectSignupPrice } from '@/lib/stripe';
+import { formatCurrency, selectSignupPrice, createStripeCheckoutSession } from '@/lib/stripe';
 import { StripeProduct, StripePrice } from '@/types/stripe';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 import { Footer } from '@/components/Footer';
@@ -251,22 +251,18 @@ export default function PaymentPage() {
         throw new Error('No user data available');
       }
 
-      // Step 2: Create Stripe checkout session
+      // Step 2: Create Stripe checkout session using reusable helper
       console.log("Creating Stripe checkout session...");
       
-      // Derive checkout mode from the selected price's type (from Firestore)
-      // Stripe requires mode to match price type:
-      // - recurring price → mode: 'subscription'
-      // - one_time price → mode: 'payment'
+      // Derive checkout mode from the selected price's type
       const checkoutMode = selectedPrice.type === 'recurring' ? 'subscription' : 'payment';
       
-      const checkoutSessionData: any = {
-        price: selectedPrice.id,
-        success_url: `${window.location.origin}/dashboard?payment=success`,
-        cancel_url: `${window.location.origin}/payment`,
+      const checkoutUrl = await createStripeCheckoutSession({
+        userId,
+        priceId: selectedPrice.id,
         mode: checkoutMode,
-        payment_method_collection: 'always',
-        allow_promotion_codes: true,
+        successUrl: `${window.location.origin}/dashboard?payment=success`,
+        cancelUrl: `${window.location.origin}/payment`,
         metadata: {
           userId,
           userName,
@@ -274,41 +270,10 @@ export default function PaymentPage() {
           tierName,
           tierId
         }
-      };
-
-      // Write to Extension's checkout_sessions collection
-      const checkoutSessionRef = await addDoc(
-        collection(db, 'stripe_customers', userId, 'checkout_sessions'),
-        checkoutSessionData
-      );
-
-      console.log('Checkout session document created:', checkoutSessionRef.id);
-
-      // Step 3: Listen for checkout URL from Extension
-      const unsubscribe = onSnapshot(checkoutSessionRef, (snap) => {
-        const data = snap.data();
-        
-        if (data?.error) {
-          console.error('Checkout session error:', data.error);
-          setError(data.error.message || 'Failed to create checkout session');
-          setIsProcessing(false);
-          unsubscribe();
-        } else if (data?.url) {
-          console.log('Checkout URL received, redirecting...');
-          unsubscribe();
-          // Redirect to Stripe Checkout
-          window.location.href = data.url;
-        }
       });
 
-      // Timeout after 10 seconds
-      setTimeout(() => {
-        if (isProcessing) {
-          unsubscribe();
-          setError('Checkout session creation timed out. Please try again.');
-          setIsProcessing(false);
-        }
-      }, 10000);
+      console.log('Checkout URL received, redirecting...');
+      window.location.href = checkoutUrl;
       
     } catch (err) {
       console.error('Payment error:', err);

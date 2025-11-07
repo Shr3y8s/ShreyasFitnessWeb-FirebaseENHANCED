@@ -206,16 +206,33 @@ export function ClientSidebar({ userName, userTier, onLogout, onShowWelcome }: C
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* In-Person Training Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">In-Person Training</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/sessions">
-                    <Calendar className="w-4 h-4" />
-                    <span className="font-medium">Sessions & Schedule</span>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/buy' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/sessions/buy">
+                    <CreditCard className="w-4 h-4" />
+                    <span className="font-medium">Buy Sessions</span>
                     {sessionsUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {sessionsUpdatesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/schedule' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/sessions/schedule">
+                    <Calendar className="w-4 h-4" />
+                    <span className="font-medium">Schedule Sessions</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

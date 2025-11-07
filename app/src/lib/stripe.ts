@@ -134,6 +134,147 @@ export async function fetchAllProducts(includeInactive: boolean = false): Promis
 }
 
 /**
+ * Check if a product is a session product
+ * Session products are identified by having ONLY one-time prices (no recurring)
+ * @param product - StripeProduct to check
+ * @returns true if product is a session product
+ */
+export function isSessionProduct(product: import('@/types/stripe').StripeProduct): boolean {
+  // Must have at least one price
+  if (!product.prices || product.prices.length === 0) {
+    return false;
+  }
+  
+  // All prices must be one_time (no recurring prices)
+  return product.prices.every(price => price.type === 'one_time');
+}
+
+/**
+ * Fetch all session products dynamically
+ * Finds products that only have one-time prices
+ * @returns Array of session products sorted by price (ascending)
+ */
+export async function fetchSessionProducts(): Promise<import('@/types/stripe').StripeProduct[]> {
+  const allProducts = await fetchAllProducts();
+  
+  // Filter for session products (only one-time prices)
+  const sessionProducts = allProducts.filter(isSessionProduct);
+  
+  // Sort by price (lowest to highest)
+  return sessionProducts.sort((a, b) => {
+    const priceA = selectSessionPrice(a);
+    const priceB = selectSessionPrice(b);
+    return (priceA?.amount || 0) - (priceB?.amount || 0);
+  });
+}
+
+/**
+ * Get pricing info for all session products
+ * Automatically detects session products by price type
+ * @returns Array of pricing details ready for display
+ */
+export async function getSessionPricing() {
+  const sessionProducts = await fetchSessionProducts();
+  
+  return sessionProducts.map(product => {
+    const price = selectSessionPrice(product);
+    const quantity = parseInt(product.name.match(/\d+/)?.[0] || '1'); // Extract number from name
+    
+    return {
+      product,
+      price,
+      priceId: price?.id || '',
+      amount: price ? price.amount / 100 : 0,
+      quantity,
+      pricePerSession: price ? price.amount / 100 / quantity : 0,
+      type: quantity === 1 ? 'single' : (quantity === 4 ? '4-pack' : `${quantity}-pack`) as import('@/types/session').SessionPackageType,
+    };
+  });
+}
+
+/**
+ * Calculate savings for package deals
+ * @param sessionPricing - Array from getSessionPricing()
+ * @returns Enhanced pricing with savings calculations
+ */
+export function calculateSessionSavings(sessionPricing: Awaited<ReturnType<typeof getSessionPricing>>) {
+  // Find single session (quantity === 1)
+  const singleSession = sessionPricing.find(p => p.quantity === 1);
+  
+  return sessionPricing.map(item => {
+    if (!singleSession || item.quantity === 1) {
+      return { ...item, savings: 0 };
+    }
+    
+    // Calculate savings vs buying individual sessions
+    const individualCost = singleSession.amount * item.quantity;
+    const packageCost = item.amount;
+    const savings = individualCost - packageCost;
+    
+    return { ...item, savings };
+  });
+}
+
+/**
+ * Create Stripe checkout session using Extension's checkout_sessions collection
+ * This is the single source of truth for creating checkout sessions
+ * @param options - Checkout session configuration
+ * @returns Promise resolving to checkout URL
+ */
+export async function createStripeCheckoutSession({
+  userId,
+  priceId,
+  mode = 'payment',
+  successUrl,
+  cancelUrl,
+  metadata = {},
+}: {
+  userId: string;
+  priceId: string;
+  mode?: 'payment' | 'subscription';
+  successUrl: string;
+  cancelUrl: string;
+  metadata?: Record<string, any>;
+}): Promise<string> {
+  const { getFirestore, collection, addDoc, onSnapshot } = await import('firebase/firestore');
+  const db = getFirestore();
+  
+  const checkoutSessionData = {
+    price: priceId,
+    mode,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    payment_method_collection: 'always',
+    allow_promotion_codes: true,
+    metadata,
+  };
+
+  const checkoutSessionRef = await addDoc(
+    collection(db, `stripe_customers/${userId}/checkout_sessions`),
+    checkoutSessionData
+  );
+
+  return new Promise((resolve, reject) => {
+    const unsubscribe = onSnapshot(checkoutSessionRef, (snap) => {
+      const data = snap.data();
+      if (data?.error) {
+        unsubscribe();
+        reject(new Error(data.error.message || 'Checkout session creation failed'));
+      } else if (data?.url) {
+        unsubscribe();
+        resolve(data.url);
+      }
+    });
+
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      unsubscribe();
+      reject(new Error('Checkout session creation timed out'));
+    }, 10000);
+  });
+}
+
+/**
  * Fetch single product by ID from Firestore
  * @param productId - Stripe product ID
  * @returns StripeProduct or null if not found
