@@ -3,8 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Checkbox } from '@/components/ui/checkbox';
-import { PlusCircle, Flame, Droplets, Target, CheckCircle2, UtensilsCrossed, Wheat, Beef } from 'lucide-react';
+import { Plus, Minus, Flame, Droplets, Target, CheckCircle2, Wheat, Beef } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NutritionCommandCenterProps {
@@ -18,10 +17,8 @@ interface NutritionCommandCenterProps {
   fatsGoal: number;
   waterConsumed: number;
   waterGoal: number;
-  dayComplete: boolean;
-  onToggleDayComplete: () => void;
   onAddWater: () => void;
-  onLogMeal?: () => void;
+  onRemoveWater: () => void;
 }
 
 export function NutritionCommandCenter({
@@ -35,10 +32,8 @@ export function NutritionCommandCenter({
   fatsGoal,
   waterConsumed,
   waterGoal,
-  dayComplete,
-  onToggleDayComplete,
   onAddWater,
-  onLogMeal,
+  onRemoveWater,
 }: NutritionCommandCenterProps) {
   // Calculate progress percentages
   const calorieProgress = (caloriesConsumed / calorieGoal) * 100;
@@ -218,53 +213,44 @@ export function NutritionCommandCenter({
                   <div>
                     <p className="text-xs text-muted-foreground">Water</p>
                     <p className="font-bold text-2xl">
-                      {waterConsumed}
+                      {waterConsumed}oz
                       <span className="text-sm text-muted-foreground ml-1">
-                        / {waterGoal}
+                        / {waterGoal}oz
                       </span>
                     </p>
                   </div>
                 </div>
-                <Button
-                  onClick={onAddWater}
-                  disabled={waterConsumed >= waterGoal}
-                  size="sm"
-                  className="bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 border border-blue-500"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                </Button>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 justify-end mb-1">
+                    <Button
+                      onClick={onRemoveWater}
+                      disabled={waterConsumed === 0}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 hover:bg-blue-500/10"
+                    >
+                      <Minus className="h-3.5 w-3.5 text-blue-500" />
+                    </Button>
+                    <Button
+                      onClick={onAddWater}
+                      disabled={waterConsumed >= waterGoal}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 hover:bg-blue-500/10"
+                    >
+                      <Plus className="h-3.5 w-3.5 text-blue-500" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(waterConsumed / 128).toFixed(1)} / {(waterGoal / 128).toFixed(1)} gal
+                  </p>
+                </div>
               </div>
               <Progress
                 value={waterProgress}
                 className="h-2 [&>div]:bg-blue-500"
               />
             </div>
-          </div>
-
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="day-complete"
-                checked={dayComplete}
-                onCheckedChange={onToggleDayComplete}
-              />
-              <label
-                htmlFor="day-complete"
-                className="text-sm font-medium cursor-pointer flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                Day Complete
-              </label>
-            </div>
-            <Button
-              onClick={onLogMeal}
-              className="bg-primary/20 text-primary hover:bg-primary/30 border border-primary"
-            >
-              <UtensilsCrossed className="h-4 w-4 mr-2" />
-              Quick Log Meal
-            </Button>
           </div>
         </div>
       </CardContent>
