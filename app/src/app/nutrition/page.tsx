@@ -8,6 +8,7 @@ import { MealPlanView } from '@/components/nutrition/meal-plan-view';
 import { NutritionHabitTracker } from '@/components/nutrition/nutrition-habit-tracker';
 import { NutritionResources } from '@/components/nutrition/nutrition-resources';
 import { NutritionCommandCenter } from '@/components/nutrition/nutrition-command-center';
+import { DayCompleteButton } from '@/components/nutrition/day-complete-button';
 import { NutritionTrendsCard } from '@/components/nutrition/nutrition-trends-card';
 import { Utensils, Target, Sparkles, BookOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,7 +34,7 @@ const dailyGoals = {
   protein: 180,
   carbs: 250,
   fat: 70,
-  water: 8
+  water: 128 // 1 gallon in oz
 };
 
 const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
@@ -41,7 +42,7 @@ const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'
 export default function NutritionPage() {
   const [dailyLog, setDailyLog] = useState(initialDailyLog);
   const [dayComplete, setDayComplete] = useState(false);
-  const [waterIntake, setWaterIntake] = useState(4);
+  const [waterIntake, setWaterIntake] = useState(64); // Starting at 64 oz (0.5 gallon)
 
   const dailyTotals = Object.values(dailyLog).flat().reduce(
     (acc, item) => {
@@ -63,7 +64,13 @@ export default function NutritionPage() {
 
   const handleAddWater = () => {
     if (waterIntake < dailyGoals.water) {
-      setWaterIntake(prev => prev + 1);
+      setWaterIntake(prev => prev + 16); // Add 16 oz per click
+    }
+  };
+
+  const handleRemoveWater = () => {
+    if (waterIntake > 0) {
+      setWaterIntake(prev => Math.max(0, prev - 16)); // Remove 16 oz per click
     }
   };
 
@@ -94,9 +101,8 @@ export default function NutritionPage() {
               fatsGoal={dailyGoals.fat}
               waterConsumed={waterIntake}
               waterGoal={dailyGoals.water}
-              dayComplete={dayComplete}
-              onToggleDayComplete={() => setDayComplete(!dayComplete)}
               onAddWater={handleAddWater}
+              onRemoveWater={handleRemoveWater}
             />
 
             <Tabs defaultValue="tracking">
@@ -122,7 +128,13 @@ export default function NutritionPage() {
               <TabsContent value="tracking" className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                   <div className="lg:col-span-2 space-y-4">
-                    <h2 className="text-2xl font-bold">Today&apos;s Food Log</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-bold">Today&apos;s Food Log</h2>
+                      <DayCompleteButton
+                        isComplete={dayComplete}
+                        onToggle={() => setDayComplete(!dayComplete)}
+                      />
+                    </div>
                     <Accordion type="multiple" defaultValue={mealCategories} className="w-full space-y-4">
                       {mealCategories.map(meal => (
                         <MealAccordion 
