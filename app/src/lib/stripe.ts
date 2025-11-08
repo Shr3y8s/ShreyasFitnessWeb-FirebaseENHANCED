@@ -246,6 +246,10 @@ export async function createStripeCheckoutSession({
     cancel_url: cancelUrl,
     payment_method_collection: 'always',
     allow_promotion_codes: true,
+    billing_address_collection: 'required',
+    customer_update: {
+      name: 'auto'
+    },
     metadata,
   };
 

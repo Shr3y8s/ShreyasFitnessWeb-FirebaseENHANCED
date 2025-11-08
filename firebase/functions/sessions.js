@@ -390,23 +390,33 @@ exports.cancelSession = onCall({
 
     // 1. Cancel in Calendly (sends email notifications to both parties)
     try {
+      console.log(`Canceling Calendly event: ${sessionData.calendlyEventId}`);
+      
       const calendlyResponse = await fetch(
-        `https://api.calendly.com/scheduled_events/${sessionData.calendlyEventId}`,
+        `https://api.calendly.com/scheduled_events/${sessionData.calendlyEventId}/cancellation`,
         {
-          method: "DELETE",
+          method: "POST",
           headers: {
             "Authorization": `Bearer ${calendlyPat.value()}`,
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            reason: reason || "Session canceled"
+          })
         }
       );
 
-      if (!calendlyResponse.ok && calendlyResponse.status !== 404) {
-        console.error("Calendly cancellation failed:", calendlyResponse.status);
+      console.log(`Calendly API response: ${calendlyResponse.status}`);
+
+      if (!calendlyResponse.ok) {
+        const errorText = await calendlyResponse.text();
+        console.error(`Calendly cancellation failed: ${calendlyResponse.status} - ${errorText}`);
         // Continue anyway - Firestore update is more important
+      } else {
+        console.log("Successfully canceled in Calendly");
       }
     } catch (calendlyError) {
-      console.error("Error calling Calendly API:", calendlyError);
+      console.error("Error calling Calendly API:", calendlyError.message);
       // Continue - local cancellation is still valid
     }
 

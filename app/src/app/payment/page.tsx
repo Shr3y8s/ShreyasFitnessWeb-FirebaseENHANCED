@@ -257,6 +257,9 @@ export default function PaymentPage() {
       // Derive checkout mode from the selected price's type
       const checkoutMode = selectedPrice.type === 'recurring' ? 'subscription' : 'payment';
       
+      // Detect if this is a session product (one-time pricing indicates session packages)
+      const isSessionProduct = selectedPrice.type === 'one_time';
+      
       const checkoutUrl = await createStripeCheckoutSession({
         userId,
         priceId: selectedPrice.id,
@@ -268,7 +271,8 @@ export default function PaymentPage() {
           userName,
           userEmail,
           tierName,
-          tierId
+          tierId,
+          type: isSessionProduct ? 'session_package' : 'subscription'
         }
       });
 
