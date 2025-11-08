@@ -1,130 +1,119 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Flame, Droplets, TrendingUp, Target, Calendar, Trophy, BicepsFlexed, ClipboardEdit } from "lucide-react";
+import type { ReactNode } from "react";
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, Flame, Award, Calendar, Target } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
-interface TrendData {
-  label: string;
-  value: string;
-  trend?: 'up' | 'down' | 'stable';
-  icon?: React.ReactNode;
-}
+const streakData = [
+  {
+    icon: <BicepsFlexed className="h-5 w-5 text-amber-500" />,
+    title: "Protein Goal Streak",
+    value: "7 days",
+  },
+  {
+    icon: <ClipboardEdit className="h-5 w-5 text-blue-500" />,
+    title: "Meal Logging Streak",
+    value: "5 days",
+  },
+  {
+    icon: <Droplets className="h-5 w-5 text-sky-500" />,
+    title: "Water Intake Streak",
+    value: "14 days",
+  },
+];
+
+const thisWeekData = [
+  {
+    icon: <Flame className="h-5 w-5 text-muted-foreground" />,
+    title: "Avg Calories",
+    value: "2,450/day",
+  },
+  {
+    icon: <Target className="h-5 w-5 text-muted-foreground" />,
+    title: "Avg Protein",
+    value: "175g/day",
+  },
+];
+
+const achievementsData = [
+  { title: "Longest Streak", value: "21 days" },
+  { title: "Best Week", value: "Week of Oct 20" },
+  { title: "Days This Month", value: "18/30 goals hit" },
+];
+
+const Section = ({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) => (
+  <div className="space-y-3">
+    <h3 className="font-semibold text-foreground flex items-center gap-2">
+      {icon}
+      {title}
+    </h3>
+    <div className="space-y-2">{children}</div>
+  </div>
+);
+
+const StreakItem = ({ icon, title, value }: { icon: ReactNode; title: string; value: string }) => (
+  <div className="flex items-center justify-between gap-4 p-3 bg-green-500/10 rounded-lg">
+    <div className="flex items-center gap-3">
+      {icon}
+      <p className="text-sm font-medium text-green-900 dark:text-green-200">{title}</p>
+    </div>
+    <Badge className="bg-green-200 text-green-900 hover:bg-green-300 dark:bg-green-800 dark:text-green-100 font-semibold">{value}</Badge>
+  </div>
+);
+
+const ThisWeekItem = ({ icon, title, value }: { icon: ReactNode; title: string; value: string }) => (
+  <div className="flex items-center justify-between py-2 border-b border-border/50">
+    <div className="flex items-center gap-3">
+      {icon}
+      <p className="text-sm text-muted-foreground">{title}</p>
+    </div>
+    <p className="text-sm font-semibold text-foreground">{value}</p>
+  </div>
+);
 
 export function NutritionTrendsCard() {
-  // Sample data - in production this would come from props or API
-  const streaks = [
-    { label: 'Protein Goal Streak', days: 7, icon: '💪' },
-    { label: 'Meal Logging Streak', days: 5, icon: '📝' },
-    { label: 'Water Intake Streak', days: 14, icon: '💧' },
-  ];
-
-  const weeklyStats: TrendData[] = [
-    { label: 'Avg Calories', value: '2,450/day', trend: 'stable', icon: <Flame className="h-4 w-4" /> },
-    { label: 'Avg Protein', value: '175g/day', trend: 'up', icon: <Target className="h-4 w-4" /> },
-    { label: 'Consistency Score', value: '92%', trend: 'up', icon: <Award className="h-4 w-4" /> },
-  ];
-
-  const achievements = [
-    { label: 'Longest Streak', value: '21 days' },
-    { label: 'Best Week', value: 'Week of Oct 20' },
-    { label: 'Days This Month', value: '18/30 goals hit' },
-  ];
-
   return (
-    <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/5 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-semibold flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-primary" />
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="text-primary" />
           Nutrition Trends
         </CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your progress and achievements
-        </p>
+        <CardDescription>
+          Your progress and achievements.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Active Streaks */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Flame className="h-4 w-4 text-orange-500" />
-            Active Streaks
-          </h4>
-          <div className="space-y-2">
-            {streaks.map((streak, idx) => (
-              <div 
-                key={idx}
-                className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{streak.icon}</span>
-                  <span className="text-sm font-medium">{streak.label}</span>
-                </div>
-                <Badge className="bg-primary/20 text-primary border-primary/30">
-                  {streak.days} days
-                </Badge>
-              </div>
-            ))}
+      <CardContent className="space-y-8">
+        <Section title="Active Streaks" icon={<Flame className="h-5 w-5 text-amber-500" />}>
+          {streakData.map((item) => (
+            <StreakItem key={item.title} {...item} />
+          ))}
+        </Section>
+        
+        <Section title="This Week" icon={<Calendar className="h-5 w-5 text-muted-foreground" />}>
+          {thisWeekData.map((item) => (
+            <ThisWeekItem key={item.title} {...item} />
+          ))}
+          <div>
+            <ThisWeekItem icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />} title="Consistency Score" value="92%" />
+            <Progress value={92} className="h-2 mt-2" />
           </div>
-        </div>
+        </Section>
 
-        {/* Weekly Trends */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            This Week
-          </h4>
-          <div className="space-y-3">
-            {weeklyStats.map((stat, idx) => (
-              <div key={idx} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    {stat.icon}
-                    <span className="font-medium">{stat.label}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">{stat.value}</span>
-                    {stat.trend === 'up' && (
-                      <TrendingUp className="h-3 w-3 text-green-500" />
-                    )}
-                  </div>
-                </div>
-                {stat.label === 'Consistency Score' && (
-                  <Progress value={92} className="h-2" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+        <Section title="Achievements" icon={<Trophy className="h-5 w-5 text-yellow-500" />}>
+          {achievementsData.map((item) => (
+            <div key={item.title} className="flex items-center justify-between py-2 border-b border-border/50">
+              <p className="text-sm text-muted-foreground">{item.title}</p>
+              <p className="text-sm font-semibold text-foreground">{item.value}</p>
+            </div>
+          ))}
+        </Section>
 
-        {/* Achievements */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Award className="h-4 w-4 text-yellow-500" />
-            Achievements
-          </h4>
-          <div className="grid grid-cols-1 gap-2">
-            {achievements.map((achievement, idx) => (
-              <div 
-                key={idx}
-                className="flex items-center justify-between p-2 rounded-md bg-secondary/50"
-              >
-                <span className="text-xs text-muted-foreground">{achievement.label}</span>
-                <span className="text-xs font-semibold">{achievement.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Motivational Message */}
-        <div className="p-3 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-          <p className="text-sm text-center">
-            <span className="font-semibold text-primary">Keep it up!</span>
-            <br />
-            <span className="text-muted-foreground text-xs">
-              You&apos;re on track for your best month yet 🎯
-            </span>
-          </p>
+        <div className="p-4 bg-green-500/10 rounded-lg text-center">
+          <p className="font-bold text-green-800 dark:text-green-200">Keep it up!</p>
+          <p className="text-sm text-green-700 dark:text-green-300">You&apos;re on track for your best month yet. 🎉</p>
         </div>
       </CardContent>
     </Card>

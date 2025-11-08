@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Minus, Flame, Droplets, Target, CheckCircle2, Wheat, Beef } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useConfetti } from '@/hooks/use-confetti';
 
 interface NutritionCommandCenterProps {
   caloriesConsumed: number;
@@ -51,6 +53,29 @@ export function NutritionCommandCenter({
       ? 'met'
       : 'under';
 
+  // Track if all goals are met
+  const allGoalsMet =
+    calorieState === 'met' &&
+    proteinConsumed >= proteinGoal &&
+    carbsConsumed >= carbsGoal &&
+    fatsConsumed >= fatsGoal &&
+    waterConsumed >= waterGoal;
+
+  const { celebrate } = useConfetti();
+  const hasTriggeredConfetti = useRef(false);
+
+  // Trigger confetti when all goals are met
+  useEffect(() => {
+    if (allGoalsMet && !hasTriggeredConfetti.current) {
+      hasTriggeredConfetti.current = true;
+      celebrate();
+    }
+    // Reset if goals are no longer met
+    if (!allGoalsMet && hasTriggeredConfetti.current) {
+      hasTriggeredConfetti.current = false;
+    }
+  }, [allGoalsMet, celebrate]);
+
   return (
     <Card className="border-green-200 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 shadow-lg">
       <CardContent className="p-6">
@@ -76,7 +101,7 @@ export function NutritionCommandCenter({
                 </div>
                 <div className="text-right">
                   {calorieState === 'met' ? (
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    <CheckCircle2 className="h-6 w-6 text-green-500 animate-scale-in" />
                   ) : (
                     <div>
                       <p
@@ -123,7 +148,7 @@ export function NutritionCommandCenter({
                 </div>
                 <div className="text-right">
                   {proteinConsumed >= proteinGoal ? (
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    <CheckCircle2 className="h-6 w-6 text-green-500 animate-scale-in" />
                   ) : (
                     <div>
                       <p className="font-bold text-lg text-green-500">
@@ -156,7 +181,7 @@ export function NutritionCommandCenter({
                 </div>
                 <div className="text-right">
                   {carbsConsumed >= carbsGoal ? (
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    <CheckCircle2 className="h-6 w-6 text-green-500 animate-scale-in" />
                   ) : (
                     <div>
                       <p className="font-bold text-lg text-green-500">
@@ -189,7 +214,7 @@ export function NutritionCommandCenter({
                 </div>
                 <div className="text-right">
                   {fatsConsumed >= fatsGoal ? (
-                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    <CheckCircle2 className="h-6 w-6 text-green-500 animate-scale-in" />
                   ) : (
                     <div>
                       <p className="font-bold text-lg text-green-500">
