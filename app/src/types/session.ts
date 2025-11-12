@@ -53,6 +53,8 @@ export interface TrainingSession {
   clientName: string;
   clientEmail: string;
   trainerId: string;
+  locationId: string; // For public: training_locations doc ID, For private: "private"
+  locationType: 'public' | 'private'; // Determines where to lookup address
   packageId: string;
   calendlyEventId: string;
   calendlyEventUri: string;

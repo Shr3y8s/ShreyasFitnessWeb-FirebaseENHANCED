@@ -863,3 +863,10 @@ exports.cleanupPendingAccounts = onSchedule({
     return null;
   }
 });
+
+/**
+ * MIGRATION FUNCTIONS
+ * One-time or administrative functions for data migrations
+ */
+const migrationFunctions = require("./migrate-session-locations");
+exports.migrateSessionLocations = migrationFunctions.migrateSessionLocations;

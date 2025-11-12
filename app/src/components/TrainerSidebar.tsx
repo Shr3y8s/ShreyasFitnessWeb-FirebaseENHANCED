@@ -17,11 +17,12 @@ import {
   LogOut,
   Mail,
   CalendarCheck,
-  Briefcase
+  Briefcase,
+  MapPin
 } from 'lucide-react';
 
 interface TrainerSidebarProps {
-  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments' | 'business' | 'pending-accounts';
+  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments' | 'business' | 'pending-accounts' | 'locations';
 }
 
 interface UserData {
@@ -276,6 +277,17 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
                     {counts.pendingAccounts}
                   </span>
                 )}
+              </button>
+            </Link>
+            
+            <Link href="/dashboard/trainer/business/locations">
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'locations' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              }`}>
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span>Training Locations</span>
               </button>
             </Link>
           </div>

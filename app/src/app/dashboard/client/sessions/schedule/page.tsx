@@ -4,13 +4,14 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
-import { Timestamp, collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { Timestamp, collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { TrainingSession, SessionBalance } from '@/types/session';
+import { TrainingLocation } from '@/types/location';
 
 // Declare Calendly types
 declare global {
@@ -30,6 +31,7 @@ export default function ScheduleSessionsPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [sessionToCancel, setSessionToCancel] = useState<TrainingSession | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
+  const [sessionLocations, setSessionLocations] = useState<Map<string, string>>(new Map());
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [sessionBalance, setSessionBalance] = useState<SessionBalance>({
     available: 0,
@@ -93,11 +95,45 @@ export default function ScheduleSessionsPage() {
       orderBy('scheduledDate', 'asc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const sessions = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as TrainingSession[];
+      
+      // Fetch locations for all sessions
+      const locationMap = new Map<string, string>();
+      
+      for (const session of sessions) {
+        try {
+          if (session.locationType === 'private') {
+            // Fetch client's address
+            const clientDoc = await getDoc(doc(db, 'users', session.clientId));
+            if (clientDoc.exists()) {
+              const clientData = clientDoc.data();
+              if (clientData.address) {
+                locationMap.set(session.id, clientData.address);
+              } else {
+                locationMap.set(session.id, 'Private location (address not set)');
+              }
+            }
+          } else {
+            // Fetch training location
+            const locationDoc = await getDoc(doc(db, 'training_locations', session.locationId));
+            if (locationDoc.exists()) {
+              const locationData = locationDoc.data() as TrainingLocation;
+              locationMap.set(session.id, locationData.address);
+            } else {
+              locationMap.set(session.id, 'Location TBD');
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching location for session ${session.id}:`, error);
+          locationMap.set(session.id, 'Location unavailable');
+        }
+      }
+      
+      setSessionLocations(locationMap);
       setUpcomingSessions(sessions);
       setLoadingSessions(false);
     }, (error) => {
@@ -370,8 +406,14 @@ export default function ScheduleSessionsPage() {
                             </span>
                           </div>
 
-                          <div className="text-sm text-muted-foreground mb-3">
-                            Duration: {session.duration} minutes
+                          <div className="space-y-1 mb-3">
+                            <div className="text-sm text-muted-foreground">
+                              Duration: {session.duration} minutes
+                            </div>
+                            <div className="text-sm text-muted-foreground flex items-start gap-2">
+                              <span className="mt-0.5">📍</span>
+                              <span>{sessionLocations.get(session.id) || 'Loading location...'}</span>
+                            </div>
                           </div>
 
                           {hoursUntil <= 48 && hoursUntil > 24 && (

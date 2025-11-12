@@ -106,6 +106,84 @@ exports.getSessionBalance = onCall({
 });
 
 /**
+ * Resolve Location from Calendly
+ * Determines locationId and locationType based on Calendly location string
+ */
+async function resolveLocation(locationString, userId) {
+  // Normalize location string
+  const location = (locationString || "").trim();
+  
+  console.log(`Resolving location: "${location}" for user ${userId}`);
+  
+  // Only process if location is non-empty
+  if (location) {
+    // Case 1: Private location (client's address)
+    if (location.toLowerCase().includes("address specified in my profile") || 
+        location.toLowerCase().includes("use my address")) {
+      
+      // Check if user has address set in profile
+      const userDoc = await db.collection("users").doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (userData?.address) {
+        console.log(`Using private address for user ${userId}`);
+        return {
+          locationId: "private",
+          locationType: "private"
+        };
+      }
+      // If no address set, will fall through to default location (Case 3)
+      console.warn(`User ${userId} selected private location but no address set, defaulting`);
+      
+    } else {
+      // Case 2: Match against public trainer locations
+      const locationsSnapshot = await db.collection("training_locations")
+        .where("isActive", "==", true)
+        .get();
+      
+      const locationLower = location.toLowerCase();
+      
+      // Try to match location name (bi-directional partial match)
+      for (const locationDoc of locationsSnapshot.docs) {
+        const locationData = locationDoc.data();
+        const nameLower = locationData.name.toLowerCase();
+        const displayNameLower = locationData.displayName.toLowerCase();
+        
+        // Check if location contains name OR name contains location
+        if (locationLower.includes(nameLower) || 
+            nameLower.includes(locationLower) ||
+            locationLower.includes(displayNameLower) ||
+            displayNameLower.includes(locationLower)) {
+          
+          console.log(`Matched location: ${locationData.displayName} (${locationDoc.id})`);
+          return {
+            locationId: locationDoc.id,
+            locationType: "public"
+          };
+        }
+      }
+    }
+  }
+  
+  // Case 3: Default fallback (empty location OR no match found)
+  console.log("Using default location");
+  const defaultLocationSnapshot = await db.collection("training_locations")
+    .where("isDefault", "==", true)
+    .limit(1)
+    .get();
+  
+  if (defaultLocationSnapshot.empty) {
+    throw new Error("No default location configured");
+  }
+  
+  const defaultLocation = defaultLocationSnapshot.docs[0];
+  return {
+    locationId: defaultLocation.id,
+    locationType: "public"
+  };
+}
+
+/**
  * Schedule Session (Calendly Webhook Handler)
  * Deducts session from balance when booking is confirmed
  */
@@ -158,6 +236,12 @@ exports.calendlyWebhook = onRequest({
       const userId = userDoc.id;
       const userData = userDoc.data();
 
+      // Extract location from Calendly event
+      const locationString = scheduledEvent.location || "";
+      
+      // Resolve location (public trainer location or private client address)
+      const locationInfo = await resolveLocation(locationString, userId);
+
       // Schedule the session
       await scheduleSession({
         userId,
@@ -167,6 +251,7 @@ exports.calendlyWebhook = onRequest({
           duration,
           eventUri: scheduledEvent.uri,
         },
+        locationInfo,
         userData,
       });
 
@@ -190,7 +275,7 @@ exports.calendlyWebhook = onRequest({
  * Schedule Session Internal Function
  * Deducts session from oldest unexpired package
  */
-async function scheduleSession({ userId, calendlyEventId, eventDetails, userData }) {
+async function scheduleSession({ userId, calendlyEventId, eventDetails, locationInfo, userData }) {
   const userRef = db.collection("users").doc(userId);
   
   await db.runTransaction(async (transaction) => {
@@ -248,6 +333,8 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, userData
       calendlyEventUri: eventDetails.eventUri,
       scheduledDate: eventDetails.scheduledDate,
       duration: eventDetails.duration,
+      locationId: locationInfo.locationId, // "private" or training_locations doc ID
+      locationType: locationInfo.locationType, // "public" or "private"
       status: "scheduled",
       creditReturned: false,
       createdAt: admin.firestore.Timestamp.now(),
@@ -263,7 +350,7 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, userData
       sessionBalance: updatedBalance,
     });
 
-    console.log(`Session scheduled for user ${userId}, deducted from package ${packageToUse.id}`);
+    console.log(`Session scheduled for user ${userId}, location: ${locationInfo.locationType}, deducted from package ${packageToUse.id}`);
   });
 }
 

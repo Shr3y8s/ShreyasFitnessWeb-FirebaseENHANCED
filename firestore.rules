@@ -318,6 +318,30 @@ service cloud.firestore {
     
     // IN-PERSON TRAINING SESSION MANAGEMENT SYSTEM
     
+    // Training Locations Collection
+    match /training_locations/{locationId} {
+      // Trainers/admins can read and manage all locations
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read active locations (for viewing session details)
+      allow read: if isAuthenticated() && resource.data.isActive == true;
+      
+      // Location validation
+      function validateLocation() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['name', 'displayName', 'address', 'isDefault', 'isActive', 'createdAt']) &&
+               data.name is string && data.name.size() > 0 &&
+               data.displayName is string && data.displayName.size() > 0 &&
+               data.address is string && data.address.size() > 0 &&
+               data.isDefault is bool &&
+               data.isActive is bool;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isTrainerOrAdmin() && validateLocation();
+      allow update: if isTrainerOrAdmin() && validateLocation();
+    }
+    
     // Training Sessions Collection
     match /sessions/{sessionId} {
       // Trainers can read and manage all sessions
