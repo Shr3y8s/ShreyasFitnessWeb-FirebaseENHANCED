@@ -21,7 +21,7 @@ import { AccountSummary } from '@/components/dashboard/account-summary';
 import { CoachNotes } from '@/components/dashboard/coach-notes';
 import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { TodoList } from '@/components/dashboard/todo-list';
-import { CurrentGoals } from '@/components/dashboard/current-goals';
+import { PrimaryObjectives } from '@/components/dashboard/primary-objectives';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 
 // Mock data for sessions
@@ -171,7 +171,7 @@ export default function ClientDashboardPage() {
                     />
                   </InteractiveCard>
                   <InteractiveCard>
-                    <CurrentGoals />
+                    <PrimaryObjectives />
                   </InteractiveCard>
                 </div>
               )}

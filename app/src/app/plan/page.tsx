@@ -8,6 +8,8 @@ import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { signOutUser } from '@/lib/firebase';
 import { ClipboardList } from 'lucide-react';
 import { PlanSummary } from '@/components/plan/plan-summary';
+import { YourVision } from '@/components/plan/your-vision';
+import { CurrentFocus } from '@/components/plan/current-focus';
 import { TrainingProtocol } from '@/components/plan/training-protocol';
 import { NutritionProtocol } from '@/components/plan/nutrition-protocol';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
@@ -110,36 +112,39 @@ export default function MyPlanPage() {
               </div>
             </div>
 
-            {/* 3-Column Grid Layout */}
+            {/* 2-Column Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* This Week's Focus - Full Width */}
-              <div className="lg:col-span-3">
+              {/* Left Column: Plan Summary, Training & Nutrition (2/3 width) */}
+              <div className="lg:col-span-2 space-y-6">
                 <PlanSummary
                   coachNote={{
                     coachName: "Shreyas",
                     message: "Weight down 2.5lbs this week, feeling good overall. Energy slightly low on leg days - added 100 calories and will watch for improvements. Keep pushing on upper body lifts, form is looking solid!"
                   }}
                 />
+                
+                {/* Training Protocol Card */}
+                <TrainingProtocol />
+
+                {/* Nutrition Protocol Card */}
+                <NutritionProtocol />
               </div>
 
-            {/* Left Column: Training & Nutrition (2/3 width) */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Training Protocol Card */}
-              <TrainingProtocol />
+              {/* Right Column: Vision, Focus, Step Goal & Cardio (1/3 width) */}
+              <div className="space-y-6 lg:col-span-1">
+                {/* Your Vision Card */}
+                <YourVision />
 
-              {/* Nutrition Protocol Card */}
-              <NutritionProtocol />
+                {/* Current Focus Card */}
+                <CurrentFocus />
+
+                {/* Step Goal Card */}
+                <StepGoalCard />
+
+                {/* Cardio Protocol Card */}
+                <CardioProtocol />
+              </div>
             </div>
-
-            {/* Right Column: Step Goal & Cardio (1/3 width) */}
-            <div className="space-y-6 lg:col-span-1">
-              {/* Step Goal Card */}
-              <StepGoalCard />
-
-              {/* Cardio Protocol Card */}
-              <CardioProtocol />
-            </div>
-          </div>
 
           </div>
         </div>

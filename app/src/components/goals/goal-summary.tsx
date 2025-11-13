@@ -1,45 +1,54 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Goal, Route, FlagTriangleRight, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Goal, Route, FlagTriangleRight, Check, PlusCircle } from 'lucide-react';
+import { AchievementLevelBanner } from './achievement-level-banner';
+
+interface Milestone {
+  text: string;
+  completed: boolean;
+}
 
 interface GoalData {
   id: string;
   status: string;
   term: string;
+  milestones?: Milestone[];
 }
 
 interface GoalSummaryProps {
   goals: GoalData[];
+  onAddGoal?: () => void;
 }
 
-export function GoalSummary({ goals }: GoalSummaryProps) {
-  const totalGoals = goals.length;
+export function GoalSummary({ goals, onAddGoal }: GoalSummaryProps) {
   const completedGoals = goals.filter(g => g.status === 'completed').length;
-  const completionRate = totalGoals > 0 ? (completedGoals / totalGoals) * 100 : 0;
-  
   const shortTermGoals = goals.filter(g => g.term === 'short-term' && g.status !== 'completed').length;
   const longTermGoals = goals.filter(g => g.term === 'long-term' && g.status !== 'completed').length;
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card 
+      className="border-primary/50" 
+      style={{ boxShadow: '0 0 15px oklch(65% 0.16 151 / 0.25), 0 4px 20px oklch(65% 0.16 151 / 0.4)' }}
+    >
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="flex items-center gap-2 text-xl">
           <Goal className="text-primary" />
           Goals Overview
         </CardTitle>
+        {onAddGoal && (
+          <Button onClick={onAddGoal} size="sm">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add New Goal
+          </Button>
+        )}
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <div className="flex justify-between items-baseline">
-            <p className="text-sm font-medium text-muted-foreground">Overall Progress</p>
-            <p className="text-sm font-bold text-primary">{completedGoals} / {totalGoals} Completed</p>
-          </div>
-          <Progress value={completionRate} />
-        </div>
-        <div className="flex justify-around">
-          <div className="grid grid-cols-3 gap-6 text-center">
+      <CardContent className="space-y-6 px-8">
+        <div className="flex justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-fit justify-items-center">
+          {/* Left side - Stats */}
+          <div className="grid grid-cols-3 gap-4 text-center">
             <div className="p-4 bg-primary/10 rounded-lg transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
               <FlagTriangleRight className="h-6 w-6 mx-auto mb-1 text-primary" />
               <p className="text-2xl font-bold">{shortTermGoals}</p>
@@ -55,6 +64,12 @@ export function GoalSummary({ goals }: GoalSummaryProps) {
               <p className="text-2xl font-bold">{completedGoals}</p>
               <p className="text-xs text-muted-foreground">Completed</p>
             </div>
+          </div>
+          
+          {/* Right side - Achievement Banner */}
+          <div className="flex items-center">
+            <AchievementLevelBanner goals={goals} />
+          </div>
           </div>
         </div>
       </CardContent>

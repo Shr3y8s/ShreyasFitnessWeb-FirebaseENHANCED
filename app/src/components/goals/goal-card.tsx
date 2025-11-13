@@ -144,6 +144,15 @@ export function GoalCard({ goal }: GoalCardProps) {
               <TermIcon className="h-3 w-3 mr-1" />
               {goal.term}
             </Badge>
+            {goal.isCompleted && (
+              <Badge
+                variant="outline"
+                className="bg-green-500/10 text-green-700 dark:bg-green-900/50 dark:text-green-300 border-green-500/50 capitalize"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Completed
+              </Badge>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -193,30 +202,33 @@ export function GoalCard({ goal }: GoalCardProps) {
         </div>
         {goal.milestones && goal.milestones.length > 0 && !goal.isCompleted && (
           <div className="pt-2">
-            <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
-              <Zap className="h-4 w-4" /> Milestones
-            </h4>
-            <ul className="space-y-2">
-              {goal.milestones.map((milestone, index) => (
-                <li key={index} className="flex items-center gap-2 text-sm">
-                  <div className={cn(
-                    "h-5 w-5 rounded-full flex items-center justify-center border-2",
-                    milestone.completed
-                      ? "bg-primary border-primary"
-                      : "border-muted-foreground/50"
-                  )}>
-                    {milestone.completed && <Check className="h-3 w-3 text-primary-foreground" />}
-                  </div>
-                  <span className={cn(
-                    milestone.completed
-                      ? "text-muted-foreground line-through"
-                      : "text-foreground"
-                  )}>
-                    {milestone.text}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+              <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+                <Zap className="h-4 w-4" /> 
+                Milestones
+              </h4>
+              <ul className="space-y-2">
+                {goal.milestones.map((milestone, index) => (
+                  <li key={index} className="flex items-center gap-2 text-sm">
+                    <div className={cn(
+                      "h-5 w-5 rounded-full flex items-center justify-center border-2",
+                      milestone.completed
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/50"
+                    )}>
+                      {milestone.completed && <Check className="h-3 w-3 text-primary-foreground" />}
+                    </div>
+                    <span className={cn(
+                      milestone.completed
+                        ? "text-muted-foreground line-through"
+                        : "text-foreground"
+                    )}>
+                      {milestone.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </CardContent>

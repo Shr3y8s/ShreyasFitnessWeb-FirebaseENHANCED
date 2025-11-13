@@ -1,12 +1,13 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Flame, Star, Award, Target, Zap } from 'lucide-react';
+import { Trophy, Flame, Star, Dumbbell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { LucideIcon } from 'lucide-react';
 
 interface Achievement {
   id: string;
-  icon: string;
+  icon: LucideIcon;
   title: string;
   description: string;
   earnedDate: string;
@@ -16,7 +17,7 @@ interface Achievement {
 const achievements: Achievement[] = [
   {
     id: '1',
-    icon: '🏆',
+    icon: Trophy,
     title: 'First Goal Completed',
     description: 'Completed your very first goal',
     earnedDate: '2024-01-15',
@@ -24,7 +25,7 @@ const achievements: Achievement[] = [
   },
   {
     id: '2',
-    icon: '🔥',
+    icon: Flame,
     title: '7-Day Streak',
     description: 'Maintained progress for 7 days straight',
     earnedDate: '2024-03-20',
@@ -32,7 +33,7 @@ const achievements: Achievement[] = [
   },
   {
     id: '3',
-    icon: '⭐',
+    icon: Star,
     title: '5 Goals Mastery',
     description: 'Successfully completed 5 goals',
     earnedDate: '2024-05-12',
@@ -40,7 +41,7 @@ const achievements: Achievement[] = [
   },
   {
     id: '4',
-    icon: '💪',
+    icon: Dumbbell,
     title: 'Consistency Champion',
     description: 'Hit milestones on time for 3 months',
     earnedDate: '2024-08-15',
@@ -65,15 +66,16 @@ export function Achievements() {
   return (
     <Card className="transition-all duration-300 hover:shadow-lg">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-xl">
           <Trophy className="h-5 w-5 text-primary" />
           Achievements
         </CardTitle>
         <CardDescription>
-          Your earned badges and milestones
+          Your earned badges and trophies
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Recent Achievements */}
         <div className="space-y-3">
           {achievements.map((achievement) => (
             <div
@@ -81,7 +83,7 @@ export function Achievements() {
               className={`p-3 border rounded-lg transition-all hover:shadow-md ${getRarityStyle(achievement.rarity)}`}
             >
               <div className="flex items-start gap-3">
-                <div className="text-2xl flex-shrink-0">{achievement.icon}</div>
+                <achievement.icon className="h-8 w-8 flex-shrink-0 text-primary" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <h4 className="font-semibold text-sm">{achievement.title}</h4>
@@ -106,18 +108,6 @@ export function Achievements() {
               </div>
             </div>
           ))}
-        </div>
-        
-        {/* Stats footer */}
-        <div className="mt-6 pt-4 border-t space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Total Achievements</span>
-            <span className="font-bold text-primary">{achievements.length}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Completion Rate</span>
-            <span className="font-bold text-green-600">80%</span>
-          </div>
         </div>
       </CardContent>
     </Card>

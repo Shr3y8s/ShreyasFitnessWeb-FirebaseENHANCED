@@ -6,14 +6,14 @@ import { useAuth } from '@/lib/auth-context';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { signOutUser } from '@/lib/firebase';
-import { Button } from '@/components/ui/button';
-import { PlusCircle, Target } from 'lucide-react';
+import { Target } from 'lucide-react';
 import { GoalList } from '@/components/goals/goal-list';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GoalSummary } from '@/components/goals/goal-summary';
 import { Achievements } from '@/components/goals/achievements';
-import { CurrentGoals } from '@/components/dashboard/current-goals';
+import { PrimaryObjectives } from '@/components/dashboard/primary-objectives';
 import { CompletedGoalList } from '@/components/goals/completed-goal-list';
+import { YourVision } from '@/components/plan/your-vision';
 
 // Mock data for goals matching the sample structure
 const initialGoals = [
@@ -149,9 +149,9 @@ const priorityOrder: { [key: string]: number } = { 'High': 1, 'Medium': 2, 'Low'
 
 export default function GoalsPage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading } = useAuth();
+  const { userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [goals, setGoals] = useState(initialGoals);
+  const [goals] = useState(initialGoals);
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -185,6 +185,11 @@ export default function GoalsPage() {
     }
   };
 
+  const handleAddGoal = () => {
+    // TODO: Implement add goal dialog/modal
+    console.log('Add new goal clicked');
+  };
+
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -213,27 +218,21 @@ export default function GoalsPage() {
           <div className="max-w-7xl mx-auto space-y-6">
             
             {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-2">
-                  <Target className="h-8 w-8 text-primary" />
-                  Goals Dashboard
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Track your objectives and celebrate your achievements.
-                </p>
-              </div>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Goal
-              </Button>
+            <div className="mb-6">
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-2">
+                <Target className="h-8 w-8 text-primary" />
+                Goals Dashboard
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Track your objectives and celebrate your achievements.
+              </p>
             </div>
             
             {/* Two-column layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               {/* Left side - 2/3 width */}
               <div className="lg:col-span-2 space-y-6">
-                <GoalSummary goals={goals} />
+                <GoalSummary goals={goals} onAddGoal={handleAddGoal} />
                 <Tabs defaultValue="short-term">
                   <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
                     <TabsTrigger value="short-term">Short-Term</TabsTrigger>
@@ -254,7 +253,8 @@ export default function GoalsPage() {
               
               {/* Right side - 1/3 width */}
               <div className="lg:col-span-1 space-y-6">
-                <CurrentGoals />
+                <YourVision />
+                <PrimaryObjectives />
                 <Achievements />
               </div>
             </div>
