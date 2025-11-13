@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
+import { TrainingSession } from '@/types/session';
+import { TrainingLocation } from '@/types/location';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
 import { WelcomeScreen } from '@/components/dashboard/welcome-screen';
@@ -24,7 +26,7 @@ import { TodoList } from '@/components/dashboard/todo-list';
 import { PrimaryObjectives } from '@/components/dashboard/primary-objectives';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 
-// Mock data for sessions
+// Mock data for calendar (will be replaced with real data in future)
 const upcomingSessions = [
   { id: 1, type: 'Full Body Strength', date: '2024-08-15', time: '09:00 AM' },
   { id: 2, type: 'Cardio & Core', date: '2024-08-17', time: '10:00 AM' },
@@ -37,19 +39,15 @@ const completedSessions = [
   { id: 3, type: 'Push Day Workout', date: '2024-08-08', duration: '55 min' },
 ];
 
-const nextWorkout = {
-  type: 'In-Person Strength Training',
-  date: 'Tomorrow, August 15th',
-  time: '9:00 AM',
-  location: 'City Gym, 123 Fitness St.',
-};
-
 export default function ClientDashboardPage() {
   const router = useRouter();
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [nextSession, setNextSession] = useState<TrainingSession | null>(null);
+  const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
+  const [loadingNextSession, setLoadingNextSession] = useState(true);
 
   useEffect(() => {
     if (authLoading) {
@@ -89,6 +87,83 @@ export default function ClientDashboardPage() {
     setLoading(false);
   }, [userDataFromAuth, authLoading, router]);
 
+  // Fetch next upcoming session
+  useEffect(() => {
+    if (!user) {
+      setLoadingNextSession(false);
+      return;
+    }
+
+    const sessionsRef = collection(db, 'sessions');
+    const q = query(
+      sessionsRef,
+      where('clientId', '==', user.uid),
+      where('status', '==', 'scheduled'),
+      where('scheduledDate', '>=', Timestamp.now()),
+      orderBy('scheduledDate', 'asc'),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      if (snapshot.empty) {
+        setNextSession(null);
+        setNextSessionLocation('');
+        setLoadingNextSession(false);
+        return;
+      }
+
+      const session = {
+        id: snapshot.docs[0].id,
+        ...snapshot.docs[0].data()
+      } as TrainingSession;
+
+      setNextSession(session);
+
+      // Fetch location based on locationType
+      try {
+        if (session.locationType === 'private') {
+          const clientDoc = await getDoc(doc(db, 'users', session.clientId));
+          if (clientDoc.exists()) {
+            const clientData = clientDoc.data();
+            if (clientData.address) {
+              // Handle address object - convert to string
+              if (typeof clientData.address === 'string') {
+                setNextSessionLocation(clientData.address);
+              } else {
+                // Address is an object {street, city, state, zipCode, country}
+                const addr = clientData.address;
+                const formattedAddress = [addr.street, addr.city, addr.state, addr.zipCode]
+                  .filter(Boolean)
+                  .join(', ');
+                setNextSessionLocation(formattedAddress || 'Private location');
+              }
+            } else {
+              setNextSessionLocation('Private location (address not set)');
+            }
+          }
+        } else {
+          const locationDoc = await getDoc(doc(db, 'training_locations', session.locationId));
+          if (locationDoc.exists()) {
+            const locationData = locationDoc.data() as TrainingLocation;
+            setNextSessionLocation(locationData.address);
+          } else {
+            setNextSessionLocation('Location TBD');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching session location:', error);
+        setNextSessionLocation('Location unavailable');
+      }
+
+      setLoadingNextSession(false);
+    }, (error) => {
+      console.error('Error fetching next session:', error);
+      setLoadingNextSession(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   const handleLogout = async () => {
     try {
       const result = await signOutUser();
@@ -116,6 +191,41 @@ export default function ClientDashboardPage() {
   const handleAddWater = () => {
     console.log('Add Water clicked');
     alert('Water tracking feature coming soon!');
+  };
+
+  const formatSessionDateTime = (timestamp: Timestamp) => {
+    const date = new Date(timestamp.toMillis());
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Get timezone abbreviation
+    const tzAbbr = new Date().toLocaleTimeString('en-US', { 
+      timeZoneName: 'short' 
+    }).split(' ').pop();
+
+    // Format date
+    let dateStr;
+    if (date.toDateString() === today.toDateString()) {
+      dateStr = 'Today';
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      dateStr = 'Tomorrow';
+    } else {
+      dateStr = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+
+    // Format time
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    return `${dateStr} at ${timeStr} ${tzAbbr}`;
   };
 
   if (loading) {
@@ -154,7 +264,33 @@ export default function ClientDashboardPage() {
               style={{ perspective: '1000px' }}
             >
               <InteractiveCard>
-                <UpcomingWorkoutReminder workout={nextWorkout} />
+                {loadingNextSession ? (
+                  <div className="text-center py-12">
+                    <div className="text-4xl mb-3">⏳</div>
+                    <p className="text-muted-foreground">Loading session...</p>
+                  </div>
+                ) : nextSession ? (
+                  <UpcomingWorkoutReminder 
+                    workout={{
+                      type: '',
+                      date: formatSessionDateTime(nextSession.scheduledDate),
+                      time: '',
+                      location: nextSessionLocation
+                    }} 
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-4xl mb-3">📅</div>
+                    <h3 className="text-lg font-semibold mb-2">No Upcoming Sessions</h3>
+                    <p className="text-muted-foreground mb-4">Schedule your next training session</p>
+                    <a 
+                      href="/dashboard/client/sessions/schedule"
+                      className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                      Book Session
+                    </a>
+                  </div>
+                )}
               </InteractiveCard>
               {showOnboarding ? (
                 <InteractiveCard>

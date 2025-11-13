@@ -12,6 +12,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { TrainingSession, SessionBalance } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
+import { Calendar, MapPin } from 'lucide-react';
 
 // Declare Calendly types
 declare global {
@@ -112,7 +113,17 @@ export default function ScheduleSessionsPage() {
             if (clientDoc.exists()) {
               const clientData = clientDoc.data();
               if (clientData.address) {
-                locationMap.set(session.id, clientData.address);
+                // Handle address object - convert to string
+                if (typeof clientData.address === 'string') {
+                  locationMap.set(session.id, clientData.address);
+                } else {
+                  // Address is an object {street, city, state, zipCode, country}
+                  const addr = clientData.address;
+                  const formattedAddress = [addr.street, addr.city, addr.state, addr.zipCode]
+                    .filter(Boolean)
+                    .join(', ');
+                  locationMap.set(session.id, formattedAddress || 'Private location');
+                }
               } else {
                 locationMap.set(session.id, 'Private location (address not set)');
               }
@@ -226,20 +237,45 @@ export default function ScheduleSessionsPage() {
   };
 
   const formatDate = (timestamp: Timestamp) => {
-    return new Date(timestamp.toMillis()).toLocaleDateString('en-US', {
+    const date = new Date(timestamp.toMillis());
+    
+    // Get timezone abbreviation
+    const tzAbbr = new Date().toLocaleTimeString('en-US', { 
+      timeZoneName: 'short' 
+    }).split(' ').pop();
+    
+    const dateStr = date.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
       year: 'numeric'
     });
+    
+    return `${dateStr} (${tzAbbr})`;
   };
 
-  const formatTime = (timestamp: Timestamp) => {
-    return new Date(timestamp.toMillis()).toLocaleTimeString('en-US', {
+  const formatTimeRange = (timestamp: Timestamp, duration: number) => {
+    const startDate = new Date(timestamp.toMillis());
+    const endDate = new Date(startDate.getTime() + duration * 60000); // duration is in minutes
+    
+    // Get timezone abbreviation
+    const tzAbbr = new Date().toLocaleTimeString('en-US', { 
+      timeZoneName: 'short' 
+    }).split(' ').pop();
+    
+    const startTime = startDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
+    
+    const endTime = endDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    return `${startTime} - ${endTime} ${tzAbbr}`;
   };
 
   const getHoursUntilSession = (timestamp: Timestamp) => {
@@ -392,26 +428,22 @@ export default function ScheduleSessionsPage() {
                           key={session.id}
                           className="border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
                         >
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <div className="font-semibold text-foreground">
-                                {formatDate(session.scheduledDate)}
-                              </div>
-                              <div className="text-primary font-medium">
-                                {formatTime(session.scheduledDate)}
-                              </div>
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="font-semibold text-foreground">
+                              {formatDate(session.scheduledDate)}
                             </div>
                             <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                               Confirmed
                             </span>
                           </div>
 
-                          <div className="space-y-1 mb-3">
-                            <div className="text-sm text-muted-foreground">
-                              Duration: {session.duration} minutes
+                          <div className="space-y-2 mb-3">
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{formatTimeRange(session.scheduledDate, session.duration)}</span>
                             </div>
-                            <div className="text-sm text-muted-foreground flex items-start gap-2">
-                              <span className="mt-0.5">📍</span>
+                            <div className="text-sm text-muted-foreground flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
                               <span>{sessionLocations.get(session.id) || 'Loading location...'}</span>
                             </div>
                           </div>
@@ -481,7 +513,7 @@ export default function ScheduleSessionsPage() {
                       {formatDate(sessionToCancel.scheduledDate)}
                     </div>
                     <div className="text-primary font-medium">
-                      {formatTime(sessionToCancel.scheduledDate)}
+                      {formatTimeRange(sessionToCancel.scheduledDate, sessionToCancel.duration)}
                     </div>
                   </div>
 

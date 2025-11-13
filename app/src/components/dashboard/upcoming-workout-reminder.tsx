@@ -34,7 +34,9 @@ export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProp
           <p className="font-bold text-lg">{workout.type}</p>
           <div className="flex items-center gap-3 text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <span>{workout.date} at {workout.time}</span>
+            <span>
+              {workout.time ? `${workout.date} at ${workout.time}` : workout.date}
+            </span>
           </div>
           <div className="flex items-center gap-3 text-muted-foreground">
             <MapPin className="h-4 w-4" />
