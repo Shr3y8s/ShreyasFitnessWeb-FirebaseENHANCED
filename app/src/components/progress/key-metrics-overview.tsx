@@ -6,7 +6,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { TrendingUp, Scale, ArrowDown, Flame, Info, ArrowUp, Footprints, Pencil, Smartphone, Target, Dumbbell } from 'lucide-react';
 import {
@@ -33,7 +32,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Progress } from '../ui/progress';
 
 interface Metric {
     id: string;
@@ -55,7 +53,7 @@ interface Metric {
 const initialMetrics: Metric[] = [
     {
         id: 'weight',
-        icon: <Scale className="h-6 w-6 text-primary" />,
+        icon: <Scale className="h-4 w-4 text-primary" />,
         label: 'Weight Journey',
         startWeight: "215.0 lbs",
         value: '202.0',
@@ -69,7 +67,7 @@ const initialMetrics: Metric[] = [
     },
     {
         id: 'workout-streak',
-        icon: <Flame className="h-6 w-6 text-primary animate-flicker" />,
+        icon: <Flame className="h-4 w-4 text-primary animate-flicker" />,
         label: 'Workout Streak',
         value: '5',
         unit: 'days',
@@ -79,7 +77,7 @@ const initialMetrics: Metric[] = [
     },
     {
         id: 'strength-gain',
-        icon: <Dumbbell className="h-6 w-6 text-primary" />,
+        icon: <Dumbbell className="h-4 w-4 text-primary" />,
         label: 'Strength Gain',
         value: '+8',
         unit: '%',
@@ -89,7 +87,7 @@ const initialMetrics: Metric[] = [
     },
     {
         id: 'steps',
-        icon: <Footprints className="h-6 w-6 text-primary" />,
+        icon: <Footprints className="h-4 w-4 text-primary" />,
         label: 'Steps',
         value: '9500',
         unit: 'steps',
@@ -108,33 +106,24 @@ const HabitConsistencyCard = ({ index }: { index?: number }) => {
     return (
         <TooltipProvider>
             <Card className={cn(
-                "group flex flex-col card-hover-lift border-primary/20 cursor-pointer gradient-accent-gold col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden",
+                "group p-2 card-hover-lift border-primary/20 cursor-pointer gradient-accent-green col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden text-center",
                 "animate-fade-in-up",
                 index !== undefined && `stagger-${Math.min(index + 1, 6)}`
             )}>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Target className="h-6 w-6 text-primary" />
-                            Habit Score
-                        </div>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 text-muted-foreground/50" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p className="max-w-xs">Your adherence to core habits. Aim for 80% or more!</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col flex-1 justify-center">
-                    <div className="flex items-baseline gap-2">
-                        <p className="text-3xl font-bold number-emphasis animate-count-up">{consistencyScore}%</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Last 7 days</p>
-                    <Progress value={consistencyScore} className="mt-2 h-2 progress-bar-animated" />
-                </CardContent>
+                <div className="flex items-center justify-between mb-0.5">
+                    <Target className="h-4 w-4 text-primary" />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground/50" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="max-w-xs">Your adherence to core habits. Aim for 80% or more!</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+                <p className="text-xs font-medium text-primary mb-0.5">Habit Score</p>
+                <p className="text-2xl font-bold number-emphasis animate-count-up">{consistencyScore}%</p>
+                <p className="text-xs text-primary">Last 7 days</p>
             </Card>
         </TooltipProvider>
     )
@@ -152,48 +141,39 @@ const MetricCard = ({ metric, onEdit, className, index }: { metric: Metric, onEd
         <Tooltip>
             <TooltipTrigger asChild>
                 <Card className={cn(
-                    "group flex flex-col card-hover-lift border-primary/20 cursor-pointer overflow-hidden",
-                    isWeightCard && "gradient-accent-green",
-                    isStrengthCard && "gradient-accent-blue",
-                    !isWeightCard && !isStrengthCard && "bg-primary/5",
+                    "group p-2 card-hover-lift border-primary/20 cursor-pointer overflow-hidden text-center gradient-accent-green",
                     "animate-fade-in-up",
                     index !== undefined && `stagger-${Math.min(index + 1, 6)}`,
                     className
                 )}>
-                    <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <span className="icon-hover-bounce">{metric.icon}</span>
-                                {metric.label}
-                            </CardTitle>
-                             <div className="flex items-center gap-2">
-                                {metric.editable && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onEdit(metric); }}>
-                                        <Pencil className="h-3 w-3" />
-                                    </Button>
-                                )}
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Info className="h-4 w-4 text-muted-foreground/50" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="max-w-xs">{metric.tooltip}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </div>
+                    <div className="flex items-center justify-between mb-0.5">
+                        <span className="icon-hover-bounce">{metric.icon}</span>
+                        <div className="flex items-center gap-1">
+                            {metric.editable && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onEdit(metric); }}>
+                                    <Pencil className="h-3 w-3" />
+                                </Button>
+                            )}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="h-4 w-4 text-muted-foreground/50" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="max-w-xs">{metric.tooltip}</p>
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        {isWeightCard ? (
-                             <div className="flex items-center justify-center gap-4">
-                                <div>
-                                    <div className="flex items-baseline justify-center gap-1">
-                                        <p className="text-lg font-semibold text-muted-foreground line-through">{metric.startWeight}</p>
-                                        <ArrowDown className="h-4 w-4 text-muted-foreground" />
-                                        <p className="text-3xl font-bold">{metric.value}</p>
-                                        <span className="text-muted-foreground text-sm self-end">lbs</span>
-                                    </div>
-                                    <div className="mt-2 flex items-center justify-center gap-2">
+                    </div>
+                    <p className="text-xs font-medium text-primary mb-0.5">{metric.label}</p>
+                    {isWeightCard ? (
+                        <>
+                            <div className="flex items-baseline justify-center gap-1">
+                                <p className="text-xs font-semibold text-muted-foreground line-through">{metric.startWeight}</p>
+                                <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                <p className="text-2xl font-bold">{metric.value}</p>
+                                <span className="text-muted-foreground text-xs">lbs</span>
+                            </div>
+                            <div className="mt-0.5 flex items-center justify-center gap-1">
                                         <Badge
                                             className={cn(
                                                 "text-xs font-semibold gap-1",
@@ -213,50 +193,39 @@ const MetricCard = ({ metric, onEdit, className, index }: { metric: Metric, onEd
                                             <ArrowDown className="h-3 w-3" />
                                             {metric.bf_change}
                                         </Badge>
-                                        )}
-                                    </div>
-                                </div>
-                             </div>
-                        ) : isStrengthCard ? (
-                            <div className="flex items-baseline gap-2">
-                                <p className="text-3xl font-bold">{metric.value}{metric.unit}</p>
-                            </div>
-                        ) : isStepsCard ? (
-                            <>
-                                <div className="flex items-baseline gap-2">
-                                    <p className="text-3xl font-bold">{parseInt(metric.value).toLocaleString()}</p>
-                                    {metric.change && (
-                                        <Badge
-                                            className={cn(
-                                                "text-xs font-semibold gap-1 self-center",
-                                                metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
-                                            )}
-                                        >
-                                            <TrendIcon className="h-3 w-3" />
-                                            {metric.change}
-                                        </Badge>
                                     )}
-                                </div>
-                                <p className="text-xs text-muted-foreground">Avg: {parseInt(metric.avg || '0').toLocaleString()}</p>
-                            </>
-                        ) : (
-                            <div className="flex items-baseline gap-2">
-                                <p className="text-3xl font-bold">{metric.value.toLocaleString()}</p>
-                                {metric.change && (
+                            </div>
+                            <p className="text-xs text-primary mt-0.5">{metric.subtext}</p>
+                        </>
+                    ) : isStrengthCard ? (
+                        <>
+                            <p className="text-2xl font-bold">{metric.value}{metric.unit}</p>
+                            <p className="text-xs text-primary">{metric.subtext}</p>
+                        </>
+                    ) : isStepsCard ? (
+                        <>
+                            <p className="text-2xl font-bold">{parseInt(metric.value).toLocaleString()}</p>
+                            {metric.change && (
+                                <div className="flex justify-center mt-0.5">
                                     <Badge
                                         className={cn(
-                                            "text-xs font-semibold gap-1 self-center",
-                                            metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-800'
+                                            "text-xs font-semibold gap-1",
+                                            metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
                                         )}
                                     >
                                         <TrendIcon className="h-3 w-3" />
                                         {metric.change}
                                     </Badge>
-                                )}
-                            </div>
-                        )}
-                         {!isStepsCard && <p className="text-xs text-muted-foreground">{metric.subtext}</p>}
-                    </CardContent>
+                                </div>
+                            )}
+                            <p className="text-xs text-primary">Avg: {parseInt(metric.avg || '0').toLocaleString()}</p>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-2xl font-bold">{metric.value.toLocaleString()}</p>
+                            <p className="text-xs text-primary">{metric.subtext}</p>
+                        </>
+                    )}
                 </Card>
             </TooltipTrigger>
             <TooltipContent>
@@ -330,15 +299,15 @@ export function KeyMetricsOverview() {
                         </TooltipProvider>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                     <Alert>
+                <CardContent className="space-y-2">
+                     <Alert className="py-2">
                         <Info className="h-4 w-4" />
                         <AlertTitle>Manual Updates Required (For Now!)</AlertTitle>
                         <AlertDescription>
                             The wearable sync feature is coming soon! Until then, please manually update your metrics by clicking the <Pencil className="inline-block h-3 w-3" /> icon on a card. We recommend updating your <b>weight</b> and optional <b>body fat %</b> after each weigh-in, and your <b>steps/streak</b> daily.
                         </AlertDescription>
                     </Alert>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
                         {metrics.map((metric, index) => (
                             <MetricCard key={metric.id} metric={metric} onEdit={handleEdit} className="lg:col-span-1" index={index}/>
                         ))}

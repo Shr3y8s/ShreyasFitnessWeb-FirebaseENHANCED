@@ -139,17 +139,15 @@ export default function ProgressPage() {
               </TabsList>
 
               <TabsContent value="overview">
-                <div className="space-y-6">
-                  <KeyMetricsOverview />
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                    <div className="lg:col-span-2 space-y-6">
-                      <ProgressCharts />
-                      <StrengthTrends />
-                    </div>
-                    <div className="lg:col-span-1 space-y-6">
-                      <HabitTracker />
-                      <Achievements />
-                    </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                  <div className="lg:col-span-2 space-y-6">
+                    <KeyMetricsOverview />
+                    <ProgressCharts />
+                    <StrengthTrends />
+                  </div>
+                  <div className="lg:col-span-1 space-y-6">
+                    <HabitTracker />
+                    <Achievements />
                   </div>
                 </div>
               </TabsContent>
