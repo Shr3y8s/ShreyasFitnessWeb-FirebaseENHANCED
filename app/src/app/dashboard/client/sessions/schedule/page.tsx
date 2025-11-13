@@ -113,7 +113,17 @@ export default function ScheduleSessionsPage() {
             if (clientDoc.exists()) {
               const clientData = clientDoc.data();
               if (clientData.address) {
-                locationMap.set(session.id, clientData.address);
+                // Handle address object - convert to string
+                if (typeof clientData.address === 'string') {
+                  locationMap.set(session.id, clientData.address);
+                } else {
+                  // Address is an object {street, city, state, zipCode, country}
+                  const addr = clientData.address;
+                  const formattedAddress = [addr.street, addr.city, addr.state, addr.zipCode]
+                    .filter(Boolean)
+                    .join(', ');
+                  locationMap.set(session.id, formattedAddress || 'Private location');
+                }
               } else {
                 locationMap.set(session.id, 'Private location (address not set)');
               }

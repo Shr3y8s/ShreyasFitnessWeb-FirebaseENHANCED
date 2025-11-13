@@ -125,7 +125,21 @@ export default function ClientDashboardPage() {
           const clientDoc = await getDoc(doc(db, 'users', session.clientId));
           if (clientDoc.exists()) {
             const clientData = clientDoc.data();
-            setNextSessionLocation(clientData.address || 'Private location (address not set)');
+            if (clientData.address) {
+              // Handle address object - convert to string
+              if (typeof clientData.address === 'string') {
+                setNextSessionLocation(clientData.address);
+              } else {
+                // Address is an object {street, city, state, zipCode, country}
+                const addr = clientData.address;
+                const formattedAddress = [addr.street, addr.city, addr.state, addr.zipCode]
+                  .filter(Boolean)
+                  .join(', ');
+                setNextSessionLocation(formattedAddress || 'Private location');
+              }
+            } else {
+              setNextSessionLocation('Private location (address not set)');
+            }
           }
         } else {
           const locationDoc = await getDoc(doc(db, 'training_locations', session.locationId));
