@@ -237,7 +237,8 @@ exports.calendlyWebhook = onRequest({
       const userData = userDoc.data();
 
       // Extract location from Calendly event
-      const locationString = scheduledEvent.location || "";
+      // Calendly sends location as an object: { location: "address string", type: "physical" }
+      const locationString = scheduledEvent.location?.location || "";
       
       // Resolve location (public trainer location or private client address)
       const locationInfo = await resolveLocation(locationString, userId);
