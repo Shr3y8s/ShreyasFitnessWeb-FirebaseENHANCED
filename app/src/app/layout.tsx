@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth-context';
 import { CoachUpdatesProvider } from '@/context/CoachUpdatesContext';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'SHREY.FIT',
@@ -21,6 +22,7 @@ export default function RootLayout({
             {children}
           </CoachUpdatesProvider>
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   );

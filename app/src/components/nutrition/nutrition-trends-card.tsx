@@ -1,10 +1,17 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, Droplets, TrendingUp, Target, Calendar, Trophy, BicepsFlexed, ClipboardEdit } from "lucide-react";
+import { Flame, Droplets, TrendingUp, Target, Calendar, BicepsFlexed, ClipboardEdit, Apple } from "lucide-react";
 import type { ReactNode } from "react";
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+
+interface MacroTargets {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
 
 const streakData = [
   {
@@ -37,19 +44,19 @@ const thisWeekData = [
   },
 ];
 
-const achievementsData = [
+const trendsSummaryData = [
   { title: "Longest Streak", value: "21 days" },
   { title: "Best Week", value: "Week of Oct 20" },
   { title: "Days This Month", value: "18/30 goals hit" },
 ];
 
-const Section = ({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) => (
-  <div className="space-y-3">
-    <h3 className="font-semibold text-foreground flex items-center gap-2">
+const MacroGridItem = ({ icon, title, value }: { icon: ReactNode; title: string; value: string }) => (
+  <div className="flex flex-col items-center justify-center p-4 bg-secondary/50 rounded-lg space-y-2">
+    <div className="flex items-center gap-2">
       {icon}
-      {title}
-    </h3>
-    <div className="space-y-2">{children}</div>
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+    </div>
+    <p className="text-lg font-bold text-foreground">{value}</p>
   </div>
 );
 
@@ -73,44 +80,113 @@ const ThisWeekItem = ({ icon, title, value }: { icon: ReactNode; title: string; 
   </div>
 );
 
-export function NutritionTrendsCard() {
+export function TargetMacrosCard({ calories, protein, carbs, fat }: MacroTargets) {
+  const macroData = [
+    {
+      icon: <Flame className="h-5 w-5 text-orange-500" />,
+      title: "Calories",
+      value: `${calories.toLocaleString()}`,
+    },
+    {
+      icon: <BicepsFlexed className="h-5 w-5 text-red-500" />,
+      title: "Protein",
+      value: `${protein}g`,
+    },
+    {
+      icon: <Apple className="h-5 w-5 text-green-500" />,
+      title: "Carbs",
+      value: `${carbs}g`,
+    },
+    {
+      icon: <Droplets className="h-5 w-5 text-yellow-500" />,
+      title: "Fat",
+      value: `${fat}g`,
+    },
+  ];
+
+  return (
+    <Card 
+      className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-green-500/50 bg-green-500/10"
+      style={{ boxShadow: '0 0 15px oklch(70% 0.19 145 / 0.25), 0 4px 20px oklch(70% 0.19 145 / 0.4)' }}
+    >
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Target className="h-5 w-5 text-green-600 dark:text-green-400" />
+          Daily Targets
+        </CardTitle>
+        <CardDescription>
+          Your nutrition goals for today.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-3">
+          {macroData.map((item) => (
+            <MacroGridItem key={item.title} {...item} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ActiveStreaksCard() {
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="text-primary" />
-          Nutrition Trends
+          <Flame className="h-5 w-5 text-amber-500" />
+          Active Streaks
         </CardTitle>
-        <CardDescription>
-          Your progress and achievements.
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <Section title="Active Streaks" icon={<Flame className="h-5 w-5 text-amber-500" />}>
-          {streakData.map((item) => (
-            <StreakItem key={item.title} {...item} />
-          ))}
-        </Section>
-        
-        <Section title="This Week" icon={<Calendar className="h-5 w-5 text-muted-foreground" />}>
-          {thisWeekData.map((item) => (
-            <ThisWeekItem key={item.title} {...item} />
-          ))}
-          <div>
-            <ThisWeekItem icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />} title="Consistency Score" value="92%" />
-            <Progress value={92} className="h-2 mt-2" />
-          </div>
-        </Section>
+      <CardContent className="space-y-2">
+        {streakData.map((item) => (
+          <StreakItem key={item.title} {...item} />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 
-        <Section title="Achievements" icon={<Trophy className="h-5 w-5 text-yellow-500" />}>
-          {achievementsData.map((item) => (
+export function ThisWeekCard() {
+  return (
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-muted-foreground" />
+          This Week
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {thisWeekData.map((item) => (
+          <ThisWeekItem key={item.title} {...item} />
+        ))}
+        <div>
+          <ThisWeekItem icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />} title="Consistency Score" value="92%" />
+          <Progress value={92} className="h-2 mt-2" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function TrendsSummaryCard() {
+  return (
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary" />
+          Trends Summary
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          {trendsSummaryData.map((item) => (
             <div key={item.title} className="flex items-center justify-between py-2 border-b border-border/50">
               <p className="text-sm text-muted-foreground">{item.title}</p>
               <p className="text-sm font-semibold text-foreground">{item.value}</p>
             </div>
           ))}
-        </Section>
-
+        </div>
         <div className="p-4 bg-green-500/10 rounded-lg text-center">
           <p className="font-bold text-green-800 dark:text-green-200">Keep it up!</p>
           <p className="text-sm text-green-700 dark:text-green-300">You&apos;re on track for your best month yet. 🎉</p>

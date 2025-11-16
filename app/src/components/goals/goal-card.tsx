@@ -22,7 +22,7 @@ import {
   Trash,
   Flag,
   Calendar,
-  Zap,
+  Star,
   Rocket,
   FlagTriangleRight,
   ArrowDown,
@@ -204,7 +204,7 @@ export function GoalCard({ goal }: GoalCardProps) {
           <div className="pt-2">
             <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
               <h4 className="text-xs uppercase font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
-                <Zap className="h-4 w-4" /> 
+                <Star className="h-4 w-4" /> 
                 Milestones
               </h4>
               <ul className="space-y-2">

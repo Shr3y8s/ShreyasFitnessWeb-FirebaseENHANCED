@@ -1,14 +1,13 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
-import { Trophy, Award, Target, Zap, Star } from 'lucide-react';
+import { Trophy, Award } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 const mockAchievements = [
   {
     id: 1,
-    icon: Trophy,
     name: '30 Day Streak',
     description: '30 consecutive days of workouts',
     earned: true,
@@ -16,7 +15,6 @@ const mockAchievements = [
   },
   {
     id: 2,
-    icon: Zap,
     name: 'PR Crusher',
     description: 'Hit 5 new personal records',
     earned: true,
@@ -24,7 +22,6 @@ const mockAchievements = [
   },
   {
     id: 3,
-    icon: Target,
     name: 'Weight Goal',
     description: 'Reached target weight',
     earned: true,
@@ -32,7 +29,6 @@ const mockAchievements = [
   },
   {
     id: 4,
-    icon: Award,
     name: 'Consistency King',
     description: '90% weekly compliance for a month',
     earned: false,
@@ -40,7 +36,6 @@ const mockAchievements = [
   },
   {
     id: 5,
-    icon: Star,
     name: 'Transformation',
     description: 'Lost 20+ lbs',
     earned: false,
@@ -54,7 +49,7 @@ export function Achievements() {
       <CardHeader>
         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <Trophy className="h-5 w-5 text-primary" />
-          Achievements
+          Metric Achievements
         </h3>
         <CardDescription>
           Milestones you&apos;ve reached
@@ -63,7 +58,6 @@ export function Achievements() {
       <CardContent>
         <div className="space-y-4">
           {mockAchievements.map((achievement, index) => {
-            const Icon = achievement.icon;
             return (
               <div
                 key={achievement.id}
@@ -84,7 +78,7 @@ export function Achievements() {
                       : 'bg-muted text-muted-foreground'
                   )}
                 >
-                  <Icon className={cn("h-5 w-5", achievement.earned && "animate-pulse")} />
+                  <Award className={cn("h-5 w-5", achievement.earned && "animate-pulse")} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">

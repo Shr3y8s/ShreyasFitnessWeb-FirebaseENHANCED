@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { MealAccordion, FoodItem, MealCategory } from '@/components/nutrition/meal-accordion';
@@ -9,10 +9,16 @@ import { NutritionHabitTracker } from '@/components/nutrition/nutrition-habit-tr
 import { NutritionResources } from '@/components/nutrition/nutrition-resources';
 import { NutritionCommandCenter } from '@/components/nutrition/nutrition-command-center';
 import { DayCompleteButton } from '@/components/nutrition/day-complete-button';
-import { NutritionTrendsCard } from '@/components/nutrition/nutrition-trends-card';
-import { Utensils, Target, Sparkles, BookOpen } from 'lucide-react';
+import { TargetMacrosCard, ActiveStreaksCard, ThisWeekCard, TrendsSummaryCard } from '@/components/nutrition/nutrition-trends-card';
+import { NutritionApproachGuide } from '@/components/nutrition/nutrition-approach-guide';
+import { Utensils, Target, Sparkles, BookOpen, Upload, X, Image as ImageIcon, CheckCircle2, UploadCloud } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion } from '@/components/ui/accordion';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const initialDailyLog: Record<MealCategory, FoodItem[]> = {
   Breakfast: [
@@ -40,9 +46,13 @@ const dailyGoals = {
 const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 
 export default function NutritionPage() {
+  const { toast } = useToast();
   const [dailyLog, setDailyLog] = useState(initialDailyLog);
   const [dayComplete, setDayComplete] = useState(false);
   const [waterIntake, setWaterIntake] = useState(64); // Starting at 64 oz (0.5 gallon)
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [fileName, setFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const dailyTotals = Object.values(dailyLog).flat().reduce(
     (acc, item) => {
@@ -72,6 +82,32 @@ export default function NutritionPage() {
     if (waterIntake > 0) {
       setWaterIntake(prev => Math.max(0, prev - 16)); // Remove 16 oz per click
     }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      toast({
+        title: "File Selected",
+        description: `${file.name} is ready for upload.`,
+      });
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setUploadedImage(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const handleMarkComplete = () => {
+    setDayComplete(true);
+    toast({
+      title: "Day Complete!",
+      description: "You've marked your nutrition as complete for the day.",
+    });
   };
 
   return (
@@ -105,6 +141,8 @@ export default function NutritionPage() {
               onRemoveWater={handleRemoveWater}
             />
 
+            <NutritionApproachGuide />
+
             <Tabs defaultValue="tracking">
               <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
                 <TabsTrigger value="tracking">
@@ -128,26 +166,84 @@ export default function NutritionPage() {
               <TabsContent value="tracking" className="mt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                   <div className="lg:col-span-2 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-bold">Today&apos;s Food Log</h2>
-                      <DayCompleteButton
-                        isComplete={dayComplete}
-                        onToggle={() => setDayComplete(!dayComplete)}
-                      />
-                    </div>
-                    <Accordion type="multiple" defaultValue={mealCategories} className="w-full space-y-4">
-                      {mealCategories.map(meal => (
-                        <MealAccordion 
-                          key={meal}
-                          meal={meal}
-                          items={dailyLog[meal]}
-                          onUpdate={(updatedItems) => updateLog(meal, updatedItems)}
-                        />
-                      ))}
-                    </Accordion>
+                    <Tabs defaultValue="manual" className="w-full">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold">Today&apos;s Food Log</h2>
+                        <TabsList className="bg-green-100/50 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-lg p-1">
+                          <TabsTrigger 
+                            value="manual"
+                            className="data-[state=active]:bg-green-200/50 dark:data-[state=active]:bg-green-800/50 data-[state=active]:text-green-900 dark:data-[state=active]:text-green-100 rounded-md px-3 py-1 text-sm"
+                          >
+                            Log Manually
+                          </TabsTrigger>
+                          <TabsTrigger 
+                            value="screenshot"
+                            className="data-[state=active]:bg-green-200/50 dark:data-[state=active]:bg-green-800/50 data-[state=active]:text-green-900 dark:data-[state=active]:text-green-100 rounded-md px-3 py-1 text-sm"
+                          >
+                            Upload Screenshot
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
+
+                      <TabsContent value="manual">
+                        <Accordion type="multiple" defaultValue={mealCategories} className="w-full space-y-4">
+                          {mealCategories.map(meal => (
+                            <MealAccordion 
+                              key={meal}
+                              meal={meal}
+                              items={dailyLog[meal]}
+                              onUpdate={(updatedItems) => updateLog(meal, updatedItems)}
+                            />
+                          ))}
+                        </Accordion>
+                      </TabsContent>
+
+                      <TabsContent value="screenshot">
+                        <div className="p-6 bg-secondary/50 border-dashed border-2 rounded-lg text-center space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            Using another app like MyFitnessPal? Upload a screenshot of your daily log here for your coach to review.
+                          </p>
+                          <div className="flex flex-col items-center gap-4">
+                            <Input 
+                              id="screenshot" 
+                              type="file" 
+                              className="hidden" 
+                              onChange={handleFileUpload} 
+                              accept="image/*" 
+                              ref={fileInputRef}
+                            />
+                            <Label 
+                              htmlFor="screenshot" 
+                              className={cn(
+                                "w-full max-w-sm cursor-pointer",
+                                buttonVariants({ variant: "outline" })
+                              )}
+                            >
+                              <UploadCloud className="mr-2 h-4 w-4" />
+                              {fileName ? `Selected: ${fileName}` : "Choose Screenshot"}
+                            </Label>
+                            <Button 
+                              onClick={handleMarkComplete}
+                              className="w-full max-w-sm"
+                            >
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              Mark Day as Complete
+                            </Button>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
-                  <div className="lg:col-span-1 space-y-6">
-                    <NutritionTrendsCard />
+                  <div className="lg:col-span-1 space-y-4">
+                    <TargetMacrosCard 
+                      calories={dailyGoals.calories}
+                      protein={dailyGoals.protein}
+                      carbs={dailyGoals.carbs}
+                      fat={dailyGoals.fat}
+                    />
+                    <ActiveStreaksCard />
+                    <ThisWeekCard />
+                    <TrendsSummaryCard />
                   </div>
                 </div>
               </TabsContent>
