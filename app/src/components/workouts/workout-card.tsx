@@ -9,6 +9,7 @@ import { WorkoutSummary } from './workout-summary';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { WorkoutCompleteDialog, type WorkoutDifficulty } from './workout-complete-dialog';
 
 interface Set {
   id: number;
@@ -37,12 +38,19 @@ interface Workout {
   isCompleted?: boolean;
   exercises: Exercise[];
   performanceData?: Record<string, { weight?: string; reps?: string }>;
+  difficulty?: WorkoutDifficulty;
+  notes?: string;
 }
 
 interface WorkoutCardProps {
   workout: Workout;
   onDismissUpdate: (updateId: number | undefined) => void;
-  onWorkoutComplete: (workoutId: string, performanceData: Record<string, { weight?: string; reps?: string }>) => void;
+  onWorkoutComplete: (
+    workoutId: string, 
+    performanceData: Record<string, { weight?: string; reps?: string }>,
+    difficulty?: WorkoutDifficulty,
+    notes?: string
+  ) => void;
   onWorkoutIncomplete?: (workoutId: string) => void;
 }
 
@@ -54,61 +62,67 @@ export function WorkoutCard({
 }: WorkoutCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCompleted, setIsCompleted] = useState(workout.isCompleted || false);
-  const [completedSets, setCompletedSets] = useState<{ [key: string]: boolean }>({});
+  const [completedExercises, setCompletedExercises] = useState<{ [key: number]: boolean }>({});
   const [performanceData, setPerformanceData] = useState(workout.performanceData || {});
   const [badgesVisible, setBadgesVisible] = useState(true);
-
-  const allSetIds = useMemo(
-    () =>
-      workout.exercises.flatMap((ex, exIndex) =>
-        ex.sets.map((_, setIndex) => `${exIndex}-${setIndex}`)
-      ),
-    [workout.exercises]
-  );
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
 
   useEffect(() => {
     if (workout.isCompleted) {
-      const allSetsChecked: { [key: string]: boolean } = {};
-      allSetIds.forEach((id) => {
-        allSetsChecked[id] = true;
+      const allExercisesChecked: { [key: number]: boolean } = {};
+      workout.exercises.forEach((_, index) => {
+        allExercisesChecked[index] = true;
       });
-      setCompletedSets(allSetsChecked);
+      setCompletedExercises(allExercisesChecked);
       setIsOpen(false);
     } else {
-      setCompletedSets({});
+      setCompletedExercises({});
       setIsOpen(false);
     }
     setIsCompleted(workout.isCompleted || false);
     setPerformanceData(workout.performanceData || {});
     setBadgesVisible(true);
-  }, [workout.isCompleted, workout.id, allSetIds, workout.performanceData]);
+  }, [workout.isCompleted, workout.id, workout.exercises, workout.performanceData]);
 
-  const allSetsCompleted = useMemo(
-    () => allSetIds.length > 0 && allSetIds.every((id) => completedSets[id]),
-    [allSetIds, completedSets]
+  const allExercisesCompleted = useMemo(
+    () => workout.exercises.length > 0 && workout.exercises.every((_, index) => completedExercises[index]),
+    [workout.exercises, completedExercises]
   );
 
   useEffect(() => {
     const wasCompleted = isCompleted;
-    const nowCompleted = allSetsCompleted;
+    const nowCompleted = allExercisesCompleted;
 
     if (nowCompleted !== wasCompleted) {
       setIsCompleted(nowCompleted);
     }
 
-    if (nowCompleted && !wasCompleted && onWorkoutComplete) {
-      onWorkoutComplete(workout.id, performanceData);
+    // Show completion dialog when all exercises are checked
+    if (nowCompleted && !wasCompleted && !workout.isCompleted) {
+      setShowCompleteDialog(true);
     }
-  }, [allSetsCompleted, isCompleted, onWorkoutComplete, workout.id, performanceData]);
+  }, [allExercisesCompleted, isCompleted, workout.isCompleted]);
 
   const handleWorkoutCompleteToggle = (checked: boolean) => {
-    const newCompletedSets: { [key: string]: boolean } = {};
+    const newCompletedExercises: { [key: number]: boolean } = {};
     if (checked) {
-      allSetIds.forEach((id) => {
-        newCompletedSets[id] = true;
+      workout.exercises.forEach((_, index) => {
+        newCompletedExercises[index] = true;
       });
     }
-    setCompletedSets(newCompletedSets);
+    setCompletedExercises(newCompletedExercises);
+  };
+
+  const handleCompleteWorkout = (difficulty: WorkoutDifficulty, notes: string, addDetails: boolean) => {
+    setShowCompleteDialog(false);
+    
+    if (addDetails) {
+      // Keep the workout card open to allow adding performance details
+      setIsOpen(true);
+    } else {
+      // Complete without details
+      onWorkoutComplete(workout.id, performanceData, difficulty, notes);
+    }
   };
 
   const handleMouseEnter = () => {
@@ -191,14 +205,21 @@ export function WorkoutCard({
             )}
           </div>
         </div>
+
+        <WorkoutCompleteDialog
+          isOpen={showCompleteDialog}
+          workoutTitle={workout.title}
+          onClose={() => setShowCompleteDialog(false)}
+          onComplete={handleCompleteWorkout}
+        />
         <CollapsibleContent>
           <div className={cn('px-6 pb-6', isCompleted && 'bg-secondary/30')}>
             <div className="space-y-6">
               {isCompleted && <WorkoutSummary workout={workout} performanceData={performanceData} />}
               <ExerciseList
                 exercises={workout.exercises}
-                completedSets={completedSets}
-                onCompletedChange={setCompletedSets}
+                completedExercises={completedExercises}
+                onExerciseCompletedChange={setCompletedExercises}
                 performanceData={performanceData}
                 onPerformanceChange={setPerformanceData}
                 onWorkoutCompleteToggle={handleWorkoutCompleteToggle}

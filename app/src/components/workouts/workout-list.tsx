@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkoutCard } from './workout-card';
+import { type WorkoutDifficulty } from './workout-complete-dialog';
 
 interface Set {
   id: number;
@@ -29,11 +30,18 @@ interface Workout {
   isCompleted?: boolean;
   exercises: Exercise[];
   performanceData?: Record<string, { weight?: string; reps?: string }>;
+  difficulty?: WorkoutDifficulty;
+  notes?: string;
 }
 
 interface WorkoutListProps {
   workouts: Workout[];
-  onWorkoutComplete: (workoutId: string, performanceData: Record<string, { weight?: string; reps?: string }>) => void;
+  onWorkoutComplete: (
+    workoutId: string, 
+    performanceData: Record<string, { weight?: string; reps?: string }>,
+    difficulty?: WorkoutDifficulty,
+    notes?: string
+  ) => void;
   onWorkoutIncomplete?: (workoutId: string) => void;
   onDismissUpdate: (updateId: number | undefined) => void;
 }

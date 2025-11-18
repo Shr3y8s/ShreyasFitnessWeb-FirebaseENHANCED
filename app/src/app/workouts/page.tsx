@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { WorkoutList } from '@/components/workouts/workout-list';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, CheckCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Lightbulb, X } from 'lucide-react';
 import { useCoachUpdates } from '@/context/CoachUpdatesContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const initialUpcomingWorkouts = [
   {
@@ -29,9 +31,9 @@ const initialUpcomingWorkouts = [
           'Push through your heels to return to the starting position.',
         ],
         sets: [
-          { id: 1, reps: '8-12', weight: '' },
-          { id: 2, reps: '8-12', weight: '' },
-          { id: 3, reps: '8-12', weight: '' },
+          { id: 1, reps: '8-12', weight: '', targetWeight: '185' },
+          { id: 2, reps: '8-12', weight: '', targetWeight: '185' },
+          { id: 3, reps: '8-12', weight: '', targetWeight: '185' },
         ],
         rest: '60s',
       },
@@ -45,9 +47,9 @@ const initialUpcomingWorkouts = [
           'Press the bar up until your arms are fully extended.',
         ],
         sets: [
-          { id: 1, reps: '8-12', weight: '' },
-          { id: 2, reps: '8-12', weight: '' },
-          { id: 3, reps: '8-12', weight: '' },
+          { id: 1, reps: '8-12', weight: '', targetWeight: '155' },
+          { id: 2, reps: '8-12', weight: '', targetWeight: '155' },
+          { id: 3, reps: '8-12', weight: '', targetWeight: '155' },
         ],
         rest: '60s',
       },
@@ -61,9 +63,9 @@ const initialUpcomingWorkouts = [
           'Squeeze your shoulder blades together at the top.',
         ],
         sets: [
-          { id: 1, reps: '8-12', weight: '' },
-          { id: 2, reps: '8-12', weight: '' },
-          { id: 3, reps: '8-12', weight: '' },
+          { id: 1, reps: '8-12', weight: '', targetWeight: '135' },
+          { id: 2, reps: '8-12', weight: '', targetWeight: '135' },
+          { id: 3, reps: '8-12', weight: '', targetWeight: '135' },
         ],
         rest: '60s',
       },
@@ -85,7 +87,7 @@ const initialUpcomingWorkouts = [
           'Land midfoot, directly under your center of gravity.',
           'Keep your cadence high (around 170-180 steps per minute).',
         ],
-        sets: [{ id: 1, reps: '30 min', weight: 'N/A' }],
+        sets: [{ id: 1, reps: '30 min', weight: 'N/A', targetWeight: '' }],
         rest: 'N/A',
       },
       {
@@ -98,9 +100,9 @@ const initialUpcomingWorkouts = [
           "Don't let your hips sag.",
         ],
         sets: [
-          { id: 1, reps: '60s hold', weight: 'N/A' },
-          { id: 2, reps: '60s hold', weight: 'N/A' },
-          { id: 3, reps: '60s hold', weight: 'N/A' },
+          { id: 1, reps: '60s hold', weight: 'N/A', targetWeight: '' },
+          { id: 2, reps: '60s hold', weight: 'N/A', targetWeight: '' },
+          { id: 3, reps: '60s hold', weight: 'N/A', targetWeight: '' },
         ],
         rest: '30s',
       },
@@ -114,9 +116,9 @@ const initialUpcomingWorkouts = [
           'Lower your legs slowly and with control.',
         ],
         sets: [
-          { id: 1, reps: '15-20', weight: '' },
-          { id: 2, reps: '15-20', weight: '' },
-          { id: 3, reps: '15-20', weight: '' },
+          { id: 1, reps: '15-20', weight: '', targetWeight: '' },
+          { id: 2, reps: '15-20', weight: '', targetWeight: '' },
+          { id: 3, reps: '15-20', weight: '', targetWeight: '' },
         ],
         rest: '30s',
       },
@@ -141,9 +143,9 @@ const initialUpcomingWorkouts = [
           'Lower yourself with control.',
         ],
         sets: [
-          { id: 1, reps: 'AMRAP', weight: 'Body' },
-          { id: 2, reps: 'AMRAP', weight: 'Body' },
-          { id: 3, reps: 'AMRAP', weight: 'Body' },
+          { id: 1, reps: 'AMRAP', weight: 'Body', targetWeight: '' },
+          { id: 2, reps: 'AMRAP', weight: 'Body', targetWeight: '' },
+          { id: 3, reps: 'AMRAP', weight: 'Body', targetWeight: '' },
         ],
         rest: '90s',
       },
@@ -157,9 +159,9 @@ const initialUpcomingWorkouts = [
           'Avoid using momentum.',
         ],
         sets: [
-          { id: 1, reps: '10-15', weight: '' },
-          { id: 2, reps: '10-15', weight: '' },
-          { id: 3, reps: '10-15', weight: '' },
+          { id: 1, reps: '10-15', weight: '', targetWeight: '30' },
+          { id: 2, reps: '10-15', weight: '', targetWeight: '30' },
+          { id: 3, reps: '10-15', weight: '', targetWeight: '30' },
         ],
         rest: '45s',
       },
@@ -173,9 +175,9 @@ const initialUpcomingWorkouts = [
           'Push through your palms to return to the start.',
         ],
         sets: [
-          { id: 1, reps: '10-15', weight: 'Body' },
-          { id: 2, reps: '10-15', weight: 'Body' },
-          { id: 3, reps: '10-15', weight: 'Body' },
+          { id: 1, reps: '10-15', weight: 'Body', targetWeight: '' },
+          { id: 2, reps: '10-15', weight: 'Body', targetWeight: '' },
+          { id: 3, reps: '10-15', weight: 'Body', targetWeight: '' },
         ],
         rest: '45s',
       },
@@ -200,7 +202,7 @@ const initialCompletedWorkouts = [
           'Roll slowly over sore muscles.',
           'Pause on tender spots for 20-30 seconds.',
         ],
-        sets: [{ id: 1, reps: '15 min', weight: 'N/A' }],
+        sets: [{ id: 1, reps: '15 min', weight: 'N/A', targetWeight: '' }],
         rest: 'N/A',
       },
       {
@@ -211,7 +213,7 @@ const initialCompletedWorkouts = [
           'Hold each stretch for 30 seconds.',
           'Breathe deeply and avoid bouncing.',
         ],
-        sets: [{ id: 1, reps: '15 min', weight: 'N/A' }],
+        sets: [{ id: 1, reps: '15 min', weight: 'N/A', targetWeight: '' }],
         rest: 'N/A',
       },
     ],
@@ -222,6 +224,20 @@ export default function WorkoutsPage() {
   const [upcomingWorkouts, setUpcomingWorkouts] = useState(initialUpcomingWorkouts);
   const [completedWorkouts, setCompletedWorkouts] = useState(initialCompletedWorkouts);
   const { setCoachUpdates } = useCoachUpdates();
+  const [showInfoBanner, setShowInfoBanner] = useState(true);
+
+  // Check localStorage for banner dismissal
+  useEffect(() => {
+    const dismissed = localStorage.getItem('workout-info-banner-dismissed');
+    if (dismissed === 'true') {
+      setShowInfoBanner(false);
+    }
+  }, []);
+
+  const handleDismissBanner = () => {
+    setShowInfoBanner(false);
+    localStorage.setItem('workout-info-banner-dismissed', 'true');
+  };
 
   const sortedUpcomingWorkouts = useMemo(() => {
     const parseDate = (dateStr: string) => {
@@ -250,13 +266,22 @@ export default function WorkoutsPage() {
 
   const handleWorkoutComplete = (
     workoutId: string,
-    performanceData: Record<string, { weight?: string; reps?: string }>
+    performanceData: Record<string, { weight?: string; reps?: string }>,
+    difficulty?: string,
+    notes?: string
   ) => {
     const workoutToMove = upcomingWorkouts.find((w) => w.id === workoutId);
     if (workoutToMove) {
       setUpcomingWorkouts((prev) => prev.filter((w) => w.id !== workoutId));
       setCompletedWorkouts((prev) => [
-        { ...workoutToMove, isCompleted: true, isNew: false, performanceData },
+        { 
+          ...workoutToMove, 
+          isCompleted: true, 
+          isNew: false, 
+          performanceData,
+          difficulty,
+          notes
+        },
         ...prev,
       ]);
     }
@@ -284,6 +309,25 @@ export default function WorkoutsPage() {
       <SidebarInset>
         <div className="min-h-screen text-foreground p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
+            {showInfoBanner && (
+              <Alert className="mb-6 border-primary/20 bg-primary/5">
+                <Lightbulb className="h-5 w-5 text-primary" />
+                <AlertDescription className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <span className="font-semibold text-primary">Quick Start:</span> Click &quot;Start Workout&quot; to begin. Access on your phone at the gym or download as PDF. When finished, mark complete and let me know how it felt - that helps me adjust your next workout. Detailed tracking is optional!
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={handleDismissBanner}
+                    className="shrink-0 hover:bg-primary/10"
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Dismiss</span>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
             <Tabs defaultValue="upcoming">
               <div className="flex justify-between items-center mb-6">
                 <div>
