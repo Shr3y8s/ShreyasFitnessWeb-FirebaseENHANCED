@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -9,8 +10,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, Calendar, Utensils, Coffee, Sun, Moon, Apple, Zap, Check } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Flame, Calendar, Utensils, Check, ArrowRight } from 'lucide-react';
 
 const dailyTargets = [
     { label: 'Calories', value: '2,400', color: 'text-green-500' },
@@ -31,74 +32,6 @@ const guidelines = [
     "Aim for 80% adherence to targets"
 ];
 
-const weeklyMealPlan = [
-    {
-        day: "Monday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Post Training", items: ["", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-            { name: "Snack", items: ["", "", ""] },
-        ]
-    },
-    {
-        day: "Tuesday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Post Training", items: ["", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-            { name: "Snack", items: ["", "", ""] },
-        ]
-    },
-    {
-        day: "Wednesday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Post Training", items: ["", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-        ]
-    },
-    {
-        day: "Thursday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Post Training", items: ["", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-            { name: "Snack", items: ["", "", ""] },
-        ]
-    },
-    {
-        day: "Friday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Post Training", items: ["", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-            { name: "Snack", items: ["", "", ""] },
-        ]
-    },
-    {
-        day: "Saturday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Post Training", items: ["", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-        ]
-    },
-    {
-        day: "Sunday",
-        meals: [
-            { name: "Breakfast", items: ["", "", "", ""] },
-            { name: "Lunch", items: ["", "", "", ""] },
-            { name: "Dinner", items: ["", "", "", ""] },
-        ]
-    }
-];
 
 const healthyHabits = [
     { title: "Eat 3 whole food meals per day", description: "Breakfast, lunch, and dinner" },
@@ -115,8 +48,6 @@ const wholeFoods = [
 ];
 
 export function NutritionProtocol() {
-  const [selectedDay, setSelectedDay] = React.useState(0);
-
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
       <CardHeader className="relative">
@@ -175,55 +106,19 @@ export function NutritionProtocol() {
             </div>
           </TabsContent>
 
-          <TabsContent value="meal-plan" className="mt-6 space-y-6">
-            {/* Day Pills */}
-            <div className="flex flex-wrap gap-2">
-                {weeklyMealPlan.map((dayPlan, index) => (
-                    <button
-                        key={index}
-                        onClick={() => setSelectedDay(index)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                            selectedDay === index
-                                ? 'bg-primary text-primary-foreground shadow-md'
-                                : 'bg-background border border-border hover:border-primary/50 hover:bg-primary/5'
-                        }`}
-                    >
-                        {dayPlan.day}
-                    </button>
-                ))}
-            </div>
-
-            {/* Meal Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                {weeklyMealPlan[selectedDay].meals.map((meal) => (
-                    <Card key={meal.name} className="flex flex-col bg-background/50 border border-primary/20">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2 text-primary">
-                                {(() => {
-                                    const mealIcons: { [key: string]: ReactNode } = {
-                                        Breakfast: <Coffee className="h-5 w-5" />,
-                                        Lunch: <Sun className="h-5 w-5" />,
-                                        Dinner: <Moon className="h-5 w-5" />,
-                                        Snack: <Apple className="h-5 w-5" />,
-                                        "Post Training": <Zap className="h-5 w-5" />,
-                                    };
-                                    return mealIcons[meal.name] || <Utensils className="h-5 w-5" />;
-                                })()}
-                                {meal.name}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1">
-                            <ul className="space-y-1.5 text-sm text-muted-foreground">
-                                {meal.items.map((item, idx) => (
-                                    <li key={idx} className="flex items-start gap-2">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 flex-shrink-0" />
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </CardContent>
-                    </Card>
-                ))}
+          <TabsContent value="meal-plan" className="mt-6">
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <Utensils className="h-16 w-16 text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-2 text-center">View Your Meal Plan</h3>
+              <p className="text-muted-foreground text-center mb-6 max-w-md">
+                Visit your nutrition hub to see your detailed meal plan, track your meals, and manage your nutrition goals.
+              </p>
+              <Link href="/nutrition">
+                <Button size="lg" className="gap-2">
+                  Go to Nutrition Hub
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </TabsContent>
 

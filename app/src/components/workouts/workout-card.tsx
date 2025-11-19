@@ -113,16 +113,10 @@ export function WorkoutCard({
     setCompletedExercises(newCompletedExercises);
   };
 
-  const handleCompleteWorkout = (difficulty: WorkoutDifficulty, notes: string, addDetails: boolean) => {
+  const handleCompleteWorkout = (difficulty: WorkoutDifficulty, notes: string) => {
     setShowCompleteDialog(false);
-    
-    if (addDetails) {
-      // Keep the workout card open to allow adding performance details
-      setIsOpen(true);
-    } else {
-      // Complete without details
-      onWorkoutComplete(workout.id, performanceData, difficulty, notes);
-    }
+    // Complete workout immediately with questionnaire data + any tracked performance data
+    onWorkoutComplete(workout.id, performanceData, difficulty, notes);
   };
 
   const handleMouseEnter = () => {

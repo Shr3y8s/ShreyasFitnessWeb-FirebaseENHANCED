@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dumbbell, Timer, Trophy, MessageSquare } from 'lucide-react';
+import { Dumbbell, Trophy, MessageSquare } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { type WorkoutDifficulty } from './workout-complete-dialog';
 
@@ -29,13 +29,17 @@ const getDifficultyDisplay = (difficulty?: WorkoutDifficulty) => {
   }
 };
 
+interface Exercise {
+  sets: unknown[];
+}
+
 interface Workout {
   id: string;
   day: string;
   date: string;
   title: string;
   description: string;
-  exercises: unknown[];
+  exercises: Exercise[];
   difficulty?: WorkoutDifficulty;
   notes?: string;
 }
@@ -45,13 +49,14 @@ interface WorkoutSummaryProps {
   performanceData: { [key: string]: { weight?: string; reps?: string } };
 }
 
-export function WorkoutSummary({ workout, performanceData }: WorkoutSummaryProps) {
-  const totalVolume = Object.keys(performanceData).reduce((acc, setId) => {
-    const set = performanceData[setId];
-    const weight = parseFloat(set.weight || '0') || 0;
-    const reps = parseInt(set.reps || '0', 10) || 0;
-    return acc + weight * reps;
+export function WorkoutSummary({ workout }: WorkoutSummaryProps) {
+  // Calculate total sets completed
+  const totalSets = workout.exercises.reduce((total, exercise) => {
+    return total + exercise.sets.length;
   }, 0);
+
+  // Count total exercises
+  const exerciseCount = workout.exercises.length;
 
   const difficultyInfo = getDifficultyDisplay(workout.difficulty);
 
@@ -90,10 +95,14 @@ export function WorkoutSummary({ workout, performanceData }: WorkoutSummaryProps
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           icon={<Dumbbell className="h-7 w-7" />}
-          title="Total Volume"
-          value={`${totalVolume.toLocaleString()} lbs`}
+          title="Sets Completed"
+          value={totalSets}
         />
-        <StatCard icon={<Timer className="h-7 w-7" />} title="Total Time" value="45:23" />
+        <StatCard 
+          icon={<Dumbbell className="h-7 w-7" />} 
+          title="Exercises Completed" 
+          value={exerciseCount} 
+        />
         <StatCard icon={<Trophy className="h-7 w-7" />} title="New PRs Achieved" value="2" />
       </div>
     </div>

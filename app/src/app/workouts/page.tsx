@@ -314,7 +314,7 @@ export default function WorkoutsPage() {
                 <Lightbulb className="h-5 w-5 text-primary" />
                 <AlertDescription className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <span className="font-semibold text-primary">Quick Start:</span> Click &quot;Start Workout&quot; to begin. Access on your phone at the gym or download as PDF. When finished, mark complete and let me know how it felt - that helps me adjust your next workout. Detailed tracking is optional!
+                    <span className="font-semibold text-primary">How to Log Your Workouts:</span> After your session, click <strong>Mark as Complete</strong> to quickly log your workout and how it felt—this helps me adjust your next workout. For detailed tracking, expand the workout to enter weights and reps for each set (optional).
                   </div>
                   <Button
                     variant="ghost"
@@ -328,47 +328,95 @@ export default function WorkoutsPage() {
                 </AlertDescription>
               </Alert>
             )}
-            <Tabs defaultValue="upcoming">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-foreground">My Workouts</h1>
-                  <p className="text-muted-foreground mt-1">
-                    Your weekly plan is ready. Let&apos;s get to work.
-                  </p>
+            {/* Mobile: Tabbed Layout */}
+            <div className="lg:hidden">
+              <Tabs defaultValue="upcoming">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold text-foreground">My Workouts</h1>
+                    <p className="text-muted-foreground mt-1">
+                      Your weekly plan is ready. Let&apos;s get to work.
+                    </p>
+                  </div>
+                  <TabsList className="bg-transparent gap-2 p-0">
+                    <TabsTrigger 
+                      value="upcoming"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:border data-[state=inactive]:border-input rounded-md px-4"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      Upcoming
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="completed"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:border data-[state=inactive]:border-input hover:bg-primary/10 hover:text-primary rounded-md px-4"
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Completed
+                    </TabsTrigger>
+                  </TabsList>
                 </div>
-                <TabsList className="bg-transparent gap-2 p-0">
-                  <TabsTrigger 
-                    value="upcoming"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:border data-[state=inactive]:border-input rounded-md px-4"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Upcoming
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="completed"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-transparent data-[state=inactive]:border data-[state=inactive]:border-input hover:bg-primary/10 hover:text-primary rounded-md px-4"
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Completed
-                  </TabsTrigger>
-                </TabsList>
+                <TabsContent value="upcoming">
+                  <WorkoutList
+                    workouts={sortedUpcomingWorkouts}
+                    onWorkoutComplete={handleWorkoutComplete}
+                    onDismissUpdate={handleDismissUpdate}
+                  />
+                </TabsContent>
+                <TabsContent value="completed">
+                  <WorkoutList
+                    workouts={completedWorkouts}
+                    onWorkoutComplete={handleWorkoutComplete}
+                    onWorkoutIncomplete={handleWorkoutIncomplete}
+                    onDismissUpdate={handleDismissUpdate}
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            {/* Desktop: Two-Column Layout */}
+            <div className="hidden lg:block">
+              <div className="mb-6">
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground">My Workouts</h1>
+                <p className="text-muted-foreground mt-1">
+                  Your weekly plan is ready. Let&apos;s get to work.
+                </p>
               </div>
-              <TabsContent value="upcoming">
-                <WorkoutList
-                  workouts={sortedUpcomingWorkouts}
-                  onWorkoutComplete={handleWorkoutComplete}
-                  onDismissUpdate={handleDismissUpdate}
-                />
-              </TabsContent>
-              <TabsContent value="completed">
-                <WorkoutList
-                  workouts={completedWorkouts}
-                  onWorkoutComplete={handleWorkoutComplete}
-                  onWorkoutIncomplete={handleWorkoutIncomplete}
-                  onDismissUpdate={handleDismissUpdate}
-                />
-              </TabsContent>
-            </Tabs>
+
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Upcoming Workouts Column */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    <h2 className="text-2xl font-bold text-foreground">Upcoming Workouts</h2>
+                    <span className="ml-auto bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-medium">
+                      {sortedUpcomingWorkouts.length}
+                    </span>
+                  </div>
+                  <WorkoutList
+                    workouts={sortedUpcomingWorkouts}
+                    onWorkoutComplete={handleWorkoutComplete}
+                    onDismissUpdate={handleDismissUpdate}
+                  />
+                </div>
+
+                {/* Completed Workouts Column */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <CheckCircle className="h-5 w-5 text-primary" />
+                    <h2 className="text-2xl font-bold text-foreground">Completed Workouts</h2>
+                    <span className="ml-auto bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-medium">
+                      {completedWorkouts.length}
+                    </span>
+                  </div>
+                  <WorkoutList
+                    workouts={completedWorkouts}
+                    onWorkoutComplete={handleWorkoutComplete}
+                    onWorkoutIncomplete={handleWorkoutIncomplete}
+                    onDismissUpdate={handleDismissUpdate}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </SidebarInset>

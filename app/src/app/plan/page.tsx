@@ -83,13 +83,16 @@ export default function MyPlanPage() {
 
             {/* Status Badges & Metric Cards */}
             <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full text-sm font-semibold">
                   <div className="h-2 w-2 rounded-full bg-green-500"></div>
                   Active
                 </div>
                 <div className="inline-flex items-center px-3 py-1.5 border border-green-500/50 rounded-full text-sm font-medium text-green-600 dark:text-green-400">
                   Updated 7 days ago
+                </div>
+                <div className="inline-flex items-center px-3 py-1.5 border border-green-500/50 rounded-full text-sm font-medium text-green-600 dark:text-green-400">
+                  Next Check-in: Oct 28
                 </div>
               </div>
               <div className="hidden md:flex items-center gap-2">

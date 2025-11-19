@@ -88,12 +88,6 @@ export function PlanSummary({ coachNote }: PlanSummaryProps) {
             </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <p className="text-sm font-semibold flex items-center gap-2 text-green-600 dark:text-green-500">
-            <Calendar className="h-4 w-4" />
-            Next Check-in: Oct 28, 2025
-        </p>
-      </CardFooter>
     </Card>
   );
 }

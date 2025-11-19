@@ -20,7 +20,7 @@ interface WorkoutCompleteDialogProps {
   isOpen: boolean;
   workoutTitle: string;
   onClose: () => void;
-  onComplete: (difficulty: WorkoutDifficulty, notes: string, addDetails: boolean) => void;
+  onComplete: (difficulty: WorkoutDifficulty, notes: string) => void;
 }
 
 export function WorkoutCompleteDialog({
@@ -31,14 +31,12 @@ export function WorkoutCompleteDialog({
 }: WorkoutCompleteDialogProps) {
   const [difficulty, setDifficulty] = useState<WorkoutDifficulty>('just-right');
   const [notes, setNotes] = useState('');
-  const [showDetailsOption, setShowDetailsOption] = useState(true);
 
-  const handleComplete = (addDetails: boolean) => {
-    onComplete(difficulty, notes.trim(), addDetails);
+  const handleComplete = () => {
+    onComplete(difficulty, notes.trim());
     // Reset state
     setDifficulty('just-right');
     setNotes('');
-    setShowDetailsOption(true);
   };
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -107,39 +105,14 @@ export function WorkoutCompleteDialog({
           </div>
         </div>
 
-        {showDetailsOption ? (
-          <DialogFooter className="flex-col sm:flex-col gap-2">
-            <div className="w-full border-t pt-4 space-y-3">
-              <p className="text-sm text-muted-foreground text-center">
-                Did you track weights used?
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleComplete(false)}
-                  className="flex-1"
-                >
-                  Skip
-                </Button>
-                <Button
-                  onClick={() => handleComplete(true)}
-                  className="flex-1"
-                >
-                  Add Performance Details
-                </Button>
-              </div>
-            </div>
-          </DialogFooter>
-        ) : (
-          <DialogFooter>
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button onClick={() => handleComplete(false)}>
-              Complete Workout
-            </Button>
-          </DialogFooter>
-        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleComplete}>
+            Complete Workout
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
