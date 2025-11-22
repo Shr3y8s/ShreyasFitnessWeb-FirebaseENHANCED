@@ -156,21 +156,6 @@ export default function ProfilePage() {
     }
   };
 
-  const getTierDisplayName = (tier?: string) => {
-    if (!tier) return 'Client';
-    
-    switch (tier) {
-      case 'in-person-training':
-      case '4-pack-training':
-        return 'In-Person Training';
-      case 'online-coaching':
-        return 'Online Coaching';
-      case 'complete-transformation':
-        return 'Complete Transformation';
-      default:
-        return 'Client';
-    }
-  };
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click();
@@ -694,6 +679,7 @@ export default function ProfilePage() {
       <ClientSidebar
         userName={userData?.name}
         userTier={userData?.tier}
+        userTierName={userData?.tierName}
         onLogout={handleLogout}
       />
       <SidebarInset>
@@ -751,9 +737,12 @@ export default function ProfilePage() {
                   <div className="flex-1">
                     <h2 className="text-2xl font-bold text-foreground">{userData?.name || 'User'}</h2>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
-                        {getTierDisplayName(userData?.tier)}
-                      </span>
+                      {/* Only show tier badge if we have a meaningful tierName */}
+                      {userData?.tierName && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
+                          {userData.tierName}
+                        </span>
+                      )}
                       {userData?.emailVerified && (
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
                           ✓ Verified

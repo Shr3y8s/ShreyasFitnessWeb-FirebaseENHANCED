@@ -117,6 +117,12 @@ export default function PendingAccountsPage() {
     return () => unsubscribe();
   }, [user]);
 
+  // Get unique tier names for filter options
+  const uniqueTierNames = React.useMemo(() => {
+    const tierNames = accounts.map(account => account.tierName).filter(Boolean);
+    return [...new Set(tierNames)].sort();
+  }, [accounts]);
+
   // Apply filters
   useEffect(() => {
     let filtered = [...accounts];
@@ -140,9 +146,9 @@ export default function PendingAccountsPage() {
       });
     }
 
-    // Tier filter
+    // Tier filter - use tierName instead of tier ID
     if (tierFilter !== 'all') {
-      filtered = filtered.filter(account => account.tier === tierFilter);
+      filtered = filtered.filter(account => account.tierName === tierFilter);
     }
 
     // reCAPTCHA filter
@@ -334,10 +340,11 @@ export default function PendingAccountsPage() {
                 className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Tiers</option>
-                <option value="in-person-training">In-Person Training</option>
-                <option value="online-coaching">Online Coaching</option>
-                <option value="complete-transformation">Complete Transformation</option>
-                <option value="4-pack-training">4-Pack Training</option>
+                {uniqueTierNames.map((tierName) => (
+                  <option key={tierName} value={tierName}>
+                    {tierName}
+                  </option>
+                ))}
               </select>
 
               <select
