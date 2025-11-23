@@ -5,6 +5,8 @@ import { useEffect, useState, FormEvent } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { validateAndFormatPhone } from '@/lib/phoneUtils';
+import Mailcheck from 'mailcheck';
+import disposableDomains from 'disposable-email-domains/index.json';
 
 export default function ConnectPage() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'message'>('schedule');
@@ -17,6 +19,7 @@ export default function ConnectPage() {
     newsletter: false
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -59,6 +62,41 @@ export default function ConnectPage() {
     }
   };
 
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, email: value });
+    
+    // Clear suggestion on change
+    if (emailSuggestion) {
+      setEmailSuggestion(null);
+    }
+  };
+
+  const handleEmailBlur = () => {
+    if (!formData.email.trim()) {
+      setEmailSuggestion(null);
+      return;
+    }
+
+    // Check for email typos with mailcheck
+    Mailcheck.run({
+      email: formData.email,
+      suggested: (suggestion: { full: string }) => {
+        setEmailSuggestion(suggestion.full);
+      },
+      empty: () => {
+        setEmailSuggestion(null);
+      }
+    });
+  };
+
+  const acceptEmailSuggestion = () => {
+    if (emailSuggestion) {
+      setFormData({ ...formData, email: emailSuggestion });
+      setEmailSuggestion(null);
+    }
+  };
+
   const handlePhoneBlur = () => {
     if (!formData.phone.trim()) {
       setPhoneError(null);
@@ -83,6 +121,14 @@ export default function ConnectPage() {
     // Validate email
     if (!validateEmail(formData.email)) {
       setSubmitError('Please enter a valid email address.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Check for disposable email domain
+    const emailDomain = formData.email.split('@')[1]?.toLowerCase();
+    if (emailDomain && disposableDomains.includes(emailDomain)) {
+      setSubmitError('Disposable email addresses are not allowed. Please use a permanent email address.');
       setIsSubmitting(false);
       return;
     }
@@ -299,8 +345,39 @@ export default function ConnectPage() {
                           placeholder="Enter your email address"
                           required
                           value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          onChange={handleEmailChange}
+                          onBlur={handleEmailBlur}
                         />
+                        {emailSuggestion && (
+                          <div style={{ 
+                            marginTop: '0.5rem', 
+                            padding: '0.5rem', 
+                            backgroundColor: '#fff3cd', 
+                            border: '1px solid #ffc107',
+                            borderRadius: '4px',
+                            fontSize: '0.875rem'
+                          }}>
+                            <span style={{ color: '#856404' }}>
+                              Did you mean{' '}
+                              <button
+                                type="button"
+                                onClick={acceptEmailSuggestion}
+                                style={{
+                                  color: '#0066cc',
+                                  textDecoration: 'underline',
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                  font: 'inherit'
+                                }}
+                              >
+                                {emailSuggestion}
+                              </button>
+                              ?
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
