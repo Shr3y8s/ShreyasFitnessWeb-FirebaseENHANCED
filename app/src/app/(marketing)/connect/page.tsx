@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { validateAndFormatPhone } from '@/lib/phoneUtils';
 import Mailcheck from 'mailcheck';
 import disposableDomains from 'disposable-email-domains/index.json';
+import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 
 export default function ConnectPage() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'message'>('schedule');
@@ -41,6 +42,11 @@ export default function ConnectPage() {
     script.src = 'https://assets.calendly.com/assets/external/widget.js';
     script.async = true;
     document.body.appendChild(script);
+
+    // Load reCAPTCHA script
+    loadRecaptcha().catch((error) => {
+      console.error('Failed to load reCAPTCHA:', error);
+    });
 
     return () => {
       document.body.removeChild(script);
@@ -145,29 +151,40 @@ export default function ConnectPage() {
     }
 
     try {
+      // Execute reCAPTCHA verification
+      const recaptchaToken = await executeRecaptcha('contact_form');
+
       // Format phone for storage (E.164 format)
       const phoneValidation = validateAndFormatPhone(formData.phone);
       const phoneToStore = phoneValidation.isValid ? phoneValidation.e164 : null;
+      
       // Get service display text
       const serviceSelect = document.getElementById('service') as HTMLSelectElement;
       const serviceDisplayText = serviceSelect?.options[serviceSelect.selectedIndex]?.text || '';
 
-      // Submit to Firestore
-      await addDoc(collection(db, 'contact_form_submissions'), {
-        Name: formData.name.trim(),
-        Email: formData.email.trim(),
-        EmailLower: formData.email.trim().toLowerCase(),
-        Phone: phoneToStore,
-        Service: formData.service,
-        ServiceDisplayText: serviceDisplayText,
-        Message: formData.message.trim(),
-        Newsletter: formData.newsletter,
-        Status: 'Unread',
-        Sent: serverTimestamp(),
-        LastUpdated: serverTimestamp(),
-        Replied: false,
-        Archived: false
+      // Submit to secure API route
+      const response = await fetch('/api/submit-contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          phone: phoneToStore,
+          service: formData.service,
+          serviceDisplayText: serviceDisplayText,
+          message: formData.message.trim(),
+          newsletter: formData.newsletter,
+          recaptchaToken: recaptchaToken,
+        }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Submission failed');
+      }
 
       setSubmitSuccess(true);
       setFormData({
@@ -178,9 +195,9 @@ export default function ConnectPage() {
         message: '',
         newsletter: false
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
-      setSubmitError('There was an error sending your message. Please try again.');
+      setSubmitError(error.message || 'There was an error sending your message. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
