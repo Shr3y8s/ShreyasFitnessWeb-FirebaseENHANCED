@@ -10,7 +10,7 @@ interface UserData {
   name: string;
   email: string;
   role: 'client' | 'trainer' | 'admin';
-  phone?: string;
+  phone?: string | null;
   paymentStatus?: string;
   emailVerified?: boolean;
   [key: string]: any;
@@ -20,13 +20,17 @@ interface AuthContextType {
   user: User | null;
   userData: UserData | null;
   loading: boolean;
+  updateUserData: (updates: Partial<UserData>) => void;
+  refreshUserData: () => Promise<void>;
 }
 
 // Create the auth context with default values
 const AuthContext = createContext<AuthContextType>({
   user: null,
   userData: null,
-  loading: true
+  loading: true,
+  updateUserData: () => {},
+  refreshUserData: async () => {}
 });
 
 // Auth provider component
@@ -34,6 +38,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Function to update userData in context after database changes
+  const updateUserData = (updates: Partial<UserData>) => {
+    setUserData(prevData => prevData ? { ...prevData, ...updates } : null);
+  };
+
+  // Function to refresh userData from database
+  const refreshUserData = async () => {
+    if (!user) return;
+
+    try {
+      // Check admins collection first
+      const adminDocRef = doc(db, 'admins', user.uid);
+      const adminDoc = await getDoc(adminDocRef);
+      
+      if (adminDoc.exists()) {
+        setUserData(adminDoc.data() as UserData);
+        return;
+      }
+      
+      // If not admin, check users collection
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        setUserData(userDoc.data() as UserData);
+      } else {
+        setUserData(null);
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+  };
 
   useEffect(() => {
     // Listen for auth state changes
@@ -77,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading }}>
+    <AuthContext.Provider value={{ user, userData, loading, updateUserData, refreshUserData }}>
       {children}
     </AuthContext.Provider>
   );

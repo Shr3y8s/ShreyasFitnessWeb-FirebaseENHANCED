@@ -17,14 +17,12 @@ import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils'
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading, updateUserData } = useAuth();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Local state for immediate photo display
-  const [currentPhotoLarge, setCurrentPhotoLarge] = useState<string | null>(null);
   
   // Personal Information edit state
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -208,8 +206,11 @@ export default function ProfilePage() {
         profilePhotoLarge: large,
       });
 
-      // Update local state immediately for instant display
-      setCurrentPhotoLarge(large);
+      // Update auth context userData to sync with database
+      updateUserData({
+        profilePhotoSmall: small,
+        profilePhotoLarge: large,
+      });
 
       alert('Profile photo updated successfully!');
 
@@ -236,7 +237,9 @@ export default function ProfilePage() {
     // Load current values into edit state
     setEditedName(userData?.name || '');
     setEditedPreferredName(userData?.preferredName || '');
-    setEditedPhone(userData?.phone || '');
+    // Format phone for display in edit mode
+    const formattedPhone = formatPhoneForDisplay(userData?.phone || '') || '';
+    setEditedPhone(formattedPhone);
     setEditedDateOfBirth(userData?.dateOfBirth || '');
     setEditedGender(userData?.gender || '');
     setIsEditingPersonal(true);
@@ -313,11 +316,8 @@ export default function ProfilePage() {
 
       await updateDoc(doc(db, 'users', user.uid), updatedData);
 
-      // Update local state with formatted display version
-      setCurrentPersonalInfo({
-        ...updatedData,
-        phone: phoneValidation.isValid ? phoneValidation.formatted : null,
-      });
+      // Update auth context userData to sync with database
+      updateUserData(updatedData);
 
       alert('Personal information updated successfully!');
       setIsEditingPersonal(false);
@@ -399,7 +399,12 @@ export default function ProfilePage() {
   const handleEditEmergency = () => {
     // Load current values from nested emergencyContact object
     setEditedEmergencyName(userData?.emergencyContact?.name || '');
-    setEditedEmergencyPhone(userData?.emergencyContact?.phone || '');
+    // Format phone for display in edit mode
+    const rawPhone = userData?.emergencyContact?.phone || '';
+    console.log('Emergency Contact Raw Phone:', rawPhone);
+    const formattedEmergencyPhone = formatPhoneForDisplay(rawPhone) || '';
+    console.log('Emergency Contact Formatted Phone:', formattedEmergencyPhone);
+    setEditedEmergencyPhone(formattedEmergencyPhone);
     setEditedEmergencyRelationship(userData?.emergencyContact?.relationship || '');
     setEditedEmergencyMedicalNotes(userData?.emergencyContact?.medicalNotes || '');
     setIsEditingEmergency(true);
@@ -471,11 +476,8 @@ export default function ProfilePage() {
         emergencyContact: updatedData,
       });
 
-      // Update local state with formatted display version
-      setCurrentEmergencyInfo({
-        ...updatedData,
-        phone: phoneValidation.isValid ? phoneValidation.formatted : null,
-      });
+      // Update auth context userData to sync with database
+      updateUserData({ emergencyContact: updatedData });
 
       alert('Emergency contact information updated successfully!');
       setIsEditingEmergency(false);
@@ -711,9 +713,9 @@ export default function ProfilePage() {
                       onClick={handlePhotoClick}
                       className="w-24 h-24 rounded-full overflow-hidden cursor-pointer shadow-lg relative"
                     >
-                      {(currentPhotoLarge || userData?.profilePhotoLarge) ? (
+                      {userData?.profilePhotoLarge ? (
                         <img
-                          src={currentPhotoLarge || userData?.profilePhotoLarge || ''}
+                          src={userData.profilePhotoLarge}
                           alt="Profile"
                           className="w-full h-full object-cover"
                         />
@@ -899,7 +901,9 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
-                        <p className="text-base font-medium">{currentPersonalInfo?.phone || userData?.phone || 'Not set'}</p>
+                        <p className="text-base font-medium">
+                          {formatPhoneForDisplay(currentPersonalInfo?.phone || userData?.phone || '') || 'Not set'}
+                        </p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
@@ -1523,7 +1527,7 @@ export default function ProfilePage() {
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Contact Phone</label>
                           <p className="text-base font-medium">
-                            {currentEmergencyInfo?.phone || userData?.emergencyContact?.phone || 'Not set'}
+                            {formatPhoneForDisplay(currentEmergencyInfo?.phone || userData?.emergencyContact?.phone || '') || 'Not set'}
                           </p>
                         </div>
                         <div>
