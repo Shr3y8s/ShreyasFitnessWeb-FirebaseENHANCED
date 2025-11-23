@@ -383,8 +383,8 @@ export default function ProfilePage() {
         address: updatedData,
       });
 
-      // Update local state immediately for instant display
-      setCurrentLocationInfo(updatedData);
+      // Update auth context userData to sync with database
+      updateUserData({ address: updatedData });
 
       alert('Location information updated successfully!');
       setIsEditingLocation(false);
@@ -531,8 +531,8 @@ export default function ProfilePage() {
         notificationPreferences: updatedData,
       });
 
-      // Update local state immediately for instant display
-      setCurrentPreferences(updatedData);
+      // Update auth context userData to sync with database
+      updateUserData({ notificationPreferences: updatedData });
 
       alert('Contact preferences updated successfully!');
       setIsEditingPreferences(false);
