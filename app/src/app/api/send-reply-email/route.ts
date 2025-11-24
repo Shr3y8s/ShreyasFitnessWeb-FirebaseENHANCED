@@ -96,10 +96,9 @@ export async function POST(request: NextRequest) {
             <p style="font-size: 15px; line-height: 1.4; color: #374151; margin: 0;">
               Thanks,<br />
               Shreyas<br />
-              <a href="https://shrey.fit" style="color: #059669; font-weight: bold; font-size: 16px; text-decoration: none;">Shrey.Fit</a>
-            </p>
-            <p style="margin-top: 10px; font-size: 14px;">
-              <a href="mailto:info@shrey.fit" style="color: #059669; text-decoration: none;">info@shrey.fit</a>
+              <br />
+              <a href="https://shrey.fit" style="color: #059669; font-weight: bold; font-size: 16px; text-decoration: none;">Shrey.Fit</a><br />
+              <a href="mailto:info@shrey.fit" style="color: #059669; font-size: 14px; text-decoration: none;">info@shrey.fit</a>
             </p>
           </div>
           
@@ -123,8 +122,8 @@ ${serviceInterest ? `\nService Interest: ${serviceInterest}` : ''}
 
 Thanks,
 Shreyas
-Shrey.Fit
 
+Shrey.Fit
 info@shrey.fit`
     });
 
