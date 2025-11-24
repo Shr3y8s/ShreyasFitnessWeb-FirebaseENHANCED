@@ -249,7 +249,7 @@ export default function InboxPage() {
     }
   };
 
-  // Handle send reply with optimistic updates
+  // Handle send reply with optimistic updates + email notification
   const handleSendReply = async () => {
     if (!selectedSubmission || !replyContent.trim() || !user) return;
 
@@ -283,7 +283,7 @@ export default function InboxPage() {
     }, 100);
     
     try {
-      // Perform API operations in background
+      // 1. Save reply to Firestore (existing functionality)
       const createdReply = await createReply(selectedSubmission.id, replyText, user.email || 'Trainer');
       
       // Update with real reply data (silently replace optimistic)
@@ -295,6 +295,36 @@ export default function InboxPage() {
         );
       }
       
+      // 2. Send email notification to lead (NEW!)
+      try {
+        const emailResponse = await fetch('/api/send-reply-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadName: selectedSubmission.Name,
+            leadEmail: selectedSubmission.Email,
+            replyMessage: replyText,
+            trainerName: 'Shreyas Annapureddy',
+            originalMessage: selectedSubmission.Message,
+            serviceInterest: selectedSubmission.ServiceDisplayText,
+            sentDate: selectedSubmission.Sent.toDate()
+          })
+        });
+
+        if (!emailResponse.ok) {
+          const errorData = await emailResponse.json();
+          console.error('Email sending failed:', errorData);
+          // Don't fail the whole operation - reply is already saved to Firestore
+          alert('Reply saved to inbox, but email notification failed to send. You may want to follow up manually via email.');
+        } else {
+          console.log('Email notification sent successfully');
+        }
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Don't fail the whole operation - reply is already saved
+        alert('Reply saved to inbox, but email notification could not be sent. Please follow up manually.');
+      }
+      
       // Update local submission status
       if (selectedSubmission) {
         setSelectedSubmission({ ...selectedSubmission, Status: 'Replied' });
@@ -302,7 +332,7 @@ export default function InboxPage() {
       
       // Show success message with slight delay
       setTimeout(() => {
-        alert('Reply sent successfully!');
+        alert('Reply sent successfully! Email notification sent to lead.');
       }, 300);
       
     } catch (err) {

@@ -584,8 +584,8 @@ export default function BillingPage() {
                         Coach Inbox
                       </a>
                       {' '}or email us at{' '}
-                      <a href="mailto:shreyas.annapureddy@gmail.com" className="font-medium underline hover:text-blue-700">
-                        shreyas.annapureddy@gmail.com
+                      <a href="mailto:billing@shrey.fit" className="font-medium underline hover:text-blue-700">
+                        billing@shrey.fit
                       </a>
                     </p>
                   </div>

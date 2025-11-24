@@ -542,7 +542,7 @@ export default function ConnectPage() {
                   </div>
                   <div className="method-details">
                     <h3>Email</h3>
-                    <p><a href="mailto:shreyas.annapureddy@gmail.com">shreyas.annapureddy@gmail.com</a></p>
+                    <p><a href="mailto:info@shrey.fit">info@shrey.fit</a></p>
                   </div>
                 </div>
                 
