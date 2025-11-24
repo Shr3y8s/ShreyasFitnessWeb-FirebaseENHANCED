@@ -23,17 +23,20 @@ interface ClientData {
   id: string;
   name: string;
   email: string;
+  preferredName?: string;
+  profilePhotoLarge?: string;
   tier?: any;
   lastWorkout?: Date;
   workoutsCompleted: number;
   status: 'active' | 'inactive' | 'pending';
   paymentStatus?: string;
   subscriptionStatus?: string;
+  createdAt?: any;
 }
 
 export default function ClientsPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [filteredClients, setFilteredClients] = useState<ClientData[]>([]);
@@ -85,6 +88,11 @@ export default function ClientsPage() {
 
   useEffect(() => {
     const fetchClients = async () => {
+      // Wait for auth to complete
+      if (authLoading) {
+        return;
+      }
+      
       if (!user) {
         router.push('/login');
         return;
@@ -145,12 +153,15 @@ export default function ClientsPage() {
               id: clientId,
               name: clientInfo.name,
               email: clientInfo.email,
+              preferredName: clientInfo.preferredName,
+              profilePhotoLarge: clientInfo.profilePhotoLarge,
               tier: clientInfo.tier,
               lastWorkout: lastCompletedWorkout?.completedAt || null,
               workoutsCompleted: completedAssignments.length,
               status: status,
               paymentStatus: clientInfo.paymentStatus || 'unknown',
-              subscriptionStatus: clientInfo.subscriptionStatus || 'unknown'
+              subscriptionStatus: clientInfo.subscriptionStatus || 'unknown',
+              createdAt: clientInfo.createdAt
             });
           });
           
@@ -168,7 +179,7 @@ export default function ClientsPage() {
       };
 
       fetchClients();
-    }, [user, router]);
+    }, [user, router, authLoading]);
 
   // Load workout templates
   useEffect(() => {
@@ -498,62 +509,105 @@ export default function ClientsPage() {
               </div>
             ) : activeClient ? (
               <>
-                {/* Client Header */}
+                {/* Enhanced Client Profile Header */}
                 <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                        {activeClient.name.charAt(0)}
+                  <div className="flex items-start gap-6 mb-6">
+                    {/* Profile Photo - Larger */}
+                    <div className="flex-shrink-0">
+                      {activeClient.profilePhotoLarge ? (
+                        <img
+                          src={activeClient.profilePhotoLarge}
+                          alt={activeClient.name}
+                          className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg border-4 border-white">
+                          {activeClient.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Client Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="mb-3">
+                        <h2 className="text-3xl font-bold text-foreground mb-1">{activeClient.name}</h2>
+                        {activeClient.preferredName && activeClient.preferredName !== activeClient.name && (
+                          <p className="text-sm text-muted-foreground mb-1">
+                            Prefers: {activeClient.preferredName}
+                          </p>
+                        )}
+                        <a 
+                          href={`mailto:${activeClient.email}`}
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          {activeClient.email}
+                        </a>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Member since {activeClient.createdAt 
+                            ? new Date(activeClient.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                            : 'recently'}
+                        </p>
                       </div>
-                      <div>
-                        <h2 className="text-2xl font-bold">{activeClient.name}</h2>
-                        <p className="text-gray-600">{activeClient.email}</p>
+
+                      {/* Status Badges */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {/* Payment Status Badge */}
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                          activeClient.paymentStatus === 'active' ? 'bg-green-100 text-green-800' :
+                          activeClient.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          <span className="text-base">💳</span>
+                          {activeClient.paymentStatus === 'active' ? 'Active Payment' : 
+                           activeClient.paymentStatus === 'pending' ? 'Payment Pending' : 
+                           activeClient.paymentStatus || 'Unknown'}
+                        </span>
+                        
+                        {/* Training Status Badge */}
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                          activeClient.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                          activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          <span className="text-base">💪</span>
+                          {activeClient.status === 'active' ? 'Actively Training' :
+                           activeClient.status === 'inactive' ? 'Training Inactive' :
+                           'No Workouts Yet'}
+                        </span>
+
+                        {/* Tier Badge */}
+                        {activeClient.tier?.name && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                            <span className="text-base">⭐</span>
+                            {activeClient.tier.name}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
+                          className="shadow-sm"
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Message Client
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            router.push(`/dashboard/trainer/assignments?mode=create&clients=${activeClient.id}`);
+                          }}
+                          className="shadow-sm"
+                        >
+                          <Dumbbell className="h-4 w-4 mr-2" />
+                          Assign Workout
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      {/* Payment Status Badge */}
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        activeClient.paymentStatus === 'active' ? 'bg-green-100 text-green-800' :
-                        activeClient.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        💳 {activeClient.paymentStatus === 'active' ? 'Paid' : 
-                            activeClient.paymentStatus === 'pending' ? 'Payment Pending' : 
-                            activeClient.paymentStatus || 'Unknown'}
-                      </span>
-                      {/* Workout Status Badge */}
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        activeClient.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                        activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        💪 {activeClient.status === 'active' ? 'Training' :
-                            activeClient.status === 'inactive' ? 'Inactive' :
-                            'No Workouts'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Quick Actions */}
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Message
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => {
-                        router.push(`/dashboard/trainer/assignments?mode=create&clients=${activeClient.id}`);
-                      }}
-                    >
-                      <Dumbbell className="h-4 w-4 mr-2" />
-                      Assign Workout
-                    </Button>
                   </div>
                 </div>
 
