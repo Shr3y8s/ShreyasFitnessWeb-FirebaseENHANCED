@@ -754,7 +754,7 @@ export default function InboxPage() {
                     </div>
                   ) : replies.length > 0 ? (
                     <div className="replies-container space-y-3 max-h-96 overflow-y-auto">
-                      {replies.map((reply) => (
+                      {[...replies].reverse().map((reply) => (
                         <div key={reply.id} className="bg-gray-50 rounded-lg p-4 border">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700">
