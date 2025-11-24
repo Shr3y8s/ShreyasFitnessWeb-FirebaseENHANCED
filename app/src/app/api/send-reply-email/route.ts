@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
           </p>
           
           <p style="font-size: 16px; line-height: 1.6; color: #374151; margin-bottom: 20px;">
-            Thank you for your interest in Shrey.fit services.
+            Thank you for your interest in Shrey.fit services. Please see my response below.
           </p>
           
           <!-- Trainer's Reply -->
@@ -83,10 +83,11 @@ export async function POST(request: NextRequest) {
             </p>
             
             <div style="background: #f9fafb; padding: 15px; border-left: 3px solid #d1d5db; border-radius: 4px;">
-              ${serviceInterest ? `<p style="font-size: 13px; color: #059669; font-weight: 600; margin-bottom: 8px;">
+              <p style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #4b5563; margin: 0;">${originalMessage || 'Your inquiry'}</p>
+              ${serviceInterest ? `
+              <p style="font-size: 13px; color: #6b7280; font-style: italic; margin-top: 15px; margin-bottom: 0;">
                 Service Interest: ${serviceInterest}
               </p>` : ''}
-              <p style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #4b5563; margin: 0;">${originalMessage || 'Your inquiry'}</p>
             </div>
           </div>
           
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       // Plain text fallback for email clients that don't support HTML
       text: `Hi ${leadName || 'there'},
 
-Thank you for your interest in Shrey.fit services.
+Thank you for your interest in Shrey.fit services. Please see my response below.
 
 ${replyMessage}
 
@@ -115,8 +116,8 @@ ${replyMessage}
 
 On ${formattedDate}, ${leadName || 'you'} wrote:
 
-${serviceInterest ? `Service Interest: ${serviceInterest}\n` : ''}
 ${originalMessage || 'Your inquiry'}
+${serviceInterest ? `\nService Interest: ${serviceInterest}` : ''}
 
 ────────────────────────────────────
 
