@@ -427,7 +427,7 @@ export default function InboxPage() {
                   <MailOpen className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Read</p>
+                  <p className="text-sm text-gray-600">Read (not replied)</p>
                   <p className="text-2xl font-bold">{messageCounts.read}</p>
                 </div>
               </div>
@@ -491,7 +491,7 @@ export default function InboxPage() {
               >
                 <option value="ALL">All Status</option>
                 <option value="Unread">Unread</option>
-                <option value="Read">Read</option>
+                <option value="Read">Read (not replied)</option>
                 <option value="Replied">Replied</option>
               </select>
             </div>
