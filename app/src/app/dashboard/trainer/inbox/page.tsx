@@ -27,7 +27,8 @@ import {
   Clock,
   User,
   Reply,
-  Inbox
+  Inbox,
+  Newspaper
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TrainerSidebar from '@/components/TrainerSidebar';
@@ -677,7 +678,7 @@ export default function InboxPage() {
                     
                     {/* Newsletter */}
                     <div className="flex items-center gap-1.5">
-                      <MessageSquare className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                      <Newspaper className="h-4 w-4 text-gray-500 flex-shrink-0" />
                       <span className="text-gray-700">
                         {selectedSubmission.Newsletter ? '✓ Newsletter' : 'No newsletter'}
                       </span>
