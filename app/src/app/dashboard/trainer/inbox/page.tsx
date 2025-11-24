@@ -37,7 +37,7 @@ type SortOption = 'DATE_DESC' | 'DATE_ASC' | 'SERVICE' | 'PRIORITY';
 
 export default function InboxPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   // State
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
@@ -64,10 +64,10 @@ export default function InboxPage() {
 
   // Check authentication
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       router.push('/login');
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   // Load service types
   useEffect(() => {
