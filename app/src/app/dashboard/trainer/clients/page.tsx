@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   Clock,
   X,
-  ChevronDown
+  ChevronDown,
+  Phone,
+  MapPin
 } from 'lucide-react';
 
 interface ClientData {
@@ -32,6 +34,14 @@ interface ClientData {
   paymentStatus?: string;
   subscriptionStatus?: string;
   createdAt?: any;
+  phone?: string;
+  emergencyContact?: {
+    name: string;
+    phone: string;
+    relationship?: string;
+  };
+  address?: string;
+  timezone?: string;
 }
 
 export default function ClientsPage() {
@@ -161,7 +171,11 @@ export default function ClientsPage() {
               status: status,
               paymentStatus: clientInfo.paymentStatus || 'unknown',
               subscriptionStatus: clientInfo.subscriptionStatus || 'unknown',
-              createdAt: clientInfo.createdAt
+              createdAt: clientInfo.createdAt,
+              phone: clientInfo.phone,
+              emergencyContact: clientInfo.emergencyContact,
+              address: clientInfo.address,
+              timezone: clientInfo.timezone
             });
           });
           
@@ -613,6 +627,102 @@ export default function ClientsPage() {
 
                 {/* Client Details Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {/* Contact Information */}
+                  <div className="bg-white border rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <Phone className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold">Contact Information</h3>
+                    </div>
+                    
+                    {/* Row 1: Phone & Email */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      {/* Phone */}
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-600 mb-1">Phone</p>
+                          {activeClient.phone ? (
+                            <a 
+                              href={`tel:${activeClient.phone}`}
+                              className="font-medium hover:text-primary transition-colors"
+                            >
+                              {activeClient.phone}
+                            </a>
+                          ) : (
+                            <p className="text-gray-400 text-sm">Not provided</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="flex items-start gap-3">
+                        <Mail className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-600 mb-1">Email</p>
+                          <a 
+                            href={`mailto:${activeClient.email}`}
+                            className="font-medium hover:text-primary transition-colors break-words"
+                          >
+                            {activeClient.email}
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Address & Emergency Contact */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Address (with Timezone) */}
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-600 mb-1">Address</p>
+                          {activeClient.address ? (
+                            <div>
+                              <p className="font-medium mb-1">{activeClient.address}</p>
+                              {activeClient.timezone && (
+                                <p className="text-sm text-gray-600">
+                                  <Clock className="h-3 w-3 inline mr-1" />
+                                  Timezone: {activeClient.timezone}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-gray-400 text-sm">Not provided</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Emergency Contact */}
+                      <div className="flex items-start gap-3">
+                        <Users className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-600 mb-1">Emergency Contact</p>
+                          {activeClient.emergencyContact ? (
+                            <div className="space-y-1">
+                              <p className="font-medium">{activeClient.emergencyContact.name}</p>
+                              <a 
+                                href={`tel:${activeClient.emergencyContact.phone}`}
+                                className="text-sm hover:text-primary transition-colors block"
+                              >
+                                <Phone className="h-3 w-3 inline mr-1" />
+                                {activeClient.emergencyContact.phone}
+                              </a>
+                              {activeClient.emergencyContact.relationship && (
+                                <p className="text-sm text-gray-600">
+                                  {activeClient.emergencyContact.relationship}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-gray-400 text-sm">Not provided</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Subscription & Payment Info */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
