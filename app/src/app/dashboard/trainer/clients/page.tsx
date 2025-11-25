@@ -312,7 +312,8 @@ export default function ClientsPage() {
 
   // Subscribe to session data when active client changes
   useEffect(() => {
-    if (!activeClientId) {
+    // Early return if no user (e.g., during logout) or no active client
+    if (!user || !activeClientId) {
       setSessionBalance(null);
       setUpcomingSessions([]);
       return;
@@ -339,12 +340,12 @@ export default function ClientsPage() {
       }
     );
 
-    // Cleanup subscriptions on unmount or when client changes
+    // Cleanup subscriptions on unmount or when client/user changes
     return () => {
       unsubscribeBalance();
       unsubscribeSessions();
     };
-  }, [activeClientId]);
+  }, [activeClientId, user]);
 
   if (loading) {
     return (
