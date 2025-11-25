@@ -403,7 +403,7 @@ users/{userId}/
   email: "shreyas@shrey.fit",
   phone: "",
   role: "trainer", // or "admin"
-  paymentStatus: "n/a", // trainers don't pay
+  accountActivated: true, // trainers are always activated
   createdAt: timestamp,
   createdBy: "admin",
   emailVerified: false

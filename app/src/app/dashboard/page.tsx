@@ -22,17 +22,17 @@ export default function DashboardWelcomePage() {
           const urlParams = new URLSearchParams(window.location.search);
           const paymentSuccess = urlParams.get('payment') === 'success';
           
-          // CRITICAL: If returning from Stripe, wait for webhook to update payment status
-          if (paymentSuccess && userData.role === 'client' && userData.paymentStatus !== 'active') {
+          // CRITICAL: If returning from Stripe, wait for webhook to update account activation
+          if (paymentSuccess && userData.role === 'client' && !userData.accountActivated) {
             console.log('[Dashboard] Waiting for payment webhook to complete...');
             setWaitingForWebhook(true);
             setLoading(false);
             return;
           }
           
-          // CRITICAL: Check payment status FIRST (but not if waiting for webhook)
-          if (userData.role === 'client' && userData.paymentStatus !== 'active') {
-            // Redirect to payment if not paid
+          // CRITICAL: Check account activation FIRST (but not if waiting for webhook)
+          if (userData.role === 'client' && !userData.accountActivated) {
+            // Redirect to payment if not activated
             router.push('/payment');
             return;
           }
@@ -74,9 +74,9 @@ export default function DashboardWelcomePage() {
     const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('[Dashboard] Payment status update:', data.paymentStatus);
+        console.log('[Dashboard] Account activation update:', data.accountActivated);
         
-        if (data.paymentStatus === 'active') {
+        if (data.accountActivated) {
           console.log('[Dashboard] Payment confirmed! Proceeding...');
           setWaitingForWebhook(false);
           // Clear the payment query parameter and reload

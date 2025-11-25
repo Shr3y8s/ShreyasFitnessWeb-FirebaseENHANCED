@@ -93,7 +93,7 @@ exports.stripeWebhook = onRequest(async (req, res) => {
             tierName: session.metadata.tierName,
             stripeCustomerId: session.customer,
             subscriptionId: session.subscription,
-            paymentStatus: 'active',
+            accountActivated: true,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             createdViaWebhook: true
           });

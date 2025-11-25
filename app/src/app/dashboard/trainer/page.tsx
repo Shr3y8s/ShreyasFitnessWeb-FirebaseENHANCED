@@ -31,6 +31,8 @@ interface ClientData {
   lastWorkout?: Date;
   workoutsCompleted: number;
   status: 'active' | 'inactive' | 'pending';
+  accountActivated?: boolean;
+  subscriptionStatus?: string;
 }
 
 export default function TrainerDashboardPage() {
@@ -189,7 +191,7 @@ export default function TrainerDashboardPage() {
         try {
           const pendingQuery = query(
             collection(db, 'users'),
-            where('paymentStatus', '==', 'pending')
+            where('accountActivated', '==', false)
           );
           const pendingSnapshot = await getDocs(pendingQuery);
           setPendingAccountsCount(pendingSnapshot.size);

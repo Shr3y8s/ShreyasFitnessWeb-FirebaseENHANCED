@@ -117,7 +117,7 @@ admin.initializeApp();
   tierName: string,
   stripeCustomerId: string,
   subscriptionId: string,
-  paymentStatus: 'active' | 'cancelled',
+  accountActivated: boolean,
   createdAt: timestamp,
   createdViaWebhook: true,
   sessionId: string,

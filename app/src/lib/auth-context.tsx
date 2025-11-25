@@ -11,7 +11,7 @@ interface UserData {
   email: string;
   role: 'client' | 'trainer' | 'admin';
   phone?: string | null;
-  paymentStatus?: string;
+  accountActivated?: boolean;
   emailVerified?: boolean;
   [key: string]: any;
 }

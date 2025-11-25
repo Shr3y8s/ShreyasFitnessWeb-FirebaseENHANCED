@@ -30,7 +30,7 @@ The Stripe Firebase Extension automatically syncs:
 | Active Subscriptions | Firestore `subscriptions` | where status='active' |
 | Payment History | Firestore `payments` + `invoices` | orderBy created |
 | Failed Payments | Firestore `invoices` | where status=failed |
-| Pending Accounts | Firestore `users` | where paymentStatus='pending' |
+| Pending Accounts | Firestore `users` | where accountActivated=false |
 | reCAPTCHA Scores | Firestore `users` | where recaptchaScore exists |
 
 ---
@@ -119,7 +119,7 @@ interface PendingAccount {
   email: string;
   tier: string;
   tierName: string;
-  paymentStatus: 'pending';
+  accountActivated: false;
   recaptchaScore?: number;
   recaptchaVerified?: boolean;
   createdAt: Timestamp;
@@ -151,7 +151,7 @@ If > 10 pending accounts:
 // Get all pending accounts
 const pendingQuery = query(
   collection(db, 'users'),
-  where('paymentStatus', '==', 'pending'),
+  where('accountActivated', '==', false),
   orderBy('createdAt', 'desc')
 );
 
@@ -288,7 +288,7 @@ match /stripe_customers/{customerId} {
 match /users/{userId} {
   allow delete: if request.auth != null &&
     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'trainer' &&
-    resource.data.paymentStatus == 'pending';
+    resource.data.accountActivated == false;
 }
 ```
 

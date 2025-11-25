@@ -71,9 +71,9 @@ export default function ClientDashboardPage() {
       return;
     }
 
-    // CRITICAL: Check payment status before allowing dashboard access
-    if (userDataFromAuth.paymentStatus !== 'active') {
-      console.log('[ClientDashboard] Payment not complete, redirecting to payment');
+    // CRITICAL: Check account activation before allowing dashboard access
+    if (!userDataFromAuth.accountActivated) {
+      console.log('[ClientDashboard] Account not activated, redirecting to payment');
       router.push('/payment');
       return;
     }

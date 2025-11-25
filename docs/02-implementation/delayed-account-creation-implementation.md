@@ -108,7 +108,7 @@ const handlePayment = async () => {
       phone: pendingSignup.phone,
       tier: pendingSignup.tier,
       tierName: pendingSignup.tierName,
-      paymentStatus: 'pending',
+      accountActivated: false,
       role: 'client',
       createdAt: serverTimestamp()
     });
@@ -220,7 +220,7 @@ const handlePayment = async () => {
 │  - User completes payment                                    │
 │  - Stripe Extension updates Firestore                        │
 │  - syncPaymentToUser/syncSubscriptionToUser triggers         │
-│  - paymentStatus updated to 'active'                         │
+│  - accountActivated updated to true                          │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -287,7 +287,7 @@ const handlePayment = async () => {
 - ✅ SessionStorage intact
 
 ### **7. Stripe Checkout Fails**
-- ✅ Account created with paymentStatus: 'pending'
+- ✅ Account created with accountActivated: false
 - ✅ User can retry from dashboard
 - ✅ syncPaymentToUser will update when paid
 - ✅ No duplicate accounts
@@ -308,7 +308,7 @@ const handlePayment = async () => {
 - [ ] Verify redirect to Stripe Checkout
 - [ ] Complete payment in Stripe
 - [ ] Verify redirect to dashboard
-- [ ] Verify paymentStatus: 'active'
+- [ ] Verify accountActivated: true
 
 ### **Package Change Flow:**
 - [ ] Login as existing user
@@ -475,7 +475,7 @@ exports.verifyRecaptcha = onDocumentWritten({
   name: "John Doe",
   email: "john@example.com",
   tier: "online-coaching",
-  paymentStatus: "pending",
+  accountActivated: false,
   
   // reCAPTCHA fields (added):
   recaptchaToken: "03AHJ...",      // Temporary
@@ -491,7 +491,7 @@ exports.verifyRecaptcha = onDocumentWritten({
   name: "John Doe",
   email: "john@example.com",
   tier: "online-coaching",
-  paymentStatus: "pending",
+  accountActivated: false,
   
   // reCAPTCHA fields (verified):
   recaptchaVerified: true,          // ✅ Verified

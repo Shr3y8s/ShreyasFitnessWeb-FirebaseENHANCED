@@ -23,7 +23,7 @@ Firestore:
 │     ├─ name: "Your Name"
 │     ├─ email: "your@email.com"
 │     ├─ role: "admin"
-│     └─ paymentStatus: "n/a"
+│     └─ accountActivated: true
 │
 └─ users/               ← Client accounts (can delete during testing)
    ├─ client1/
@@ -99,9 +99,9 @@ Firestore:
    - Value: admin
    
    Field 4:
-   - Field: paymentStatus
-   - Type: string
-   - Value: n/a
+   - Field: accountActivated
+   - Type: boolean
+   - Value: true
    
    Field 5:
    - Field: phone

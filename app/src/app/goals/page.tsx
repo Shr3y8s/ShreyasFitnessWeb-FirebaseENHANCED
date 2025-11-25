@@ -166,7 +166,7 @@ export default function GoalsPage() {
       return;
     }
 
-    if (userData.paymentStatus !== 'active') {
+    if (!userData.accountActivated) {
       router.push('/payment');
       return;
     }

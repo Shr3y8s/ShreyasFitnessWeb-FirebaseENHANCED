@@ -45,7 +45,7 @@ This document summarizes the comprehensive improvements made to the payment and 
 **Solution:**
 - Created `syncPaymentToUser` Cloud Function
 - Listens to `stripe_customers/{uid}/payments/{paymentId}`
-- Updates `paymentStatus: 'active'` when payment succeeds
+- Updates `accountActivated: true` when payment succeeds
 
 **Files Modified:**
 - `firebase/functions/index.js`
@@ -56,7 +56,7 @@ exports.syncPaymentToUser = onDocumentWritten({
   document: "stripe_customers/{userId}/payments/{paymentId}",
   region: "us-west1",
 }, async (event) => {
-  // Updates user paymentStatus when payment succeeds
+  // Updates user accountActivated when payment succeeds
 });
 ```
 
@@ -97,7 +97,7 @@ exports.cleanupPendingAccounts = onSchedule({
 ```
 
 **Cleanup Criteria:**
-- `paymentStatus === "pending"`
+- `accountActivated === false`
 - `createdAt > 48 hours ago`
 - No successful payments
 
@@ -115,7 +115,7 @@ exports.cleanupPendingAccounts = onSchedule({
 
 ```
 1. User Signs Up
-   └─> Account created (paymentStatus: "pending")
+   └─> Account created (accountActivated: false)
    
 2. User Selects Package
    └─> Tier stored in user document
@@ -128,11 +128,11 @@ exports.cleanupPendingAccounts = onSchedule({
 4. Payment Processing
    ├─ ONE-TIME: stripe_customers/{uid}/payments/{paymentId}
    │   └─> syncPaymentToUser triggers
-   │       └─> paymentStatus: "active"
+   │       └─> accountActivated: true
    │
-   └─ SUBSCRIPTION: stripe_customers/{uid}/subscriptions/{subId}
-       └─> syncSubscriptionToUser triggers
-           └─> paymentStatus: "active"
+
+        └─> syncSubscriptionToUser triggers
+           └─> accountActivated: true
            
 5. Success
    └─> Welcome screen → Dashboard
@@ -217,7 +217,7 @@ exports.cleanupPendingAccounts = onSchedule({
 - [ ] Sign up with 4-pack tier
 - [ ] Complete payment at Stripe
 - [ ] Verify redirect to welcome screen
-- [ ] Verify `paymentStatus: "active"` in Firestore
+- [ ] Verify `accountActivated: true` in Firestore
 - [ ] Test "Change Package" button
 - [ ] Test "Cancel" button
 
@@ -225,7 +225,7 @@ exports.cleanupPendingAccounts = onSchedule({
 - [ ] Sign up with subscription tier
 - [ ] Complete payment at Stripe
 - [ ] Verify redirect to welcome screen
-- [ ] Verify `paymentStatus: "active"` in Firestore
+- [ ] Verify `accountActivated: true` in Firestore
 - [ ] Check subscription in Stripe dashboard
 - [ ] Test "Change Package" button
 

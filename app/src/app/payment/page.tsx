@@ -19,7 +19,7 @@ interface UserData {
   email: string;
   tier: string;
   tierName: string;
-  paymentStatus?: string;
+  accountActivated?: boolean;
   phone?: string;
 }
 
@@ -96,8 +96,8 @@ export default function PaymentPage() {
 
       const data = userDoc.data() as UserData;
       
-      // Check if already paid
-      if (data.paymentStatus === 'active') {
+      // Check if account is already activated (already completed payment)
+      if (data.accountActivated) {
         router.push('/dashboard');
         return;
       }
@@ -207,11 +207,35 @@ export default function PaymentPage() {
         console.log("Creating new account before payment...");
         
         // Create Firebase Auth account
-        const userCredential = await createUserWithEmailAndPassword(
-          firebaseAuth,
-          pendingSignup.email,
-          pendingSignup.password
-        );
+        let userCredential;
+        try {
+          userCredential = await createUserWithEmailAndPassword(
+            firebaseAuth,
+            pendingSignup.email,
+            pendingSignup.password
+          );
+        } catch (authError: any) {
+          console.error('Firebase Auth error:', authError);
+          
+          // Handle specific auth errors
+          if (authError.code === 'auth/email-already-in-use') {
+            setError('This email is already registered. Redirecting to login page...');
+            setTimeout(() => router.push('/login'), 3000);
+            return;
+          } else if (authError.code === 'auth/weak-password') {
+            setError('Password is too weak. Please use at least 6 characters.');
+            setIsProcessing(false);
+            return;
+          } else if (authError.code === 'auth/invalid-email') {
+            setError('Invalid email address format.');
+            setIsProcessing(false);
+            return;
+          } else {
+            setError(`Account creation failed: ${authError.message}`);
+            setIsProcessing(false);
+            return;
+          }
+        }
         
         userId = userCredential.user.uid;
         userEmail = pendingSignup.email;
@@ -226,7 +250,7 @@ export default function PaymentPage() {
           phone: pendingSignup.phone,
           tier: pendingSignup.tier,
           tierName: pendingSignup.tierName,
-          paymentStatus: 'pending',
+          accountActivated: false, // Will be set to true on first payment
           role: 'client',
           recaptchaToken: recaptchaToken || null,
           recaptchaVerified: false, // Will be verified by backend

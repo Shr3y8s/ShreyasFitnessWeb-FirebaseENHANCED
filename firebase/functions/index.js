@@ -396,17 +396,28 @@ exports.syncPaymentToUser = onDocumentWritten({
 
     // For one-time payments, if status is 'succeeded', mark user as active
     if (status === "succeeded") {
+      // Get current user data to check if already activated
+      const userDoc = await admin.firestore().collection("users").doc(userId).get();
+      const userData = userDoc.data();
+      
       const updateData = {
-        paymentStatus: "active",
         lastPaymentId: paymentId,
         lastPaymentAmount: paymentData.amount || 0,
         lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
 
+      // Only set accountActivated if not already set (write-once boolean)
+      if (!userData || !userData.accountActivated) {
+        updateData.accountActivated = true;
+        
+        logger.info("Activating account on first payment", {
+          userId,
+          paymentId,
+        });
+      }
+      
       // Assign trainer if not already assigned
-      const userDoc = await admin.firestore().collection("users").doc(userId).get();
-      const userData = userDoc.data();
       
       if (!userData || !userData.assignedTrainerId) {
         logger.info("Assigning trainer to one-time payment customer", {userId});
@@ -437,9 +448,9 @@ exports.syncPaymentToUser = onDocumentWritten({
 
       await admin.firestore().collection("users").doc(userId).update(updateData);
 
-      logger.info("User payment status synced successfully (one-time payment)", {
+      logger.info("User payment synced successfully (one-time payment)", {
         userId,
-        paymentStatus: "active",
+        accountActivated: updateData.accountActivated || userData.accountActivated,
         paymentId,
         trainerAssigned: !!updateData.assignedTrainerId,
       });
@@ -592,7 +603,7 @@ exports.cancelSession = sessionFunctions.cancelSession;
 /**
  * Firestore trigger to sync subscription status from stripe_customers to users
  * This bridges the Stripe Extension (which updates stripe_customers)
- * with our users collection (which tracks paymentStatus)
+ * with our users collection
  * Triggered whenever a subscription document is created or updated
  */
 exports.syncSubscriptionToUser = onDocumentWritten({
@@ -608,7 +619,6 @@ exports.syncSubscriptionToUser = onDocumentWritten({
     if (!change.after.exists) {
       logger.info("Subscription deleted, updating user", {userId, subscriptionId});
       await admin.firestore().collection("users").doc(userId).update({
-        paymentStatus: "cancelled",
         subscriptionEndedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -624,19 +634,29 @@ exports.syncSubscriptionToUser = onDocumentWritten({
       status,
     });
 
+    // Get current user data to check account activation status
+    const userDoc = await admin.firestore().collection("users").doc(userId).get();
+    const userData = userDoc.data();
+
     // Prepare update object
     const updateData = {
-      paymentStatus: status === "active" ? "active" : "pending",
       subscriptionId: subscriptionId,
       subscriptionStatus: status,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
+    // Only set accountActivated on first active subscription (write-once)
+    if (status === "active" && (!userData || !userData.accountActivated)) {
+      updateData.accountActivated = true;
+      
+      logger.info("Activating account on first subscription", {
+        userId,
+        subscriptionId,
+      });
+    }
+
     // If subscription is active and user doesn't have a trainer assigned, assign one
     if (status === "active") {
-      const userDoc = await admin.firestore().collection("users").doc(userId).get();
-      const userData = userDoc.data();
-      
       if (!userData || !userData.assignedTrainerId) {
         logger.info("Assigning trainer to new active subscriber", {userId});
         
@@ -665,12 +685,12 @@ exports.syncSubscriptionToUser = onDocumentWritten({
       }
     }
 
-    // Update the users collection with payment status and trainer assignment
+    // Update the users collection with subscription status and trainer assignment
     await admin.firestore().collection("users").doc(userId).update(updateData);
 
-    logger.info("User payment status synced successfully", {
+    logger.info("User subscription synced successfully", {
       userId,
-      paymentStatus: status === "active" ? "active" : "pending",
+      subscriptionStatus: status,
       subscriptionId,
       trainerAssigned: !!updateData.assignedTrainerId,
     });
@@ -772,11 +792,10 @@ exports.verifyRecaptcha = onDocumentWritten({
 });
 
 /**
- * Scheduled function to clean up abandoned pending accounts
+ * Scheduled function to clean up abandoned accounts that never activated
  * Runs daily at 2 AM UTC to remove accounts that:
- * - Have paymentStatus === "pending"
+ * - Have accountActivated === false (never completed payment)
  * - Were created more than 48 hours ago
- * - Have no successful payments
  * 
  * This prevents database bloat from abandoned signups and test accounts
  */
@@ -793,10 +812,10 @@ exports.cleanupPendingAccounts = onSchedule({
         now.toMillis() - (48 * 60 * 60 * 1000),
     );
 
-    // Find pending accounts older than 48 hours
+    // Find unactivated accounts older than 48 hours
     const usersRef = admin.firestore().collection("users");
     const pendingAccountsQuery = usersRef
-        .where("paymentStatus", "==", "pending")
+        .where("accountActivated", "==", false)
         .where("createdAt", "<", fortyEightHoursAgo);
 
     const snapshot = await pendingAccountsQuery.get();

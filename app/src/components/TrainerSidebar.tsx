@@ -117,7 +117,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
       // Listen to pending accounts
       const pendingAccountsQuery = query(
         collection(db, 'users'),
-        where('paymentStatus', '==', 'pending')
+        where('accountActivated', '==', false)
       );
       const unsubPending = onSnapshot(pendingAccountsQuery, (snapshot) => {
         setCounts(prev => ({ ...prev, pendingAccounts: snapshot.size }));

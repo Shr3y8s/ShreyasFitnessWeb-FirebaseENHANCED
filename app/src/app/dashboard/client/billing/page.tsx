@@ -80,9 +80,9 @@ export default function BillingPage() {
       return;
     }
 
-    // Check payment status
-    if (userData.paymentStatus !== 'active') {
-      console.log('[Billing] Payment not complete, redirecting to payment');
+    // Check account activation
+    if (!userData.accountActivated) {
+      console.log('[Billing] Account not activated, redirecting to payment');
       router.push('/payment');
       return;
     }

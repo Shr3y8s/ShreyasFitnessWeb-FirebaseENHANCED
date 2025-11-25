@@ -47,7 +47,7 @@ export default function ProgressPage() {
       return;
     }
 
-    if (userData.paymentStatus !== 'active') {
+    if (!userData.accountActivated) {
       router.push('/payment');
       return;
     }

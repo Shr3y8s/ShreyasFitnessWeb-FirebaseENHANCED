@@ -69,15 +69,15 @@ service cloud.firestore {
                   resource.data.role in ['trainer', 'admin'];
       
       // Allow users to update their own profile with validation
-      // IMPORTANT: Users cannot modify role, createdAt, or paymentStatus (only Stripe Extension can update paymentStatus)
+      // IMPORTANT: Users cannot modify role, createdAt, or accountActivated (only backend can update accountActivated)
       allow update: if isOwner(userId) &&
                     (!request.resource.data.diff(resource.data).affectedKeys()
-                      .hasAny(['role', 'createdAt', 'paymentStatus', 'stripeCustomerId', 'subscriptionId']));
+                      .hasAny(['role', 'createdAt', 'accountActivated', 'stripeCustomerId', 'subscriptionId']));
                       
       // Allow initial creation of user documents (for signup process)
-      // Users can create their account with paymentStatus: "pending"
+      // Users can create their account with accountActivated: false
       allow create: if isOwner(userId) &&
-                    request.resource.data.paymentStatus == 'pending';
+                    request.resource.data.accountActivated == false;
     
       // Dashboard data collection
       match /dashboard_data/{docId} {

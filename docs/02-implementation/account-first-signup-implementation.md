@@ -13,13 +13,13 @@ Implementing a reliable account-first signup flow where users create accounts be
    ↓
 3. Firebase Auth account created
    ↓
-4. User document created with paymentStatus: "pending"
+4. User document created with accountActivated: false
    ↓
 5. Redirect to /payment
    ↓
 6. User completes Stripe Checkout
    ↓
-7. Extension webhook updates paymentStatus: "active"
+7. Extension webhook updates accountActivated: true
    ↓
 8. User can access full dashboard
 ```
@@ -27,22 +27,18 @@ Implementing a reliable account-first signup flow where users create accounts be
 ### User States
 
 #### Pending Payment
-- **Status**: `paymentStatus: "pending"`
+- **Status**: `accountActivated: false`
 - **Access**: Limited - redirected to "Complete Payment" screen
 - **Actions**: Can complete payment, view account info
 - **Cleanup**: Auto-deleted after 7 days if no payment
 
-#### Active Payment
-- **Status**: `paymentStatus: "active"`
+#### Completed Payment
+- **Status**: `accountActivated: true`
 - **Access**: Full dashboard access
 - **Actions**: All features available
 - **Cleanup**: None needed
 
-#### Cancelled Payment
-- **Status**: `paymentStatus: "cancelled"`
-- **Access**: Limited - can restart subscription
-- **Actions**: Can re-subscribe
-- **Cleanup**: Kept for historical records
+**Note:** Subscription cancellations are tracked separately in the Stripe Extension's `subscriptions` collection (subscription.status = 'cancelled'), NOT in the `accountActivated` field. Once a user successfully pays during signup, `accountActivated` remains `true` permanently, even if they later cancel their subscription.
 
 ## Database Schema
 
@@ -53,7 +49,7 @@ Implementing a reliable account-first signup flow where users create accounts be
   name: string                     // User name
   tier: string                     // "online" | "complete"
   tierName: string                 // "Online Coaching" | "Complete Transformation"
-  paymentStatus: string            // "pending" | "active" | "cancelled"
+  accountActivated: boolean        // false = pending payment, true = active
   role: string                     // "client" | "trainer" | "admin"
   createdAt: Timestamp             // Account creation time
   
@@ -88,10 +84,10 @@ service cloud.firestore {
       // Users can read their own data
       allow read: if request.auth.uid == userId;
       
-      // Users can update their own data but not paymentStatus
-      // (only extension webhook can update paymentStatus)
+      // Users can update their own data but not accountActivated
+      // (only extension webhook can update accountActivated)
       allow write: if request.auth.uid == userId 
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['paymentStatus']));
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['accountActivated']));
     }
     
     // Other collections...
@@ -103,7 +99,7 @@ service cloud.firestore {
 
 ### Scheduled Function
 - **Schedule**: Daily at 2:00 AM UTC
-- **Target**: Users with `paymentStatus: "pending"` AND `createdAt > 7 days ago`
+- **Target**: Users with `accountActivated: false` AND `createdAt > 7 days ago`
 - **Action**: Delete Firebase Auth account + Firestore document
 - **Logging**: Log all deletions for audit
 
@@ -117,14 +113,14 @@ Admin dashboard feature to:
 
 The Stripe Firebase Extension handles:
 - ✅ Webhook events from Stripe
-- ✅ Updating `paymentStatus` to "active" on successful payment
+- ✅ Updating `accountActivated` to true on successful payment
 - ✅ Creating `stripeCustomerId` and `subscriptionId`
 - ✅ Syncing subscription status changes
 
 We handle:
 - ✅ Creating Firebase Auth accounts
-- ✅ Creating user documents with initial `paymentStatus: "pending"`
-- ✅ Redirecting users based on payment status
+- ✅ Creating user documents with initial `accountActivated: false`
+- ✅ Redirecting users based on account activation status
 - ✅ Cleanup of abandoned accounts
 
 ## Testing Checklist
@@ -133,7 +129,7 @@ We handle:
 - [ ] User creates account successfully
 - [ ] Redirected to payment page
 - [ ] Completes Stripe Checkout
-- [ ] Extension updates paymentStatus to "active"
+- [ ] Extension updates accountActivated to true
 - [ ] User can access full dashboard
 
 ### Abandoned Payment Path
@@ -182,7 +178,7 @@ We handle:
 If migrating from payment-first implementation:
 1. Keep existing custom webhook for backward compatibility
 2. Update signup flow to new account-first approach
-3. Add paymentStatus field to existing users (default: "active")
+3. Add accountActivated field to existing users (default: true for active users)
 4. Deploy and test
 5. Monitor for 2 weeks
 6. Remove old payment-first code if stable

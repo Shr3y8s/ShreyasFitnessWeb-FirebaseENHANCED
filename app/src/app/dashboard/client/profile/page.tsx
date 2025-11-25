@@ -131,9 +131,9 @@ export default function ProfilePage() {
       return;
     }
 
-    // CRITICAL: Check payment status
-    if (userData.paymentStatus !== 'active') {
-      console.log('[Profile] Payment not complete, redirecting to payment');
+    // CRITICAL: Check account activation
+    if (!userData.accountActivated) {
+      console.log('[Profile] Account not activated, redirecting to payment');
       router.push('/payment');
       return;
     }
@@ -639,10 +639,10 @@ export default function ProfilePage() {
         address: userData.address || {},
         emergencyContact: userData.emergencyContact || {},
         notificationPreferences: userData.notificationPreferences || {},
-        subscription: {
-          tier: userData.tier,
-          paymentStatus: userData.paymentStatus,
-        },
+          subscription: {
+            tier: userData.tier,
+            accountActivated: userData.accountActivated,
+          },
       };
 
       // Create JSON blob

@@ -171,7 +171,7 @@ export async function createUserWithTier(email: string, password: string, name: 
       phone: phone || null,
       tier: tier.id,
       tierName: tier.name,
-      paymentStatus: 'pending', // Account created, payment not yet completed
+      accountActivated: false, // Account created, payment not yet completed
       role: 'client',
       createdAt: serverTimestamp()
     });

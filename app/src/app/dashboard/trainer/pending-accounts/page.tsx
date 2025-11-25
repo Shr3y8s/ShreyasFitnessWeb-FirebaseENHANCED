@@ -35,7 +35,7 @@ interface PendingAccount {
   phone?: string;
   tier: string;
   tierName: string;
-  paymentStatus: string;
+  accountActivated: boolean;
   recaptchaScore?: number;
   recaptchaVerified?: boolean;
   createdAt: Timestamp;
@@ -83,7 +83,7 @@ export default function PendingAccountsPage() {
 
     const pendingQuery = query(
       collection(db, 'users'),
-      where('paymentStatus', '==', 'pending'),
+      where('accountActivated', '==', false),
       orderBy('createdAt', 'desc')
     );
 
@@ -101,7 +101,7 @@ export default function PendingAccountsPage() {
           phone: data.phone,
           tier: data.tier || 'unknown',
           tierName: data.tierName || 'Unknown Plan',
-          paymentStatus: data.paymentStatus,
+          accountActivated: data.accountActivated || false,
           recaptchaScore: data.recaptchaScore,
           recaptchaVerified: data.recaptchaVerified,
           createdAt: data.createdAt,
