@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 interface TrainerSidebarProps {
-  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments' | 'business' | 'pending-accounts' | 'locations';
+  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments' | 'business' | 'pending-accounts' | 'locations' | 'profile';
 }
 
 interface UserData {
@@ -33,8 +33,7 @@ interface UserData {
 
 export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSidebarProps) {
   const router = useRouter();
-  const { user } = useAuth();
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const { user, userData } = useAuth();
   const [counts, setCounts] = useState({
     clients: 0,
     exercises: 0,
@@ -45,21 +44,16 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
     pendingAccounts: 0
   });
 
-  // Fetch user data and counts
+  // Fetch counts
   useEffect(() => {
     if (!user) return;
 
     // Array to store all unsubscribe functions
     const unsubscribers: (() => void)[] = [];
 
-    // Fetch user data
+    // Count clients
     (async () => {
       try {
-        const { doc, getDoc } = await import('firebase/firestore');
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        setUserData(userDoc.data() as UserData || null);
-
-        // Count clients
         const clientsQuery = query(
           collection(db, 'users'),
           where('role', '==', 'client')
@@ -67,7 +61,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
         const clientsSnapshot = await getDocs(clientsQuery);
         setCounts(prev => ({ ...prev, clients: clientsSnapshot.size }));
       } catch (error) {
-        console.error('Error fetching user data:', error);
+        console.error('Error fetching clients count:', error);
       }
     })();
 
@@ -145,7 +139,7 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
   };
 
   return (
-    <div className="fixed left-4 top-4 bottom-4 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-emerald-200/60 z-50 flex flex-col">
+    <div className="fixed left-4 top-4 bottom-4 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-emerald-200/60 z-30 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-5">
         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
@@ -330,24 +324,51 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
             </Link>
           </div>
         </div>
+
+        {/* Account Management */}
+        <div>
+          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Account Management</p>
+          <div className="space-y-1">
+            <Link href="/dashboard/trainer/profile">
+              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                currentPage === 'profile' 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              }`}>
+                <User className="w-4 h-4 flex-shrink-0" />
+                <span>My Profile</span>
+              </button>
+            </Link>
+          </div>
+        </div>
       </nav>
 
       {/* Footer */}
       <div className="p-4 border-t border-emerald-100/30 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-              {userData?.name ? userData.name.charAt(0).toUpperCase() : 'T'}
-            </div>
+            {userData?.profilePhotoSmall ? (
+              <img
+                src={userData.profilePhotoSmall}
+                alt={userData.name || 'Trainer'}
+                className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                {userData?.name ? userData.name.charAt(0).toUpperCase() : 'A'}
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-sidebar-foreground truncate">{userData?.name || 'Trainer'}</p>
-              <p className="text-xs text-primary font-medium truncate">trainer/admin</p>
+              <p className="font-semibold text-sm text-sidebar-foreground truncate">{userData?.name || 'Admin'}</p>
+              <p className="text-xs text-primary font-medium truncate capitalize">
+                {userData?.role || 'admin'}
+              </p>
             </div>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={handleLogout} 
+            onClick={handleLogout}
             className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
           >
             <LogOut className="w-4 h-4" />

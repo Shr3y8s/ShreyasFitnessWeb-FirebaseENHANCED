@@ -13,6 +13,21 @@ interface UserData {
   phone?: string | null;
   accountActivated?: boolean;
   emailVerified?: boolean;
+  
+  // Profile photo fields (for both clients and trainers)
+  profilePhotoSmall?: string | null;   // 150x150px
+  profilePhotoLarge?: string | null;   // 500x500px
+  
+  // Trainer-specific profile fields
+  bio?: string | null;
+  professionalTitle?: string | null;
+  yearsExperience?: number | null;
+  specializations?: string[];
+  
+  // For clients - assigned trainer info
+  assignedTrainerId?: string;
+  assignedTrainerName?: string;
+  
   [key: string]: any;
 }
 

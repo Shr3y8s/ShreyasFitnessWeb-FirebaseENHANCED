@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Helper function to check file size (5MB max)
+    function isValidSize() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+    
+    // Helper function to check if file is an image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Profile photos - allow users to upload their own profile photos
+    // Works for both clients (users collection) and trainers/admins (admins collection)
+    match /profile-photos/{userId}/{filename} {
+      // Allow read if authenticated (for viewing profile photos)
+      allow read: if isAuthenticated();
+      
+      // Allow write only if:
+      // 1. User is authenticated
+      // 2. User owns this directory (userId matches auth.uid)
+      // 3. File is an image
+      // 4. File size is under 5MB
+      allow write: if isOwner(userId) && isImage() && isValidSize();
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

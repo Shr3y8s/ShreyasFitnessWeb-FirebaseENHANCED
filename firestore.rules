@@ -10,26 +10,30 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
-    function isTrainer() {
-      return isAuthenticated() && (
-        // Check admins collection first
-        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['trainer', 'admin']) ||
-        // Fall back to users collection
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'])
-      );
+    // Check if user is an admin (owner with full platform access)
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin';
     }
     
+    // Check if user is a trainer (staff with scoped access)
+    function isTrainer() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'trainer';
+    }
+    
+    // Check if user is either admin or trainer (for shared permissions)
     function isTrainerOrAdmin() {
-      return isAuthenticated() && (
-        // Check admins collection first
-        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['trainer', 'admin']) ||
-        // Fall back to users collection
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['trainer', 'admin'])
-      );
+      return isAdmin() || isTrainer();
+    }
+    
+    // Check if trainer is assigned to a specific client (for future filtering)
+    function isAssignedTrainer(clientId) {
+      return isTrainer() &&
+        exists(/databases/$(database)/documents/users/$(clientId)) &&
+        get(/databases/$(database)/documents/users/$(clientId)).data.assignedTrainerId == request.auth.uid;
     }
 
     // Contact Form Submissions - New collection for contact form
@@ -44,16 +48,25 @@ service cloud.firestore {
       }
     }
     
-    // ADMIN COLLECTION: Protected collection for admin accounts
+    // ADMIN COLLECTION: Protected collection for admin/trainer accounts
     match /admins/{adminId} {
-      // Admins can read their own profile
+      // Admins and trainers can read their own profile
       allow read: if request.auth.uid == adminId;
       
-      // CLIENT MESSAGING: Allow authenticated clients to read admin profiles (to find their coach)
+      // Admins can read all trainer profiles (for future team management)
+      allow read: if isAdmin();
+      
+      // CLIENT MESSAGING: Allow authenticated clients to read admin/trainer profiles (to find their coach)
       allow read: if isAuthenticated();
       
-      // Admin profiles are manually created/managed only
-      allow write: if false;
+      // Admins and trainers can update their own profile (excluding role, email, and createdAt)
+      // Explicitly allow profile photo, name, phone, bio, professionalTitle, yearsExperience fields
+      allow update: if request.auth.uid == adminId &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'createdAt', 'email', 'stripeCustomerId']);
+      
+      // No direct create/delete (manual only or via Cloud Functions)
+      allow create, delete: if false;
     }
     
     // Enhanced user profile rules for dashboard
