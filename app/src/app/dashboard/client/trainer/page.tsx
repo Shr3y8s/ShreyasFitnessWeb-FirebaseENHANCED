@@ -17,6 +17,11 @@ import {
   Calendar,
   User,
   Loader2,
+  ExternalLink,
+  Linkedin,
+  Youtube,
+  Instagram,
+  Facebook,
 } from 'lucide-react';
 import { formatPhoneForDisplay } from '@/lib/phoneUtils';
 
@@ -27,8 +32,31 @@ interface TrainerData {
   phone?: string;
   profilePhotoLarge?: string;
   profilePhotoSmall?: string;
-  professionalTitle?: string;
+  // Education
+  educationDegree?: string;
+  educationMajor?: string;
+  educationMinor?: string;
+  educationInstitution?: string;
+  // Certifications
+  fitnessCertifications?: string;
+  nutritionCertifications?: string;
+  specialtyCertifications?: string;
+  fitnessCertificationUrls?: string[];
+  nutritionCertificationUrls?: string[];
+  specialtyCertificationUrls?: string[];
+  // Experience
   yearsExperience?: number;
+  specializations?: string;
+  // Philosophy
+  trainingPhilosophy?: string;
+  areasOfExpertise?: string;
+  // Social Media
+  linkedinUrl?: string;
+  youtubeUrl?: string;
+  instagramUrl?: string;
+  facebookUrl?: string;
+  // Legacy fields
+  professionalTitle?: string;
   bio?: string;
 }
 
@@ -62,8 +90,31 @@ export default function YourTrainerPage() {
               phone: data.phone,
               profilePhotoLarge: data.profilePhotoLarge,
               profilePhotoSmall: data.profilePhotoSmall,
-              professionalTitle: data.professionalTitle,
+              // Education
+              educationDegree: data.educationDegree,
+              educationMajor: data.educationMajor,
+              educationMinor: data.educationMinor,
+              educationInstitution: data.educationInstitution,
+              // Certifications
+              fitnessCertifications: data.fitnessCertifications,
+              nutritionCertifications: data.nutritionCertifications,
+              specialtyCertifications: data.specialtyCertifications,
+              fitnessCertificationUrls: data.fitnessCertificationUrls || [],
+              nutritionCertificationUrls: data.nutritionCertificationUrls || [],
+              specialtyCertificationUrls: data.specialtyCertificationUrls || [],
+              // Experience
               yearsExperience: data.yearsExperience,
+              specializations: data.specializations,
+              // Philosophy
+              trainingPhilosophy: data.trainingPhilosophy,
+              areasOfExpertise: data.areasOfExpertise,
+              // Social Media
+              linkedinUrl: data.linkedinUrl,
+              youtubeUrl: data.youtubeUrl,
+              instagramUrl: data.instagramUrl,
+              facebookUrl: data.facebookUrl,
+              // Legacy
+              professionalTitle: data.professionalTitle,
               bio: data.bio,
             });
           }
@@ -88,6 +139,56 @@ export default function YourTrainerPage() {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  // Helper function to render certification badges
+  const renderCertificationBadges = (
+    certificationsText: string,
+    urls: string[],
+    colorClass: string
+  ) => {
+    // Parse certifications by comma, semicolon, or pipe
+    const certs = certificationsText
+      .split(/[,;|]/)
+      .map(cert => cert.trim())
+      .filter(cert => cert.length > 0);
+
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {certs.map((cert, index) => {
+          const url = urls[index];
+          const BadgeContent = (
+            <>
+              <span className="font-medium">{cert}</span>
+              {url && <ExternalLink className="h-3 w-3 ml-1" />}
+            </>
+          );
+
+          if (url) {
+            return (
+              <a
+                key={index}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm ${colorClass} hover:opacity-80 transition-opacity cursor-pointer shadow-sm`}
+              >
+                {BadgeContent}
+              </a>
+            );
+          }
+
+          return (
+            <span
+              key={index}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm ${colorClass} shadow-sm`}
+            >
+              {BadgeContent}
+            </span>
+          );
+        })}
+      </div>
+    );
   };
 
   if (loading || authLoading) {
@@ -147,25 +248,72 @@ export default function YourTrainerPage() {
             </div>
 
             {/* Hero Section - Trainer Profile Card */}
-            <Card className="border-2 border-primary/20 overflow-hidden">
-              <div className="bg-gradient-to-r from-primary/10 via-blue-50 to-primary/5 p-8">
+            <Card className="border-2 border-primary/20 overflow-hidden p-0">
+              <CardContent className="bg-gradient-to-r from-primary/10 via-blue-50 to-primary/5 p-8">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                  {/* Profile Photo */}
-                  <div className="relative">
-                    {trainerData.profilePhotoLarge ? (
-                      <img
-                        src={trainerData.profilePhotoLarge}
-                        alt={trainerData.name}
-                        className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-4xl font-bold shadow-lg border-4 border-white">
-                        {trainerData.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    {trainerData.yearsExperience && (
-                      <div className="absolute -bottom-2 -right-2 bg-primary text-white px-3 py-1 rounded-full text-sm font-bold shadow-md">
-                        {trainerData.yearsExperience}+ years
+                  {/* Profile Photo & Social Links */}
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                      {trainerData.profilePhotoLarge ? (
+                        <img
+                          src={trainerData.profilePhotoLarge}
+                          alt={trainerData.name}
+                          className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
+                        />
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-4xl font-bold shadow-lg border-4 border-white">
+                          {trainerData.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Social Media Icons */}
+                    {(trainerData.linkedinUrl || trainerData.facebookUrl || trainerData.youtubeUrl || trainerData.instagramUrl) && (
+                      <div className="flex items-center gap-2">
+                        {trainerData.linkedinUrl && (
+                          <a
+                            href={trainerData.linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow hover:bg-blue-50"
+                            aria-label="LinkedIn"
+                          >
+                            <Linkedin className="h-5 w-5 text-blue-600" />
+                          </a>
+                        )}
+                        {trainerData.facebookUrl && (
+                          <a
+                            href={trainerData.facebookUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow hover:bg-blue-50"
+                            aria-label="Facebook"
+                          >
+                            <Facebook className="h-5 w-5 text-blue-700" />
+                          </a>
+                        )}
+                        {trainerData.youtubeUrl && (
+                          <a
+                            href={trainerData.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow hover:bg-red-50"
+                            aria-label="YouTube"
+                          >
+                            <Youtube className="h-5 w-5 text-red-600" />
+                          </a>
+                        )}
+                        {trainerData.instagramUrl && (
+                          <a
+                            href={trainerData.instagramUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg transition-shadow hover:bg-pink-50"
+                            aria-label="Instagram"
+                          >
+                            <Instagram className="h-5 w-5 text-pink-600" />
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
@@ -175,18 +323,23 @@ export default function YourTrainerPage() {
                     <h2 className="text-3xl font-bold text-foreground mb-2">
                       {trainerData.name}
                     </h2>
-                    {trainerData.professionalTitle && (
+                    {trainerData.fitnessCertifications && (
                       <p className="text-lg text-primary font-medium mb-3">
-                        {trainerData.professionalTitle}
+                        {trainerData.fitnessCertifications}
                       </p>
                     )}
                     {trainerData.yearsExperience && (
-                      <div className="flex items-center gap-2 text-muted-foreground justify-center md:justify-start mb-4">
+                      <div className="flex items-center gap-2 text-muted-foreground justify-center md:justify-start mb-2">
                         <Award className="h-5 w-5 text-primary" />
                         <span className="font-medium">
                           {trainerData.yearsExperience}+ Years of Experience
                         </span>
                       </div>
+                    )}
+                    {trainerData.specializations && (
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Specializing in: {trainerData.specializations}
+                      </p>
                     )}
 
                     {/* Primary CTA */}
@@ -200,22 +353,103 @@ export default function YourTrainerPage() {
                     </Button>
                   </div>
                 </div>
-              </div>
+              </CardContent>
             </Card>
 
-            {/* About Your Trainer */}
-            {trainerData.bio && (
+            {/* Education & Credentials */}
+            {(trainerData.educationDegree || trainerData.fitnessCertifications || trainerData.nutritionCertifications || trainerData.specialtyCertifications) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary" />
+                    Education & Credentials
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {trainerData.educationDegree && trainerData.educationMajor && trainerData.educationInstitution && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Education</h4>
+                      <p className="text-base">
+                        {trainerData.educationDegree} {trainerData.educationMajor}
+                        {trainerData.educationMinor && ` (Minor: ${trainerData.educationMinor})`}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{trainerData.educationInstitution}</p>
+                    </div>
+                  )}
+                  
+                  {(trainerData.fitnessCertifications || trainerData.nutritionCertifications || trainerData.specialtyCertifications) && (
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-semibold text-foreground mb-3">Certifications</h4>
+                      <div className="space-y-4">
+                        {trainerData.fitnessCertifications && (
+                          <div>
+                            <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1.5">
+                              💪 Fitness Certifications
+                            </p>
+                            {renderCertificationBadges(
+                              trainerData.fitnessCertifications,
+                              trainerData.fitnessCertificationUrls || [],
+                              'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            )}
+                          </div>
+                        )}
+                        {trainerData.nutritionCertifications && (
+                          <div>
+                            <p className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-1.5">
+                              🥗 Nutrition Certifications
+                            </p>
+                            {renderCertificationBadges(
+                              trainerData.nutritionCertifications,
+                              trainerData.nutritionCertificationUrls || [],
+                              'bg-blue-100 text-blue-800 border border-blue-200'
+                            )}
+                          </div>
+                        )}
+                        {trainerData.specialtyCertifications && (
+                          <div>
+                            <p className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-1.5">
+                              ⭐ Specialty Certifications
+                            </p>
+                            {renderCertificationBadges(
+                              trainerData.specialtyCertifications,
+                              trainerData.specialtyCertificationUrls || [],
+                              'bg-purple-100 text-purple-800 border border-purple-200'
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Training Philosophy & Expertise */}
+            {(trainerData.trainingPhilosophy || trainerData.areasOfExpertise) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5 text-primary" />
-                    About Your Trainer
+                    Training Approach
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap">
-                    {trainerData.bio}
-                  </p>
+                <CardContent className="space-y-4">
+                  {trainerData.trainingPhilosophy && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Coaching Philosophy</h4>
+                      <p className="text-base text-foreground leading-relaxed">
+                        {trainerData.trainingPhilosophy}
+                      </p>
+                    </div>
+                  )}
+                  {trainerData.areasOfExpertise && (
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Areas of Expertise</h4>
+                      <p className="text-base text-foreground leading-relaxed">
+                        {trainerData.areasOfExpertise}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -244,13 +478,14 @@ export default function YourTrainerPage() {
                       <p className="text-sm text-muted-foreground">Fastest response time</p>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => router.push('/dashboard/client/messages')}
-                    className="w-full"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Open Coach Chat
-                  </Button>
+                  <div className="flex justify-center md:justify-start">
+                    <Button
+                      onClick={() => router.push('/dashboard/client/messages')}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Open Coach Chat
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Additional Contact Info */}
@@ -279,71 +514,6 @@ export default function YourTrainerPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button
-                    variant="outline"
-                    className="h-auto p-4 flex flex-col items-start text-left"
-                    onClick={() => router.push('/dashboard/client/plan')}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">View My Plan</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      See your personalized training program
-                    </span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="h-auto p-4 flex flex-col items-start text-left"
-                    onClick={() => router.push('/dashboard/client/sessions/schedule')}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                      <span className="font-semibold">Schedule Session</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      Book your next training session
-                    </span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="h-auto p-4 flex flex-col items-start text-left"
-                    onClick={() => router.push('/dashboard/client/progress')}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="h-5 w-5 text-green-600" />
-                      <span className="font-semibold">Track Progress</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      View your metrics and achievements
-                    </span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="h-auto p-4 flex flex-col items-start text-left"
-                    onClick={() => router.push('/dashboard/client/resources')}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageSquare className="h-5 w-5 text-purple-600" />
-                      <span className="font-semibold">Resources</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      Access training materials and guides
-                    </span>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </SidebarInset>

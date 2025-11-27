@@ -18,11 +18,39 @@ interface UserData {
   profilePhotoSmall?: string | null;   // 150x150px
   profilePhotoLarge?: string | null;   // 500x500px
   
-  // Trainer-specific profile fields
+  // Trainer-specific profile fields (Education)
+  educationDegree?: string | null;
+  educationMajor?: string | null;
+  educationMinor?: string | null;
+  educationInstitution?: string | null;
+  
+  // Certifications
+  fitnessCertifications?: string | null;
+  nutritionCertifications?: string | null;
+  specialtyCertifications?: string | null;
+  
+  // Certification Verification URLs
+  fitnessCertificationUrls?: string[];
+  nutritionCertificationUrls?: string[];
+  specialtyCertificationUrls?: string[];
+  
+  // Social Media
+  linkedinUrl?: string | null;
+  youtubeUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  
+  // Experience
+  yearsExperience?: number | null;
+  specializations?: string | null;  // Changed from string[] to string
+  
+  // Philosophy
+  trainingPhilosophy?: string | null;
+  areasOfExpertise?: string | null;
+  
+  // Legacy fields (for migration)
   bio?: string | null;
   professionalTitle?: string | null;
-  yearsExperience?: number | null;
-  specializations?: string[];
   
   // For clients - assigned trainer info
   assignedTrainerId?: string;
