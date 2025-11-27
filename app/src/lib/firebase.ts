@@ -194,31 +194,6 @@ export async function createUserWithTier(email: string, password: string, name: 
   }
 }
 
-// Function to create a trainer/admin user
-export async function createTrainerUser(email: string, password: string, name: string, phone: string): Promise<UserCreationResult> {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const userId = userCredential.user.uid;
-    
-    await setDoc(doc(db, 'users', userId), {
-      name: name,
-      email: email,
-      phone: phone || null,
-      role: 'trainer',
-      permissions: ['create_workouts', 'manage_clients', 'view_analytics', 'admin_access'],
-      createdAt: serverTimestamp()
-    });
-    
-    return { success: true, userId, user: userCredential.user };
-  } catch (error) {
-    console.error('Error creating trainer user:', error);
-    return {
-      success: false,
-      error: error as Error
-    };
-  }
-}
-
 // Function to sign in a user
 export async function signInUser(email: string, password: string): Promise<SignInResult> {
   try {
