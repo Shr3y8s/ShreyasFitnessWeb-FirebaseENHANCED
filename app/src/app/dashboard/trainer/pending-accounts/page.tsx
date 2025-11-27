@@ -16,6 +16,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { deleteUser } from 'firebase/auth';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -234,10 +235,10 @@ export default function PendingAccountsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <SidebarProvider>
       <TrainerSidebar currentPage="pending-accounts" />
-
-      <div className="ml-64 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div>
@@ -524,7 +525,8 @@ export default function PendingAccountsPage() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      </SidebarInset>
 
       {/* Bulk Delete Confirmation Modal */}
       {bulkDeleteConfirm && (
@@ -558,6 +560,6 @@ export default function PendingAccountsPage() {
           </div>
         </div>
       )}
-    </div>
+    </SidebarProvider>
   );
 }

@@ -1,130 +1,72 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
-import { db, signOutUser } from '@/lib/firebase';
-import { collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
+import { signOutUser, db } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import {
-  Users,
-  Dumbbell,
-  Target,
   LayoutDashboard,
-  Inbox,
+  Users,
+  Mail,
+  Dumbbell,
+  ListChecks,
+  Briefcase,
+  MapPin,
   User,
   LogOut,
-  Mail,
-  CalendarCheck,
-  Briefcase,
-  MapPin
+  Clock,
 } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuBadge,
+} from '@/components/ui/sidebar';
 
 interface TrainerSidebarProps {
-  currentPage?: 'overview' | 'inbox' | 'clients' | 'messages' | 'exercises' | 'workouts' | 'assignments' | 'business' | 'pending-accounts' | 'locations' | 'profile';
+  currentPage?: string;
 }
 
-interface UserData {
-  name?: string;
-  email?: string;
-  role?: string;
-}
-
-export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSidebarProps) {
+export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
+  const pathname = usePathname();
   const router = useRouter();
   const { user, userData } = useAuth();
-  const [counts, setCounts] = useState({
-    clients: 0,
-    exercises: 0,
-    workouts: 0,
-    assignments: 0,
-    unreadMessages: 0,
-    unreadClientMessages: 0,
-    pendingAccounts: 0
-  });
+  const [clientCount, setClientCount] = useState(0);
 
-  // Fetch counts
+  // Listen for real-time client count updates
   useEffect(() => {
-    if (!user) return;
-
-    // Array to store all unsubscribe functions
-    const unsubscribers: (() => void)[] = [];
-
-    // Count clients
-    (async () => {
-      try {
-        const clientsQuery = query(
-          collection(db, 'users'),
-          where('role', '==', 'client')
-        );
-        const clientsSnapshot = await getDocs(clientsQuery);
-        setCounts(prev => ({ ...prev, clients: clientsSnapshot.size }));
-      } catch (error) {
-        console.error('Error fetching clients count:', error);
-      }
-    })();
-
-    // Set up real-time listeners
-    try {
-      // Listen to exercises
-      const exercisesQuery = query(
-        collection(db, 'exercises'),
-        where('createdBy', '==', user.uid)
-      );
-      const unsubExercises = onSnapshot(exercisesQuery, (snapshot) => {
-        setCounts(prev => ({ ...prev, exercises: snapshot.size }));
-      });
-      unsubscribers.push(unsubExercises);
-
-      // Listen to workouts
-      const workoutsQuery = query(
-        collection(db, 'workout_templates'),
-        where('createdBy', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
-      const unsubWorkouts = onSnapshot(workoutsQuery, (snapshot) => {
-        setCounts(prev => ({ ...prev, workouts: snapshot.size }));
-      });
-      unsubscribers.push(unsubWorkouts);
-
-      // Listen to assignments
-      const assignmentsQuery = query(
-        collection(db, 'assigned_workouts'),
-        where('trainerId', '==', user.uid)
-      );
-      const unsubAssignments = onSnapshot(assignmentsQuery, (snapshot) => {
-        setCounts(prev => ({ ...prev, assignments: snapshot.size }));
-      });
-      unsubscribers.push(unsubAssignments);
-
-      // Listen to unread contact messages
-      const contactsQuery = query(
-        collection(db, 'contact_form_submissions'),
-        where('Status', '==', 'Unread')
-      );
-      const unsubContacts = onSnapshot(contactsQuery, (snapshot) => {
-        setCounts(prev => ({ ...prev, unreadMessages: snapshot.size }));
-      });
-      unsubscribers.push(unsubContacts);
-
-      // Listen to pending accounts
-      const pendingAccountsQuery = query(
-        collection(db, 'users'),
-        where('accountActivated', '==', false)
-      );
-      const unsubPending = onSnapshot(pendingAccountsQuery, (snapshot) => {
-        setCounts(prev => ({ ...prev, pendingAccounts: snapshot.size }));
-      });
-      unsubscribers.push(unsubPending);
-    } catch (error) {
-      console.error('Error setting up listeners:', error);
+    if (!user) {
+      setClientCount(0);
+      return;
     }
 
-    // Return cleanup function
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
+    const clientsQuery = query(
+      collection(db, 'users'),
+      where('role', '==', 'client')
+    );
+
+    const unsubscribe = onSnapshot(
+      clientsQuery,
+      (snapshot) => {
+        setClientCount(snapshot.size);
+      },
+      (error) => {
+        console.error('Error listening to client count:', error);
+        setClientCount(0);
+      }
+    );
+
+    return () => unsubscribe();
   }, [user]);
 
   const handleLogout = async () => {
@@ -139,253 +81,235 @@ export default function TrainerSidebar({ currentPage = 'overview' }: TrainerSide
   };
 
   return (
-    <div className="fixed left-4 top-4 bottom-4 w-64 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-emerald-200/60 z-30 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-5">
-        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-          SF
+    <Sidebar variant="floating">
+      <SidebarHeader>
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+            SF
+          </div>
+          <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
         </div>
-        <span className="font-bold text-lg text-sidebar-foreground">TRAINER PORTAL</span>
-      </div>
+      </SidebarHeader>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-6 overflow-auto">
-        {/* Dashboard Section */}
-        <div>
-          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Dashboard</p>
-          <Link href="/dashboard/trainer">
-            <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-              currentPage === 'overview' 
-                ? 'bg-primary text-white hover:bg-primary/90' 
-                : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-            }`}>
-              <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
-              <span>Overview</span>
-            </button>
-          </Link>
-        </div>
-        
-        {/* Lead Management */}
-        <div>
-          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Lead Management</p>
-          <div className="space-y-1">
-            <Link href="/dashboard/trainer/inbox">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'inbox' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <Inbox className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Lead Inbox</span>
-                {counts.unreadMessages > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                    {counts.unreadMessages}
-                  </span>
-                )}
-              </button>
-            </Link>
-          </div>
-        </div>
-        
-        {/* Client Management */}
-        <div>
-          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Client Management</p>
-          <div className="space-y-1">
-            <Link href="/dashboard/trainer/clients">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'clients' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <Users className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Clients</span>
-                {counts.clients > 0 && (
-                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                    {counts.clients}
-                  </span>
-                )}
-              </button>
-            </Link>
-            
-            <Link href="/dashboard/trainer/clients-messages">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'messages' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <Mail className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Client Inbox</span>
-                {counts.unreadClientMessages > 0 && (
-                  <span className="ml-auto bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                    {counts.unreadClientMessages}
-                  </span>
-                )}
-              </button>
-            </Link>
-            
-            <Link href="/dashboard/trainer/assignments">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'assignments' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <CalendarCheck className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Workout Assignments</span>
-                {counts.assignments > 0 && (
-                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                    {counts.assignments}
-                  </span>
-                )}
-              </button>
-            </Link>
-          </div>
-        </div>
+      <SidebarContent>
+        {/* Overview Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
+            Overview
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer' || currentPage === 'dashboard' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer">
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="font-medium">Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-        {/* Business Management */}
-        <div>
-          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Business Management</p>
-          <div className="space-y-1">
-            <Link href="/dashboard/trainer/business">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'business' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <Briefcase className="w-4 h-4 flex-shrink-0" />
-                <span>Overview</span>
-              </button>
-            </Link>
-            
-            <Link href="/dashboard/trainer/pending-accounts">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'pending-accounts' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <User className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Pending Accounts</span>
-                {counts.pendingAccounts > 0 && (
-                  <span className={`ml-auto text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    counts.pendingAccounts > 10 ? 'bg-red-500 text-white' : 'bg-yellow-500 text-white'
-                  }`}>
-                    {counts.pendingAccounts}
-                  </span>
-                )}
-              </button>
-            </Link>
-            
-            <Link href="/dashboard/trainer/business/locations">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'locations' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <MapPin className="w-4 h-4 flex-shrink-0" />
-                <span>Training Locations</span>
-              </button>
-            </Link>
-          </div>
-        </div>
-        
-        {/* Workout Management */}
-        <div>
-          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Workout Management</p>
-          <div className="space-y-1">
-            <Link href="/dashboard/trainer/exercises">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'exercises' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <Target className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Exercise Library</span>
-                {counts.exercises > 0 && (
-                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                    {counts.exercises}
-                  </span>
-                )}
-              </button>
-            </Link>
-            
-            <Link href="/dashboard/trainer/workouts">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'workouts' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <Dumbbell className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">Workout Library</span>
-                {counts.workouts > 0 && (
-                  <span className="ml-auto bg-sidebar-accent text-sidebar-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
-                    {counts.workouts}
-                  </span>
-                )}
-              </button>
-            </Link>
-          </div>
-        </div>
+        {/* Client Management Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
+            Client Management
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/clients' || currentPage === 'clients' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/clients">
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">Clients</span>
+                    {clientCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {clientCount}
+                      </SidebarMenuBadge>
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/clients-messages' || currentPage === 'messages' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/clients-messages">
+                    <Mail className="w-4 h-4" />
+                    <span className="font-medium">Messages</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-        {/* Account Management */}
-        <div>
-          <p className="text-xs font-medium text-sidebar-foreground/70 mb-2 px-2">Account Management</p>
-          <div className="space-y-1">
-            <Link href="/dashboard/trainer/profile">
-              <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                currentPage === 'profile' 
-                  ? 'bg-primary text-white hover:bg-primary/90' 
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-              }`}>
-                <User className="w-4 h-4 flex-shrink-0" />
-                <span>My Profile</span>
-              </button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+        {/* Training Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
+            Training
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/exercises' || currentPage === 'exercises' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/exercises">
+                    <Dumbbell className="w-4 h-4" />
+                    <span className="font-medium">Exercise Library</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/workouts' || currentPage === 'workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/workouts">
+                    <ListChecks className="w-4 h-4" />
+                    <span className="font-medium">Workout Templates</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/assignments' || currentPage === 'assignments' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/assignments">
+                    <ListChecks className="w-4 h-4" />
+                    <span className="font-medium">Assignments</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-emerald-100/30 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {userData?.profilePhotoSmall ? (
-              <img
-                src={userData.profilePhotoSmall}
-                alt={userData.name || 'Trainer'}
-                className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                {userData?.name ? userData.name.charAt(0).toUpperCase() : 'A'}
+        {/* Business Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
+            Business
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/business' || currentPage === 'business' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/business">
+                    <Briefcase className="w-4 h-4" />
+                    <span className="font-medium">Analytics</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/business/locations' || currentPage === 'locations' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/business/locations">
+                    <MapPin className="w-4 h-4" />
+                    <span className="font-medium">Training Locations</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/pending-accounts' || currentPage === 'pending-accounts' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/pending-accounts">
+                    <Clock className="w-4 h-4" />
+                    <span className="font-medium">Pending Accounts</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Account Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
+            Account
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/profile' || currentPage === 'profile' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/profile">
+                    <User className="w-4 h-4" />
+                    <span className="font-medium">Profile</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <div className="p-3 border-t border-white/10 space-y-3">
+          {/* User Info */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {userData?.profilePhotoSmall ? (
+                <img
+                  src={userData.profilePhotoSmall}
+                  alt={userData?.name || 'Trainer'}
+                  className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                  {userData?.name ? userData.name.charAt(0).toUpperCase() : 'T'}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-sidebar-foreground truncate">
+                  {userData?.name || 'Trainer'}
+                </p>
+                <p className="text-xs text-primary font-medium truncate capitalize">
+                  {userData?.role || 'Trainer'}
+                </p>
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm text-sidebar-foreground truncate">{userData?.name || 'Admin'}</p>
-              <p className="text-xs text-primary font-medium truncate capitalize">
-                {userData?.role || 'admin'}
-              </p>
             </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout}
+              className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout}
-            className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
+          
+          {/* Legal Links */}
+          <div className="text-xs text-center text-muted-foreground pt-2 border-t border-white/10">
+            <Link href="/legal/terms" className="hover:text-primary transition-colors">
+              Terms
+            </Link>
+            <span className="mx-2">•</span>
+            <Link href="/legal/privacy" className="hover:text-primary transition-colors">
+              Privacy
+            </Link>
+          </div>
         </div>
-        
-        {/* Legal Links */}
-        <div className="text-xs text-center text-muted-foreground pt-2 border-t border-emerald-100/30">
-          <Link href="/legal/terms" className="hover:text-primary transition-colors">
-            Terms
-          </Link>
-          <span className="mx-2">•</span>
-          <Link href="/legal/privacy" className="hover:text-primary transition-colors">
-            Privacy
-          </Link>
-        </div>
-      </div>
-    </div>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

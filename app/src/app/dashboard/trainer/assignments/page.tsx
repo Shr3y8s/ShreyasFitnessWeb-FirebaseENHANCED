@@ -18,6 +18,7 @@ import {
   updateDoc,
   Timestamp
 } from 'firebase/firestore';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import {
   Calendar,
@@ -332,10 +333,10 @@ export default function WorkoutAssignmentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <SidebarProvider>
       <TrainerSidebar currentPage="assignments" />
-
-      <div className="ml-64 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header with Breadcrumb */}
         <div className="mb-6">
           <div className="flex items-center text-sm text-gray-600 mb-2">
@@ -917,7 +918,8 @@ export default function WorkoutAssignmentsPage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

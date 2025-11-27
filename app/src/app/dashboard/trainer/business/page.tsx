@@ -14,6 +14,7 @@ import {
   limit,
   Timestamp
 } from 'firebase/firestore';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -277,10 +278,10 @@ export default function BusinessOverviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <SidebarProvider>
       <TrainerSidebar currentPage="business" />
-
-      <div className="ml-64 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div>
@@ -579,7 +580,8 @@ export default function BusinessOverviewPage() {
             </ul>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

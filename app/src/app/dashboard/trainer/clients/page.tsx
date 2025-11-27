@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import {
   Users,
@@ -360,10 +361,10 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <SidebarProvider>
       <TrainerSidebar currentPage="clients" />
-
-      <div className="ml-64 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Client Management</h1>
@@ -1212,7 +1213,8 @@ export default function ClientsPage() {
             )}
           </div>
         </div>
-      </div>
+        </div>
+      </SidebarInset>
 
       {/* Bulk Workout Assignment Modal */}
       {bulkAssignModalOpen && selectedWorkout && (
@@ -1568,6 +1570,6 @@ export default function ClientsPage() {
           </div>
         </div>
       )}
-    </div>
+    </SidebarProvider>
   );
 }

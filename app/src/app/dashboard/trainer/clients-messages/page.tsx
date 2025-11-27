@@ -18,6 +18,7 @@ import {
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import {
   Users,
@@ -494,10 +495,10 @@ export default function ClientMessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <SidebarProvider>
       <TrainerSidebar currentPage="messages" />
-
-      <div className="ml-64 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header with Breadcrumb */}
         <div className="mb-6">
           <div className="flex items-center text-sm text-gray-600 mb-2">
@@ -908,7 +909,8 @@ export default function ClientMessagesPage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

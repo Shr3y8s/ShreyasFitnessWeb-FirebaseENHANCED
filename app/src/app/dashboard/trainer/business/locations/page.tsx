@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, MapPin, CheckCircle2, XCircle, Info } from 'lucide-react';
 import LocationCard from '@/components/locations/LocationCard';
 import LocationModal from '@/components/locations/LocationModal';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 
 export default function TrainingLocationsPage() {
@@ -183,23 +184,26 @@ export default function TrainingLocationsPage() {
 
   if (loading) {
     return (
-      <>
+      <SidebarProvider>
         <TrainerSidebar currentPage="locations" />
-        <div className="min-h-screen ml-72 p-8">
+        <SidebarInset>
+          <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
           <div className="max-w-5xl mx-auto">
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading locations...</p>
             </div>
           </div>
-        </div>
-      </>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <>
+    <SidebarProvider>
       <TrainerSidebar currentPage="locations" />
-      <div className="min-h-screen ml-72 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -299,7 +303,8 @@ export default function TrainingLocationsPage() {
         location={editingLocation}
         existingLocations={locations}
       />
-      </div>
-    </>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
