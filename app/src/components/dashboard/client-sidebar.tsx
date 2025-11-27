@@ -18,11 +18,12 @@ import {
   MessageSquare,
   BookOpen,
   CreditCard,
-  Settings,
   Plug,
   Smartphone,
   LogOut,
   ClipboardList,
+  UserCircle,
+  Apple,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -179,9 +180,8 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
       </SidebarHeader>
 
       <SidebarContent>
-        {/* General Section */}
+        {/* Dashboard - Standalone */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">General</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -192,6 +192,15 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Training Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Training</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/plan">
@@ -213,15 +222,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* In-Person Training Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">In-Person Training</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/buy' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/sessions/buy">
@@ -247,13 +247,35 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Nutrition Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Nutrition</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/nutrition' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/nutrition">
+                    <Apple className="w-4 h-4" />
+                    <span className="font-medium">Nutrition Hub</span>
+                    {nutritionUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {nutritionUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* Tracking Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Tracking</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className={pathname === '/progress' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/progress">
                     <BarChart3 className="w-4 h-4" />
                     <span className="font-medium">Metrics</span>
@@ -266,20 +288,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/nutrition">
-                    <HeartPulse className="w-4 h-4" />
-                    <span className="font-medium">Nutrition Hub</span>
-                    {nutritionUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {nutritionUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className={pathname === '/goals' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/goals">
                     <Goal className="w-4 h-4" />
                     <span className="font-medium">Goals & Milestones</span>
@@ -301,6 +310,14 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/trainer' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/trainer">
+                    <UserCircle className="w-4 h-4" />
+                    <span className="font-medium">Your Trainer</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/messages' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/messages">
                     <MessageSquare className="w-4 h-4" />
@@ -314,7 +331,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className={pathname === '/resources' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/resources">
                     <BookOpen className="w-4 h-4" />
                     <span className="font-medium">Resources</span>
@@ -356,19 +373,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                     {billingUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {billingUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/settings">
-                    <Settings className="w-4 h-4" />
-                    <span className="font-medium">Settings</span>
-                    {settingsUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {settingsUpdatesCount}
                       </SidebarMenuBadge>
                     )}
                   </Link>

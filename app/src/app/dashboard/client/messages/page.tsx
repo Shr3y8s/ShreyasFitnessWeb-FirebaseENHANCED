@@ -35,6 +35,7 @@ interface TrainerData {
   id: string;
   name: string;
   email: string;
+  profilePhotoSmall?: string;
 }
 
 export default function ClientMessagesPage() {
@@ -79,13 +80,15 @@ export default function ClientMessagesPage() {
             console.log('[ClientMessages] Found coach:', {
               id: trainerDoc.id,
               name: admin.name,
-              email: admin.email
+              email: admin.email,
+              profilePhotoSmall: admin.profilePhotoSmall
             });
             
             setTrainerData({
               id: trainerDoc.id,
               name: admin.name || 'Your Coach',
-              email: admin.email || ''
+              email: admin.email || '',
+              profilePhotoSmall: admin.profilePhotoSmall
             });
           } else {
             console.log('[ClientMessages] Assigned trainer document not found');
@@ -278,7 +281,7 @@ export default function ClientMessagesPage() {
       <ClientSidebar
         userName={userData?.name}
         userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall}
+        userProfilePhoto={userData?.profilePhotoSmall || undefined}
         onLogout={handleLogout}
       />
       <SidebarInset>
@@ -297,9 +300,17 @@ export default function ClientMessagesPage() {
           {/* Chat Header */}
           <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold">
-                {trainerData.name.charAt(0)}
-              </div>
+              {trainerData.profilePhotoSmall ? (
+                <img
+                  src={trainerData.profilePhotoSmall}
+                  alt={trainerData.name}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold">
+                  {trainerData.name.charAt(0)}
+                </div>
+              )}
               <div>
                 <h2 className="text-xl font-bold">{trainerData.name}</h2>
                 <p className="text-sm text-gray-600">Your Coach</p>
