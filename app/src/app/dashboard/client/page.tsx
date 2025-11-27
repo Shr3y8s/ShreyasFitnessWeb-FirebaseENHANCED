@@ -246,6 +246,7 @@ export default function ClientDashboardPage() {
       <ClientSidebar
         userName={userDataFromAuth?.name}
         userTier={userDataFromAuth?.tier}
+        userProfilePhoto={userDataFromAuth?.profilePhotoSmall}
         onLogout={handleLogout}
       />
       <SidebarInset>

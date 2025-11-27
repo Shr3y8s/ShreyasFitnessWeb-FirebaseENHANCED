@@ -682,6 +682,7 @@ export default function ProfilePage() {
         userName={userData?.name}
         userTier={userData?.tier}
         userTierName={userData?.tierName}
+        userProfilePhoto={userData?.profilePhotoSmall}
         onLogout={handleLogout}
       />
       <SidebarInset>

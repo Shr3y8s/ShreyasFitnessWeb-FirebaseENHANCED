@@ -300,6 +300,7 @@ export default function ScheduleSessionsPage() {
         <ClientSidebar
           userName={userData?.name}
           userTier={userData?.tier}
+          userProfilePhoto={userData?.profilePhotoSmall}
           onLogout={handleLogout}
         />
         <SidebarInset>

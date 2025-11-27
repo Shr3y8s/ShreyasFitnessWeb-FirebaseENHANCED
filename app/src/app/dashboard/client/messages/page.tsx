@@ -275,9 +275,10 @@ export default function ClientMessagesPage() {
 
   return (
     <SidebarProvider>
-      <ClientSidebar 
+      <ClientSidebar
         userName={userData?.name}
         userTier={userData?.tier}
+        userProfilePhoto={userData?.profilePhotoSmall}
         onLogout={handleLogout}
       />
       <SidebarInset>

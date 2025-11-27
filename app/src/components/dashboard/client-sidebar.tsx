@@ -50,11 +50,12 @@ interface ClientSidebarProps {
   userName?: string;
   userTier?: ServiceTier | string;
   userTierName?: string;
+  userProfilePhoto?: string;
   onLogout?: () => void;
   onShowWelcome?: () => void;
 }
 
-export function ClientSidebar({ userName, userTier, userTierName, onLogout, onShowWelcome }: ClientSidebarProps) {
+export function ClientSidebar({ userName, userTier, userTierName, userProfilePhoto, onLogout, onShowWelcome }: ClientSidebarProps) {
   
   const pathname = usePathname();
   const { coachUpdates } = useCoachUpdates();
@@ -417,9 +418,17 @@ export function ClientSidebar({ userName, userTier, userTierName, onLogout, onSh
           {/* User Info */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                {userName ? userName.charAt(0).toUpperCase() : 'U'}
-              </div>
+              {userProfilePhoto ? (
+                <img
+                  src={userProfilePhoto}
+                  alt={userName || 'User'}
+                  className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-sidebar-foreground truncate">{userName || 'User'}</p>
                 {/* Only show tier display if we have a meaningful tierName */}
