@@ -21,7 +21,8 @@ import {
   Phone,
   MapPin,
   CreditCard,
-  ExternalLink
+  ExternalLink,
+  Send
 } from 'lucide-react';
 import { 
   fetchClientBillingData, 
@@ -1159,54 +1160,35 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* Communication History */}
+                  {/* Communication */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-2 bg-purple-100 rounded-lg">
-                        <Users className="h-5 w-5 text-purple-600" />
+                        <Mail className="h-5 w-5 text-purple-600" />
                       </div>
-                      <h3 className="text-lg font-semibold">Communication History</h3>
+                      <h3 className="text-lg font-semibold">Communication</h3>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
-                            T
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium">You</p>
-                              <span className="text-xs text-gray-500">2 days ago</span>
-                            </div>
-                            <p className="text-sm text-gray-600">Great progress on your form! Keep up the excellent work.</p>
-                          </div>
-                        </div>
+                    <div className="text-center py-8">
+                      <Mail className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <p className="text-gray-600 mb-6">
+                        View full conversation history and send messages to {activeClient.name}
+                      </p>
+                      <div className="flex gap-3 justify-center">
+                        <Button
+                          variant="outline"
+                          onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          View Messages
+                        </Button>
+                        <Button
+                          onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Message
+                        </Button>
                       </div>
-
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0">
-                            {activeClient.name.charAt(0)}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium">{activeClient.name}</p>
-                              <span className="text-xs text-gray-500">3 days ago</span>
-                            </div>
-                            <p className="text-sm text-gray-600">Can we adjust Tuesday's workout? I have a conflict.</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
-                      >
-                        <Users className="h-4 w-4 mr-2" />
-                        Send New Message
-                      </Button>
                     </div>
                   </div>
                 </div>
