@@ -36,6 +36,7 @@ interface ClientData {
   id: string;
   name: string;
   email: string;
+  profilePhotoSmall?: string;
   tier?: any;
 }
 
@@ -145,6 +146,7 @@ export default function ClientMessagesPage() {
             id: doc.id,
             name: clientInfo.name,
             email: clientInfo.email,
+            profilePhotoSmall: clientInfo.profilePhotoSmall,
             tier: clientInfo.tier
           });
         });
@@ -604,9 +606,17 @@ export default function ClientMessagesPage() {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                                {client.name.charAt(0)}
-                              </div>
+                              {client.profilePhotoSmall ? (
+                                <img
+                                  src={client.profilePhotoSmall}
+                                  alt={client.name}
+                                  className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                                  {client.name.charAt(0)}
+                                </div>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium truncate">{client.name}</p>
                                 <p className="text-sm text-gray-600 truncate">{client.email}</p>
@@ -674,9 +684,17 @@ export default function ClientMessagesPage() {
                             } ${hasUnread ? 'bg-blue-50/30' : ''}`}
                           >
                             <div className="flex items-center gap-3 mb-2">
-                              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                {client.name.charAt(0)}
-                              </div>
+                              {client.profilePhotoSmall ? (
+                                <img
+                                  src={client.profilePhotoSmall}
+                                  alt={client.name}
+                                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                                  {client.name.charAt(0)}
+                                </div>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
                                   <p className={`font-medium truncate ${hasUnread ? 'font-bold' : ''}`}>
@@ -798,9 +816,17 @@ export default function ClientMessagesPage() {
                   {/* Chat Header */}
                   <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold">
-                        {activeClient.name.charAt(0)}
-                      </div>
+                      {activeClient.profilePhotoSmall ? (
+                        <img
+                          src={activeClient.profilePhotoSmall}
+                          alt={activeClient.name}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold">
+                          {activeClient.name.charAt(0)}
+                        </div>
+                      )}
                       <div>
                         <h2 className="text-xl font-bold">{activeClient.name}</h2>
                         <p className="text-sm text-gray-600">{activeClient.email}</p>

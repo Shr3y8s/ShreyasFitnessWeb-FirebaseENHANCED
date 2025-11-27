@@ -50,6 +50,7 @@ interface ClientData {
   name: string;
   email: string;
   preferredName?: string;
+  profilePhotoSmall?: string;
   profilePhotoLarge?: string;
   tier?: any;
   tierName?: string;
@@ -205,6 +206,7 @@ export default function ClientsPage() {
               name: clientInfo.name,
               email: clientInfo.email,
               preferredName: clientInfo.preferredName,
+              profilePhotoSmall: clientInfo.profilePhotoSmall,
               profilePhotoLarge: clientInfo.profilePhotoLarge,
               tier: clientInfo.tier,
               tierName: clientInfo.tierName,
@@ -469,9 +471,17 @@ export default function ClientsPage() {
                             onClick={() => setActiveClientId(client.id)}
                             className="flex items-center gap-3 flex-1 min-w-0 text-left"
                           >
-                            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                              {client.name.charAt(0)}
-                            </div>
+                            {client.profilePhotoSmall ? (
+                              <img
+                                src={client.profilePhotoSmall}
+                                alt={client.name}
+                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                                {client.name.charAt(0)}
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate">{client.name}</p>
                               <p className="text-sm text-gray-600 truncate">{client.email}</p>
@@ -1432,9 +1442,17 @@ export default function ClientsPage() {
                 <label className="font-semibold mb-2 block">Client:</label>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                      {activeClient.name.charAt(0)}
-                    </div>
+                    {activeClient.profilePhotoSmall ? (
+                      <img
+                        src={activeClient.profilePhotoSmall}
+                        alt={activeClient.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
+                        {activeClient.name.charAt(0)}
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium">{activeClient.name}</p>
                       <p className="text-sm text-gray-600">{activeClient.email}</p>
