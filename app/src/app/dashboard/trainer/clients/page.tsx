@@ -41,6 +41,7 @@ import {
   getNextExpirationDate,
   formatSimpleDate
 } from '@/lib/session-utils';
+import { formatPhoneForDisplay } from '@/lib/phoneUtils';
 import { SessionBalance, SessionPackage, TrainingSession } from '@/types/session';
 
 interface ClientData {
@@ -755,7 +756,7 @@ export default function ClientsPage() {
                               href={`tel:${activeClient.phone}`}
                               className="font-medium hover:text-primary transition-colors"
                             >
-                              {activeClient.phone}
+                              {formatPhoneForDisplay(activeClient.phone)}
                             </a>
                           ) : (
                             <p className="text-gray-400 text-sm">Not provided</p>
@@ -820,7 +821,7 @@ export default function ClientsPage() {
                                 className="text-sm hover:text-primary transition-colors block"
                               >
                                 <Phone className="h-3 w-3 inline mr-1" />
-                                {activeClient.emergencyContact.phone}
+                                {formatPhoneForDisplay(activeClient.emergencyContact.phone)}
                               </a>
                               {activeClient.emergencyContact.relationship && (
                                 <p className="text-sm text-gray-600">
