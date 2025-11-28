@@ -13,11 +13,8 @@ import {
   Mail,
   Dumbbell,
   ListChecks,
-  Briefcase,
-  MapPin,
   User,
   LogOut,
-  Clock,
   Shield,
 } from 'lucide-react';
 import {
@@ -190,50 +187,6 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                   <Link href="/dashboard/trainer/assignments">
                     <ListChecks className="w-4 h-4" />
                     <span className="font-medium">Assignments</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Business Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
-            Business
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  className={pathname === '/dashboard/trainer/business' || currentPage === 'business' ? 'bg-primary text-white hover:bg-primary/90' : ''}
-                >
-                  <Link href="/dashboard/trainer/business">
-                    <Briefcase className="w-4 h-4" />
-                    <span className="font-medium">Analytics</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  className={pathname === '/dashboard/trainer/business/locations' || currentPage === 'locations' ? 'bg-primary text-white hover:bg-primary/90' : ''}
-                >
-                  <Link href="/dashboard/trainer/business/locations">
-                    <MapPin className="w-4 h-4" />
-                    <span className="font-medium">Training Locations</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  className={pathname === '/dashboard/trainer/pending-accounts' || currentPage === 'pending-accounts' ? 'bg-primary text-white hover:bg-primary/90' : ''}
-                >
-                  <Link href="/dashboard/trainer/pending-accounts">
-                    <Clock className="w-4 h-4" />
-                    <span className="font-medium">Pending Accounts</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
