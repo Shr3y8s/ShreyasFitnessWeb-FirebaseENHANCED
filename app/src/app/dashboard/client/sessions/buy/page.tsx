@@ -19,6 +19,7 @@ export default function BuySessionsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [processingPriceId, setProcessingPriceId] = useState<string | null>(null);
   const [sessionOptions, setSessionOptions] = useState<any[]>([]);
   const [balance, setBalance] = useState<any>(null);
   const [packages, setPackages] = useState<SessionPackage[]>([]);
@@ -85,7 +86,7 @@ export default function BuySessionsPage() {
 
   const handlePurchase = async (priceId: string) => {
     try {
-      setLoading(true);
+      setProcessingPriceId(priceId);
       
       if (!user) {
         throw new Error('User not authenticated');
@@ -111,7 +112,7 @@ export default function BuySessionsPage() {
     } catch (error) {
       console.error('Error creating checkout session:', error);
       alert(`Failed to create checkout session: ${(error as Error).message}`);
-      setLoading(false);
+      setProcessingPriceId(null);
     }
   };
 
@@ -128,7 +129,7 @@ export default function BuySessionsPage() {
       <ClientSidebar
         userName={userData?.name}
         userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall}
+        userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
         onLogout={handleLogout}
       />
       <SidebarInset>
@@ -165,7 +166,7 @@ export default function BuySessionsPage() {
                     savings={option.savings}
                     stripePriceId={option.priceId}
                     onPurchase={handlePurchase}
-                    loading={loading}
+                    loading={processingPriceId === option.priceId}
                     featured={option.quantity > 1}
                   />
                 ))}
