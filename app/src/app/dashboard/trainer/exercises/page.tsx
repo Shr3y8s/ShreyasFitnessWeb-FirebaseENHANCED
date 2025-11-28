@@ -65,6 +65,8 @@ export default function ExerciseLibraryPage() {
   });
 
   useEffect(() => {
+    let unsubscribe: (() => void) | null = null;
+
     const checkAccess = async () => {
       if (authLoading) {
         return;
@@ -81,20 +83,26 @@ export default function ExerciseLibraryPage() {
       }
 
       try {
-        // Listen to exercises
-        const unsubscribe = listenToExercises(user.uid, (exerciseList) => {
+        // Listen to exercises and store unsubscribe function
+        unsubscribe = listenToExercises(user.uid, (exerciseList) => {
           setExercises(exerciseList);
           setFilteredExercises(exerciseList);
         });
 
         setLoading(false);
-        return () => unsubscribe();
       } catch (error) {
         console.error('Error checking access:', error);
       }
     };
 
     checkAccess();
+
+    // Return cleanup function directly to React
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [user, router, authLoading, canAccessTrainerDashboard]);
 
   // Filter and sort exercises
