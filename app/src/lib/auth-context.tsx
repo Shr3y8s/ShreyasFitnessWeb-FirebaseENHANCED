@@ -14,6 +14,11 @@ interface UserData {
   accountActivated?: boolean;
   emailVerified?: boolean;
   
+  // Multi-collection architecture support
+  userType?: 'admin' | 'trainer' | 'client';  // NEW: Identifies which collection user is from
+  sourceCollection?: 'admins' | 'trainers' | 'users';  // NEW: Source Firestore collection
+  canTrain?: boolean;  // NEW: For admin - whether they personally train clients
+  
   // Profile photo fields (for both clients and trainers)
   profilePhotoSmall?: string | null;   // 150x150px
   profilePhotoLarge?: string | null;   // 500x500px
@@ -55,6 +60,7 @@ interface UserData {
   // For clients - assigned trainer info
   assignedTrainerId?: string;
   assignedTrainerName?: string;
+  assignedTrainerCollection?: 'admins' | 'trainers';  // NEW: Which collection the trainer is in
   
   [key: string]: any;
 }
@@ -92,21 +98,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     try {
-      // Check admins collection first
+      // Multi-collection waterfall lookup: admin → trainer → client
+      
+      // 1. Check admins collection first
       const adminDocRef = doc(db, 'admins', user.uid);
       const adminDoc = await getDoc(adminDocRef);
       
       if (adminDoc.exists()) {
-        setUserData(adminDoc.data() as UserData);
+        const adminData = adminDoc.data();
+        setUserData({
+          ...adminData,
+          userType: 'admin',
+          sourceCollection: 'admins',
+          role: adminData.role || 'admin'
+        } as UserData);
         return;
       }
       
-      // If not admin, check users collection
+      // 2. Check trainers collection
+      const trainerDocRef = doc(db, 'trainers', user.uid);
+      const trainerDoc = await getDoc(trainerDocRef);
+      
+      if (trainerDoc.exists()) {
+        const trainerData = trainerDoc.data();
+        setUserData({
+          ...trainerData,
+          userType: 'trainer',
+          sourceCollection: 'trainers',
+          role: 'trainer'
+        } as UserData);
+        return;
+      }
+      
+      // 3. Check users collection (clients)
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
-        setUserData(userDoc.data() as UserData);
+        const clientData = userDoc.data();
+        setUserData({
+          ...clientData,
+          userType: 'client',
+          sourceCollection: 'users',
+          role: clientData.role || 'client'
+        } as UserData);
       } else {
         setUserData(null);
       }
@@ -122,22 +157,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (user) {
         try {
-          // Check admins collection first
+          // Multi-collection waterfall lookup: admin → trainer → client
+          
+          // 1. Check admins collection first
           const adminDocRef = doc(db, 'admins', user.uid);
           const adminDoc = await getDoc(adminDocRef);
           
           if (adminDoc.exists()) {
-            setUserData(adminDoc.data() as UserData);
+            const adminData = adminDoc.data();
+            setUserData({
+              ...adminData,
+              userType: 'admin',
+              sourceCollection: 'admins',
+              role: adminData.role || 'admin'
+            } as UserData);
             setLoading(false);
             return;
           }
           
-          // If not admin, check users collection
+          // 2. Check trainers collection
+          const trainerDocRef = doc(db, 'trainers', user.uid);
+          const trainerDoc = await getDoc(trainerDocRef);
+          
+          if (trainerDoc.exists()) {
+            const trainerData = trainerDoc.data();
+            setUserData({
+              ...trainerData,
+              userType: 'trainer',
+              sourceCollection: 'trainers',
+              role: 'trainer'
+            } as UserData);
+            setLoading(false);
+            return;
+          }
+          
+          // 3. Check users collection (clients)
           const userDocRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userDocRef);
           
           if (userDoc.exists()) {
-            setUserData(userDoc.data() as UserData);
+            const clientData = userDoc.data();
+            setUserData({
+              ...clientData,
+              userType: 'client',
+              sourceCollection: 'users',
+              role: clientData.role || 'client'
+            } as UserData);
           } else {
             setUserData(null);
           }

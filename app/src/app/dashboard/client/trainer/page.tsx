@@ -77,9 +77,21 @@ export default function YourTrainerPage() {
 
       try {
         const assignedTrainerId = userData?.assignedTrainerId;
-
-        if (assignedTrainerId) {
-          const trainerDoc = await getDoc(doc(db, 'admins', assignedTrainerId));
+        const assignedTrainerCollection = userData?.assignedTrainerCollection;
+        
+        // Strict mode: Both fields are now required (no fallback)
+        if (!assignedTrainerId || !assignedTrainerCollection) {
+          console.error('[ClientTrainer] Missing trainer assignment fields', {
+            userId: user.uid,
+            hasAssignedTrainerId: !!assignedTrainerId,
+            hasAssignedTrainerCollection: !!assignedTrainerCollection,
+          });
+          setLoading(false);
+          return;
+        }
+        
+        if (assignedTrainerId && assignedTrainerCollection) {
+          const trainerDoc = await getDoc(doc(db, assignedTrainerCollection, assignedTrainerId));
 
           if (trainerDoc.exists()) {
             const data = trainerDoc.data();

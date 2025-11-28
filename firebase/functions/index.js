@@ -433,12 +433,14 @@ exports.syncPaymentToUser = onDocumentWritten({
           const trainerData = trainerDoc.data();
           
           updateData.assignedTrainerId = trainerDoc.id;
+          updateData.assignedTrainerCollection = 'admins';  // Multi-trainer architecture: specify source collection
           updateData.assignedTrainerName = trainerData.name || "Your Coach";
           updateData.assignedAt = admin.firestore.FieldValue.serverTimestamp();
           
           logger.info("Trainer assigned to user", {
             userId,
             trainerId: trainerDoc.id,
+            trainerCollection: 'admins',
             trainerName: trainerData.name,
           });
         } else {
@@ -671,12 +673,14 @@ exports.syncSubscriptionToUser = onDocumentWritten({
           const trainerData = trainerDoc.data();
           
           updateData.assignedTrainerId = trainerDoc.id;
+          updateData.assignedTrainerCollection = 'admins';  // Multi-trainer architecture: specify source collection
           updateData.assignedTrainerName = trainerData.name || "Your Coach";
           updateData.assignedAt = admin.firestore.FieldValue.serverTimestamp();
           
           logger.info("Trainer assigned to user", {
             userId,
             trainerId: trainerDoc.id,
+            trainerCollection: 'admins',
             trainerName: trainerData.name,
           });
         } else {

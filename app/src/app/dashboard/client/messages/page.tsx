@@ -67,12 +67,25 @@ export default function ClientMessagesPage() {
         
         // Use assigned trainer from user profile
         const assignedTrainerId = userData?.assignedTrainerId;
+        const assignedTrainerCollection = userData?.assignedTrainerCollection;
         
-        if (assignedTrainerId) {
+        // Strict mode: Both fields are now required (no fallback)
+        if (!assignedTrainerId || !assignedTrainerCollection) {
+          console.error('[ClientMessages] Missing trainer assignment fields', {
+            userId: user.uid,
+            hasAssignedTrainerId: !!assignedTrainerId,
+            hasAssignedTrainerCollection: !!assignedTrainerCollection,
+          });
+          setLoading(false);
+          return;
+        }
+        
+        if (assignedTrainerId && assignedTrainerCollection) {
           console.log('[ClientMessages] Found assigned trainer ID:', assignedTrainerId);
+          console.log('[ClientMessages] Fetching from collection:', assignedTrainerCollection);
           
           // Direct document fetch - much faster than collection query!
-          const trainerDoc = await getDoc(doc(db, 'admins', assignedTrainerId));
+          const trainerDoc = await getDoc(doc(db, assignedTrainerCollection, assignedTrainerId));
           
           if (trainerDoc.exists()) {
             const admin = trainerDoc.data();

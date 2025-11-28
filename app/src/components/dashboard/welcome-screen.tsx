@@ -14,24 +14,29 @@ interface WelcomeScreenProps {
 interface TrainerInfo {
   name: string;
   email: string;
+  profilePhotoLarge?: string;
 }
 
 export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
   const [trainerInfo, setTrainerInfo] = useState<TrainerInfo | null>(null);
   const { userData } = useAuth();
 
-  // Fetch trainer information
+  // Fetch trainer information using multi-collection support
   useEffect(() => {
     const fetchTrainer = async () => {
-      if (!userData?.assignedTrainerId) return;
+      const trainerId = userData?.assignedTrainerId;
+      const trainerCollection = userData?.assignedTrainerCollection;
+      
+      if (!trainerId || !trainerCollection) return;
 
       try {
-        const trainerDoc = await getDoc(doc(db, 'admins', userData.assignedTrainerId));
+        const trainerDoc = await getDoc(doc(db, trainerCollection, trainerId));
         if (trainerDoc.exists()) {
           const data = trainerDoc.data();
           setTrainerInfo({
             name: data.name || 'Your Coach',
-            email: data.email || ''
+            email: data.email || '',
+            profilePhotoLarge: data.profilePhotoLarge
           });
         }
       } catch (error) {
@@ -61,9 +66,17 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
           <div className="rounded-xl border-2 border-primary bg-gradient-to-br from-primary/5 to-primary/10 p-8 space-y-4 shadow-lg">
             <div className="text-center space-y-4">
               <div className="flex justify-center">
-                <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                  {trainerInfo.name.charAt(0)}
-                </div>
+                {trainerInfo.profilePhotoLarge ? (
+                  <img
+                    src={trainerInfo.profilePhotoLarge}
+                    alt={trainerInfo.name}
+                    className="w-20 h-20 rounded-full object-cover shadow-lg border-2 border-white"
+                  />
+                ) : (
+                  <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                    {trainerInfo.name.charAt(0)}
+                  </div>
+                )}
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-primary mb-2">
