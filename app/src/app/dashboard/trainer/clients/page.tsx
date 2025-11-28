@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { AdminOnlySection } from '@/components/dashboard/AdminOnlySection';
 import {
   Users,
   Search,
@@ -79,7 +80,7 @@ interface ClientData {
 
 export default function ClientsPage() {
   const router = useRouter();
-  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+  const { user, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [filteredClients, setFilteredClients] = useState<ClientData[]>([]);
@@ -856,15 +857,12 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* Subscription & Payment Info */}
-                  <div className="bg-white border rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <CreditCard className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold">Subscription & Payments</h3>
-                      </div>
+                  {/* Subscription & Payment Info - Admin Only */}
+                  <AdminOnlySection
+                    title="Subscription & Payments"
+                    canAccessAdminDashboard={canAccessAdminDashboard || false}
+                  >
+                    <div className="flex justify-end mb-4">
                       {(billingLoading || sessionLoading) && (
                         <span className="text-sm text-gray-500">Loading...</span>
                       )}
@@ -1098,7 +1096,7 @@ export default function ClientsPage() {
                         <p className="text-sm">No billing or session data available</p>
                       </div>
                     )}
-                  </div>
+                  </AdminOnlySection>
 
                   {/* Workout Stats */}
                   <div className="bg-white border rounded-xl p-6">

@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, collectionGroup, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { AdminOnlySection } from '@/components/dashboard/AdminOnlySection';
 import { 
   Users,
   Dumbbell,
@@ -38,7 +39,7 @@ interface ClientData {
 
 export default function TrainerDashboardPage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+  const { user, userData, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
@@ -325,10 +326,12 @@ export default function TrainerDashboardPage() {
             </div>
           </div>
 
-          {/* Financial Stats Row */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Business Metrics</h3>
+          {/* Financial Stats Row - Admin Only */}
+          <AdminOnlySection 
+            title="Business Metrics" 
+            canAccessAdminDashboard={canAccessAdminDashboard || false}
+          >
+            <div className="flex justify-end mb-4">
               <Link href="/dashboard/trainer/business">
                 <Button variant="outline" size="sm">
                   View All Metrics
@@ -407,10 +410,10 @@ export default function TrainerDashboardPage() {
                 </div>
               </Link>
             </div>
-          </div>
+          </AdminOnlySection>
 
-          {/* Pending Accounts Alert */}
-          {pendingAccountsCount > 10 && (
+          {/* Pending Accounts Alert - Admin Only */}
+          {canAccessAdminDashboard && pendingAccountsCount > 10 && (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
               <div className="flex items-start">
                 <AlertCircle className="h-5 w-5 text-yellow-400 mt-0.5 mr-3 flex-shrink-0" />
