@@ -33,12 +33,14 @@ import {
 
 export default function ExerciseLibraryPage() {
   const router = useRouter();
-  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+  const { user, userData, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedScope, setSelectedScope] = useState<string>('all'); // all, personal, company
+  const [sortBy, setSortBy] = useState<string>('name'); // name, date, usage, updated
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,7 +53,7 @@ export default function ExerciseLibraryPage() {
     targetMuscleGroups: string[];
     equipment: string[];
     notes: string;
-    isPublic: boolean;
+    scope: 'personal' | 'company';
   }>({
     name: '',
     instructions: '',
@@ -59,7 +61,7 @@ export default function ExerciseLibraryPage() {
     targetMuscleGroups: [],
     equipment: [],
     notes: '',
-    isPublic: false
+    scope: 'personal'
   });
 
   useEffect(() => {
@@ -95,26 +97,54 @@ export default function ExerciseLibraryPage() {
     checkAccess();
   }, [user, router, authLoading, canAccessTrainerDashboard]);
 
-  // Filter exercises based on search and category
+  // Filter and sort exercises
   useEffect(() => {
     let filtered = exercises;
 
+    // Apply search filter - searches name, instructions, muscle groups, equipment, and creator
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(exercise =>
-        exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        exercise.instructions.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        exercise.name.toLowerCase().includes(query) ||
+        exercise.instructions.toLowerCase().includes(query) ||
         exercise.targetMuscleGroups.some(muscle => 
-          muscle.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+          muscle.toLowerCase().includes(query)
+        ) ||
+        exercise.equipment.some(eq => 
+          eq.toLowerCase().includes(query)
+        ) ||
+        (exercise.createdByName && exercise.createdByName.toLowerCase().includes(query))
       );
     }
 
+    // Apply category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(exercise => exercise.category === selectedCategory);
     }
 
+    // Apply scope filter
+    if (selectedScope !== 'all') {
+      filtered = filtered.filter(exercise => exercise.scope === selectedScope);
+    }
+
+    // Apply sorting
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'date':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'usage':
+          return (b.usageCount || 0) - (a.usageCount || 0);
+        case 'updated':
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        default:
+          return 0;
+      }
+    });
+
     setFilteredExercises(filtered);
-  }, [exercises, searchQuery, selectedCategory]);
+  }, [exercises, searchQuery, selectedCategory, selectedScope, sortBy]);
 
   const resetForm = () => {
     setExerciseForm({
@@ -124,18 +154,24 @@ export default function ExerciseLibraryPage() {
       targetMuscleGroups: [],
       equipment: [],
       notes: '',
-      isPublic: false
+      scope: 'personal'
     });
   };
 
   const handleCreateExercise = async () => {
     if (!user || !exerciseForm.name || !exerciseForm.instructions) return;
 
+    // Get user's name from Firestore
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userName = userDoc.exists() ? userDoc.data().name || user.email || 'Unknown' : user.email || 'Unknown';
+
     setSaving(true);
     try {
       const result = await createExercise({
         ...exerciseForm,
-        createdBy: user.uid
+        createdBy: user.uid,
+        createdByName: userName,
+        isActive: true
       });
 
       if (result.success) {
@@ -158,7 +194,7 @@ export default function ExerciseLibraryPage() {
       targetMuscleGroups: [...exercise.targetMuscleGroups],
       equipment: [...exercise.equipment],
       notes: exercise.notes || '',
-      isPublic: exercise.isPublic
+      scope: exercise.scope || 'personal'
     });
   };
 
@@ -210,6 +246,42 @@ export default function ExerciseLibraryPage() {
     }));
   };
 
+  const canEditExercise = (exercise: Exercise): boolean => {
+    if (!user) return false;
+    
+    // Personal exercises: only creator can edit
+    if (exercise.scope === 'personal') {
+      return exercise.createdBy === user.uid;
+    }
+    
+    // Company exercises: creator OR admin can edit
+    if (exercise.scope === 'company') {
+      return exercise.createdBy === user.uid || canAccessAdminDashboard;
+    }
+    
+    return false;
+  };
+
+  const getEditTooltip = (exercise: Exercise): string => {
+    if (!user) return 'Not authorized';
+    
+    if (exercise.scope === 'personal' && exercise.createdBy !== user.uid) {
+      return 'Only the creator can edit personal exercises';
+    }
+    
+    if (exercise.scope === 'company') {
+      if (exercise.createdBy === user.uid) {
+        return 'Edit exercise';
+      } else if (canAccessAdminDashboard) {
+        return 'Edit exercise (admin)';
+      } else {
+        return 'Only the creator or admins can edit company exercises';
+      }
+    }
+    
+    return 'Edit exercise';
+  };
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'strength': return <Dumbbell className="h-4 w-4" />;
@@ -250,25 +322,48 @@ export default function ExerciseLibraryPage() {
           </div>
 
           <div className="space-y-6">
+        {/* Summary Stats Bar */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-4">
+          <div className="flex items-center justify-center gap-8 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-gray-700">Your Library:</span>
+              <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full font-medium">
+                {exercises.filter(e => e.scope === 'personal').length} Personal
+              </span>
+              <span className="text-gray-400">·</span>
+              <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-medium">
+                {exercises.filter(e => e.scope === 'company').length} Company
+              </span>
+              <span className="text-gray-400">·</span>
+              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
+                {exercises.length} Total
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl border p-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search exercises by name, instructions, or muscle groups..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+        <div className="bg-white rounded-xl border p-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search exercises by name, instructions, or muscle groups..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 border rounded-md"
+                className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+                aria-label="Filter by category"
               >
                 <option value="all">All Categories</option>
                 {EXERCISE_CATEGORIES.map((category) => (
@@ -276,6 +371,29 @@ export default function ExerciseLibraryPage() {
                     {category.label}
                   </option>
                 ))}
+              </select>
+              
+              <select
+                value={selectedScope}
+                onChange={(e) => setSelectedScope(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+                aria-label="Filter by scope"
+              >
+                <option value="all">All Exercises</option>
+                <option value="personal">My Exercises</option>
+                <option value="company">Company Library</option>
+              </select>
+              
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+                aria-label="Sort by"
+              >
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="date">Sort: Newest First</option>
+                <option value="usage">Sort: Most Used</option>
+                <option value="updated">Sort: Recently Updated</option>
               </select>
             </div>
           </div>
@@ -378,6 +496,40 @@ export default function ExerciseLibraryPage() {
                     onChange={(e) => setExerciseForm(prev => ({ ...prev, notes: e.target.value }))}
                     className="w-full min-h-[60px] px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
+                </div>
+
+                <div>
+                  <Label>Exercise Scope</Label>
+                  <div className="mt-2 space-y-2">
+                    <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="scope"
+                        value="personal"
+                        checked={exerciseForm.scope === 'personal'}
+                        onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'personal' }))}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">Personal Exercise</div>
+                        <div className="text-sm text-gray-600">Only you can see and use this exercise</div>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <input
+                        type="radio"
+                        name="scope"
+                        value="company"
+                        checked={exerciseForm.scope === 'company'}
+                        onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'company' }))}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">Company Library</div>
+                        <div className="text-sm text-gray-600">All trainers can see and use this exercise</div>
+                      </div>
+                    </label>
+                  </div>
                 </div>
 
               </div>
@@ -498,6 +650,35 @@ export default function ExerciseLibraryPage() {
                           }`}>
                             {EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.label}
                           </span>
+                          {exercise.scope === 'company' ? (
+                            <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full font-medium">
+                              Company Library
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                              Personal
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                          {exercise.createdByName && (
+                            <>
+                              <span>Created by {exercise.createdByName}</span>
+                              {exercise.createdAt && (
+                                <>
+                                  <span>·</span>
+                                  <span>{new Date(exercise.createdAt).toLocaleDateString()}</span>
+                                </>
+                              )}
+                            </>
+                          )}
+                          {exercise.updatedAt && exercise.updatedAt !== exercise.createdAt && (
+                            <>
+                              <span>·</span>
+                              <span className="text-blue-600">Updated {new Date(exercise.updatedAt).toLocaleDateString()}</span>
+                            </>
+                          )}
                         </div>
                         
                         <p className="text-gray-600 mb-3">{exercise.instructions}</p>
@@ -528,11 +709,9 @@ export default function ExerciseLibraryPage() {
                           </div>
                         )}
                         
-                        {exercise.usageCount && exercise.usageCount > 0 && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            Used in {exercise.usageCount} workout{exercise.usageCount !== 1 ? 's' : ''}
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          Used in {exercise.usageCount || 0} workout{(exercise.usageCount || 0) !== 1 ? 's' : ''}
+                        </p>
                       </div>
                       
                       <div className="flex gap-2">
@@ -540,6 +719,11 @@ export default function ExerciseLibraryPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditExercise(exercise)}
+                          disabled={!canEditExercise(exercise)}
+                          title={getEditTooltip(exercise)}
+                          className={!canEditExercise(exercise) 
+                            ? "text-gray-400 cursor-not-allowed" 
+                            : ""}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -547,7 +731,13 @@ export default function ExerciseLibraryPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteExercise(exercise.id)}
-                          className="text-red-500 hover:text-red-700"
+                          disabled={(exercise.usageCount || 0) > 0}
+                          title={(exercise.usageCount || 0) > 0 
+                            ? `Used in ${exercise.usageCount} workout${exercise.usageCount !== 1 ? 's' : ''} - cannot delete` 
+                            : 'Delete exercise'}
+                          className={(exercise.usageCount || 0) > 0 
+                            ? "text-gray-400 cursor-not-allowed" 
+                            : "text-red-500 hover:text-red-700"}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

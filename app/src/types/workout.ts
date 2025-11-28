@@ -1,6 +1,6 @@
 // Workout system types
 
-// Phase 2: Separate Exercise Library
+// Phase 2: Separate Exercise Library (Hybrid Model)
 export interface Exercise {
   id: string;
   name: string;
@@ -10,10 +10,23 @@ export interface Exercise {
   equipment: string[];
   notes?: string;
   mediaUrl?: string;
-  createdBy: string;
+  
+  // Ownership & Attribution (persists even if user deleted)
+  createdBy: string; // User ID
+  createdByName: string; // Display name - persists forever
   createdAt: Date;
   updatedAt: Date;
-  isPublic: boolean;
+  
+  // Hybrid Model: Scope determines visibility
+  scope: 'personal' | 'company'; // personal = only creator sees, company = all trainers see
+  isActive: boolean; // False when trainer leaves or exercise deprecated
+  
+  // Edit tracking
+  lastEditedBy?: string;
+  lastEditedByName?: string;
+  lastEditedAt?: Date;
+  
+  // Usage analytics
   usageCount?: number; // Track how often this exercise is used
 }
 

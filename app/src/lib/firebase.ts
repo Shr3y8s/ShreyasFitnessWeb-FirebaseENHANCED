@@ -276,7 +276,9 @@ export async function createExercise(exercise: Omit<Exercise, 'id' | 'createdAt'
   try {
     const docRef = await addDoc(collection(db, 'exercises'), {
       ...exercise,
-      isPublic: false, // Default to private for single trainer setup
+      // Hybrid model defaults
+      scope: exercise.scope || 'personal', // Default to personal
+      isActive: true, // All new exercises are active
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       usageCount: 0
@@ -311,46 +313,68 @@ export async function deleteExercise(exerciseId: string) {
   }
 }
 
+// Hybrid Model: Get trainer's personal exercises + all company exercises
 export function listenToExercises(trainerId: string, callback: (exercises: Exercise[]) => void) {
-  const exercisesQuery = query(
+  // We need two queries: personal exercises and company exercises
+  // Since Firestore doesn't support OR queries easily, we'll combine results
+  
+  const personalQuery = query(
     collection(db, 'exercises'),
     where('createdBy', '==', trainerId),
+    where('scope', '==', 'personal'),
+    where('isActive', '==', true),
     orderBy('name')
   );
   
-  return onSnapshot(exercisesQuery, (snapshot) => {
-    const exercises: Exercise[] = [];
-    snapshot.forEach((doc) => {
-      exercises.push({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        updatedAt: doc.data().updatedAt?.toDate()
-      } as Exercise);
-    });
-    callback(exercises);
-  });
-}
-
-export function listenToPublicExercises(callback: (exercises: Exercise[]) => void) {
-  const exercisesQuery = query(
+  const companyQuery = query(
     collection(db, 'exercises'),
-    where('isPublic', '==', true),
-    orderBy('usageCount', 'desc')
+    where('scope', '==', 'company'),
+    where('isActive', '==', true),
+    orderBy('name')
   );
   
-  return onSnapshot(exercisesQuery, (snapshot) => {
-    const exercises: Exercise[] = [];
+  let personalExercises: Exercise[] = [];
+  let companyExercises: Exercise[] = [];
+  
+  const unsubPersonal = onSnapshot(personalQuery, (snapshot) => {
+    personalExercises = [];
     snapshot.forEach((doc) => {
-      exercises.push({
+      personalExercises.push({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         updatedAt: doc.data().updatedAt?.toDate()
       } as Exercise);
     });
-    callback(exercises);
+    // Combine and sort
+    const combined = [...personalExercises, ...companyExercises].sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+    callback(combined);
   });
+  
+  const unsubCompany = onSnapshot(companyQuery, (snapshot) => {
+    companyExercises = [];
+    snapshot.forEach((doc) => {
+      companyExercises.push({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      } as Exercise);
+    });
+    // Combine and sort
+    const combined = [...personalExercises, ...companyExercises].sort((a, b) => 
+      a.name.localeCompare(b.name)
+    );
+    callback(combined);
+  });
+  
+  // Return combined unsubscribe function
+  return () => {
+    unsubPersonal();
+    unsubCompany();
+  };
 }
 
 export async function incrementExerciseUsage(exerciseId: string) {
