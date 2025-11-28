@@ -16,7 +16,7 @@ import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils'
 
 export default function TrainerProfilePage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading, updateUserData } = useAuth();
+  const { user, userData, loading: authLoading, updateUserData, canAccessTrainerDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -81,15 +81,15 @@ export default function TrainerProfilePage() {
       return;
     }
 
-    // Only admins and trainers should access this page
-    if (userData.role !== 'admin' && userData.role !== 'trainer') {
-      console.log('[TrainerProfile] User is not admin/trainer, redirecting');
+    // Check if user can access trainer dashboard
+    if (!canAccessTrainerDashboard) {
+      console.log('[TrainerProfile] User cannot access trainer dashboard, redirecting');
       router.push('/dashboard');
       return;
     }
 
     setLoading(false);
-  }, [userData, authLoading, router]);
+  }, [userData, authLoading, router, canAccessTrainerDashboard]);
 
   const handleLogout = async () => {
     try {

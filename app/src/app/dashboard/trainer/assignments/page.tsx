@@ -68,7 +68,7 @@ interface Assignment {
 export default function WorkoutAssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
 
   // Mode state
   const [mode, setMode] = useState<'create' | 'view'>('create');
@@ -116,16 +116,26 @@ export default function WorkoutAssignmentsPage() {
   // Fetch all data
   useEffect(() => {
     const fetchData = async () => {
+      if (authLoading) {
+        return;
+      }
+
       if (!user) {
         router.push('/login');
         return;
       }
 
+      if (!canAccessTrainerDashboard) {
+        router.push('/dashboard');
+        return;
+      }
+
       try {
-        // Fetch clients
+        // Fetch clients assigned to this trainer
         const clientsQuery = query(
           collection(db, 'users'),
           where('role', '==', 'client'),
+          where('assignedTrainerId', '==', user.uid),
           orderBy('createdAt', 'desc')
         );
         const clientsSnapshot = await getDocs(clientsQuery);
@@ -193,7 +203,7 @@ export default function WorkoutAssignmentsPage() {
     };
 
     fetchData();
-  }, [user, router]);
+  }, [user, router, authLoading, canAccessTrainerDashboard]);
 
   // Filter clients
   const filteredClients = clients.filter(client => {

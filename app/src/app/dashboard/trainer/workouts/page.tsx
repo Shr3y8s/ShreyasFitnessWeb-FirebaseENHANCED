@@ -28,7 +28,7 @@ import {
 
 export default function WorkoutLibraryPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<any[]>([]);
@@ -39,8 +39,17 @@ export default function WorkoutLibraryPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
+      if (authLoading) {
+        return;
+      }
+
       if (!user) {
         router.push('/login');
+        return;
+      }
+
+      if (!canAccessTrainerDashboard) {
+        router.push('/dashboard');
         return;
       }
 
@@ -59,7 +68,7 @@ export default function WorkoutLibraryPage() {
     };
 
     checkAccess();
-  }, [user, router]);
+  }, [user, router, authLoading, canAccessTrainerDashboard]);
 
   // Filter workouts based on search and filters
   useEffect(() => {

@@ -62,7 +62,7 @@ interface Conversation {
 export default function ClientMessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
   
   // Mode state
   const [mode, setMode] = useState<'compose' | 'view'>('view');
@@ -130,11 +130,18 @@ export default function ClientMessagesPage() {
         router.push('/login');
         return;
       }
+
+      // Check if user can access trainer dashboard
+      if (!canAccessTrainerDashboard) {
+        router.push('/dashboard');
+        return;
+      }
       
       try {
         const clientsQuery = query(
           collection(db, 'users'),
           where('role', '==', 'client'),
+          where('assignedTrainerId', '==', user.uid),
           orderBy('createdAt', 'desc')
         );
         

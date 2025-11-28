@@ -38,7 +38,7 @@ export default function AdminDashboardPage() {
 
       // Redirect if not admin
       if (!canAccessAdminDashboard) {
-        router.push('/dashboard/trainer');
+        router.push('/dashboard');
         return;
       }
 

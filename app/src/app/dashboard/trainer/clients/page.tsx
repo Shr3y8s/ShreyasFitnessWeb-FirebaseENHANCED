@@ -79,7 +79,7 @@ interface ClientData {
 
 export default function ClientsPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [filteredClients, setFilteredClients] = useState<ClientData[]>([]);
@@ -150,12 +150,19 @@ export default function ClientsPage() {
         router.push('/login');
         return;
       }
+
+      // Check if user can access trainer dashboard
+      if (!canAccessTrainerDashboard) {
+        router.push('/dashboard');
+        return;
+      }
       
       try {
-        // Fetch clients
+        // Fetch clients assigned to this trainer
         const clientsQuery = query(
           collection(db, 'users'),
           where('role', '==', 'client'),
+          where('assignedTrainerId', '==', user.uid),
           orderBy('createdAt', 'desc')
         );
           

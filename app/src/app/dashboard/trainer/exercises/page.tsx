@@ -22,6 +22,7 @@ import {
   Save,
   X
 } from 'lucide-react';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import {
   Exercise,
@@ -32,7 +33,7 @@ import {
 
 export default function ExerciseLibraryPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
@@ -63,8 +64,17 @@ export default function ExerciseLibraryPage() {
 
   useEffect(() => {
     const checkAccess = async () => {
+      if (authLoading) {
+        return;
+      }
+
       if (!user) {
         router.push('/login');
+        return;
+      }
+
+      if (!canAccessTrainerDashboard) {
+        router.push('/dashboard');
         return;
       }
 
@@ -83,7 +93,7 @@ export default function ExerciseLibraryPage() {
     };
 
     checkAccess();
-  }, [user, router]);
+  }, [user, router, authLoading, canAccessTrainerDashboard]);
 
   // Filter exercises based on search and category
   useEffect(() => {
@@ -219,12 +229,10 @@ export default function ExerciseLibraryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      {/* Shared Trainer Sidebar */}
+    <SidebarProvider>
       <TrainerSidebar currentPage="exercises" />
-
-      {/* Main Content */}
-      <div className="ml-64 p-8">
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div className="flex justify-between items-center">
@@ -553,7 +561,8 @@ export default function ExerciseLibraryPage() {
         </div>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

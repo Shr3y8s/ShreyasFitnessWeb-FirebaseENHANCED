@@ -65,8 +65,16 @@ export default function LeadInboxPage() {
 
   // Check authentication - admin only
   useEffect(() => {
-    if (!authLoading && (!user || !canAccessAdminDashboard)) {
+    if (authLoading) return;
+    
+    if (!user) {
       router.push('/login');
+      return;
+    }
+    
+    if (!canAccessAdminDashboard) {
+      router.push('/dashboard');
+      return;
     }
   }, [user, authLoading, canAccessAdminDashboard, router]);
 
