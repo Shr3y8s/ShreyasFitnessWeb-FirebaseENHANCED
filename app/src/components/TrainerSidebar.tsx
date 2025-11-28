@@ -18,6 +18,7 @@ import {
   User,
   LogOut,
   Clock,
+  Shield,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -40,7 +41,7 @@ interface TrainerSidebarProps {
 export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, userData } = useAuth();
+  const { user, userData, canAccessAdminDashboard } = useAuth();
   const [clientCount, setClientCount] = useState(0);
 
   // Listen for real-time client count updates
@@ -261,6 +262,28 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Dashboard Switcher - Only for Admins */}
+        {canAccessAdminDashboard && (
+          <>
+            <div className="my-2 border-t border-sidebar-border" />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      onClick={() => router.push('/dashboard/admin')}
+                      className="cursor-pointer"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span className="font-medium">Admin Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

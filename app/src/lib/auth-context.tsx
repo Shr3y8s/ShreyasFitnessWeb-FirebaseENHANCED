@@ -71,6 +71,8 @@ interface AuthContextType {
   loading: boolean;
   updateUserData: (updates: Partial<UserData>) => void;
   refreshUserData: () => Promise<void>;
+  canAccessAdminDashboard: boolean;
+  canAccessTrainerDashboard: boolean;
 }
 
 // Create the auth context with default values
@@ -79,7 +81,9 @@ const AuthContext = createContext<AuthContextType>({
   userData: null,
   loading: true,
   updateUserData: () => {},
-  refreshUserData: async () => {}
+  refreshUserData: async () => {},
+  canAccessAdminDashboard: false,
+  canAccessTrainerDashboard: false,
 });
 
 // Auth provider component
@@ -221,8 +225,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
+  // Compute permission flags
+  const canAccessAdminDashboard = userData?.role === 'admin';
+  const canAccessTrainerDashboard = 
+    userData?.role === 'admin' || userData?.role === 'trainer';
+
   return (
-    <AuthContext.Provider value={{ user, userData, loading, updateUserData, refreshUserData }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userData, 
+      loading, 
+      updateUserData, 
+      refreshUserData,
+      canAccessAdminDashboard,
+      canAccessTrainerDashboard,
+    }}>
       {children}
     </AuthContext.Provider>
   );
