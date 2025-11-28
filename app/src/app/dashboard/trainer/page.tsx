@@ -38,7 +38,7 @@ interface ClientData {
 
 export default function TrainerDashboardPage() {
   const router = useRouter();
-  const { user, userData, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading, canAccessTrainerDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
@@ -59,7 +59,8 @@ export default function TrainerDashboardPage() {
         return;
       }
 
-      if (userData.role !== 'trainer' && userData.role !== 'admin') {
+      // Check if user can access trainer dashboard (trainer or admin with canTrain=true)
+      if (!canAccessTrainerDashboard) {
         router.push('/dashboard');
         return;
       }

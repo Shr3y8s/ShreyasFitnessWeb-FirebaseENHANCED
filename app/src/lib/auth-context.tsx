@@ -228,7 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Compute permission flags
   const canAccessAdminDashboard = userData?.role === 'admin';
   const canAccessTrainerDashboard = 
-    userData?.role === 'admin' || userData?.role === 'trainer';
+    userData?.role === 'trainer' || 
+    (userData?.role === 'admin' && userData?.canTrain === true);
 
   return (
     <AuthContext.Provider value={{ 

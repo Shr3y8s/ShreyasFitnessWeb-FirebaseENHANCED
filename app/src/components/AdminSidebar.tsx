@@ -25,6 +25,7 @@ import {
   TrendingUp,
   LayoutDashboard,
   LogOut,
+  Inbox,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
@@ -36,7 +37,7 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { userData } = useAuth();
+  const { userData, canAccessTrainerDashboard } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -127,6 +128,17 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
+                  className={pathname === '/dashboard/admin/leads' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/admin/leads">
+                    <Inbox className="w-4 h-4" />
+                    <span className="font-medium">Lead Inbox</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
                   className={pathname === '/dashboard/admin/trainers' ? 'bg-primary text-white hover:bg-primary/90' : ''}
                 >
                   <Link href="/dashboard/admin/trainers">
@@ -183,23 +195,27 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Dashboard Switcher */}
-        <div className="my-2 border-t border-sidebar-border" />
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  onClick={() => router.push('/dashboard/trainer')}
-                  className="cursor-pointer"
-                >
-                  <Briefcase className="w-4 h-4" />
-                  <span className="font-medium">Training Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Dashboard Switcher - Only if user can train */}
+        {canAccessTrainerDashboard && (
+          <>
+            <div className="my-2 border-t border-sidebar-border" />
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      onClick={() => router.push('/dashboard/trainer')}
+                      className="cursor-pointer"
+                    >
+                      <Briefcase className="w-4 h-4" />
+                      <span className="font-medium">Training Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter>

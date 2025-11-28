@@ -31,13 +31,14 @@ import {
   Newspaper
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import TrainerSidebar from '@/components/TrainerSidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import AdminSidebar from '@/components/AdminSidebar';
 
 type SortOption = 'DATE_DESC' | 'DATE_ASC' | 'SERVICE' | 'PRIORITY';
 
-export default function InboxPage() {
+export default function LeadInboxPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
   
   // State
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
@@ -62,12 +63,12 @@ export default function InboxPage() {
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
 
-  // Check authentication
+  // Check authentication - admin only
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && (!user || !canAccessAdminDashboard)) {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, canAccessAdminDashboard, router]);
 
   // Load service types
   useEffect(() => {
@@ -378,27 +379,30 @@ export default function InboxPage() {
 
   if (loading && submissions.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
-        <div className="text-stone-600">Loading inbox...</div>
-      </div>
+      <SidebarProvider>
+        <AdminSidebar currentPage="leads" />
+        <SidebarInset>
+          <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+            <div className="text-stone-600">Loading inbox...</div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      {/* Shared Trainer Sidebar */}
-      <TrainerSidebar currentPage="inbox" />
-
-      {/* Main Content */}
-      <div className="ml-64 p-8">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Contact Inbox</h1>
-              <p className="text-muted-foreground mt-1">Manage contact form submissions and lead communications</p>
-            </div>
-            <Button
+    <SidebarProvider>
+      <AdminSidebar currentPage="leads" />
+      <SidebarInset>
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+          <div className="max-w-7xl mx-auto space-y-8">
+            {/* Header */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Lead Inbox</h1>
+                <p className="text-muted-foreground mt-1">Manage contact form submissions and lead communications</p>
+              </div>
+              <Button
               variant="outline"
               size="sm"
               onClick={() => window.location.reload()}
@@ -789,7 +793,8 @@ export default function InboxPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
