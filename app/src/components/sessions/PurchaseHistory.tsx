@@ -60,10 +60,13 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
             {packages.map((pkg) => (
               <tr key={pkg.id} className="border-b border-border/50 hover:bg-muted/50">
                 <td className="py-3 px-4 text-sm">
-                  {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleDateString('en-US', {
+                  {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleString('en-US', {
                     month: 'short',
                     day: 'numeric',
-                    year: 'numeric'
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
                   })}
                 </td>
                 <td className="py-3 px-4 text-sm font-medium">
@@ -75,6 +78,11 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                     day: 'numeric',
                     year: 'numeric'
                   })}
+                  <span className="text-muted-foreground text-xs ml-1">
+                    (11:59 PM {new Date(typeof pkg.expirationDate === 'number' ? pkg.expirationDate : pkg.expirationDate.toMillis()).toLocaleTimeString('en-US', {
+                      timeZoneName: 'short'
+                    }).split(' ').pop()})
+                  </span>
                 </td>
                 <td className="py-3 px-4 text-sm">
                   {getStatusBadge(pkg)}
@@ -99,10 +107,13 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   {pkg.type === '4-pack' ? '4-Pack' : 'Single'} Sessions
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleDateString('en-US', {
+                  {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleString('en-US', {
                     month: 'short',
                     day: 'numeric',
-                    year: 'numeric'
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
                   })}
                 </div>
               </div>
@@ -120,6 +131,11 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   day: 'numeric',
                   year: 'numeric'
                 })}
+                <span className="text-xs ml-1">
+                  (11:59 PM {new Date(typeof pkg.expirationDate === 'number' ? pkg.expirationDate : pkg.expirationDate.toMillis()).toLocaleTimeString('en-US', {
+                    timeZoneName: 'short'
+                  }).split(' ').pop()})
+                </span>
               </span>
             </div>
           </div>
