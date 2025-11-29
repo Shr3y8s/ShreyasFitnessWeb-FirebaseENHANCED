@@ -962,13 +962,13 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* 3. Session Information */}
+                  {/* 3. In-person Sessions */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-2 bg-blue-100 rounded-lg">
                         <Calendar className="h-5 w-5 text-blue-600" />
                       </div>
-                      <h3 className="text-lg font-semibold">Session Information</h3>
+                      <h3 className="text-lg font-semibold">In-person Sessions</h3>
                     </div>
 
                     {/* Session Balance Summary */}
@@ -1152,51 +1152,53 @@ export default function ClientsPage() {
 
                           {/* Subscription Transaction History */}
                           {clientBillingData.transactions.length > 0 && (
-                            <div className="mb-6 pb-6 border-b">
-                              <h4 className="font-medium mb-3 text-sm text-gray-700">Subscription Transactions</h4>
-                              <div className="overflow-x-auto">
-                                <table className="w-full">
-                                  <thead className="border-b">
-                                    <tr className="text-left">
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Date</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Description</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Payment Method</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Amount</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Status</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y">
-                                    {clientBillingData.transactions.slice(0, 5).map((transaction) => {
-                                      const date = new Date(transaction.date * 1000);
-                                      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                      
-                                      return (
-                                        <tr key={transaction.id} className="hover:bg-gray-50">
-                                          <td className="py-3 pr-3 text-xs font-medium text-gray-900">{dateStr}</td>
-                                          <td className="py-3 pr-3 text-xs text-gray-900">{transaction.description || transaction.productName}</td>
-                                          <td className="py-3 pr-3 text-xs text-gray-900">
-                                            {transaction.paymentMethod 
-                                              ? typeof transaction.paymentMethod === 'string' 
-                                                ? transaction.paymentMethod 
-                                                : getPaymentMethodDisplay(transaction.paymentMethod)
-                                              : 'N/A'}
-                                          </td>
-                                          <td className="py-3 pr-3 text-xs font-medium text-gray-900">
-                                            {formatCurrency(transaction.amount, transaction.currency)}
-                                          </td>
-                                          <td className="py-3 pr-3">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                                              transaction.status === 'paid' || transaction.status === 'succeeded' ? 'bg-green-100 text-green-700' :
-                                              'bg-gray-100 text-gray-700'
-                                            }`}>
-                                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                                            </span>
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
+                            <div className="mb-6">
+                              <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+                                <h4 className="text-lg font-semibold mb-4 text-foreground">Subscription Transactions</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full">
+                                    <thead className="border-b">
+                                      <tr className="text-left">
+                                        <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Date</th>
+                                        <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Description</th>
+                                        <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Payment Method</th>
+                                        <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Amount</th>
+                                        <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                      {clientBillingData.transactions.slice(0, 5).map((transaction) => {
+                                        const date = new Date(transaction.date * 1000);
+                                        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                        
+                                        return (
+                                          <tr key={transaction.id} className="hover:bg-gray-50">
+                                            <td className="py-3 pr-3 text-xs font-medium text-gray-900">{dateStr}</td>
+                                            <td className="py-3 pr-3 text-xs text-gray-900">{transaction.description || transaction.productName}</td>
+                                            <td className="py-3 pr-3 text-xs text-gray-900">
+                                              {transaction.paymentMethod 
+                                                ? typeof transaction.paymentMethod === 'string' 
+                                                  ? transaction.paymentMethod 
+                                                  : getPaymentMethodDisplay(transaction.paymentMethod)
+                                                : 'N/A'}
+                                            </td>
+                                            <td className="py-3 pr-3 text-xs font-medium text-gray-900">
+                                              {formatCurrency(transaction.amount, transaction.currency)}
+                                            </td>
+                                            <td className="py-3 pr-3">
+                                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                transaction.status === 'paid' || transaction.status === 'succeeded' ? 'bg-green-100 text-green-700' :
+                                                'bg-gray-100 text-gray-700'
+                                              }`}>
+                                                {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
                             </div>
                           )}
