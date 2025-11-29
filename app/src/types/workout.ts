@@ -4,10 +4,20 @@
 export interface Exercise {
   id: string;
   name: string;
-  instructions: string;
+  aliases?: string[]; // Alternative names
   category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
-  targetMuscleGroups: string[];
+  description?: string; // Overview of the exercise
+  instructions?: string; // General instructions for the exercise
+  videoUrl?: string; // Link to demonstration video
   equipment: string[];
+  posture?: string; // standing, seated, prone, supine, kneeling, plank
+  primaryMuscles: string[]; // Main muscles worked
+  secondaryMuscles?: string[]; // Stabilizer muscles
+  muscleGroup: string; // upper_body, lower_body, core, full_body
+  movementPattern?: string; // squat, hinge, push, pull, carry, rotation, lunge
+  planeOfMotion?: string; // sagittal, frontal, transverse
+  armLegType: 'single' | 'double'; // Single or double arm/leg movement
+  gripType?: string; // overhand, underhand, neutral, wide, narrow, mixed
   notes?: string;
   mediaUrl?: string;
   
@@ -218,23 +228,130 @@ export const MUSCLE_GROUPS = [
   'Full Body'
 ] as const;
 
-export const EQUIPMENT_OPTIONS = [
-  'None (Bodyweight)',
-  'Dumbbells',
-  'Barbells',
-  'Resistance Bands',
-  'Kettlebells',
-  'Pull-up Bar',
-  'Bench',
-  'Cable Machine',
-  'Treadmill',
-  'Stationary Bike',
-  'Rowing Machine',
-  'Medicine Ball',
-  'Stability Ball',
-  'Foam Roller',
-  'Yoga Mat',
-  'Other'
+// Categorized equipment for easier selection
+export const EQUIPMENT_CATEGORIES = {
+  none: {
+    label: 'No Equipment',
+    items: ['None / Bodyweight']
+  },
+  freeWeights: {
+    label: 'Free Weights',
+    items: [
+      'Barbell', 'Dumbbell', 'Kettlebell', 'Weight Plates',
+      'EZ Curl Bar', 'Trap Bar / Hex Bar', 'Safety Squat Bar',
+      'Swiss Bar', 'Medicine Ball', 'Slam Ball', 'Sandbag', 'D-Ball'
+    ]
+  },
+  machinesStrength: {
+    label: 'Machines - Strength',
+    items: [
+      'Cable Machine', 'Cable Crossover Machine', 'Functional Trainer',
+      'Smith Machine', 'Lat Pulldown Machine', 'Seated Row Machine',
+      'Chest Press Machine', 'Shoulder Press Machine', 'Leg Press Machine',
+      'Hack Squat Machine', 'Leg Extension Machine', 'Leg Curl Machine',
+      'Calf Raise Machine', 'Hip Abduction Machine', 'Hip Adduction Machine',
+      'Glute Machine', 'Pec Deck / Fly Machine', 'Rear Delt Machine',
+      'Preacher Curl Bench', 'Tricep Dip Machine', 'Ab Crunch Machine',
+      'Rotary Torso Machine', 'Multi-Gym / Home Gym'
+    ]
+  },
+  machinesCardio: {
+    label: 'Machines - Cardio',
+    items: [
+      'Treadmill', 'Elliptical Trainer', 'Stationary Bike',
+      'Recumbent Bike', 'Spin Bike / Indoor Cycle', 'Air Bike / Fan Bike',
+      'Rowing Machine', 'Stair Climber / Stepmill', 'Stepper',
+      'SkiErg', 'Vertical Climber / VersaClimber', 'Arc Trainer / Cross Trainer',
+      "Jacob's Ladder"
+    ]
+  },
+  racksBenches: {
+    label: 'Racks & Benches',
+    items: [
+      'Power Rack / Squat Rack', 'Half Rack', 'Squat Stand',
+      'Bench (Flat)', 'Bench (Adjustable)', 'Incline Bench',
+      'Decline Bench', 'Preacher Curl Bench',
+      'Roman Chair / Hyperextension Bench', 'Glute Ham Developer (GHD)',
+      'Ab Bench', 'Dumbbell Rack', 'Weight Tree / Plate Rack'
+    ]
+  },
+  bodyweightCalisthenics: {
+    label: 'Bodyweight & Calisthenics',
+    items: [
+      'Pull-Up Bar', 'Dip Station / Dip Bars', 'Push-Up Bars / Handles',
+      'Parallettes', 'Gymnastic Rings', 'Suspension Trainer (TRX)',
+      'Ab Wheel / Roller', "Captain's Chair"
+    ]
+  },
+  functionalHIIT: {
+    label: 'Functional & HIIT',
+    items: [
+      'Battle Ropes', 'Plyo Box / Jump Box', 'Resistance Bands',
+      'Mini Bands / Hip Circle', 'Sled / Prowler', 'Tire',
+      'Landmine', 'Agility Ladder', 'Cones', 'Speed Parachute',
+      'Weighted Vest', 'Ankle Weights', 'Wrist Weights', 'Weighted Belt / Dip Belt'
+    ]
+  },
+  flexibilityRecovery: {
+    label: 'Flexibility & Recovery',
+    items: [
+      'Yoga Mat', 'Foam Roller', 'Massage Ball / Lacrosse Ball',
+      'Stretching Strap', 'Stability Ball / Swiss Ball', 'BOSU Ball',
+      'Balance Board / Wobble Board', 'Massage Gun'
+    ]
+  },
+  sportSpecific: {
+    label: 'Sport-Specific',
+    items: [
+      'Boxing Bag / Heavy Bag', 'Speed Bag', 'Jump Rope / Speed Rope',
+      'Climbing Wall / Pegboard', 'Finger Trainer / Grip Strengthener',
+      'Pilates Reformer', 'Barre', 'Step Platform'
+    ]
+  }
+} as const;
+
+// Flat list of all equipment for backward compatibility
+export const EQUIPMENT_OPTIONS = Object.values(EQUIPMENT_CATEGORIES).flatMap(category => category.items);
+
+export const POSTURE_OPTIONS = [
+  'Standing',
+  'Seated',
+  'Prone',
+  'Supine',
+  'Kneeling',
+  'Plank'
+] as const;
+
+export const MOVEMENT_PATTERNS = [
+  'Squat',
+  'Hinge',
+  'Push',
+  'Pull',
+  'Carry',
+  'Rotation',
+  'Lunge'
+] as const;
+
+export const PLANE_OF_MOTION = [
+  'Sagittal',
+  'Frontal',
+  'Transverse'
+] as const;
+
+export const MUSCLE_GROUPS_CATEGORIES = [
+  'Upper Body',
+  'Lower Body',
+  'Core',
+  'Full Body'
+] as const;
+
+export const GRIP_TYPES = [
+  'Overhand',
+  'Underhand',
+  'Neutral',
+  'Wide',
+  'Narrow',
+  'Mixed'
 ] as const;
 
 export const DIFFICULTY_LEVELS = [

@@ -40,7 +40,14 @@ import {
   Exercise,
   EXERCISE_CATEGORIES,
   MUSCLE_GROUPS,
-  EQUIPMENT_OPTIONS
+  EQUIPMENT_OPTIONS,
+  EQUIPMENT_CATEGORIES,
+  POSTURE_OPTIONS,
+  MOVEMENT_PATTERNS,
+  PLANE_OF_MOTION,
+  MUSCLE_GROUPS_CATEGORIES,
+  DIFFICULTY_LEVELS,
+  GRIP_TYPES
 } from '@/types/workout';
 
 export default function ExerciseLibraryPage() {
@@ -61,21 +68,46 @@ export default function ExerciseLibraryPage() {
   // New exercise form state
   const [exerciseForm, setExerciseForm] = useState<{
     name: string;
+    aliases: string[];
+    description: string;
     instructions: string;
     category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
-    targetMuscleGroups: string[];
+    videoUrl: string;
+    posture: string;
+    primaryMuscles: string[];
+    secondaryMuscles: string[];
+    muscleGroup: string;
+    movementPattern: string;
+    planeOfMotion: string;
+    armLegType: 'single' | 'double';
+    gripType: string;
     equipment: string[];
     notes: string;
     scope: 'personal' | 'company';
   }>({
     name: '',
+    aliases: [],
+    description: '',
     instructions: '',
     category: 'strength',
-    targetMuscleGroups: [],
+    videoUrl: '',
+    posture: '',
+    primaryMuscles: [],
+    secondaryMuscles: [],
+    muscleGroup: '',
+    movementPattern: '',
+    planeOfMotion: '',
+    armLegType: 'double',
+    gripType: '',
     equipment: [],
     notes: '',
     scope: 'personal'
   });
+
+  // Helper states for UI
+  const [aliasInput, setAliasInput] = useState('');
+  const [instructionInput, setInstructionInput] = useState('');
+  const [activeEquipmentTab, setActiveEquipmentTab] = useState<keyof typeof EQUIPMENT_CATEGORIES>('none');
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -126,17 +158,21 @@ export default function ExerciseLibraryPage() {
     // Apply search filter - searches name, instructions, muscle groups, equipment, and creator
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(exercise =>
-        exercise.name.toLowerCase().includes(query) ||
-        exercise.instructions.toLowerCase().includes(query) ||
-        exercise.targetMuscleGroups.some(muscle => 
-          muscle.toLowerCase().includes(query)
-        ) ||
-        exercise.equipment.some(eq => 
-          eq.toLowerCase().includes(query)
-        ) ||
-        (exercise.createdByName && exercise.createdByName.toLowerCase().includes(query))
-      );
+      filtered = filtered.filter(exercise => {
+        const instructionsText = Array.isArray(exercise.instructions) 
+          ? exercise.instructions.join(' ').toLowerCase()
+          : String(exercise.instructions || '').toLowerCase();
+        
+        return exercise.name.toLowerCase().includes(query) ||
+          instructionsText.includes(query) ||
+          (exercise.primaryMuscles || []).some((muscle: string) => 
+            muscle.toLowerCase().includes(query)
+          ) ||
+          exercise.equipment.some((eq: string) => 
+            eq.toLowerCase().includes(query)
+          ) ||
+          (exercise.createdByName && exercise.createdByName.toLowerCase().includes(query));
+      });
     }
 
     // Apply category filter
@@ -183,17 +219,29 @@ export default function ExerciseLibraryPage() {
   const resetForm = () => {
     setExerciseForm({
       name: '',
+      aliases: [],
+      description: '',
       instructions: '',
       category: 'strength',
-      targetMuscleGroups: [],
+      videoUrl: '',
+      posture: '',
+      primaryMuscles: [],
+      secondaryMuscles: [],
+      muscleGroup: '',
+      movementPattern: '',
+      planeOfMotion: '',
+      armLegType: 'double',
+      gripType: '',
       equipment: [],
       notes: '',
       scope: 'personal'
     });
+    setAliasInput('');
+    setInstructionInput('');
   };
 
   const handleCreateExercise = async () => {
-    if (!user || !exerciseForm.name || !exerciseForm.instructions) return;
+    if (!user || !exerciseForm.name || exerciseForm.primaryMuscles.length === 0 || !exerciseForm.muscleGroup || exerciseForm.equipment.length === 0) return;
 
     // Get user's name from Firestore
     const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -223,9 +271,19 @@ export default function ExerciseLibraryPage() {
     setEditingId(exercise.id);
     setExerciseForm({
       name: exercise.name,
-      instructions: exercise.instructions,
+      aliases: exercise.aliases || [],
+      description: exercise.description || '',
+      instructions: exercise.instructions || '',
       category: exercise.category,
-      targetMuscleGroups: [...exercise.targetMuscleGroups],
+      videoUrl: exercise.videoUrl || '',
+      posture: exercise.posture || '',
+      primaryMuscles: [...(exercise.primaryMuscles || [])],
+      secondaryMuscles: [...(exercise.secondaryMuscles || [])],
+      muscleGroup: exercise.muscleGroup || '',
+      movementPattern: exercise.movementPattern || '',
+      planeOfMotion: exercise.planeOfMotion || '',
+      armLegType: exercise.armLegType || 'double',
+      gripType: exercise.gripType || '',
       equipment: [...exercise.equipment],
       notes: exercise.notes || '',
       scope: exercise.scope || 'personal'
@@ -233,7 +291,7 @@ export default function ExerciseLibraryPage() {
   };
 
   const handleUpdateExercise = async () => {
-    if (!editingId || !exerciseForm.name || !exerciseForm.instructions) return;
+    if (!editingId || !exerciseForm.name || exerciseForm.primaryMuscles.length === 0 || !exerciseForm.muscleGroup || exerciseForm.equipment.length === 0) return;
 
     setSaving(true);
     try {
@@ -288,12 +346,21 @@ export default function ExerciseLibraryPage() {
     }
   };
 
-  const handleMuscleGroupToggle = (muscle: string) => {
+  const handlePrimaryMuscleToggle = (muscle: string) => {
     setExerciseForm(prev => ({
       ...prev,
-      targetMuscleGroups: prev.targetMuscleGroups.includes(muscle)
-        ? prev.targetMuscleGroups.filter(m => m !== muscle)
-        : [...prev.targetMuscleGroups, muscle]
+      primaryMuscles: prev.primaryMuscles.includes(muscle)
+        ? prev.primaryMuscles.filter(m => m !== muscle)
+        : [...prev.primaryMuscles, muscle]
+    }));
+  };
+
+  const handleSecondaryMuscleToggle = (muscle: string) => {
+    setExerciseForm(prev => ({
+      ...prev,
+      secondaryMuscles: prev.secondaryMuscles.includes(muscle)
+        ? prev.secondaryMuscles.filter(m => m !== muscle)
+        : [...prev.secondaryMuscles, muscle]
     }));
   };
 
@@ -484,129 +551,357 @@ export default function ExerciseLibraryPage() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Exercise Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Push-ups"
-                    value={exerciseForm.name}
-                    onChange={(e) => setExerciseForm(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
+            <div className="space-y-8">
+              {/* SECTION 1: Basic Identity */}
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Basic Identity</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="name">Exercise Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., Barbell Bench Press"
+                      value={exerciseForm.name}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="mt-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="instructions">Instructions *</Label>
-                  <textarea
-                    id="instructions"
-                    placeholder="Describe how to perform this exercise..."
-                    value={exerciseForm.instructions}
-                    onChange={(e) => setExerciseForm(prev => ({ ...prev, instructions: e.target.value }))}
-                    className="w-full min-h-[100px] px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="description">Description</Label>
+                    <textarea
+                      id="description"
+                      placeholder="Brief overview of the exercise..."
+                      value={exerciseForm.description}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full min-h-[80px] px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-2"
+                    />
+                  </div>
 
-                <div>
-                  <Label>Category</Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {EXERCISE_CATEGORIES.map((category) => (
-                      <button
-                        key={category.value}
-                        onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
-                        className={`p-2 rounded-lg border text-sm transition-colors ${
-                          exerciseForm.category === category.value
-                            ? 'border-primary bg-primary text-white'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        {category.label}
-                      </button>
-                    ))}
+                  <div className="md:col-span-2">
+                    <Label>Aliases (Alternative Names)</Label>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., Bench, Flat Bench..."
+                          value={aliasInput}
+                          onChange={(e) => setAliasInput(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (aliasInput.trim() && !exerciseForm.aliases.includes(aliasInput.trim())) {
+                                setExerciseForm(prev => ({ ...prev, aliases: [...prev.aliases, aliasInput.trim()] }));
+                                setAliasInput('');
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (aliasInput.trim() && !exerciseForm.aliases.includes(aliasInput.trim())) {
+                              setExerciseForm(prev => ({ ...prev, aliases: [...prev.aliases, aliasInput.trim()] }));
+                              setAliasInput('');
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {exerciseForm.aliases.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {exerciseForm.aliases.map((alias, index) => (
+                            <span key={index} className="px-2 py-1 bg-gray-100 rounded-full text-sm flex items-center gap-1">
+                              {alias}
+                              <button
+                                onClick={() => setExerciseForm(prev => ({
+                                  ...prev,
+                                  aliases: prev.aliases.filter((_, i) => i !== index)
+                                }))}
+                                className="text-gray-500 hover:text-red-500"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-4">
-                <div>
-                  <Label>Target Muscle Groups</Label>
-                  <div className="mt-2 max-h-32 overflow-y-auto border rounded-lg p-2">
-                    {MUSCLE_GROUPS.map((muscle) => (
-                      <label key={muscle} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded">
-                        <input
-                          type="checkbox"
-                          checked={exerciseForm.targetMuscleGroups.includes(muscle)}
-                          onChange={() => handleMuscleGroupToggle(muscle)}
-                        />
-                        <span className="text-sm">{muscle}</span>
-                      </label>
-                    ))}
+              {/* SECTION 2: Instructions & Guidance */}
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Instructions & Guidance</h4>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="instructions">Instructions</Label>
+                    <textarea
+                      id="instructions"
+                      placeholder="General instructions for performing the exercise..."
+                      value={exerciseForm.instructions}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, instructions: e.target.value }))}
+                      className="w-full min-h-[100px] px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="videoUrl">Video/Media URL</Label>
+                    <Input
+                      id="videoUrl"
+                      type="url"
+                      placeholder="https://example.com/video.mp4"
+                      value={exerciseForm.videoUrl}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
+                      className="mt-2"
+                    />
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <Label>Equipment Needed</Label>
-                  <div className="mt-2 max-h-32 overflow-y-auto border rounded-lg p-2">
-                    {EQUIPMENT_OPTIONS.map((equipment) => (
-                      <label key={equipment} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded">
-                        <input
-                          type="checkbox"
-                          checked={exerciseForm.equipment.includes(equipment)}
-                          onChange={() => handleEquipmentToggle(equipment)}
-                        />
-                        <span className="text-sm">{equipment}</span>
-                      </label>
-                    ))}
+              {/* SECTION 3: Muscle & Movement Data */}
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Muscle & Movement Data</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Primary Muscles *</Label>
+                    <div className="mt-2 max-h-32 overflow-y-auto border rounded-lg p-2">
+                      {MUSCLE_GROUPS.map((muscle) => (
+                        <label key={muscle} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded">
+                          <input
+                            type="checkbox"
+                            checked={exerciseForm.primaryMuscles.includes(muscle)}
+                            onChange={() => handlePrimaryMuscleToggle(muscle)}
+                          />
+                          <span className="text-sm">{muscle}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Secondary Muscles</Label>
+                    <div className="mt-2 max-h-32 overflow-y-auto border rounded-lg p-2">
+                      {MUSCLE_GROUPS.map((muscle) => (
+                        <label key={muscle} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded">
+                          <input
+                            type="checkbox"
+                            checked={exerciseForm.secondaryMuscles.includes(muscle)}
+                            onChange={() => handleSecondaryMuscleToggle(muscle)}
+                          />
+                          <span className="text-sm">{muscle}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Muscle Group Category *</Label>
+                    <select
+                      value={exerciseForm.muscleGroup}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, muscleGroup: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {MUSCLE_GROUPS_CATEGORIES.map((group) => (
+                        <option key={group} value={group.toLowerCase().replace(' ', '_')}>{group}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label>Movement Pattern</Label>
+                    <select
+                      value={exerciseForm.movementPattern}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, movementPattern: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {MOVEMENT_PATTERNS.map((pattern) => (
+                        <option key={pattern} value={pattern.toLowerCase()}>{pattern}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label>Plane of Motion</Label>
+                    <select
+                      value={exerciseForm.planeOfMotion}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, planeOfMotion: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {PLANE_OF_MOTION.map((plane) => (
+                        <option key={plane} value={plane.toLowerCase()}>{plane}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <Label htmlFor="notes">Notes (Optional)</Label>
-                  <textarea
-                    id="notes"
-                    placeholder="Additional notes, tips, or modifications..."
-                    value={exerciseForm.notes}
-                    onChange={(e) => setExerciseForm(prev => ({ ...prev, notes: e.target.value }))}
-                    className="w-full min-h-[60px] px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                </div>
+              {/* SECTION 4: Exercise Setup & Equipment */}
+              <div>
+                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Exercise Setup & Equipment</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Category</Label>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {EXERCISE_CATEGORIES.map((category) => (
+                        <button
+                          key={category.value}
+                          onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
+                          className={`p-2 rounded-lg border text-sm transition-colors ${
+                            exerciseForm.category === category.value
+                              ? 'border-primary bg-primary text-white'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          {category.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                <div>
-                  <Label>Exercise Scope</Label>
-                  <div className="mt-2 space-y-2">
-                    <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <input
-                        type="radio"
-                        name="scope"
-                        value="personal"
-                        checked={exerciseForm.scope === 'personal'}
-                        onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'personal' }))}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">Personal Exercise</div>
-                        <div className="text-sm text-gray-600">Only you can see and use this exercise</div>
+                  <div className="md:col-span-2">
+                    <Label>Equipment Required *</Label>
+                    <div className="mt-2">
+                      {/* Equipment Category Tabs */}
+                      <div className="flex flex-wrap gap-1 mb-3 border-b pb-2">
+                        {Object.entries(EQUIPMENT_CATEGORIES).map(([key, category]) => {
+                          const categoryKey = key as keyof typeof EQUIPMENT_CATEGORIES;
+                          const selectedCount = category.items.filter(item => 
+                            exerciseForm.equipment.includes(item)
+                          ).length;
+                          
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setActiveEquipmentTab(categoryKey)}
+                              className={`px-3 py-1.5 text-xs rounded-t transition-colors relative ${
+                                activeEquipmentTab === categoryKey
+                                  ? 'bg-primary text-white font-medium'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {category.label}
+                              {selectedCount > 0 && (
+                                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                                  activeEquipmentTab === categoryKey
+                                    ? 'bg-white text-primary'
+                                    : 'bg-primary text-white'
+                                }`}>
+                                  {selectedCount}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
-                    </label>
-                    <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                      <input
-                        type="radio"
-                        name="scope"
-                        value="company"
-                        checked={exerciseForm.scope === 'company'}
-                        onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'company' }))}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">Company Library</div>
-                        <div className="text-sm text-gray-600">All trainers can see and use this exercise</div>
+                      
+                      {/* Equipment Items Grid */}
+                      <div className="border rounded-lg p-3 bg-gray-50 max-h-48 overflow-y-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {EQUIPMENT_CATEGORIES[activeEquipmentTab].items.map((equipment) => (
+                            <label key={equipment} className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={exerciseForm.equipment.includes(equipment)}
+                                onChange={() => handleEquipmentToggle(equipment)}
+                                className="rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <span className="text-sm">{equipment}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </label>
+                      
+                      {/* Selected Equipment Summary */}
+                      {exerciseForm.equipment.length > 0 && (
+                        <div className="mt-2 text-xs text-gray-600">
+                          {exerciseForm.equipment.length} item{exerciseForm.equipment.length !== 1 ? 's' : ''} selected
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Posture/Position</Label>
+                    <select
+                      value={exerciseForm.posture}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, posture: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {POSTURE_OPTIONS.map((posture) => (
+                        <option key={posture} value={posture.toLowerCase()}>{posture}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label>Grip Type</Label>
+                    <select
+                      value={exerciseForm.gripType}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, gripType: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                    >
+                      <option value="">Select...</option>
+                      {GRIP_TYPES.map((grip) => (
+                        <option key={grip} value={grip.toLowerCase()}>{grip}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Single vs Double Arm/Leg</Label>
+                    <select
+                      value={exerciseForm.armLegType}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, armLegType: e.target.value as 'single' | 'double' }))}
+                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                    >
+                      <option value="double">Double (Both Arms/Legs)</option>
+                      <option value="single">Single (One Arm/Leg at a Time)</option>
+                    </select>
                   </div>
                 </div>
+              </div>
 
+              {/* Exercise Scope */}
+              <div>
+                <Label>Exercise Scope</Label>
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="scope"
+                      value="personal"
+                      checked={exerciseForm.scope === 'personal'}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'personal' }))}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Personal Exercise</div>
+                      <div className="text-sm text-gray-600">Only you can see and use this</div>
+                    </div>
+                  </label>
+                  <label className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="scope"
+                      value="company"
+                      checked={exerciseForm.scope === 'company'}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'company' }))}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">Company Library</div>
+                      <div className="text-sm text-gray-600">All trainers can see and use this</div>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -616,7 +911,7 @@ export default function ExerciseLibraryPage() {
               </Button>
               <Button 
                 onClick={handleCreateExercise}
-                disabled={!exerciseForm.name || !exerciseForm.instructions || saving}
+                disabled={!exerciseForm.name || exerciseForm.primaryMuscles.length === 0 || !exerciseForm.muscleGroup || exerciseForm.equipment.length === 0 || saving}
               >
                 <Save className="h-4 w-4 mr-2" />
                 {saving ? 'Saving...' : 'Save Exercise'}
@@ -662,40 +957,247 @@ export default function ExerciseLibraryPage() {
               {filteredExercises.map((exercise) => (
                 <div key={exercise.id} className="p-6 hover:bg-gray-50 transition-colors">
                   {editingId === exercise.id ? (
-                    /* Edit Form - Similar to create form but inline */
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor={`edit-name-${exercise.id}`}>Exercise Name</Label>
-                          <Input
-                            id={`edit-name-${exercise.id}`}
-                            value={exerciseForm.name}
-                            onChange={(e) => setExerciseForm(prev => ({ ...prev, name: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <Label>Category</Label>
-                          <select
-                            value={exerciseForm.category}
-                            onChange={(e) => setExerciseForm(prev => ({ ...prev, category: e.target.value as any }))}
-                            className="w-full px-3 py-2 border rounded-md"
-                          >
-                            {EXERCISE_CATEGORIES.map((cat) => (
-                              <option key={cat.value} value={cat.value}>{cat.label}</option>
-                            ))}
-                          </select>
-                        </div>
+                    /* Edit Form - Complete form matching create form */
+                    <div className="space-y-6 bg-blue-50 p-6 rounded-lg border border-blue-200">
+                      <div className="flex justify-between items-center pb-3 border-b border-blue-200">
+                        <h4 className="font-semibold text-blue-900">Edit Exercise</h4>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
+
+                      {/* SECTION 1: Basic Identity */}
                       <div>
-                        <Label htmlFor={`edit-instructions-${exercise.id}`}>Instructions</Label>
-                        <textarea
-                          id={`edit-instructions-${exercise.id}`}
-                          value={exerciseForm.instructions}
-                          onChange={(e) => setExerciseForm(prev => ({ ...prev, instructions: e.target.value }))}
-                          className="w-full min-h-[80px] px-3 py-2 border rounded-md"
-                        />
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Basic Identity</h5>
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor={`edit-name-${exercise.id}`}>Exercise Name *</Label>
+                            <Input
+                              id={`edit-name-${exercise.id}`}
+                              value={exerciseForm.name}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, name: e.target.value }))}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`edit-description-${exercise.id}`}>Description</Label>
+                            <textarea
+                              id={`edit-description-${exercise.id}`}
+                              value={exerciseForm.description}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, description: e.target.value }))}
+                              className="w-full min-h-[60px] px-3 py-2 border rounded-md mt-1"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-end gap-3">
+
+                      {/* SECTION 2: Instructions & Guidance */}
+                      <div>
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Instructions & Guidance</h5>
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor={`edit-instructions-${exercise.id}`}>Instructions</Label>
+                            <textarea
+                              id={`edit-instructions-${exercise.id}`}
+                              value={exerciseForm.instructions}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, instructions: e.target.value }))}
+                              className="w-full min-h-[80px] px-3 py-2 border rounded-md mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`edit-videoUrl-${exercise.id}`}>Video/Media URL</Label>
+                            <Input
+                              id={`edit-videoUrl-${exercise.id}`}
+                              type="url"
+                              value={exerciseForm.videoUrl}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECTION 3: Muscle & Movement Data */}
+                      <div>
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Muscle & Movement Data</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <Label>Primary Muscles *</Label>
+                            <div className="mt-1 max-h-32 overflow-y-auto border rounded-lg p-2 bg-white">
+                              {MUSCLE_GROUPS.map((muscle) => (
+                                <label key={muscle} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={exerciseForm.primaryMuscles.includes(muscle)}
+                                    onChange={() => handlePrimaryMuscleToggle(muscle)}
+                                  />
+                                  <span>{muscle}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Secondary Muscles</Label>
+                            <div className="mt-1 max-h-32 overflow-y-auto border rounded-lg p-2 bg-white">
+                              {MUSCLE_GROUPS.map((muscle) => (
+                                <label key={muscle} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={exerciseForm.secondaryMuscles.includes(muscle)}
+                                    onChange={() => handleSecondaryMuscleToggle(muscle)}
+                                  />
+                                  <span>{muscle}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <Label>Muscle Group Category *</Label>
+                            <select
+                              value={exerciseForm.muscleGroup}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, muscleGroup: e.target.value }))}
+                              className="w-full px-3 py-2 border rounded-md mt-1 text-sm bg-white"
+                            >
+                              <option value="">Select...</option>
+                              {MUSCLE_GROUPS_CATEGORIES.map((group) => (
+                                <option key={group} value={group.toLowerCase().replace(' ', '_')}>{group}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <Label>Movement Pattern</Label>
+                            <select
+                              value={exerciseForm.movementPattern}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, movementPattern: e.target.value }))}
+                              className="w-full px-3 py-2 border rounded-md mt-1 text-sm bg-white"
+                            >
+                              <option value="">Select...</option>
+                              {MOVEMENT_PATTERNS.map((pattern) => (
+                                <option key={pattern} value={pattern.toLowerCase()}>{pattern}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECTION 4: Exercise Setup & Equipment */}
+                      <div>
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Exercise Setup & Equipment</h5>
+                        <div className="space-y-3">
+                          <div>
+                            <Label>Category</Label>
+                            <div className="mt-1 grid grid-cols-2 gap-2">
+                              {EXERCISE_CATEGORIES.map((category) => (
+                                <button
+                                  key={category.value}
+                                  type="button"
+                                  onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
+                                  className={`p-2 rounded-lg border text-sm transition-colors ${
+                                    exerciseForm.category === category.value
+                                      ? 'border-primary bg-primary text-white'
+                                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                                  }`}
+                                >
+                                  {category.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label>Equipment Required *</Label>
+                            <div className="mt-1">
+                              {/* Equipment Category Tabs */}
+                              <div className="flex flex-wrap gap-1 mb-2 border-b pb-1">
+                                {Object.entries(EQUIPMENT_CATEGORIES).map(([key, category]) => {
+                                  const categoryKey = key as keyof typeof EQUIPMENT_CATEGORIES;
+                                  const selectedCount = category.items.filter(item => 
+                                    exerciseForm.equipment.includes(item)
+                                  ).length;
+                                  
+                                  return (
+                                    <button
+                                      key={key}
+                                      type="button"
+                                      onClick={() => setActiveEquipmentTab(categoryKey)}
+                                      className={`px-2 py-1 text-xs rounded-t transition-colors ${
+                                        activeEquipmentTab === categoryKey
+                                          ? 'bg-primary text-white font-medium'
+                                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                      }`}
+                                    >
+                                      {category.label}
+                                      {selectedCount > 0 && (
+                                        <span className={`ml-1 px-1 py-0.5 rounded-full text-xs font-bold ${
+                                          activeEquipmentTab === categoryKey
+                                            ? 'bg-white text-primary'
+                                            : 'bg-primary text-white'
+                                        }`}>
+                                          {selectedCount}
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              
+                              {/* Equipment Items Grid */}
+                              <div className="border rounded-lg p-2 bg-white max-h-40 overflow-y-auto">
+                                <div className="grid grid-cols-2 gap-2">
+                                  {EQUIPMENT_CATEGORIES[activeEquipmentTab].items.map((equipment) => (
+                                    <label key={equipment} className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer text-sm">
+                                      <input
+                                        type="checkbox"
+                                        checked={exerciseForm.equipment.includes(equipment)}
+                                        onChange={() => handleEquipmentToggle(equipment)}
+                                        className="rounded border-gray-300"
+                                      />
+                                      <span>{equipment}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              {exerciseForm.equipment.length > 0 && (
+                                <div className="mt-1 text-xs text-gray-600">
+                                  {exerciseForm.equipment.length} item{exerciseForm.equipment.length !== 1 ? 's' : ''} selected
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <Label>Posture/Position</Label>
+                              <select
+                                value={exerciseForm.posture}
+                                onChange={(e) => setExerciseForm(prev => ({ ...prev, posture: e.target.value }))}
+                                className="w-full px-3 py-2 border rounded-md mt-1 text-sm bg-white"
+                              >
+                                <option value="">Select...</option>
+                                {POSTURE_OPTIONS.map((posture) => (
+                                  <option key={posture} value={posture.toLowerCase()}>{posture}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <Label>Grip Type</Label>
+                              <select
+                                value={exerciseForm.gripType}
+                                onChange={(e) => setExerciseForm(prev => ({ ...prev, gripType: e.target.value }))}
+                                className="w-full px-3 py-2 border rounded-md mt-1 text-sm bg-white"
+                              >
+                                <option value="">Select...</option>
+                                {GRIP_TYPES.map((grip) => (
+                                  <option key={grip} value={grip.toLowerCase()}>{grip}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end gap-3 pt-3 border-t border-blue-200">
                         <Button variant="outline" onClick={() => setEditingId(null)}>
                           Cancel
                         </Button>
@@ -762,14 +1264,44 @@ export default function ExerciseLibraryPage() {
                           )}
                         </div>
                         
-                        <p className="text-gray-600 mb-3">{exercise.instructions}</p>
+                        {exercise.description && (
+                          <p className="text-gray-600 mb-2">{exercise.description}</p>
+                        )}
                         
-                        {exercise.targetMuscleGroups.length > 0 && (
+                        {exercise.instructions && (
+                          <div className="mb-3">
+                            <span className="text-sm font-medium text-gray-700">Instructions:</span>
+                            {Array.isArray(exercise.instructions) ? (
+                              <ol className="list-decimal list-inside text-sm text-gray-600 mt-1 space-y-1">
+                                {exercise.instructions.map((step, index) => (
+                                  <li key={index}>{step}</li>
+                                ))}
+                              </ol>
+                            ) : (
+                              <p className="text-sm text-gray-600 mt-1">{exercise.instructions}</p>
+                            )}
+                          </div>
+                        )}
+                        
+                        {(exercise.primaryMuscles || []).length > 0 && (
                           <div className="mb-2">
-                            <span className="text-sm font-medium text-gray-700 mr-2">Target Muscles:</span>
+                            <span className="text-sm font-medium text-gray-700 mr-2">Primary Muscles:</span>
                             <div className="inline-flex flex-wrap gap-1">
-                              {exercise.targetMuscleGroups.map((muscle) => (
+                              {(exercise.primaryMuscles || []).map((muscle: string) => (
                                 <span key={muscle} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                  {muscle}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {(exercise.secondaryMuscles || []).length > 0 && (
+                          <div className="mb-2">
+                            <span className="text-sm font-medium text-gray-700 mr-2">Secondary Muscles:</span>
+                            <div className="inline-flex flex-wrap gap-1">
+                              {(exercise.secondaryMuscles || []).map((muscle: string) => (
+                                <span key={muscle} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
                                   {muscle}
                                 </span>
                               ))}
