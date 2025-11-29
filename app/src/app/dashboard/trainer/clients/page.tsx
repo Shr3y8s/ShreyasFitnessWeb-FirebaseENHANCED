@@ -484,7 +484,8 @@ export default function ClientsPage() {
                     return (
                       <div
                         key={client.id}
-                        className={`w-full p-4 hover:bg-gray-50 transition-colors ${
+                        onClick={() => setActiveClientId(client.id)}
+                        className={`w-full p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
                           activeClientId === client.id ? 'bg-blue-50 border-l-4 border-primary' : ''
                         } ${isSelected ? 'bg-blue-50/50' : ''}`}
                       >
@@ -501,11 +502,8 @@ export default function ClientsPage() {
                             className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary flex-shrink-0"
                           />
                           
-                          {/* Client Info - clickable to view details */}
-                          <button
-                            onClick={() => setActiveClientId(client.id)}
-                            className="flex items-center gap-3 flex-1 min-w-0 text-left"
-                          >
+                          {/* Client Info */}
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
                             {client.profilePhotoSmall ? (
                               <img
                                 src={client.profilePhotoSmall}
@@ -521,7 +519,7 @@ export default function ClientsPage() {
                               <p className="font-medium truncate">{client.name}</p>
                               <p className="text-sm text-gray-600 truncate">{client.email}</p>
                             </div>
-                          </button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 ml-[52px]">
                           <span className={`px-2 py-0.5 rounded-full text-xs ${
