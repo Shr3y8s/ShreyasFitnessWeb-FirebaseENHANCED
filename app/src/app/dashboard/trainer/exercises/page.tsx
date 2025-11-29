@@ -7,7 +7,16 @@ import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { db, listenToExercises, createExercise, updateExercise, deleteExercise } from '@/lib/firebase';
+import { 
+  db, 
+  listenToExercises, 
+  createExercise, 
+  updateExercise, 
+  deleteExercise,
+  deactivateExercise,
+  reactivateExercise,
+  checkExerciseUsage
+} from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
   Plus,
@@ -20,7 +29,10 @@ import {
   Zap,
   Activity,
   Save,
-  X
+  X,
+  Archive,
+  Eye,
+  CheckCircle2
 } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
@@ -40,6 +52,7 @@ export default function ExerciseLibraryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedScope, setSelectedScope] = useState<string>('all'); // all, personal, company
+  const [selectedStatus, setSelectedStatus] = useState<string>('active'); // all, active, inactive
   const [sortBy, setSortBy] = useState<string>('name'); // name, date, usage, updated
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,10 +97,11 @@ export default function ExerciseLibraryPage() {
 
       try {
         // Listen to exercises and store unsubscribe function
+        // includeInactive = true to show both active and inactive exercises
         unsubscribe = listenToExercises(user.uid, (exerciseList) => {
           setExercises(exerciseList);
           setFilteredExercises(exerciseList);
-        });
+        }, true); // Always include inactive so we can filter them in UI
 
         setLoading(false);
       } catch (error) {
@@ -135,6 +149,18 @@ export default function ExerciseLibraryPage() {
       filtered = filtered.filter(exercise => exercise.scope === selectedScope);
     }
 
+    // Apply status filter
+    if (selectedStatus !== 'all') {
+      if (selectedStatus === 'active') {
+        // Show exercises that are active (true or undefined/missing field)
+        filtered = filtered.filter(exercise => exercise.isActive !== false);
+      } else if (selectedStatus === 'inactive') {
+        // Show exercises that are explicitly inactive (false)
+        // Use strict equality to only match false, not undefined
+        filtered = filtered.filter(exercise => exercise.isActive === false);
+      }
+    }
+
     // Apply sorting
     filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
@@ -152,7 +178,7 @@ export default function ExerciseLibraryPage() {
     });
 
     setFilteredExercises(filtered);
-  }, [exercises, searchQuery, selectedCategory, selectedScope, sortBy]);
+  }, [exercises, searchQuery, selectedCategory, selectedScope, selectedStatus, sortBy]);
 
   const resetForm = () => {
     setExerciseForm({
@@ -223,16 +249,42 @@ export default function ExerciseLibraryPage() {
     }
   };
 
-  const handleDeleteExercise = async (exerciseId: string) => {
-    if (!confirm('Are you sure you want to delete this exercise? This action cannot be undone.')) return;
-
-    try {
-      const result = await deleteExercise(exerciseId);
+  const handleDeactivate = async (exerciseId: string) => {
+    if (!user) return;
+    
+    if (confirm('Archive this exercise? It will be hidden from your active library but can be restored later.')) {
+      const result = await deactivateExercise(exerciseId, user.uid, canAccessAdminDashboard);
       if (!result.success) {
-        console.error('Failed to delete exercise');
+        alert(result.error || 'Failed to archive exercise');
       }
-    } catch (error) {
-      console.error('Error deleting exercise:', error);
+    }
+  };
+
+  const handleReactivate = async (exerciseId: string) => {
+    if (!user) return;
+    
+    const result = await reactivateExercise(exerciseId);
+    if (!result.success) {
+      alert(result.error || 'Failed to restore exercise');
+    }
+  };
+
+  const handleDelete = async (exerciseId: string) => {
+    if (!user) return;
+    
+    // Check if exercise is used in workouts
+    const usage = await checkExerciseUsage(exerciseId);
+    
+    if (usage.isUsed) {
+      alert(`Cannot delete: This exercise is used in ${usage.usedInWorkouts} workout template(s). Please archive it instead.`);
+      return;
+    }
+    
+    if (confirm('⚠️ PERMANENTLY DELETE this exercise? This action cannot be undone.\n\nTo keep the exercise but hide it, use the Archive button instead.')) {
+      const result = await deleteExercise(exerciseId, user.uid, canAccessAdminDashboard);
+      if (!result.success) {
+        alert(result.error || 'Failed to delete exercise');
+      }
     }
   };
 
@@ -335,16 +387,20 @@ export default function ExerciseLibraryPage() {
           <div className="flex items-center justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-700">Your Library:</span>
+              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                {exercises.filter(e => e.isActive !== false).length} Active
+              </span>
+              <span className="text-gray-400">·</span>
               <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full font-medium">
+                {exercises.filter(e => e.isActive === false).length} Inactive
+              </span>
+              <span className="text-gray-400">·</span>
+              <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
                 {exercises.filter(e => e.scope === 'personal').length} Personal
               </span>
               <span className="text-gray-400">·</span>
               <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-medium">
                 {exercises.filter(e => e.scope === 'company').length} Company
-              </span>
-              <span className="text-gray-400">·</span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
-                {exercises.length} Total
               </span>
             </div>
           </div>
@@ -390,6 +446,17 @@ export default function ExerciseLibraryPage() {
                 <option value="all">All Exercises</option>
                 <option value="personal">My Exercises</option>
                 <option value="company">Company Library</option>
+              </select>
+              
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+                aria-label="Filter by status"
+              >
+                <option value="active">Active Only</option>
+                <option value="all">All Status</option>
+                <option value="inactive">Inactive Only</option>
               </select>
               
               <select
@@ -648,6 +715,12 @@ export default function ExerciseLibraryPage() {
                           <div className="flex items-center gap-2">
                             {getCategoryIcon(exercise.category)}
                             <h4 className="font-semibold text-lg">{exercise.name}</h4>
+                            {/* Status Badge */}
+                            {exercise.isActive === false && (
+                              <span className="px-2 py-1 bg-gray-500 text-white text-xs rounded-full font-medium">
+                                Inactive
+                              </span>
+                            )}
                           </div>
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.color === 'blue' ? 'bg-blue-100 text-blue-800' :
@@ -735,15 +808,50 @@ export default function ExerciseLibraryPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
+                        
+                        {/* Archive/Restore Button */}
+                        {exercise.isActive !== false ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeactivate(exercise.id)}
+                            disabled={!canEditExercise(exercise)}
+                            title={!canEditExercise(exercise)
+                              ? 'Only the creator or admins can archive exercises'
+                              : 'Archive exercise (reversible)'}
+                            className={!canEditExercise(exercise)
+                              ? "text-gray-400 cursor-not-allowed" 
+                              : "text-orange-600 hover:text-orange-700"}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleReactivate(exercise.id)}
+                            disabled={!canEditExercise(exercise)}
+                            title={!canEditExercise(exercise)
+                              ? 'Only the creator or admins can restore exercises'
+                              : 'Restore exercise to active library'}
+                            className={!canEditExercise(exercise)
+                              ? "text-gray-400 cursor-not-allowed" 
+                              : "text-blue-600 hover:text-blue-700"}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {/* Delete Button */}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDeleteExercise(exercise.id)}
-                          disabled={(exercise.usageCount || 0) > 0}
-                          title={(exercise.usageCount || 0) > 0 
-                            ? `Used in ${exercise.usageCount} workout${exercise.usageCount !== 1 ? 's' : ''} - cannot delete` 
-                            : 'Delete exercise'}
-                          className={(exercise.usageCount || 0) > 0 
+                          onClick={() => handleDelete(exercise.id)}
+                          disabled={!canEditExercise(exercise)}
+                          title={!canEditExercise(exercise)
+                            ? 'Only the creator or admins can delete exercises'
+                            : 'Permanently delete exercise (cannot be undone)'}
+                          className={!canEditExercise(exercise)
                             ? "text-gray-400 cursor-not-allowed" 
                             : "text-red-500 hover:text-red-700"}
                         >

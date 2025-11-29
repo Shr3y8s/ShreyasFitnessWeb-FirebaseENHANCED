@@ -68,6 +68,7 @@ import {
   getFirestore, 
   doc, 
   getDoc,
+  getDocs,
   setDoc, 
   collection,
   onSnapshot,
@@ -303,35 +304,157 @@ export async function updateExercise(exerciseId: string, updates: Partial<Exerci
   }
 }
 
-export async function deleteExercise(exerciseId: string) {
+export async function checkExerciseUsage(exerciseId: string): Promise<{
+  isUsed: boolean;
+  usedInWorkouts: number;
+  usedInAssignments: number;
+}> {
   try {
+    // Check if exercise is used in workout templates
+    const workoutsQuery = query(
+      collection(db, 'workout_templates'),
+      where('isActive', '==', true)
+    );
+    const workoutsSnapshot = await getDocs(workoutsQuery);
+    
+    // Count workouts that contain this exercise
+    let workoutsCount = 0;
+    workoutsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.exercises && data.exercises.some((ex: any) => ex.id === exerciseId)) {
+        workoutsCount++;
+      }
+    });
+    
+    // Note: We could also check assigned_workouts if needed in the future
+    // For now, checking workout templates is sufficient
+    
+    return {
+      isUsed: workoutsCount > 0,
+      usedInWorkouts: workoutsCount,
+      usedInAssignments: 0 // Future: check assigned_workouts
+    };
+  } catch (error) {
+    console.error('Error checking exercise usage:', error);
+    return { isUsed: false, usedInWorkouts: 0, usedInAssignments: 0 };
+  }
+}
+
+export async function deactivateExercise(
+  exerciseId: string,
+  userId: string,
+  isAdmin: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get exercise to check ownership
+    const exerciseDoc = await getDoc(doc(db, 'exercises', exerciseId));
+    if (!exerciseDoc.exists()) {
+      return { success: false, error: 'Exercise not found' };
+    }
+    
+    const exercise = exerciseDoc.data();
+    
+    // Permission check: only creator or admin can deactivate
+    if (!isAdmin && exercise.createdBy !== userId) {
+      return { success: false, error: 'Permission denied: You can only deactivate your own exercises' };
+    }
+    
+    await updateDoc(doc(db, 'exercises', exerciseId), {
+      isActive: false,
+      deactivatedAt: serverTimestamp(),
+      deactivatedBy: userId
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deactivating exercise:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function deleteExercise(
+  exerciseId: string,
+  userId: string,
+  isAdmin: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get exercise to check ownership
+    const exerciseDoc = await getDoc(doc(db, 'exercises', exerciseId));
+    if (!exerciseDoc.exists()) {
+      return { success: false, error: 'Exercise not found' };
+    }
+    
+    const exercise = exerciseDoc.data();
+    
+    // Permission check: only creator or admin can delete
+    if (!isAdmin && exercise.createdBy !== userId) {
+      return { success: false, error: 'Permission denied: You can only delete your own exercises' };
+    }
+    
+    // Usage check: prevent deletion if exercise is used
+    const usage = await checkExerciseUsage(exerciseId);
+    if (usage.isUsed) {
+      return {
+        success: false,
+        error: `Cannot delete: Exercise is used in ${usage.usedInWorkouts} workout template(s). Deactivate instead to hide it from your library.`
+      };
+    }
+    
+    // Permanently delete
     await deleteDoc(doc(db, 'exercises', exerciseId));
     return { success: true };
   } catch (error) {
     console.error('Error deleting exercise:', error);
-    return { success: false, error: error as Error };
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function reactivateExercise(exerciseId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await updateDoc(doc(db, 'exercises', exerciseId), {
+      isActive: true,
+      reactivatedAt: serverTimestamp()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error reactivating exercise:', error);
+    return { success: false, error: (error as Error).message };
   }
 }
 
 // Hybrid Model: Get trainer's personal exercises + all company exercises
-export function listenToExercises(trainerId: string, callback: (exercises: Exercise[]) => void) {
+// includeInactive: if true, shows both active and inactive exercises
+export function listenToExercises(trainerId: string, callback: (exercises: Exercise[]) => void, includeInactive: boolean = false) {
   // We need two queries: personal exercises and company exercises
   // Since Firestore doesn't support OR queries easily, we'll combine results
   
-  const personalQuery = query(
-    collection(db, 'exercises'),
-    where('createdBy', '==', trainerId),
-    where('scope', '==', 'personal'),
-    where('isActive', '==', true),
-    orderBy('name')
-  );
+  const personalQuery = includeInactive 
+    ? query(
+        collection(db, 'exercises'),
+        where('createdBy', '==', trainerId),
+        where('scope', '==', 'personal'),
+        orderBy('name')
+      )
+    : query(
+        collection(db, 'exercises'),
+        where('createdBy', '==', trainerId),
+        where('scope', '==', 'personal'),
+        where('isActive', '==', true),
+        orderBy('name')
+      );
   
-  const companyQuery = query(
-    collection(db, 'exercises'),
-    where('scope', '==', 'company'),
-    where('isActive', '==', true),
-    orderBy('name')
-  );
+  const companyQuery = includeInactive
+    ? query(
+        collection(db, 'exercises'),
+        where('scope', '==', 'company'),
+        orderBy('name')
+      )
+    : query(
+        collection(db, 'exercises'),
+        where('scope', '==', 'company'),
+        where('isActive', '==', true),
+        orderBy('name')
+      );
   
   let personalExercises: Exercise[] = [];
   let companyExercises: Exercise[] = [];
