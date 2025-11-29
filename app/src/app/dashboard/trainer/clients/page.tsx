@@ -46,6 +46,7 @@ import {
 } from '@/lib/session-utils';
 import { formatPhoneForDisplay } from '@/lib/phoneUtils';
 import { SessionBalance, SessionPackage, TrainingSession } from '@/types/session';
+import PurchaseHistory from '@/components/sessions/PurchaseHistory';
 
 interface ClientData {
   id: string;
@@ -348,22 +349,9 @@ export default function ClientsPage() {
     // Subscribe to upcoming sessions
     const unsubscribeSessions = subscribeToUpcomingSessions(
       activeClientId,
-      async (sessions) => {
+      (sessions) => {
         console.log('[Trainer Clients] Upcoming sessions updated:', sessions);
         setUpcomingSessions(sessions);
-        
-        // Fetch locations for all sessions
-        const locationMap = new Map<string, string>();
-        for (const session of sessions) {
-          try {
-            const location = await getSessionLocation(session);
-            locationMap.set(session.id, location);
-          } catch (error) {
-            console.error(`Error fetching location for session ${session.id}:`, error);
-            locationMap.set(session.id, 'Location unavailable');
-          }
-        }
-        setSessionLocations(locationMap);
       }
     );
 
@@ -373,6 +361,30 @@ export default function ClientsPage() {
       unsubscribeSessions();
     };
   }, [activeClientId, user]);
+
+  // Fetch locations for upcoming sessions (separate effect to keep snapshot callback synchronous)
+  useEffect(() => {
+    if (upcomingSessions.length === 0) {
+      setSessionLocations(new Map());
+      return;
+    }
+
+    const fetchLocations = async () => {
+      const locationMap = new Map<string, string>();
+      for (const session of upcomingSessions) {
+        try {
+          const location = await getSessionLocation(session);
+          locationMap.set(session.id, location);
+        } catch (error) {
+          console.error(`Error fetching location for session ${session.id}:`, error);
+          locationMap.set(session.id, 'Location unavailable');
+        }
+      }
+      setSessionLocations(locationMap);
+    };
+
+    fetchLocations();
+  }, [upcomingSessions]);
 
   if (loading) {
     return (
@@ -871,6 +883,44 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
+                  {/* Upcoming Sessions - Visible to all trainers */}
+                  {upcomingSessions.length > 0 && (
+                    <div className="bg-white border rounded-xl p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Calendar className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold">Upcoming Sessions</h3>
+                      </div>
+                      <div className="space-y-2">
+                        {upcomingSessions.slice(0, 3).map((session) => (
+                          <div key={session.id} className="p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">
+                                  {formatSessionDate(session.scheduledDate)}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {formatSessionTimeRange(session.scheduledDate, session.duration)}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  📍 {sessionLocations.get(session.id) || 'Loading location...'}
+                                </p>
+                              </div>
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {session.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Subscription & Payment Info - Admin Only */}
                   <AdminOnlySection
                     title="Subscription & Payments"
@@ -1028,78 +1078,13 @@ export default function ClientsPage() {
                       </>
                     ) : null}
 
-                    {/* Session Packages Display */}
+                    {/* Session Purchase History */}
                     {sessionBalance && (sessionBalance as any).packages && (sessionBalance as any).packages.length > 0 && (
                       <div className={clientBillingData ? "mt-6 pt-6 border-t" : ""}>
-                        <h4 className="font-medium mb-4">Session Packages</h4>
-                        <div className="space-y-3">
-                          {(sessionBalance as any).packages.map((pkg: any, idx: number) => (
-                            <div key={idx} className="p-4 bg-gray-50 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <div>
-                                  <p className="font-medium">{getPackageTypeName(pkg.packageType)}</p>
-                                  <p className="text-sm text-gray-600">
-                                    {pkg.sessionsRemaining} of {pkg.totalSessions} sessions remaining
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  {pkg.expirationDate && (
-                                    <p className="text-sm text-gray-600">
-                                      Expires: {formatSimpleDate(pkg.expirationDate)}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              {pkg.sessionsRemaining === 0 && (
-                                <span className="inline-flex px-2 py-1 bg-red-100 text-red-800 rounded text-xs">
-                                  Expired
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">Total Sessions Available:</span>
-                            <span className="text-lg font-bold text-blue-600">
-                              {(sessionBalance as any).totalRemaining || 0}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Upcoming Sessions Display */}
-                    {upcomingSessions.length > 0 && (
-                      <div className="mt-6 pt-6 border-t">
-                        <h4 className="font-medium mb-4">Upcoming Sessions</h4>
-                        <div className="space-y-2">
-                          {upcomingSessions.slice(0, 3).map((session) => (
-                            <div key={session.id} className="p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">
-                                  {formatSessionDate(session.scheduledDate)}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {formatSessionTimeRange(session.scheduledDate, session.duration)}
-                                </p>
-                                  <p className="text-sm text-gray-600">
-                                    📍 {sessionLocations.get(session.id) || 'Loading location...'}
-                                  </p>
-                                </div>
-                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                  session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                  session.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {session.status}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <PurchaseHistory 
+                          packages={(sessionBalance as any).packages}
+                          loading={sessionLoading}
+                        />
                       </div>
                     )}
 
