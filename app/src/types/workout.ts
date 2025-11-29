@@ -69,10 +69,27 @@ export interface WorkoutTemplate {
   category: 'strength' | 'cardio' | 'hiit' | 'flexibility' | 'mixed';
   targetMuscleGroups: string[];
   equipment: string[];
+  
+  // Ownership & Attribution (persists even if user deleted)
   createdBy: string; // trainer ID
+  createdByName: string; // Display name - persists forever
   createdAt: Date;
   updatedAt: Date;
-  isPublic: boolean;
+  
+  // Hybrid Model: Scope determines visibility
+  scope: 'personal' | 'company'; // personal = only creator sees, company = all trainers see
+  isActive: boolean; // False when archived or deprecated
+  
+  // Edit tracking
+  lastEditedBy?: string;
+  lastEditedByName?: string;
+  lastEditedAt?: Date;
+  
+  // Usage analytics
+  usageCount?: number; // Track how many times this template is assigned
+  
+  // Legacy field (deprecated - use scope instead)
+  isPublic?: boolean;
   tags: string[];
 }
 
@@ -160,7 +177,7 @@ export interface CreateWorkoutForm {
   estimatedDuration: number;
   exercises: CreateExerciseForm[];
   tags: string[];
-  isPublic: boolean;
+  scope: 'personal' | 'company'; // Replaced isPublic field
 }
 
 export interface CreateExerciseForm {

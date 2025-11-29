@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { db, listenToWorkoutTemplates, deleteWorkoutTemplate } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { 
+  listenToWorkoutTemplates, 
+  deleteWorkoutTemplate,
+  deactivateWorkoutTemplate,
+  reactivateWorkoutTemplate,
+  checkWorkoutUsage
+} from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { 
@@ -23,18 +28,22 @@ import {
   Zap,
   Wind,
   Activity,
-  X
+  X,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 
 export default function WorkoutLibraryPage() {
   const router = useRouter();
-  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+  const { user, userData, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<any[]>([]);
   const [workoutSearchQuery, setWorkoutSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('active'); // active, all, inactive
+  const [selectedScope, setSelectedScope] = useState<string>('all'); // all, personal, company
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
 
   useEffect(() => {
@@ -54,11 +63,11 @@ export default function WorkoutLibraryPage() {
       }
 
       try {
-        // Listen to workout templates
+        // Listen to workout templates (includeInactive = true to show both active and inactive)
         const unsubscribe = listenToWorkoutTemplates(user.uid, (templates) => {
           setWorkoutTemplates(templates);
           setFilteredWorkouts(templates);
-        });
+        }, true);
 
         setLoading(false);
         return () => unsubscribe();
@@ -74,6 +83,21 @@ export default function WorkoutLibraryPage() {
   useEffect(() => {
     let filtered = workoutTemplates;
 
+    // Status filter
+    if (selectedStatus === 'active') {
+      filtered = filtered.filter(workout => workout.isActive !== false);
+    } else if (selectedStatus === 'inactive') {
+      filtered = filtered.filter(workout => workout.isActive === false);
+    }
+
+    // Scope filter
+    if (selectedScope === 'personal') {
+      filtered = filtered.filter(workout => workout.scope === 'personal');
+    } else if (selectedScope === 'company') {
+      filtered = filtered.filter(workout => workout.scope === 'company');
+    }
+
+    // Search filter
     if (workoutSearchQuery) {
       filtered = filtered.filter(workout =>
         workout.name.toLowerCase().includes(workoutSearchQuery.toLowerCase()) ||
@@ -82,24 +106,60 @@ export default function WorkoutLibraryPage() {
       );
     }
 
+    // Difficulty filter
     if (selectedDifficulty !== 'all') {
       filtered = filtered.filter(workout => workout.difficulty === selectedDifficulty);
     }
 
+    // Category filter
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(workout => workout.category === selectedCategory);
     }
 
     setFilteredWorkouts(filtered);
-  }, [workoutTemplates, workoutSearchQuery, selectedDifficulty, selectedCategory]);
+  }, [workoutTemplates, workoutSearchQuery, selectedDifficulty, selectedCategory, selectedStatus, selectedScope]);
+
+  const handleDeactivateWorkout = async (workoutId: string) => {
+    if (!user) return;
+    
+    if (confirm('Archive this workout? It will be hidden from your active library but can be restored later.')) {
+      const result = await deactivateWorkoutTemplate(workoutId, user.uid, canAccessAdminDashboard);
+      if (result.success) {
+        alert('Workout archived successfully!');
+      } else {
+        alert(result.error || 'Failed to archive workout');
+      }
+    }
+  };
+
+  const handleReactivateWorkout = async (workoutId: string) => {
+    if (!user) return;
+    
+    const result = await reactivateWorkoutTemplate(workoutId);
+    if (result.success) {
+      alert('Workout restored successfully!');
+    } else {
+      alert(result.error || 'Failed to restore workout');
+    }
+  };
 
   const handleDeleteWorkout = async (workoutId: string) => {
-    if (confirm('Are you sure you want to delete this workout? This action cannot be undone.')) {
-      const result = await deleteWorkoutTemplate(workoutId);
+    if (!user) return;
+    
+    // Check if workout is used anywhere (future: check assignments/programs)
+    const usage = await checkWorkoutUsage(workoutId);
+    
+    if (usage.isUsed) {
+      alert(`Cannot delete: This workout is used in ${usage.usedInAssignments} assignment(s). Please archive it instead.`);
+      return;
+    }
+    
+    if (confirm('⚠️ PERMANENTLY DELETE this workout? This action cannot be undone.\n\nTo keep the workout but hide it, use the Archive button instead.')) {
+      const result = await deleteWorkoutTemplate(workoutId, user.uid, canAccessAdminDashboard);
       if (result.success) {
         alert('Workout deleted successfully!');
       } else {
-        alert('Failed to delete workout. Please try again.');
+        alert(result.error || 'Failed to delete workout');
       }
     }
   };
@@ -142,7 +202,7 @@ export default function WorkoutLibraryPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Workout Library</h1>
-              <p className="text-muted-foreground mt-1">Create and manage workout templates • {workoutTemplates.length} workout{workoutTemplates.length !== 1 ? 's' : ''} total</p>
+              <p className="text-muted-foreground mt-1">Create and manage workout templates</p>
             </div>
             <Link href="/dashboard/trainer/workouts/create">
               <Button>
@@ -150,6 +210,30 @@ export default function WorkoutLibraryPage() {
                 Create New Workout
               </Button>
             </Link>
+          </div>
+
+          {/* Summary Stats Bar */}
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-4">
+            <div className="flex items-center justify-center gap-8 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">Your Library:</span>
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                  {workoutTemplates.filter(w => w.isActive !== false).length} Active
+                </span>
+                <span className="text-gray-400">·</span>
+                <span className="px-3 py-1 bg-gray-100 text-gray-800 rounded-full font-medium">
+                  {workoutTemplates.filter(w => w.isActive === false).length} Inactive
+                </span>
+                <span className="text-gray-400">·</span>
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+                  {workoutTemplates.filter(w => w.scope === 'personal').length} Personal
+                </span>
+                <span className="text-gray-400">·</span>
+                <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full font-medium">
+                  {workoutTemplates.filter(w => w.scope === 'company').length} Company
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Search and Filters */}
@@ -167,7 +251,31 @@ export default function WorkoutLibraryPage() {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+                    aria-label="Filter by status"
+                  >
+                    <option value="active">Active Only</option>
+                    <option value="all">All Status</option>
+                    <option value="inactive">Inactive Only</option>
+                  </select>
+                  
+                  <select
+                    value={selectedScope}
+                    onChange={(e) => setSelectedScope(e.target.value)}
+                    className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
+                    aria-label="Filter by scope"
+                  >
+                    <option value="all">All Workouts</option>
+                    <option value="personal">My Workouts</option>
+                    <option value="company">Company Library</option>
+                  </select>
+
+                  <div className="h-6 w-px bg-gray-300" />
+
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600 font-medium">Difficulty:</span>
                     <button
@@ -291,6 +399,20 @@ export default function WorkoutLibraryPage() {
                             {getCategoryIcon(workout.category)}
                             {workout.category}
                           </span>
+                          {workout.isActive === false && (
+                            <span className="px-2 py-0.5 bg-gray-500 text-white text-xs rounded-full font-medium">
+                              Inactive
+                            </span>
+                          )}
+                          {workout.scope === 'company' ? (
+                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded-full font-medium">
+                              Company Library
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
+                              Personal
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -342,10 +464,30 @@ export default function WorkoutLibraryPage() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         </Link>
+                        {workout.isActive !== false ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeactivateWorkout(workout.id)}
+                            title="Archive workout (reversible)"
+                          >
+                            <Archive className="h-4 w-4 text-orange-600" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleReactivateWorkout(workout.id)}
+                            title="Restore workout to active library"
+                          >
+                            <ArchiveRestore className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteWorkout(workout.id)}
+                          title="Permanently delete workout (cannot be undone)"
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
@@ -458,22 +600,9 @@ export default function WorkoutLibraryPage() {
                   </div>
                 </div>
 
-                <div className="p-6 border-t bg-gray-50 flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => setSelectedWorkout(null)}>
+                <div className="p-6 border-t bg-gray-50">
+                  <Button variant="outline" className="w-full" onClick={() => setSelectedWorkout(null)}>
                     Close
-                  </Button>
-                  <Link href={`/dashboard/trainer/workouts/create?id=${selectedWorkout.id}`}>
-                    <Button variant="outline">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  </Link>
-                  <Button variant="destructive" onClick={() => {
-                    setSelectedWorkout(null);
-                    handleDeleteWorkout(selectedWorkout.id);
-                  }}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
                   </Button>
                 </div>
               </div>

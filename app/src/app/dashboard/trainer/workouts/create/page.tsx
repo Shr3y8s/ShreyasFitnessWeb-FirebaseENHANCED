@@ -82,7 +82,7 @@ export default function EnhancedCreateWorkoutPage() {
     estimatedDuration: 30,
     exercises: [],
     tags: [],
-    isPublic: false
+    scope: 'personal'
   });
 
   // Selected exercises for workout
@@ -97,7 +97,7 @@ export default function EnhancedCreateWorkoutPage() {
     targetMuscleGroups: [] as string[],
     equipment: [] as string[],
     notes: '',
-    isPublic: false
+    scope: 'personal' as const
   });
 
   const [tagInput, setTagInput] = useState('');
@@ -148,7 +148,7 @@ export default function EnhancedCreateWorkoutPage() {
               estimatedDuration: template.estimatedDuration || 30,
               exercises: template.exercises || [],
               tags: template.tags || [],
-              isPublic: template.isPublic || false
+              scope: template.scope || 'personal'
             });
             
             // Pre-populate exercises
@@ -244,7 +244,9 @@ export default function EnhancedCreateWorkoutPage() {
         equipment: newExerciseForm.equipment,
         notes: newExerciseForm.notes,
         createdBy: user.uid,
-        isPublic: newExerciseForm.isPublic
+        createdByName: user.displayName || user.email || 'Unknown',
+        scope: newExerciseForm.scope,
+        isActive: true
       };
 
       // Always save to library
@@ -268,7 +270,7 @@ export default function EnhancedCreateWorkoutPage() {
         targetMuscleGroups: [],
         equipment: [],
         notes: '',
-        isPublic: false
+        scope: 'personal'
       });
       setIsCreatingExercise(false);
     } catch (error) {
@@ -350,7 +352,9 @@ export default function EnhancedCreateWorkoutPage() {
         estimatedDuration: workoutForm.estimatedDuration,
         exercises: exercisesForTemplate,
         tags: workoutForm.tags,
-        isPublic: workoutForm.isPublic,
+        scope: workoutForm.scope,
+        isActive: true,
+        createdByName: user.displayName || user.email || 'Unknown',
         targetMuscleGroups: [...new Set(exercisesForTemplate.flatMap((ex: any) => ex.targetMuscleGroups || []))],
         equipment: [...new Set(exercisesForTemplate.flatMap((ex: any) => ex.equipment || []))]
       };
@@ -697,9 +701,9 @@ export default function EnhancedCreateWorkoutPage() {
                               <div className="flex items-center gap-2 mb-1">
                                 {getCategoryIcon(exercise.category)}
                                 <h4 className="font-medium">{exercise.name}</h4>
-                                {exercise.isPublic && (
-                                  <span className="px-1 py-0.5 bg-green-100 text-green-800 text-xs rounded">
-                                    Public
+                                {exercise.scope === 'company' && (
+                                  <span className="px-1 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded">
+                                    Company Library
                                   </span>
                                 )}
                               </div>

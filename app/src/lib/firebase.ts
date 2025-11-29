@@ -609,26 +609,83 @@ export function listenToClientAssignments(clientId: string, callback: (assignmen
 
 // PHASE 2: Workout Template Management Functions
 
-export function listenToWorkoutTemplates(trainerId: string, callback: (templates: any[]) => void) {
-  const templatesQuery = query(
-    collection(db, 'workout_templates'),
-    where('createdBy', '==', trainerId),
-    orderBy('createdAt', 'desc')
-  );
+// Hybrid Model: Get trainer's personal templates + all company templates
+// includeInactive: if true, shows both active and inactive templates
+export function listenToWorkoutTemplates(trainerId: string, callback: (templates: any[]) => void, includeInactive: boolean = false) {
+  // Query personal templates
+  const personalQuery = includeInactive 
+    ? query(
+        collection(db, 'workout_templates'),
+        where('createdBy', '==', trainerId),
+        where('scope', '==', 'personal'),
+        orderBy('createdAt', 'desc')
+      )
+    : query(
+        collection(db, 'workout_templates'),
+        where('createdBy', '==', trainerId),
+        where('scope', '==', 'personal'),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc')
+      );
   
-  return onSnapshot(templatesQuery, (snapshot) => {
-    const templates: any[] = [];
+  // Query company-wide templates
+  const companyQuery = includeInactive
+    ? query(
+        collection(db, 'workout_templates'),
+        where('scope', '==', 'company'),
+        orderBy('createdAt', 'desc')
+      )
+    : query(
+        collection(db, 'workout_templates'),
+        where('scope', '==', 'company'),
+        where('isActive', '==', true),
+        orderBy('createdAt', 'desc')
+      );
+  
+  let personalTemplates: any[] = [];
+  let companyTemplates: any[] = [];
+  
+  const unsubPersonal = onSnapshot(personalQuery, (snapshot) => {
+    personalTemplates = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
-      templates.push({
+      personalTemplates.push({
         id: doc.id,
         ...data,
         createdAt: data.createdAt?.toDate(),
         updatedAt: data.updatedAt?.toDate()
       });
     });
-    callback(templates);
+    // Combine and sort by creation date
+    const combined = [...personalTemplates, ...companyTemplates].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    callback(combined);
   });
+  
+  const unsubCompany = onSnapshot(companyQuery, (snapshot) => {
+    companyTemplates = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      companyTemplates.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+        updatedAt: data.updatedAt?.toDate()
+      });
+    });
+    // Combine and sort by creation date
+    const combined = [...personalTemplates, ...companyTemplates].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    callback(combined);
+  });
+  
+  // Return combined unsubscribe function
+  return () => {
+    unsubPersonal();
+    unsubCompany();
+  };
 }
 
 export async function getWorkoutTemplate(templateId: string) {
@@ -668,12 +725,130 @@ export async function updateWorkoutTemplate(templateId: string, updates: any) {
   }
 }
 
-export async function deleteWorkoutTemplate(templateId: string) {
+export async function checkWorkoutUsage(templateId: string): Promise<{
+  isUsed: boolean;
+  usedInAssignments: number;
+  activeAssignments: number;
+}> {
   try {
+    // Check if template is used in assigned workouts
+    const assignmentsQuery = query(
+      collection(db, 'assigned_workouts'),
+      where('templateId', '==', templateId)
+    );
+    const assignmentsSnapshot = await getDocs(assignmentsQuery);
+    
+    let activeCount = 0;
+    assignmentsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      // Count assignments that are not completed
+      if (data.status !== 'completed') {
+        activeCount++;
+      }
+    });
+    
+    return {
+      isUsed: assignmentsSnapshot.size > 0,
+      usedInAssignments: assignmentsSnapshot.size,
+      activeAssignments: activeCount
+    };
+  } catch (error) {
+    console.error('Error checking workout usage:', error);
+    return { isUsed: false, usedInAssignments: 0, activeAssignments: 0 };
+  }
+}
+
+export async function deactivateWorkoutTemplate(
+  templateId: string,
+  userId: string,
+  isAdmin: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get template to check ownership
+    const templateDoc = await getDoc(doc(db, 'workout_templates', templateId));
+    if (!templateDoc.exists()) {
+      return { success: false, error: 'Workout template not found' };
+    }
+    
+    const template = templateDoc.data();
+    
+    // Permission check: only creator or admin can deactivate
+    if (!isAdmin && template.createdBy !== userId) {
+      return { success: false, error: 'Permission denied: You can only archive your own workout templates' };
+    }
+    
+    await updateDoc(doc(db, 'workout_templates', templateId), {
+      isActive: false,
+      deactivatedAt: serverTimestamp(),
+      deactivatedBy: userId
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deactivating workout template:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function reactivateWorkoutTemplate(templateId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await updateDoc(doc(db, 'workout_templates', templateId), {
+      isActive: true,
+      reactivatedAt: serverTimestamp()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error reactivating workout template:', error);
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function deleteWorkoutTemplate(
+  templateId: string,
+  userId?: string,
+  isAdmin?: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // If userId provided, check permissions
+    if (userId) {
+      const templateDoc = await getDoc(doc(db, 'workout_templates', templateId));
+      if (!templateDoc.exists()) {
+        return { success: false, error: 'Workout template not found' };
+      }
+      
+      const template = templateDoc.data();
+      
+      // Permission check: only creator or admin can delete
+      if (!isAdmin && template.createdBy !== userId) {
+        return { success: false, error: 'Permission denied: You can only delete your own workout templates' };
+      }
+    }
+    
+    // Usage check: prevent deletion if template is actively assigned
+    const usage = await checkWorkoutUsage(templateId);
+    if (usage.activeAssignments > 0) {
+      return {
+        success: false,
+        error: `Cannot delete: This workout is assigned to ${usage.activeAssignments} client(s). Archive it instead to hide it from your library.`
+      };
+    }
+    
+    // Permanently delete
     await deleteDoc(doc(db, 'workout_templates', templateId));
     return { success: true };
   } catch (error) {
     console.error('Error deleting workout template:', error);
-    return { success: false, error: error as Error };
+    return { success: false, error: (error as Error).message };
+  }
+}
+
+export async function incrementWorkoutUsage(templateId: string) {
+  try {
+    const templateRef = doc(db, 'workout_templates', templateId);
+    await updateDoc(templateRef, {
+      usageCount: increment(1)
+    });
+  } catch (error) {
+    console.error('Error incrementing workout usage:', error);
   }
 }
