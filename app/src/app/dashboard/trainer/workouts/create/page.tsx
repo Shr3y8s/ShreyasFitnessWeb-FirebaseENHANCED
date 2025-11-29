@@ -43,6 +43,7 @@ import {
   EQUIPMENT_OPTIONS
 } from '@/types/workout';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 
 interface WorkoutExercise {
   type: 'library' | 'custom';
@@ -400,12 +401,12 @@ export default function EnhancedCreateWorkoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Shared Trainer Sidebar */}
+    <SidebarProvider>
       <TrainerSidebar currentPage="workouts" />
-      
-      {/* Header */}
-      <div className="bg-white border-b ml-64">
+      <SidebarInset>
+        <div className="min-h-screen bg-stone-50">
+          {/* Header */}
+          <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -437,8 +438,8 @@ export default function EnhancedCreateWorkoutPage() {
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <div className="bg-white border-b ml-64">
+          {/* Progress Steps */}
+          <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center gap-8">
             <button
@@ -474,8 +475,8 @@ export default function EnhancedCreateWorkoutPage() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 ml-64">
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Basic Information Step */}
         {currentStep === 'basic' && (
           <div className="bg-white rounded-xl border p-8">
@@ -1052,7 +1053,9 @@ export default function EnhancedCreateWorkoutPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
