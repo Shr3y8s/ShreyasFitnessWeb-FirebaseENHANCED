@@ -99,7 +99,8 @@ export default function ClientsPage() {
   const [billingError, setBillingError] = useState<string | null>(null);
   
   // Session state
-  const [sessionBalance, setSessionBalance] = useState<SessionBalance | null>(null);
+  const [sessionBalance, setSessionBalance] = useState<any | null>(null);
+  const [sessionPackages, setSessionPackages] = useState<SessionPackage[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
   const [sessionLocations, setSessionLocations] = useState<Map<string, string>>(new Map());
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -339,9 +340,11 @@ export default function ClientsPage() {
     // Subscribe to session balance
     const unsubscribeBalance = subscribeToSessionBalance(
       activeClientId,
-      (balance) => {
+      (balance, packages) => {
         console.log('[Trainer Clients] Session balance updated:', balance);
+        console.log('[Trainer Clients] Session packages updated:', packages);
         setSessionBalance(balance);
+        setSessionPackages(packages);
         setSessionLoading(false);
       }
     );
@@ -779,7 +782,7 @@ export default function ClientsPage() {
 
                 {/* Client Details Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                  {/* Contact Information */}
+                  {/* 1. Contact Information */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-2 bg-orange-100 rounded-lg">
@@ -869,7 +872,7 @@ export default function ClientsPage() {
                               </a>
                               {activeClient.emergencyContact.relationship && (
                                 <p className="text-sm text-gray-600">
-                                  {activeClient.emergencyContact.relationship}
+                                  Relationship: {activeClient.emergencyContact.relationship}
                                 </p>
                               )}
                             </div>
@@ -881,219 +884,7 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* Upcoming Sessions - Visible to all trainers */}
-                  {upcomingSessions.length > 0 && (
-                    <div className="bg-white border rounded-xl p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Calendar className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <h3 className="text-lg font-semibold">Upcoming Sessions</h3>
-                      </div>
-                      <div className="space-y-2">
-                        {upcomingSessions.slice(0, 3).map((session) => (
-                          <div key={session.id} className="p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">
-                                  {formatSessionDate(session.scheduledDate)}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {formatSessionTimeRange(session.scheduledDate, session.duration)}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  📍 {sessionLocations.get(session.id) || 'Loading location...'}
-                                </p>
-                              </div>
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                session.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {session.status}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Subscription & Payment Info - Admin Only */}
-                  <AdminOnlySection
-                    title="Subscription & Payments"
-                    canAccessAdminDashboard={canAccessAdminDashboard || false}
-                  >
-                    <div className="flex justify-end mb-4">
-                      {(billingLoading || sessionLoading) && (
-                        <span className="text-sm text-gray-500">Loading...</span>
-                      )}
-                    </div>
-                    
-                    {billingError ? (
-                      <div className="text-center py-4 text-red-600">
-                        <p className="text-sm">{billingError}</p>
-                      </div>
-                    ) : clientBillingData || sessionBalance ? (
-                      <>
-                        {clientBillingData && (
-                          <>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-3">
-                              <div>
-                                <p className="text-sm text-gray-600">Current Plan</p>
-                                <p className="font-semibold text-lg">
-                                  {activeClient.tierName || 'No Tier Assigned'}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-sm text-gray-600">Subscription Status</p>
-                                <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                                  clientBillingData.hasActiveSubscription ? 'bg-green-100 text-green-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {clientBillingData.hasActiveSubscription ? '✅ Active' : 'No Active Subscription'}
-                                </span>
-                              </div>
-                              {clientBillingData.currentPaymentMethod && (
-                                <div>
-                                  <p className="text-sm text-gray-600">Payment Method</p>
-                                  <p className="font-medium">
-                                    {getPaymentMethodDisplay(clientBillingData.currentPaymentMethod)}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="space-y-3">
-                              {clientBillingData.nextPaymentDate && clientBillingData.nextPaymentAmount ? (
-                                <>
-                                  <div>
-                                    <p className="text-sm text-gray-600">Next Billing Date</p>
-                                    <p className="font-medium">
-                                      {formatDate(Math.floor(clientBillingData.nextPaymentDate.getTime() / 1000))}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm text-gray-600">Next Payment Amount</p>
-                                    <p className="font-medium">
-                                      {formatCurrency(clientBillingData.nextPaymentAmount)}
-                                    </p>
-                                  </div>
-                                </>
-                              ) : (
-                                <div>
-                                  <p className="text-sm text-gray-600">Billing Type</p>
-                                  <p className="font-medium">
-                                    {clientBillingData.hasActiveSubscription ? 'Subscription' : 'One-time Payment'}
-                                  </p>
-                                </div>
-                              )}
-                              {clientBillingData.stripeCustomerId && (
-                                <div>
-                                  <a
-                                    href={`https://dashboard.stripe.com/customers/${clientBillingData.stripeCustomerId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium"
-                                  >
-                                    View in Stripe
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Payment History - Last 5 */}
-                          {clientBillingData.transactions.length > 0 && (
-                            <div className="mt-6 pt-4 border-t">
-                              <h4 className="font-medium mb-3 text-sm text-gray-700">Recent Transactions</h4>
-                              <div className="overflow-x-auto">
-                                <table className="w-full">
-                                  <thead className="border-b">
-                                    <tr className="text-left">
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Date & Time</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Product</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Activity</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Amount</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Payment Method</th>
-                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Status</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y">
-                                    {clientBillingData.transactions.slice(0, 5).map((transaction) => {
-                                      const date = new Date(transaction.date * 1000);
-                                      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                      const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                                      
-                                      return (
-                                        <tr key={transaction.id} className="hover:bg-gray-50">
-                                          <td className="py-3 pr-3 text-xs">
-                                            <div className="font-medium text-gray-900">{dateStr}</div>
-                                            <div className="text-gray-500">{timeStr}</div>
-                                          </td>
-                                          <td className="py-3 pr-3 text-xs font-medium text-gray-900">
-                                            {transaction.productName}
-                                          </td>
-                                          <td className="py-3 pr-3 text-xs text-gray-900">
-                                            <div className="flex items-center gap-1.5">
-                                              {transaction.status === 'paid' || transaction.status === 'succeeded' ? (
-                                                <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                              ) : transaction.status === 'pending' ? (
-                                                <Clock className="w-3 h-3 text-yellow-600" />
-                                              ) : (
-                                                <XCircle className="w-3 h-3 text-red-600" />
-                                              )}
-                                              <span>{transaction.description || 'Payment'}</span>
-                                            </div>
-                                          </td>
-                                          <td className="py-3 pr-3 text-xs font-medium text-gray-900">
-                                            {formatCurrency(transaction.amount, transaction.currency)}
-                                          </td>
-                                          <td className="py-3 pr-3 text-xs text-gray-600">
-                                            {transaction.paymentMethod || 'N/A'}
-                                          </td>
-                                          <td className="py-3 pr-3">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                                              transaction.status === 'paid' || transaction.status === 'succeeded' ? 'bg-green-100 text-green-700' :
-                                              transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                              'bg-red-100 text-red-700'
-                                            }`}>
-                                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                                            </span>
-                                          </td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
-                          </>
-                        )}
-                      </>
-                    ) : null}
-
-                    {/* Session Purchase History */}
-                    {sessionBalance && (sessionBalance as any).packages && (sessionBalance as any).packages.length > 0 && (
-                      <div className={clientBillingData ? "mt-6 pt-6 border-t" : ""}>
-                        <PurchaseHistory 
-                          packages={(sessionBalance as any).packages}
-                          loading={sessionLoading}
-                        />
-                      </div>
-                    )}
-
-                    {!clientBillingData && !sessionBalance && (
-                      <div className="text-center py-4 text-gray-500">
-                        <p className="text-sm">No billing or session data available</p>
-                      </div>
-                    )}
-                  </AdminOnlySection>
-
-                  {/* Workout Stats */}
+                  {/* 2. Workout Activity */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-2 bg-green-100 rounded-lg">
@@ -1171,7 +962,265 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  {/* Communication */}
+                  {/* 3. Session Information */}
+                  <div className="bg-white border rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold">Session Information</h3>
+                    </div>
+
+                    {/* Session Balance Summary */}
+                    {sessionBalance && sessionBalance.available !== undefined && (
+                      <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-sm text-gray-600 mb-1">Total Purchased</p>
+                            <p className="text-2xl font-bold text-blue-600">{sessionBalance.purchased || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 mb-1">Used</p>
+                            <p className="text-2xl font-bold text-gray-600">{sessionBalance.used || 0}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600 mb-1">Available</p>
+                            <p className="text-2xl font-bold text-green-600">{sessionBalance.available || 0}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upcoming Sessions */}
+                    {upcomingSessions.length > 0 ? (
+                      <div>
+                        <h4 className="font-medium mb-3">Upcoming Sessions</h4>
+                        <div className="space-y-2">
+                          {upcomingSessions.slice(0, 3).map((session) => (
+                            <div key={session.id} className="p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium">
+                                    {formatSessionDate(session.scheduledDate)}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {formatSessionTimeRange(session.scheduledDate, session.duration)}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    📍 {sessionLocations.get(session.id) || 'Loading location...'}
+                                  </p>
+                                </div>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                  session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {session.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                        <p className="text-gray-600">No upcoming sessions scheduled</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. Subscription Overview */}
+                  <div className="bg-white border rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <CreditCard className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold">Subscription Overview</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Current Plan</p>
+                        <p className="font-semibold text-lg">
+                          {activeClient.tierName || 'No Plan'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Status</p>
+                        <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                          clientBillingData?.hasActiveSubscription ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {clientBillingData?.hasActiveSubscription ? 'Active' : 
+                           billingLoading ? 'Loading...' : 'Inactive'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Member Since</p>
+                        <p className="font-medium">
+                          {activeClient.createdAt 
+                            ? new Date(activeClient.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                            : 'Recently'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Duration</p>
+                        <p className="font-medium">
+                          {activeClient.createdAt 
+                            ? (() => {
+                                const months = Math.floor((Date.now() - activeClient.createdAt.seconds * 1000) / (1000 * 60 * 60 * 24 * 30));
+                                return months === 0 ? 'Less than 1 month' : `${months} month${months !== 1 ? 's' : ''}`;
+                              })()
+                            : 'New member'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Billing & Payments (Admin Only) */}
+                  <AdminOnlySection
+                    title="Billing & Payments"
+                    canAccessAdminDashboard={canAccessAdminDashboard || false}
+                  >
+                    <div className="flex justify-end mb-4">
+                      {(billingLoading || sessionLoading) && (
+                        <span className="text-sm text-gray-500">Loading...</span>
+                      )}
+                    </div>
+                    
+                    {billingError ? (
+                      <div className="text-center py-4 text-red-600">
+                        <p className="text-sm">{billingError}</p>
+                      </div>
+                    ) : (clientBillingData || sessionBalance) ? (
+                      <>
+                        {clientBillingData && (
+                          <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="space-y-3">
+                              {clientBillingData.transactions.length > 0 && (
+                                <>
+                                  <div>
+                                    <p className="text-sm text-gray-600">Last Payment Date</p>
+                                    <p className="font-medium">
+                                      {formatDate(clientBillingData.transactions[0].date)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-600">Last Payment Amount</p>
+                                    <p className="font-medium">
+                                      {formatCurrency(clientBillingData.transactions[0].amount, clientBillingData.transactions[0].currency)}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            
+                            <div className="space-y-3">
+                              {clientBillingData.nextPaymentDate && clientBillingData.nextPaymentAmount ? (
+                                <>
+                                  <div>
+                                    <p className="text-sm text-gray-600">Next Billing Date</p>
+                                    <p className="font-medium">
+                                      {formatDate(Math.floor(clientBillingData.nextPaymentDate.getTime() / 1000))}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-600">Next Payment Amount</p>
+                                    <p className="font-medium">
+                                      {formatCurrency(clientBillingData.nextPaymentAmount)}
+                                    </p>
+                                  </div>
+                                </>
+                              ) : null}
+                              {clientBillingData.stripeCustomerId && (
+                                <div>
+                                  <a
+                                    href={`https://dashboard.stripe.com/customers/${clientBillingData.stripeCustomerId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium"
+                                  >
+                                    View in Stripe
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Subscription Transaction History */}
+                          {clientBillingData.transactions.length > 0 && (
+                            <div className="mb-6 pb-6 border-b">
+                              <h4 className="font-medium mb-3 text-sm text-gray-700">Subscription Transactions</h4>
+                              <div className="overflow-x-auto">
+                                <table className="w-full">
+                                  <thead className="border-b">
+                                    <tr className="text-left">
+                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Date</th>
+                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Description</th>
+                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Payment Method</th>
+                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Amount</th>
+                                      <th className="pb-2 pr-3 text-xs font-medium text-gray-600">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y">
+                                    {clientBillingData.transactions.slice(0, 5).map((transaction) => {
+                                      const date = new Date(transaction.date * 1000);
+                                      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                      
+                                      return (
+                                        <tr key={transaction.id} className="hover:bg-gray-50">
+                                          <td className="py-3 pr-3 text-xs font-medium text-gray-900">{dateStr}</td>
+                                          <td className="py-3 pr-3 text-xs text-gray-900">{transaction.description || transaction.productName}</td>
+                                          <td className="py-3 pr-3 text-xs text-gray-900">
+                                            {transaction.paymentMethod 
+                                              ? typeof transaction.paymentMethod === 'string' 
+                                                ? transaction.paymentMethod 
+                                                : getPaymentMethodDisplay(transaction.paymentMethod)
+                                              : 'N/A'}
+                                          </td>
+                                          <td className="py-3 pr-3 text-xs font-medium text-gray-900">
+                                            {formatCurrency(transaction.amount, transaction.currency)}
+                                          </td>
+                                          <td className="py-3 pr-3">
+                                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                              transaction.status === 'paid' || transaction.status === 'succeeded' ? 'bg-green-100 text-green-700' :
+                                              'bg-gray-100 text-gray-700'
+                                            }`}>
+                                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                          </>
+                        )}
+
+                        {/* Session Purchase History */}
+                        {sessionPackages.length > 0 && (
+                          <div>
+                            <PurchaseHistory 
+                              packages={sessionPackages}
+                              loading={sessionLoading}
+                            />
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        <p className="text-sm">No billing data available</p>
+                      </div>
+                    )}
+                  </AdminOnlySection>
+
+                  {/* 6. Communication */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="p-2 bg-purple-100 rounded-lg">
