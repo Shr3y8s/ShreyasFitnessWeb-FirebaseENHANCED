@@ -40,6 +40,13 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
     return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">Active</span>;
   };
 
+  // Sort packages by purchase date (newest first)
+  const sortedPackages = [...packages].sort((a, b) => {
+    const aTime = typeof a.purchaseDate === 'number' ? a.purchaseDate : a.purchaseDate.toMillis();
+    const bTime = typeof b.purchaseDate === 'number' ? b.purchaseDate : b.purchaseDate.toMillis();
+    return bTime - aTime; // Descending order (newest first)
+  });
+
   return (
     <div className="bg-card rounded-lg shadow-md p-6 border border-border">
       <h3 className="text-lg font-semibold mb-4 text-foreground">Purchase History</h3>
@@ -49,15 +56,16 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Date</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Type</th>
-              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Expires</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Purchase Date</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Package Name</th>
+              <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Expiration Date</th>
+              <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Amount Paid</th>
               <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
               <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Used</th>
             </tr>
           </thead>
           <tbody>
-            {packages.map((pkg) => (
+            {sortedPackages.map((pkg) => (
               <tr key={pkg.id} className="border-b border-border/50 hover:bg-muted/50">
                 <td className="py-3 px-4 text-sm">
                   {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleString('en-US', {
@@ -70,7 +78,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   })}
                 </td>
                 <td className="py-3 px-4 text-sm font-medium">
-                  {pkg.type === '4-pack' ? '4-Pack' : 'Single'}
+                  {pkg.stripeProductName || 'Session Package'}
                 </td>
                 <td className="py-3 px-4 text-sm">
                   {new Date(typeof pkg.expirationDate === 'number' ? pkg.expirationDate : pkg.expirationDate.toMillis()).toLocaleDateString('en-US', {
@@ -83,6 +91,9 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                       timeZoneName: 'short'
                     }).split(' ').pop()})
                   </span>
+                </td>
+                <td className="py-3 px-4 text-sm text-right font-medium">
+                  {pkg.amount ? `$${(pkg.amount / 100).toFixed(2)}` : 'N/A'}
                 </td>
                 <td className="py-3 px-4 text-sm">
                   {getStatusBadge(pkg)}
@@ -99,12 +110,12 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
 
       {/* Mobile view */}
       <div className="md:hidden space-y-3">
-        {packages.map((pkg) => (
+        {sortedPackages.map((pkg) => (
           <div key={pkg.id} className="border border-border rounded-lg p-4">
             <div className="flex justify-between items-start mb-2">
               <div>
                 <div className="font-medium text-sm text-foreground">
-                  {pkg.type === '4-pack' ? '4-Pack' : 'Single'} Sessions
+                  {pkg.stripeProductName || 'Session Package'}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleString('en-US', {
@@ -118,10 +129,6 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                 </div>
               </div>
               {getStatusBadge(pkg)}
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Used:</span>
-              <span className="font-medium">{pkg.quantity - pkg.remaining} / {pkg.quantity}</span>
             </div>
             <div className="flex justify-between text-sm mt-1">
               <span className="text-muted-foreground">Expires:</span>
@@ -137,6 +144,14 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   }).split(' ').pop()})
                 </span>
               </span>
+            </div>
+            <div className="flex justify-between text-sm mt-1">
+              <span className="text-muted-foreground">Amount Paid:</span>
+              <span className="font-medium">{pkg.amount ? `$${(pkg.amount / 100).toFixed(2)}` : 'N/A'}</span>
+            </div>
+            <div className="flex justify-between text-sm mt-1">
+              <span className="text-muted-foreground">Used:</span>
+              <span className="font-medium">{pkg.quantity - pkg.remaining} / {pkg.quantity}</span>
             </div>
           </div>
         ))}

@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import { SessionPackageType } from '@/types/session';
 
 interface PricingCardProps {
-  type: SessionPackageType;
+  productName: string;
   price: number;
   sessionsIncluded: number;
   pricePerSession: number;
@@ -16,7 +15,7 @@ interface PricingCardProps {
 }
 
 export default function PricingCard({
-  type,
+  productName,
   price,
   sessionsIncluded,
   pricePerSession,
@@ -40,7 +39,7 @@ export default function PricingCard({
       
       <div className="p-6 h-full flex flex-col">
         <h3 className="text-xl font-bold mb-2 text-foreground">
-          {type === '4-pack' ? '4-Pack Sessions' : 'Single Session'}
+          {productName}
         </h3>
         
         <div className="mb-4">
@@ -48,7 +47,7 @@ export default function PricingCard({
             <span className="text-4xl font-bold text-foreground">
               ${price}
             </span>
-            {type === '4-pack' && (
+            {sessionsIncluded > 1 && (
               <span className="ml-2 text-sm text-muted-foreground">
                 / {sessionsIncluded} sessions
               </span>
@@ -75,11 +74,11 @@ export default function PricingCard({
             <span className="mr-2">{featured ? '✓' : '•'}</span>
             <span>60 days to use</span>
           </li>
-          {type === '4-pack' && (
+          {sessionsIncluded > 1 && (
             <>
               <li className="flex items-start">
                 <span className="mr-2">✓</span>
-                <span className="font-medium">14% discount</span>
+                <span className="font-medium">Save {Math.round(((savings || 0) / price) * 100)}%</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">✓</span>
@@ -87,7 +86,7 @@ export default function PricingCard({
               </li>
             </>
           )}
-          {type === 'single' && (
+          {sessionsIncluded === 1 && (
             <li className="flex items-start">
               <span className="mr-2">•</span>
               <span>Perfect for trying out</span>

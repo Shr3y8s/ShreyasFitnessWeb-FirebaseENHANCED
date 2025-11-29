@@ -510,12 +510,11 @@ async function createSessionPackageFromPayment(userId, paymentData) {
   const price = await stripe.prices.retrieve(priceId);
   const product = await stripe.products.retrieve(productId);
 
-  // Determine package type and quantity from product name
+  // Determine quantity from product name
   // Expected format: "Single Session" or "4-Pack Training Sessions"
   const productName = product.name || "";
   const quantityMatch = productName.match(/(\d+)/);
   const quantity = quantityMatch ? parseInt(quantityMatch[1]) : 1;
-  const packageType = quantity === 1 ? "single" : (quantity === 4 ? "4-pack" : `${quantity}-pack`);
 
   // Calculate expiration date (end of 60th day from purchase)
   const purchaseDate = admin.firestore.Timestamp.now();
@@ -533,7 +532,6 @@ async function createSessionPackageFromPayment(userId, paymentData) {
   // Create package object
   const packageData = {
     id: admin.firestore().collection("users").doc().id, // Generate unique ID
-    type: packageType,
     quantity: quantity,
     remaining: quantity,
     purchaseDate: purchaseDate,
@@ -542,7 +540,8 @@ async function createSessionPackageFromPayment(userId, paymentData) {
     stripePaymentIntentId: paymentIntentId,
     stripePriceId: priceId,
     stripeProductId: product.id,
-    amount: price.unit_amount,
+    stripeProductName: product.name, // Store product name at purchase time for historical accuracy
+    amount: paymentData.amount, // Actual amount charged (includes discounts/coupons)
   };
 
   // Update user document with new package and balance
@@ -585,7 +584,6 @@ async function createSessionPackageFromPayment(userId, paymentData) {
     userId,
     packageId: packageData.id,
     quantity,
-    type: packageType,
   });
 }
 

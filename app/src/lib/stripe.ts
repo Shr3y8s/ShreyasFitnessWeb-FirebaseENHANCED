@@ -187,7 +187,6 @@ export async function getSessionPricing() {
       amount: price ? price.amount / 100 : 0,
       quantity,
       pricePerSession: price ? price.amount / 100 / quantity : 0,
-      type: quantity === 1 ? 'single' : (quantity === 4 ? '4-pack' : `${quantity}-pack`) as import('@/types/session').SessionPackageType,
     };
   });
 }

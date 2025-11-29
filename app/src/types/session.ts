@@ -1,10 +1,8 @@
 import { Timestamp } from 'firebase/firestore';
 
 /**
- * Session Package Types
+ * Session Package Extension
  */
-export type SessionPackageType = 'single' | '4-pack';
-
 export interface SessionPackageExtension {
   trainerId: string;
   date: Timestamp;
@@ -14,7 +12,6 @@ export interface SessionPackageExtension {
 
 export interface SessionPackage {
   id: string;
-  type: SessionPackageType;
   quantity: number;
   remaining: number;
   purchaseDate: number | Timestamp; // Timestamp as milliseconds or Firestore Timestamp
@@ -23,6 +20,7 @@ export interface SessionPackage {
   stripePaymentIntentId: string;
   stripePriceId: string;
   stripeProductId?: string;
+  stripeProductName?: string; // Stripe product name stored at purchase time for historical accuracy
   amount?: number;
   extendedBy?: SessionPackageExtension;
 }
@@ -185,17 +183,6 @@ export interface CalendlyWebhookPayload {
 export interface SessionBalanceCardProps {
   balance: SessionBalance;
   packages: SessionPackage[];
-  loading?: boolean;
-}
-
-export interface PricingCardProps {
-  type: SessionPackageType;
-  price: number;
-  sessionsIncluded: number;
-  pricePerSession: number;
-  savings?: number;
-  stripePriceId: string;
-  onPurchase: (priceId: string) => void;
   loading?: boolean;
 }
 

@@ -222,9 +222,14 @@ export function formatSessionTimeRange(timestamp: Timestamp, duration: number): 
  * @returns Display name for package type
  */
 export function getPackageTypeName(packageData: SessionPackage): string {
-  if (packageData.type === 'single') return 'Single Session';
-  if (packageData.type === '4-pack') return '4-Pack Sessions';
-  return `${packageData.quantity}-Pack Sessions`;
+  // Use Stripe product name if available
+  if (packageData.stripeProductName) {
+    return packageData.stripeProductName;
+  }
+  // Fallback based on quantity
+  return packageData.quantity === 1 
+    ? 'Single Session' 
+    : `${packageData.quantity}-Pack Sessions`;
 }
 
 /**

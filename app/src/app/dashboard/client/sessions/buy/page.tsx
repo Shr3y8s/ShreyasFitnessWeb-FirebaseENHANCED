@@ -159,7 +159,7 @@ export default function BuySessionsPage() {
                 {sessionOptions.map((option, index) => (
                   <PricingCard
                     key={option.priceId}
-                    type={option.type}
+                    productName={option.product.name}
                     price={option.amount}
                     sessionsIncluded={option.quantity}
                     pricePerSession={option.pricePerSession}
