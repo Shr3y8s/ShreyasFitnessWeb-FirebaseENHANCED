@@ -100,6 +100,7 @@ export default function ClientsPage() {
   // Session state
   const [sessionBalance, setSessionBalance] = useState<SessionBalance | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
+  const [sessionLocations, setSessionLocations] = useState<Map<string, string>>(new Map());
   const [sessionLoading, setSessionLoading] = useState(false);
   
   // Modal state
@@ -347,9 +348,22 @@ export default function ClientsPage() {
     // Subscribe to upcoming sessions
     const unsubscribeSessions = subscribeToUpcomingSessions(
       activeClientId,
-      (sessions) => {
+      async (sessions) => {
         console.log('[Trainer Clients] Upcoming sessions updated:', sessions);
         setUpcomingSessions(sessions);
+        
+        // Fetch locations for all sessions
+        const locationMap = new Map<string, string>();
+        for (const session of sessions) {
+          try {
+            const location = await getSessionLocation(session);
+            locationMap.set(session.id, location);
+          } catch (error) {
+            console.error(`Error fetching location for session ${session.id}:`, error);
+            locationMap.set(session.id, 'Location unavailable');
+          }
+        }
+        setSessionLocations(locationMap);
       }
     );
 
@@ -1071,11 +1085,9 @@ export default function ClientsPage() {
                                 <p className="text-sm text-gray-600">
                                   {formatSessionTimeRange(session.scheduledDate, session.duration)}
                                 </p>
-                                  {session.locationId && (
-                                    <p className="text-sm text-gray-600">
-                                      📍 {getSessionLocation(session)}
-                                    </p>
-                                  )}
+                                  <p className="text-sm text-gray-600">
+                                    📍 {sessionLocations.get(session.id) || 'Loading location...'}
+                                  </p>
                                 </div>
                                 <span className={`px-2 py-1 rounded-full text-xs ${
                                   session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
