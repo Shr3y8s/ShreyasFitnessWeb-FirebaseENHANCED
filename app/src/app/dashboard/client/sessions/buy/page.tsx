@@ -137,7 +137,7 @@ export default function BuySessionsPage() {
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Buy Training Sessions</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Buy 1-on-1 Training Sessions</h1>
               <p className="text-muted-foreground">
                 Purchase session packages to train with your coach. Sessions expire 60 days after purchase.
               </p>

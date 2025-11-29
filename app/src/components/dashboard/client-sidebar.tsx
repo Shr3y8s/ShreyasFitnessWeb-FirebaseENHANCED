@@ -226,7 +226,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/buy' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/sessions/buy">
                     <CreditCard className="w-4 h-4" />
-                    <span className="font-medium">Buy Sessions</span>
+                    <span className="font-medium">Buy 1-on-1 Sessions</span>
                     {availableSessions > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-green-600 text-white flex items-center justify-center w-5 h-5 p-0">
                         {availableSessions}
@@ -239,7 +239,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/schedule' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/sessions/schedule">
                     <Calendar className="w-4 h-4" />
-                    <span className="font-medium">Schedule Sessions</span>
+                    <span className="font-medium">Schedule 1-on-1</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

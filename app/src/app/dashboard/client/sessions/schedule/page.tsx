@@ -300,7 +300,7 @@ export default function ScheduleSessionsPage() {
         <ClientSidebar
           userName={userData?.name}
           userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall}
+          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
           onLogout={handleLogout}
         />
         <SidebarInset>
@@ -344,6 +344,7 @@ export default function ScheduleSessionsPage() {
         <ClientSidebar
           userName={userData?.name}
           userTier={userData?.tier}
+          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
           onLogout={handleLogout}
         />
         <SidebarInset>
@@ -351,9 +352,9 @@ export default function ScheduleSessionsPage() {
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Schedule Training Sessions</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Schedule 1-on-1 Training Sessions</h1>
               <p className="text-muted-foreground">
-                Book your one-on-one training sessions with your coach
+                Book your sessions and manage upcoming appointments.
               </p>
             </div>
 
