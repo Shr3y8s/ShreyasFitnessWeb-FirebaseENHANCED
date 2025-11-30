@@ -524,6 +524,12 @@ export async function assignWorkoutToClients(assignment: {
     const batch = writeBatch(db);
     const assignments: string[] = [];
 
+    // Increment usage count for the workout template
+    const templateRef = doc(db, 'workout_templates', assignment.templateId);
+    batch.update(templateRef, {
+      usageCount: increment(assignment.clientIds.length)
+    });
+
     for (const clientId of assignment.clientIds) {
       const assignmentRef = doc(collection(db, 'assigned_workouts'));
       batch.set(assignmentRef, {
@@ -731,26 +737,18 @@ export async function checkWorkoutUsage(templateId: string): Promise<{
   activeAssignments: number;
 }> {
   try {
-    // Check if template is used in assigned workouts
-    const assignmentsQuery = query(
-      collection(db, 'assigned_workouts'),
-      where('templateId', '==', templateId)
-    );
-    const assignmentsSnapshot = await getDocs(assignmentsQuery);
+    // Get the workout template to check usageCount
+    const templateDoc = await getDoc(doc(db, 'workout_templates', templateId));
+    if (!templateDoc.exists()) {
+      return { isUsed: false, usedInAssignments: 0, activeAssignments: 0 };
+    }
     
-    let activeCount = 0;
-    assignmentsSnapshot.forEach((doc) => {
-      const data = doc.data();
-      // Count assignments that are not completed
-      if (data.status !== 'completed') {
-        activeCount++;
-      }
-    });
+    const usageCount = templateDoc.data().usageCount || 0;
     
     return {
-      isUsed: assignmentsSnapshot.size > 0,
-      usedInAssignments: assignmentsSnapshot.size,
-      activeAssignments: activeCount
+      isUsed: usageCount > 0,
+      usedInAssignments: usageCount,
+      activeAssignments: usageCount
     };
   } catch (error) {
     console.error('Error checking workout usage:', error);
@@ -850,5 +848,41 @@ export async function incrementWorkoutUsage(templateId: string) {
     });
   } catch (error) {
     console.error('Error incrementing workout usage:', error);
+  }
+}
+
+export async function decrementWorkoutUsage(templateId: string) {
+  try {
+    const templateRef = doc(db, 'workout_templates', templateId);
+    await updateDoc(templateRef, {
+      usageCount: increment(-1)
+    });
+  } catch (error) {
+    console.error('Error decrementing workout usage:', error);
+  }
+}
+
+export async function unassignWorkout(assignmentId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get the assignment to find the templateId
+    const assignmentDoc = await getDoc(doc(db, 'assigned_workouts', assignmentId));
+    if (!assignmentDoc.exists()) {
+      return { success: false, error: 'Assignment not found' };
+    }
+    
+    const templateId = assignmentDoc.data().templateId;
+    
+    // Delete the assignment and decrement usage count in a batch
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'assigned_workouts', assignmentId));
+    batch.update(doc(db, 'workout_templates', templateId), {
+      usageCount: increment(-1)
+    });
+    
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('Error unassigning workout:', error);
+    return { success: false, error: (error as Error).message };
   }
 }

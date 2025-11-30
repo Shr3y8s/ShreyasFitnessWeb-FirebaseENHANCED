@@ -40,7 +40,37 @@ export interface Exercise {
   usageCount?: number; // Track how often this exercise is used
 }
 
-// Exercise reference in workouts (Phase 2)
+// ============================================================================
+// WORKOUT TEMPLATE STRUCTURES (Phase 2: Enhanced Set-Based Programming)
+// ============================================================================
+
+/**
+ * WorkoutSet - Individual set prescription within an exercise
+ * Defines the target parameters for a single set
+ * Note: Renamed from "Set" to avoid conflict with JavaScript's built-in Set class
+ */
+export interface WorkoutSet {
+  type: 'warmup' | 'working';  // Set category: warmup or working
+  setNumber: number;           // Sequential set number (1, 2, 3, etc.)
+  targetReps: string;          // Target reps - supports ranges ("8-12") or fixed ("10") or "AMRAP"
+  targetWeight: string;        // Target weight - "Bodyweight", "185 lbs", or ranges "50-60 lbs"
+  intensity: string;           // How hard: "warm-up", "normal", "drop set", "to failure", "heavy set"
+  restSeconds: number;         // Rest period after this set in seconds
+  rpeTarget?: number;          // Optional Rate of Perceived Exertion (1-10 scale) for auto-regulation
+}
+
+/**
+ * WorkoutExercise - Exercise prescription within a workout template
+ * References an exercise from the library and defines how it should be performed
+ */
+export interface WorkoutExercise {
+  exerciseId: string;          // Reference to Exercise in the exercise library
+  sets: WorkoutSet[];          // Array of prescribed sets for this exercise
+  order: number;               // Position in workout sequence (1, 2, 3, etc.)
+  notes?: string;              // Workout-specific instructions or coaching cues
+}
+
+// Exercise reference in workouts (Phase 2) - DEPRECATED: Use WorkoutExercise instead
 export interface ExerciseReference {
   exerciseId: string; // Reference to exercise in library
   sets?: number;
@@ -69,11 +99,15 @@ export interface EmbeddedExercise {
   equipment: string[];
 }
 
+/**
+ * WorkoutTemplate - Complete workout prescription
+ * A workout is a collection of exercises with prescribed sets
+ */
 export interface WorkoutTemplate {
   id: string;
   name: string;
   description: string;
-  exercises: Exercise[];
+  exercises: WorkoutExercise[];  // Array of exercises with set prescriptions
   estimatedDuration: number; // in minutes
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   category: 'strength' | 'cardio' | 'hiit' | 'flexibility' | 'mixed';
@@ -375,3 +409,70 @@ export const EXERCISE_CATEGORIES = [
   { value: 'core', label: 'Core', color: 'purple' },
   { value: 'other', label: 'Other', color: 'gray' }
 ] as const;
+
+// Set defaults and options
+export const DEFAULT_SET_VALUES = {
+  targetReps: '8-12',
+  targetWeight: 'AHAP',
+  restSeconds: 60
+} as const;
+
+export const INTENSITY_OPTIONS = [
+  { value: 'warm-up', label: 'Warm-up' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'drop set', label: 'Drop Set' },
+  { value: 'to failure', label: 'To Failure' },
+  { value: 'heavy set', label: 'Heavy Set' },
+  { value: 'custom', label: 'Custom...' }
+] as const;
+
+export const SET_TYPE_OPTIONS = [
+  { value: 'warmup', label: 'Warmup' },
+  { value: 'working', label: 'Working' }
+] as const;
+
+/**
+ * Create default sets for a new exercise
+ * Returns: 1 warmup set + 2 working sets with default values
+ */
+export const createDefaultSets = (): WorkoutSet[] => [
+  {
+    type: 'warmup',
+    setNumber: 1,
+    targetReps: DEFAULT_SET_VALUES.targetReps,
+    targetWeight: DEFAULT_SET_VALUES.targetWeight,
+    intensity: 'warm-up',
+    restSeconds: DEFAULT_SET_VALUES.restSeconds
+  },
+  {
+    type: 'working',
+    setNumber: 2,
+    targetReps: DEFAULT_SET_VALUES.targetReps,
+    targetWeight: DEFAULT_SET_VALUES.targetWeight,
+    intensity: 'normal',
+    restSeconds: DEFAULT_SET_VALUES.restSeconds
+  },
+  {
+    type: 'working',
+    setNumber: 3,
+    targetReps: DEFAULT_SET_VALUES.targetReps,
+    targetWeight: DEFAULT_SET_VALUES.targetWeight,
+    intensity: 'normal',
+    restSeconds: DEFAULT_SET_VALUES.restSeconds
+  }
+];
+
+/**
+ * Create a new empty set with default values
+ * @param setNumber - The sequential number for this set
+ * @param type - 'warmup' or 'working'
+ * @returns A new WorkoutSet object with default values
+ */
+export const createEmptySet = (setNumber: number, type: 'warmup' | 'working' = 'working'): WorkoutSet => ({
+  type,
+  setNumber,
+  targetReps: DEFAULT_SET_VALUES.targetReps,
+  targetWeight: DEFAULT_SET_VALUES.targetWeight,
+  intensity: type === 'warmup' ? 'warm-up' : 'normal',
+  restSeconds: DEFAULT_SET_VALUES.restSeconds
+});

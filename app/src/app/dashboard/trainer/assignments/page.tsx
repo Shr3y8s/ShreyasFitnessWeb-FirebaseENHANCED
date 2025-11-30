@@ -682,8 +682,6 @@ export default function WorkoutAssignmentsPage() {
                                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">{workout.description}</p>
                                 )}
                                 <div className="flex items-center gap-3 text-xs text-gray-600">
-                                  <span>{workout.estimatedDuration || '?'} min</span>
-                                  <span>•</span>
                                   <span>{workout.exercises?.length || 0} exercises</span>
                                 </div>
                               </div>
@@ -840,7 +838,6 @@ export default function WorkoutAssignmentsPage() {
                                   </div>
                                 )}
                                 <div className="flex items-center gap-4 text-sm">
-                                  <span className="text-gray-600">Duration: <strong>{workout.estimatedDuration || '?'} min</strong></span>
                                   <span className="text-gray-600">Exercises: <strong>{workout.exercises?.length || 0}</strong></span>
                                 </div>
                               </div>
