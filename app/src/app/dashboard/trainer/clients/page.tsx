@@ -328,10 +328,38 @@ export default function ClientsPage() {
     // 1. Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(client =>
-        client.name.toLowerCase().includes(query) ||
-        client.email.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(client => {
+        // Search name and email
+        if (client.name.toLowerCase().includes(query) ||
+            client.email.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Search preferred name
+        if (client.preferredName?.toLowerCase().includes(query)) {
+          return true;
+        }
+        
+        // Search address
+        if (client.address) {
+          // Handle string format
+          if (typeof client.address === 'string' && 
+              client.address.toLowerCase().includes(query)) {
+            return true;
+          }
+          
+          // Handle object format (city, state, country only - skip street/zipCode for privacy)
+          if (typeof client.address === 'object') {
+            if (client.address.city?.toLowerCase().includes(query) ||
+                client.address.state?.toLowerCase().includes(query) ||
+                client.address.country?.toLowerCase().includes(query)) {
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      });
     }
 
     // 2. Subscription Status filter
@@ -496,25 +524,27 @@ export default function ClientsPage() {
       <SidebarInset>
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-3">
           <h1 className="text-2xl font-bold text-foreground">Client Management</h1>
-          <p className="text-muted-foreground mt-1">{filteredClients.length} of {clients.length} clients</p>
         </div>
 
         {/* Filter Panel - Above Everything */}
-        <div className="bg-white rounded-xl border p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Filters</h2>
-          
-          {/* Search Bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search clients..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
+        <div className="bg-white rounded-xl border p-4 mb-4">
+          {/* Search Bar with Client Count */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+            <span className="text-sm text-muted-foreground flex-shrink-0 whitespace-nowrap">
+              {filteredClients.length} of {clients.length} clients
+            </span>
           </div>
 
           {/* 5 Independent Filters - Responsive Grid */}
@@ -600,9 +630,9 @@ export default function ClientsPage() {
         </div>
 
         {/* Master-Detail Split View */}
-        <div className="flex gap-6 h-[calc(100vh-380px)]">
-          {/* LEFT PANEL: Client List (35%) */}
-          <div className="w-[35%] flex flex-col bg-white rounded-xl border overflow-hidden">
+        <div className="flex gap-4 h-[calc(100vh-340px)]">
+          {/* LEFT PANEL: Client List (30%) */}
+          <div className="w-[30%] flex flex-col bg-white rounded-xl border overflow-hidden">
             {/* Selection Header */}
             <div className="p-4 border-b flex-shrink-0">
               {filteredClients.length > 0 && (
@@ -717,8 +747,8 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          {/* RIGHT PANEL: Client Details OR Bulk Actions (65%) */}
-          <div className="w-[65%] bg-white rounded-xl border overflow-hidden flex flex-col">
+          {/* RIGHT PANEL: Client Details OR Bulk Actions (70%) */}
+          <div className="w-[70%] bg-white rounded-xl border overflow-hidden flex flex-col">
             {isBulkMode ? (
               /* BULK ACTION PANEL */
               <div className="flex flex-col h-full">
@@ -834,112 +864,83 @@ export default function ClientsPage() {
               </div>
             ) : activeClient ? (
               <>
-                {/* Enhanced Client Profile Header */}
-                <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50">
-                  <div className="flex items-start gap-6 mb-6">
-                    {/* Profile Photo - Larger */}
-                    <div className="flex-shrink-0">
-                      {activeClient.profilePhotoLarge ? (
-                        <img
-                          src={activeClient.profilePhotoLarge}
-                          alt={activeClient.name}
-                          className="w-32 h-32 rounded-full object-cover shadow-lg border-4 border-white"
-                        />
-                      ) : (
-                        <div className="w-32 h-32 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg border-4 border-white">
-                          {activeClient.name.charAt(0).toUpperCase()}
+                {/* Client Details Content - Now includes header for scrolling */}
+                <div className="flex-1 overflow-y-auto">
+                  {/* Compact Client Profile Header - Now Scrollable */}
+                  <div className="p-4 bg-white border-b sticky top-0 z-10 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      {/* Profile Photo - Compact */}
+                      <div className="flex-shrink-0">
+                        {activeClient.profilePhotoLarge ? (
+                          <img
+                            src={activeClient.profilePhotoLarge}
+                            alt={activeClient.name}
+                            className="w-20 h-20 rounded-full object-cover shadow-md border-2 border-white"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md border-2 border-white">
+                            {activeClient.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Client Info - Compact Single Line */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <h2 className="text-xl font-bold text-foreground truncate">{activeClient.name}</h2>
+                          {/* Quick Actions - Right Aligned */}
+                          <div className="flex gap-2 flex-shrink-0">
+                            <Button 
+                              size="sm" 
+                              variant="default"
+                              onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
+                              className="h-7 text-xs"
+                            >
+                              <Mail className="h-3 w-3 mr-1" />
+                              Message
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                router.push(`/dashboard/trainer/assignments?mode=create&clients=${activeClient.id}`);
+                              }}
+                              className="h-7 text-xs"
+                            >
+                              <Dumbbell className="h-3 w-3 mr-1" />
+                              Assign Workout
+                            </Button>
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Client Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="mb-3">
-                        <h2 className="text-3xl font-bold text-foreground mb-1">{activeClient.name}</h2>
-                        {activeClient.preferredName && activeClient.preferredName !== activeClient.name && (
-                          <p className="text-sm text-muted-foreground mb-1">
-                            Prefers: {activeClient.preferredName}
-                          </p>
-                        )}
-                        <a 
-                          href={`mailto:${activeClient.email}`}
-                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          {activeClient.email}
-                        </a>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Member since {activeClient.createdAt 
-                            ? new Date(activeClient.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                            : 'recently'}
-                        </p>
-                      </div>
-
-                      {/* Status Badges */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {/* Payment/Subscription Status Badge - Use Stripe data if available, fallback to legacy field */}
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                          clientBillingData?.hasActiveSubscription ? 'bg-green-100 text-green-800' :
-                          clientBillingData && !clientBillingData.hasActiveSubscription && clientBillingData.transactions.length > 0 ? 'bg-blue-100 text-blue-800' :
-                          !activeClient.accountActivated ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          <span className="text-base">💳</span>
-                          {clientBillingData?.hasActiveSubscription ? 'Active Subscription' :
-                            clientBillingData && !clientBillingData.hasActiveSubscription && clientBillingData.transactions.length > 0 ? 'One-Time Payment' :
-                            !activeClient.accountActivated ? 'Payment Pending' :
-                            billingLoading ? 'Loading...' : 'No Payment'}
-                        </span>
-                        
-                        {/* Training Status Badge */}
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                          activeClient.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                          activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          <span className="text-base">💪</span>
-                          {activeClient.status === 'active' ? 'Actively Training' :
-                           activeClient.status === 'inactive' ? 'Training Inactive' :
-                           'No Workouts Yet'}
-                        </span>
-
-                        {/* Tier Badge */}
-                        {activeClient.tier?.name && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
-                            <span className="text-base">⭐</span>
-                            {activeClient.tier.name}
+                        {/* Status Badges */}
+                        <div className="flex gap-2">
+                          {/* Most Important Status Badge - Payment Status */}
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                            clientBillingData?.hasActiveSubscription ? 'bg-green-100 text-green-800' :
+                            !activeClient.accountActivated ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {clientBillingData?.hasActiveSubscription ? '✓ Active' :
+                              !activeClient.accountActivated ? '⏳ Pending' :
+                              billingLoading ? '...' : '○ Inactive'}
                           </span>
-                        )}
-                      </div>
-
-                      {/* Quick Actions */}
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="default"
-                          onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
-                          className="shadow-sm"
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Message Client
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            router.push(`/dashboard/trainer/assignments?mode=create&clients=${activeClient.id}`);
-                          }}
-                          className="shadow-sm"
-                        >
-                          <Dumbbell className="h-4 w-4 mr-2" />
-                          Assign Workout
-                        </Button>
+                          {/* Training Status Badge */}
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                            activeClient.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                            activeClient.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {activeClient.status === 'active' ? '💪 Training' :
+                             activeClient.status === 'inactive' ? '⏸️ Inactive' :
+                             '○ No Workouts'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Client Details Content */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {/* Detail Cards - Scrollable Content */}
+                  <div className="p-4 space-y-4">
                   {/* 1. Contact Information */}
                   <div className="bg-white border rounded-xl p-6">
                     <div className="flex items-center gap-2 mb-4">
@@ -1410,6 +1411,7 @@ export default function ClientsPage() {
                         </Button>
                       </div>
                     </div>
+                  </div>
                   </div>
                 </div>
               </>
