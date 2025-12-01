@@ -79,6 +79,19 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
     }
   };
 
+  // Get smart role label based on role and canTrain
+  const getRoleLabel = () => {
+    if (!userData?.role) return 'Trainer';
+    
+    if (userData.role === 'trainer') {
+      return 'Trainer';
+    } else if (userData.role === 'admin') {
+      return userData.canTrain ? 'Admin + Trainer' : 'Business Admin';
+    }
+    
+    return userData.role;
+  };
+
   return (
     <Sidebar variant="floating">
       <SidebarHeader>
@@ -223,8 +236,8 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
         {/* Dashboard Switcher - Only for Admins */}
         {canAccessAdminDashboard && (
           <>
-            <div className="my-2 border-t border-sidebar-border" />
-            <SidebarGroup>
+            <div className="border-t border-sidebar-border" />
+            <SidebarGroup className="py-1">
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
@@ -239,44 +252,45 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+            <div className="border-t border-sidebar-border" />
           </>
         )}
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="p-3 border-t border-white/10 space-y-3">
+        <div className="p-2 border-t border-white/10">
           {/* User Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {userData?.profilePhotoSmall ? (
-                <img
-                  src={userData.profilePhotoSmall}
-                  alt={userData?.name || 'Trainer'}
-                  className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                  {userData?.name ? userData.name.charAt(0).toUpperCase() : 'T'}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-sidebar-foreground truncate">
-                  {userData?.name || 'Trainer'}
-                </p>
-                <p className="text-xs text-primary font-medium truncate capitalize">
-                  {userData?.role || 'Trainer'}
-                </p>
+          <div className="flex items-center gap-3 mb-4">
+            {userData?.profilePhotoSmall ? (
+              <img
+                src={userData.profilePhotoSmall}
+                alt={userData?.name || 'Trainer'}
+                className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                {userData?.name ? userData.name.charAt(0).toUpperCase() : 'T'}
               </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-sidebar-foreground truncate">
+                {userData?.name || 'Trainer'}
+              </p>
+              <p className="text-xs text-primary font-medium truncate">
+                {getRoleLabel()}
+              </p>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout}
-              className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
           </div>
+
+          {/* Logout Button */}
+          <Button 
+            variant="destructive"
+            onClick={handleLogout}
+            className="w-full justify-center gap-2 mb-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </Button>
           
           {/* Legal Links */}
           <div className="text-xs text-center text-muted-foreground pt-2 border-t border-white/10">
