@@ -86,7 +86,10 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
             SF
           </div>
-          <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+            <span className="text-xs text-muted-foreground">Trainer Portal</span>
+          </div>
         </div>
       </SidebarHeader>
 
@@ -143,7 +146,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 >
                   <Link href="/dashboard/trainer/clients-messages">
                     <Mail className="w-4 h-4" />
-                    <span className="font-medium">Messages</span>
+                    <span className="font-medium">Client Messages</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -209,7 +212,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 >
                   <Link href="/dashboard/trainer/profile">
                     <User className="w-4 h-4" />
-                    <span className="font-medium">Profile</span>
+                    <span className="font-medium">My Profile</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
