@@ -13,6 +13,7 @@ import {
   Mail,
   Dumbbell,
   ListChecks,
+  ClipboardList,
   User,
   LogOut,
   Shield,
@@ -174,7 +175,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                   className={pathname === '/dashboard/trainer/workouts' || currentPage === 'workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}
                 >
                   <Link href="/dashboard/trainer/workouts">
-                    <ListChecks className="w-4 h-4" />
+                    <ClipboardList className="w-4 h-4" />
                     <span className="font-medium">Workout Templates</span>
                   </Link>
                 </SidebarMenuButton>
@@ -228,7 +229,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                       onClick={() => router.push('/dashboard/admin')}
                       className="cursor-pointer"
                     >
-                      <Shield className="w-4 h-4" />
+                      <Shield className="w-4 h-4 text-amber-500" />
                       <span className="font-medium">Admin Dashboard</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
