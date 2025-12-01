@@ -89,9 +89,17 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [filteredClients, setFilteredClients] = useState<ClientData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tierFilter, setTierFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Phase 3: Independent Status + Type Filters
+  const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState<string>('all'); // 'all', 'active', 'inactive'
+  const [subscriptionTypeFilter, setSubscriptionTypeFilter] = useState<string>('all'); // 'all' or product ID
+  const [sessionStatusFilter, setSessionStatusFilter] = useState<string>('all'); // 'all', 'has-sessions', 'no-sessions', 'expired'
+  const [sessionTypeFilter, setSessionTypeFilter] = useState<string>('all'); // 'all' or product ID
+  const [workoutActivityFilter, setWorkoutActivityFilter] = useState<string>('all'); // 'all', 'active', 'inactive', 'pending'
+  
   const [stripeProducts, setStripeProducts] = useState<StripeProduct[]>([]);
+  const [subscriptionProducts, setSubscriptionProducts] = useState<StripeProduct[]>([]);
+  const [sessionProducts, setSessionProducts] = useState<StripeProduct[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -284,12 +292,28 @@ export default function ClientsPage() {
     }
   }, [user]);
 
-  // Load Stripe products for tier filter
+  // Load Stripe products and separate by type
   useEffect(() => {
     const loadProducts = async () => {
       try {
+        const { fetchAllProducts, isSessionProduct } = await import('@/lib/stripe');
         const products = await fetchAllProducts();
         setStripeProducts(products);
+        
+        // Separate subscription products (have recurring prices) from session products (only one-time)
+        const subscriptions: StripeProduct[] = [];
+        const sessions: StripeProduct[] = [];
+        
+        products.forEach(product => {
+          if (isSessionProduct(product)) {
+            sessions.push(product);
+          } else {
+            subscriptions.push(product);
+          }
+        });
+        
+        setSubscriptionProducts(subscriptions);
+        setSessionProducts(sessions);
       } catch (error) {
         console.error('Error loading Stripe products:', error);
       }
@@ -297,10 +321,11 @@ export default function ClientsPage() {
     loadProducts();
   }, []);
 
-  // Filter clients
+  // Phase 3: Advanced filtering logic with 5 independent filters
   useEffect(() => {
     let filtered = [...clients];
 
+    // 1. Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(client =>
@@ -309,28 +334,62 @@ export default function ClientsPage() {
       );
     }
 
-    if (tierFilter !== 'all') {
-      filtered = filtered.filter(client => {
-        // Check if it matches their subscription tier
-        if (client.tier === tierFilter) {
-          return true;
-        }
-        
-        // Check if they have any session package with this Stripe product ID
-        const hasSessionPack = client.sessionPackages?.some(pkg => 
-          pkg.stripeProductId === tierFilter
-        );
-        
-        return hasSessionPack || false;
-      });
+    // 2. Subscription Status filter
+    if (subscriptionStatusFilter !== 'all') {
+      if (subscriptionStatusFilter === 'active') {
+        filtered = filtered.filter(client => client.accountActivated && client.tier);
+      } else if (subscriptionStatusFilter === 'inactive') {
+        filtered = filtered.filter(client => !client.accountActivated || !client.tier);
+      }
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(client => client.status === statusFilter);
+    // 3. Subscription Type filter
+    if (subscriptionTypeFilter !== 'all') {
+      filtered = filtered.filter(client => client.tier === subscriptionTypeFilter);
+    }
+
+    // 4. Session Status filter
+    if (sessionStatusFilter !== 'all') {
+      if (sessionStatusFilter === 'has-sessions') {
+        filtered = filtered.filter(client => 
+          client.sessionPackages && client.sessionPackages.length > 0
+        );
+      } else if (sessionStatusFilter === 'no-sessions') {
+        filtered = filtered.filter(client => 
+          !client.sessionPackages || client.sessionPackages.length === 0
+        );
+      } else if (sessionStatusFilter === 'expired') {
+        filtered = filtered.filter(client => {
+          if (!client.sessionPackages || client.sessionPackages.length === 0) return false;
+          
+          // Check if all packages are expired
+          const allExpired = client.sessionPackages.every(pkg => {
+            if (!pkg.expirationDate) return false;
+            const expirationDate = typeof pkg.expirationDate === 'number' 
+              ? new Date(pkg.expirationDate * 1000)
+              : new Date(pkg.expirationDate.seconds * 1000);
+            return expirationDate < new Date();
+          });
+          
+          return allExpired;
+        });
+      }
+    }
+
+    // 5. Session Type filter
+    if (sessionTypeFilter !== 'all') {
+      filtered = filtered.filter(client => 
+        client.sessionPackages?.some(pkg => pkg.stripeProductId === sessionTypeFilter)
+      );
+    }
+
+    // 6. Workout Activity filter
+    if (workoutActivityFilter !== 'all') {
+      filtered = filtered.filter(client => client.status === workoutActivityFilter);
     }
 
     setFilteredClients(filtered);
-  }, [clients, searchQuery, tierFilter, statusFilter]);
+  }, [clients, searchQuery, subscriptionStatusFilter, subscriptionTypeFilter, sessionStatusFilter, sessionTypeFilter, workoutActivityFilter]);
 
   // Fetch billing data when active client changes
   useEffect(() => {
@@ -442,13 +501,110 @@ export default function ClientsPage() {
           <p className="text-muted-foreground mt-1">{filteredClients.length} of {clients.length} clients</p>
         </div>
 
+        {/* Filter Panel - Above Everything */}
+        <div className="bg-white rounded-xl border p-6 mb-6">
+          <h2 className="text-lg font-semibold mb-4">Filters</h2>
+          
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search clients..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+
+          {/* 5 Independent Filters - Responsive Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Subscription Status Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Subscription Status</label>
+              <select
+                value={subscriptionStatusFilter}
+                onChange={(e) => setSubscriptionStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All</option>
+                <option value="active">✅ Active</option>
+                <option value="inactive">⏸️ Inactive</option>
+              </select>
+            </div>
+
+            {/* Subscription Type Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Subscription Type</label>
+              <select
+                value={subscriptionTypeFilter}
+                onChange={(e) => setSubscriptionTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All</option>
+                {subscriptionProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Session Status Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Session Status</label>
+              <select
+                value={sessionStatusFilter}
+                onChange={(e) => setSessionStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All</option>
+                <option value="has-sessions">✅ Has Sessions</option>
+                <option value="no-sessions">❌ No Sessions</option>
+                <option value="expired">⏰ Expired</option>
+              </select>
+            </div>
+
+            {/* Session Type Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Session Type</label>
+              <select
+                value={sessionTypeFilter}
+                onChange={(e) => setSessionTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All</option>
+                {sessionProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Workout Activity Filter */}
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">Workout Activity</label>
+              <select
+                value={workoutActivityFilter}
+                onChange={(e) => setWorkoutActivityFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All</option>
+                <option value="active">🟢 On Track</option>
+                <option value="inactive">🔴 Inactive (30+ days)</option>
+                <option value="pending">🟡 Never Assigned</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         {/* Master-Detail Split View */}
-        <div className="flex gap-6 h-[calc(100vh-200px)]">
+        <div className="flex gap-6 h-[calc(100vh-380px)]">
           {/* LEFT PANEL: Client List (35%) */}
           <div className="w-[35%] flex flex-col bg-white rounded-xl border overflow-hidden">
-            {/* Search and Filters */}
-            <div className="p-4 border-b space-y-3 flex-shrink-0">
-              {/* Selection Header - shows when clients can be selected */}
+            {/* Selection Header */}
+            <div className="p-4 border-b flex-shrink-0">
               {filteredClients.length > 0 && (
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -474,43 +630,6 @@ export default function ClientsPage() {
                   )}
                 </div>
               )}
-
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={tierFilter}
-                  onChange={(e) => setTierFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">All Tiers</option>
-                  {stripeProducts.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
-                
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
             </div>
 
             {/* Client List */}
@@ -523,11 +642,11 @@ export default function ClientsPage() {
                       <div
                         key={client.id}
                         onClick={() => setActiveClientId(client.id)}
-                        className={`w-full p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        className={`w-full p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
                           activeClientId === client.id ? 'bg-blue-50 border-l-4 border-primary' : ''
                         } ${isSelected ? 'bg-blue-50/50' : ''}`}
                       >
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3">
                           {/* Checkbox */}
                           <input
                             type="checkbox"
@@ -540,36 +659,37 @@ export default function ClientsPage() {
                             className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary flex-shrink-0"
                           />
                           
-                          {/* Client Info */}
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            {client.profilePhotoSmall ? (
-                              <img
-                                src={client.profilePhotoSmall}
-                                alt={client.name}
-                                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                {client.name.charAt(0)}
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{client.name}</p>
-                              <p className="text-sm text-gray-600 truncate">{client.email}</p>
+                          {/* Avatar */}
+                          {client.profilePhotoSmall ? (
+                            <img
+                              src={client.profilePhotoSmall}
+                              alt={client.name}
+                              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                              {client.name.charAt(0)}
+                            </div>
+                          )}
+                          
+                          {/* Name and Status - Single Row */}
+                          <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                            <p className="font-medium truncate">{client.name}</p>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={`px-2 py-0.5 rounded-full text-xs whitespace-nowrap ${
+                                client.status === 'active' ? 'bg-green-100 text-green-800' :
+                                client.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {client.status === 'active' ? 'On Track' :
+                                 client.status === 'inactive' ? 'Inactive' :
+                                 'No Workouts'}
+                              </span>
+                              <span className="text-xs text-gray-600 whitespace-nowrap">
+                                {client.workoutsCompleted} workouts
+                              </span>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-[52px]">
-                          <span className={`px-2 py-0.5 rounded-full text-xs ${
-                            client.status === 'active' ? 'bg-green-100 text-green-800' :
-                            client.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {client.status}
-                          </span>
-                          <span className="text-xs text-gray-600">
-                            {client.workoutsCompleted} workouts
-                          </span>
                         </div>
                       </div>
                     );
@@ -582,8 +702,11 @@ export default function ClientsPage() {
                   <button
                     onClick={() => {
                       setSearchQuery('');
-                      setTierFilter('all');
-                      setStatusFilter('all');
+                      setSubscriptionStatusFilter('all');
+                      setSubscriptionTypeFilter('all');
+                      setSessionStatusFilter('all');
+                      setSessionTypeFilter('all');
+                      setWorkoutActivityFilter('all');
                     }}
                     className="mt-3 text-sm text-primary hover:text-primary/80"
                   >
