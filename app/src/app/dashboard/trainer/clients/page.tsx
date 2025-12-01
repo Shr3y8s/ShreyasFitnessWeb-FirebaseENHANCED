@@ -47,6 +47,8 @@ import {
 import { formatPhoneForDisplay } from '@/lib/phoneUtils';
 import { SessionBalance, SessionPackage, TrainingSession } from '@/types/session';
 import PurchaseHistory from '@/components/sessions/PurchaseHistory';
+import { fetchAllProducts } from '@/lib/stripe';
+import type { StripeProduct } from '@/types/stripe';
 
 interface ClientData {
   id: string;
@@ -57,6 +59,7 @@ interface ClientData {
   profilePhotoLarge?: string;
   tier?: any;
   tierName?: string;
+  sessionPackages?: SessionPackage[]; // Array of session packages
   lastWorkout?: Date;
   workoutsCompleted: number;
   status: 'active' | 'inactive' | 'pending';
@@ -88,6 +91,7 @@ export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [stripeProducts, setStripeProducts] = useState<StripeProduct[]>([]);
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -192,11 +196,10 @@ export default function ClientsPage() {
           
           setAssignments(allAssignments);
           
-          const clientsData: ClientData[] = [];
-          
-          clientsSnapshot.forEach((doc) => {
-            const clientInfo = doc.data();
-            const clientId = doc.id;
+          // Process clients and fetch their session packages
+          const clientsPromises = clientsSnapshot.docs.map(async (docSnapshot) => {
+            const clientInfo = docSnapshot.data();
+            const clientId = docSnapshot.id;
             
             const clientAssignments = allAssignments.filter(a => a.clientId === clientId);
             const completedAssignments = clientAssignments.filter(a => a.status === 'completed');
@@ -213,7 +216,10 @@ export default function ClientsPage() {
               }
             }
             
-            clientsData.push({
+            // Session packages are already in clientInfo from the initial query
+            const sessionPackages: SessionPackage[] = clientInfo.sessionPackages || [];
+            
+            return {
               id: clientId,
               name: clientInfo.name,
               email: clientInfo.email,
@@ -222,6 +228,7 @@ export default function ClientsPage() {
               profilePhotoLarge: clientInfo.profilePhotoLarge,
               tier: clientInfo.tier,
               tierName: clientInfo.tierName,
+              sessionPackages,
               lastWorkout: lastCompletedWorkout?.completedAt || null,
               workoutsCompleted: completedAssignments.length,
               status: status,
@@ -232,8 +239,10 @@ export default function ClientsPage() {
               emergencyContact: clientInfo.emergencyContact,
               address: clientInfo.address,
               timezone: clientInfo.timezone
-            });
+            };
           });
+          
+          const clientsData = await Promise.all(clientsPromises);
           
           setClients(clientsData);
           
@@ -275,6 +284,19 @@ export default function ClientsPage() {
     }
   }, [user]);
 
+  // Load Stripe products for tier filter
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const products = await fetchAllProducts();
+        setStripeProducts(products);
+      } catch (error) {
+        console.error('Error loading Stripe products:', error);
+      }
+    };
+    loadProducts();
+  }, []);
+
   // Filter clients
   useEffect(() => {
     let filtered = [...clients];
@@ -288,7 +310,19 @@ export default function ClientsPage() {
     }
 
     if (tierFilter !== 'all') {
-      filtered = filtered.filter(client => client.tier?.id === tierFilter);
+      filtered = filtered.filter(client => {
+        // Check if it matches their subscription tier
+        if (client.tier === tierFilter) {
+          return true;
+        }
+        
+        // Check if they have any session package with this Stripe product ID
+        const hasSessionPack = client.sessionPackages?.some(pkg => 
+          pkg.stripeProductId === tierFilter
+        );
+        
+        return hasSessionPack || false;
+      });
     }
 
     if (statusFilter !== 'all') {
@@ -459,10 +493,11 @@ export default function ClientsPage() {
                   className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Tiers</option>
-                  <option value="in-person-training">In-Person</option>
-                  <option value="online-coaching">Online</option>
-                  <option value="complete-transformation">Transform</option>
-                  <option value="4-pack-training">4-Pack</option>
+                  {stripeProducts.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
                 </select>
                 
                 <select

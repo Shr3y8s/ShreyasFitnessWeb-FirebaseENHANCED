@@ -180,6 +180,21 @@ service cloud.firestore {
                       request.auth.uid == userId &&
                       validateMetricData();
       }
+      
+      // Private subcollection for sensitive client data
+      match /private/{docId} {
+        // Users can read their own private data
+        allow read: if isOwner(userId);
+        
+        // Trainers can read session balance for their assigned clients
+        allow read: if isTrainerOrAdmin() && isAssignedTrainer(userId);
+        
+        // Admins can read all private data
+        allow read: if isAdmin();
+        
+        // Only backend/Cloud Functions can write (users via functions)
+        allow write: if false;
+      }
     }
     
     // WORKOUT MANAGEMENT SYSTEM - Phase 1 & 2
