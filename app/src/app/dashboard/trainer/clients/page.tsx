@@ -524,13 +524,17 @@ export default function ClientsPage() {
       <SidebarInset>
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header */}
-        <div className="mb-3">
+        <div className="mb-3 flex items-center gap-3">
           <h1 className="text-2xl font-bold text-foreground">Client Management</h1>
+          <span className="text-lg text-muted-foreground">•</span>
+          <span className="text-lg text-muted-foreground">
+            {filteredClients.length} of {clients.length} clients
+          </span>
         </div>
 
         {/* Filter Panel - Above Everything */}
         <div className="bg-white rounded-xl border p-4 mb-4">
-          {/* Search Bar with Client Count */}
+          {/* Search Bar */}
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -542,9 +546,6 @@ export default function ClientsPage() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
-            <span className="text-sm text-muted-foreground flex-shrink-0 whitespace-nowrap">
-              {filteredClients.length} of {clients.length} clients
-            </span>
           </div>
 
           {/* 5 Independent Filters - Responsive Grid */}
