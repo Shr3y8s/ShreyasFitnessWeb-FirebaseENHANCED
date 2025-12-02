@@ -12,6 +12,9 @@ import {
   reactivateWorkoutTemplate,
   checkWorkoutUsage
 } from '@/lib/firebase';
+import { isTimeBased, formatSetPrescription } from '@/types/workout';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { 
@@ -45,6 +48,8 @@ export default function WorkoutLibraryPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('active'); // active, all, inactive
   const [selectedScope, setSelectedScope] = useState<string>('all'); // all, personal, company
   const [selectedWorkout, setSelectedWorkout] = useState<any | null>(null);
+  const [sortBy, setSortBy] = useState<string>('modified'); // modified, name, used
+  const [exerciseLibrary, setExerciseLibrary] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -79,7 +84,7 @@ export default function WorkoutLibraryPage() {
     checkAccess();
   }, [user, router, authLoading, canAccessTrainerDashboard]);
 
-  // Filter workouts based on search and filters
+  // Filter and sort workouts
   useEffect(() => {
     let filtered = workoutTemplates;
 
@@ -116,8 +121,23 @@ export default function WorkoutLibraryPage() {
       filtered = filtered.filter(workout => workout.category === selectedCategory);
     }
 
-    setFilteredWorkouts(filtered);
-  }, [workoutTemplates, workoutSearchQuery, selectedDifficulty, selectedCategory, selectedStatus, selectedScope]);
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'used':
+          return (b.usageCount || 0) - (a.usageCount || 0);
+        case 'modified':
+        default:
+          const aDate = a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0);
+          const bDate = b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0);
+          return bDate.getTime() - aDate.getTime();
+      }
+    });
+
+    setFilteredWorkouts(sorted);
+  }, [workoutTemplates, workoutSearchQuery, selectedDifficulty, selectedCategory, selectedStatus, selectedScope, sortBy]);
 
   const handleDeactivateWorkout = async (workoutId: string) => {
     if (!user) return;
@@ -182,6 +202,32 @@ export default function WorkoutLibraryPage() {
       case 'advanced': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // Load exercise library when workout modal opens
+  useEffect(() => {
+    const loadExercises = async () => {
+      if (selectedWorkout && exerciseLibrary.size === 0) {
+        try {
+          const exercisesRef = collection(db, 'exercises');
+          const snapshot = await getDocs(exercisesRef);
+          const exerciseMap = new Map();
+          snapshot.docs.forEach(doc => {
+            exerciseMap.set(doc.id, { id: doc.id, ...doc.data() });
+          });
+          setExerciseLibrary(exerciseMap);
+        } catch (error) {
+          console.error('Error loading exercise library:', error);
+        }
+      }
+    };
+    loadExercises();
+  }, [selectedWorkout]);
+
+  // Function to get exercise name from ID
+  const getExerciseName = (exerciseId: string) => {
+    const exercise = exerciseLibrary.get(exerciseId);
+    return exercise?.name || exerciseId || 'Unknown Exercise';
   };
 
   if (loading) {
@@ -379,6 +425,36 @@ export default function WorkoutLibraryPage() {
             </div>
           )}
 
+          {/* Section Header with Sort Controls */}
+          {filteredWorkouts.length > 0 && (
+            <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Dumbbell className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Workout Library
+                  </h2>
+                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                    {filteredWorkouts.length} {filteredWorkouts.length === 1 ? 'Workout' : 'Workouts'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 font-medium">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="modified">Recently Modified</option>
+                    <option value="name">Name (A-Z)</option>
+                    <option value="used">Most Used</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Workout Cards Grid */}
           {filteredWorkouts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -421,14 +497,28 @@ export default function WorkoutLibraryPage() {
                       <p className="text-sm text-gray-600 mb-4 line-clamp-2">{workout.description}</p>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{workout.estimatedDuration} min</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Target className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{workout.exercises?.length || 0} exercises</span>
+                    <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Dumbbell className="h-4 w-4 text-primary" />
+                          <span className="text-gray-700 font-medium">{workout.exercises?.length || 0} exercises</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-primary" />
+                          <span className="text-gray-700 font-medium">
+                            {workout.exercises?.reduce((total: number, ex: any) => total + (ex.sets?.length || 0), 0) || 0} sets
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <span className="text-gray-700 font-medium">
+                            {workout.estimatedDuration ? `${workout.estimatedDuration} min` : 'Not set'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-primary" />
+                          <span className="text-gray-700 font-medium">Used {workout.usageCount || 0}×</span>
+                        </div>
                       </div>
                     </div>
 
@@ -527,45 +617,96 @@ export default function WorkoutLibraryPage() {
             </div>
           )}
 
-          {/* Workout Detail Modal */}
+          {/* Comprehensive Workout Detail View */}
           {selectedWorkout && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedWorkout(null)}>
-              <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="p-6 border-b sticky top-0 bg-white">
-                  <div className="flex justify-between items-start">
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedWorkout(null)}>
+              <div className="bg-white rounded-xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-white">
+                  <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
-                      <h2 className="text-2xl font-bold mb-2">{selectedWorkout.name}</h2>
+                      <h2 className="text-3xl font-bold mb-2">{selectedWorkout.name}</h2>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${getDifficultyColor(selectedWorkout.difficulty)}`}>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getDifficultyColor(selectedWorkout.difficulty)}`}>
                           {selectedWorkout.difficulty}
                         </span>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm capitalize">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm capitalize flex items-center gap-1">
+                          {getCategoryIcon(selectedWorkout.category)}
                           {selectedWorkout.category}
                         </span>
-                        <span className="text-sm text-gray-600">• {selectedWorkout.estimatedDuration} min</span>
-                        <span className="text-sm text-gray-600">• {selectedWorkout.exercises?.length || 0} exercises</span>
+                        {selectedWorkout.isActive === false && (
+                          <span className="px-3 py-1 bg-gray-500 text-white text-sm rounded-full font-medium">Inactive</span>
+                        )}
+                        {selectedWorkout.scope === 'company' && (
+                          <span className="px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full font-medium">Company Library</span>
+                        )}
                       </div>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedWorkout(null)}>
                       <X className="h-5 w-5" />
                     </Button>
                   </div>
+
+                  {/* Metadata Cards */}
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="text-xs text-gray-500 mb-1">Duration</div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-primary" />
+                        <span className="font-semibold">
+                          {selectedWorkout.estimatedDuration ? `${selectedWorkout.estimatedDuration} min` : 'Not set'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="text-xs text-gray-500 mb-1">Exercises</div>
+                      <div className="flex items-center gap-2">
+                        <Dumbbell className="h-4 w-4 text-primary" />
+                        <span className="font-semibold">{selectedWorkout.exercises?.length || 0}</span>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="text-xs text-gray-500 mb-1">Total Sets</div>
+                      <div className="flex items-center gap-2">
+                        <Target className="h-4 w-4 text-primary" />
+                        <span className="font-semibold">
+                          {selectedWorkout.exercises?.reduce((total: number, ex: any) => total + (ex.sets?.length || 0), 0) || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="text-xs text-gray-500 mb-1">Usage Count</div>
+                      <div className="flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-primary" />
+                        <span className="font-semibold">{selectedWorkout.usageCount || 0}×</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-6 space-y-6">
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                  {/* Description */}
                   {selectedWorkout.description && (
                     <div>
-                      <h3 className="font-semibold mb-2">Description</h3>
+                      <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-primary"></div>
+                        Description
+                      </h3>
                       <p className="text-gray-600">{selectedWorkout.description}</p>
                     </div>
                   )}
 
+                  {/* Tags */}
                   {selectedWorkout.tags && selectedWorkout.tags.length > 0 && (
                     <div>
-                      <h3 className="font-semibold mb-2">Tags</h3>
+                      <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                        <div className="h-1 w-1 rounded-full bg-primary"></div>
+                        Tags
+                      </h3>
                       <div className="flex flex-wrap gap-2">
                         {selectedWorkout.tags.map((tag: string) => (
-                          <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded flex items-center gap-1">
+                          <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-1">
                             <Tag className="h-3 w-3" />
                             {tag}
                           </span>
@@ -574,36 +715,112 @@ export default function WorkoutLibraryPage() {
                     </div>
                   )}
 
+                  {/* Exercise Breakdown */}
                   <div>
-                    <h3 className="font-semibold mb-3">Exercises ({selectedWorkout.exercises?.length || 0})</h3>
-                    <div className="space-y-3">
-                      {selectedWorkout.exercises?.map((exercise: any, index: number) => (
-                        <div key={index} className="border rounded-lg p-4">
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-semibold">
-                              {index + 1}
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-medium mb-1">{exercise.name}</h4>
-                              <p className="text-sm text-gray-600 mb-2">{exercise.instructions}</p>
-                              <div className="flex flex-wrap gap-3 text-sm">
-                                {exercise.sets?.length > 0 && <span className="text-gray-600">Sets: <strong>{exercise.sets.length}</strong></span>}
-                                {exercise.reps && <span className="text-gray-600">Reps: <strong>{exercise.reps}</strong></span>}
-                                {exercise.duration && <span className="text-gray-600">Duration: <strong>{exercise.duration}s</strong></span>}
-                                {exercise.restTime && <span className="text-gray-600">Rest: <strong>{exercise.restTime}s</strong></span>}
+                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <div className="h-1 w-1 rounded-full bg-primary"></div>
+                      Exercise Breakdown ({selectedWorkout.exercises?.length || 0} exercises)
+                    </h3>
+                    <div className="space-y-4">
+                      {selectedWorkout.exercises?.map((workoutExercise: any, index: number) => {
+                        // Get exercise name from library or fallback to stored name
+                        const exerciseName = workoutExercise.exerciseId 
+                          ? getExerciseName(workoutExercise.exerciseId)
+                          : (workoutExercise.name || 'Unknown Exercise');
+                        
+                        return (
+                          <div key={index} className="border rounded-xl overflow-hidden bg-white">
+                            <div className="bg-gray-50 px-4 py-3 border-b flex items-center gap-3">
+                              <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                                {index + 1}
                               </div>
+                              <h4 className="font-semibold text-lg flex-1">{exerciseName}</h4>
+                              <span className="text-sm text-gray-600">{workoutExercise.sets?.length || 0} sets</span>
                             </div>
+                            
+                            {workoutExercise.sets && workoutExercise.sets.length > 0 ? (
+                              <div className="p-4 space-y-2">
+                                {workoutExercise.sets.map((set: any, setIndex: number) => (
+                                  <div key={setIndex} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg text-sm">
+                                    <span className="font-semibold text-gray-700 w-16">Set {set.setNumber || setIndex + 1}</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      set.type === 'warmup' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {set.type === 'warmup' ? 'Warmup' : 'Working'}
+                                    </span>
+                                    {/* Smart display: Show duration OR reps, not both */}
+                                    {isTimeBased(set) ? (
+                                      <span className="text-gray-700 font-medium">{set.duration} sec</span>
+                                    ) : (
+                                      <>
+                                        <span className="text-gray-700 font-medium">{set.targetReps} reps</span>
+                                        <span className="text-gray-700">× {set.targetWeight}</span>
+                                      </>
+                                    )}
+                                    <span className="text-gray-500">• {set.intensity}</span>
+                                    <span className="text-gray-500">• {set.restSeconds}s rest</span>
+                                    {set.rpeTarget && <span className="text-gray-500">• RPE {set.rpeTarget}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-4 text-sm text-gray-500">No set details available</div>
+                            )}
+
+                            {workoutExercise.notes && (
+                              <div className="px-4 pb-4">
+                                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                  <div className="text-xs font-semibold text-yellow-800 mb-1">Notes:</div>
+                                  <div className="text-sm text-yellow-700">{workoutExercise.notes}</div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
 
+                {/* Footer Actions */}
                 <div className="p-6 border-t bg-gray-50">
-                  <Button variant="outline" className="w-full" onClick={() => setSelectedWorkout(null)}>
-                    Close
-                  </Button>
+                  <div className="flex gap-3">
+                    <Link href={`/dashboard/trainer/workouts/create?id=${selectedWorkout.id}`} className="flex-1">
+                      <Button variant="default" className="w-full">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Workout
+                      </Button>
+                    </Link>
+                    {selectedWorkout.isActive !== false ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          handleDeactivateWorkout(selectedWorkout.id);
+                          setSelectedWorkout(null);
+                        }}
+                      >
+                        <Archive className="h-4 w-4 mr-2" />
+                        Archive
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          handleReactivateWorkout(selectedWorkout.id);
+                          setSelectedWorkout(null);
+                        }}
+                      >
+                        <ArchiveRestore className="h-4 w-4 mr-2" />
+                        Restore
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedWorkout(null)}
+                    >
+                      Close
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

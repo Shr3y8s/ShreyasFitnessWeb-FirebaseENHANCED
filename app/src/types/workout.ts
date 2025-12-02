@@ -57,6 +57,7 @@ export interface WorkoutSet {
   intensity: string;           // How hard: "warm-up", "normal", "drop set", "to failure", "heavy set"
   restSeconds: number;         // Rest period after this set in seconds
   rpeTarget?: number;          // Optional Rate of Perceived Exertion (1-10 scale) for auto-regulation
+  duration?: number;           // Optional duration in seconds for time-based exercises (planks, cardio intervals, etc.)
 }
 
 /**
@@ -476,3 +477,42 @@ export const createEmptySet = (setNumber: number, type: 'warmup' | 'working' = '
   intensity: type === 'warmup' ? 'warm-up' : 'normal',
   restSeconds: DEFAULT_SET_VALUES.restSeconds
 });
+
+/**
+ * Check if a set is time-based (uses duration instead of reps)
+ * @param set - The WorkoutSet to check
+ * @returns true if the set uses duration, false if it uses reps
+ */
+export const isTimeBased = (set: WorkoutSet): boolean => {
+  return set.duration !== undefined && set.duration > 0;
+};
+
+/**
+ * Format the set prescription for display
+ * Shows either duration or reps based on what's set
+ * @param set - The WorkoutSet to format
+ * @returns Formatted string like "60 sec" or "8-12 reps"
+ */
+export const formatSetPrescription = (set: WorkoutSet): string => {
+  if (isTimeBased(set)) {
+    return `${set.duration} sec`;
+  }
+  return `${set.targetReps} reps`;
+};
+
+/**
+ * Format duration in seconds to a human-readable string
+ * @param seconds - Duration in seconds
+ * @returns Formatted string like "60 sec" or "2 min" or "1:30"
+ */
+export const formatDuration = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${seconds} sec`;
+  } else if (seconds % 60 === 0) {
+    return `${seconds / 60} min`;
+  } else {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+};

@@ -40,7 +40,8 @@ import {
   createDefaultSets,
   createEmptySet,
   INTENSITY_OPTIONS,
-  SET_TYPE_OPTIONS
+  SET_TYPE_OPTIONS,
+  isTimeBased
 } from '@/types/workout';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -719,6 +720,36 @@ export default function CreateWorkoutPage() {
                             </Button>
                           </div>
                           
+                          {/* Toggle: Reps vs Duration Mode */}
+                          <div className="mb-4 flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex-1">
+                              <span className="text-sm font-medium text-blue-900">
+                                {set.duration && set.duration > 0 ? '⏱️ Time-Based Exercise' : '🏋️ Rep-Based Exercise'}
+                              </span>
+                              <p className="text-xs text-blue-700 mt-0.5">
+                                {set.duration && set.duration > 0 
+                                  ? 'Using duration (planks, holds, cardio)' 
+                                  : 'Using reps and weight'}
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (set.duration && set.duration > 0) {
+                                  // Switch to reps mode: clear duration
+                                  handleUpdateSet(setIndex, { duration: undefined });
+                                } else {
+                                  // Switch to duration mode: set default duration, clear might want to keep reps/weight for reference
+                                  handleUpdateSet(setIndex, { duration: 60 });
+                                }
+                              }}
+                              className="whitespace-nowrap"
+                            >
+                              {set.duration && set.duration > 0 ? '→ Switch to Reps' : '→ Switch to Duration'}
+                            </Button>
+                          </div>
+
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <Label className="text-sm">Type</Label>
@@ -732,24 +763,50 @@ export default function CreateWorkoutPage() {
                                 ))}
                               </select>
                             </div>
-                            <div>
-                              <Label className="text-sm">Reps</Label>
-                              <Input
-                                value={set.targetReps}
-                                onChange={(e) => handleUpdateSet(setIndex, { targetReps: e.target.value })}
-                                placeholder="8-12"
-                                className="mt-1"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-sm">Weight</Label>
-                              <Input
-                                value={set.targetWeight}
-                                onChange={(e) => handleUpdateSet(setIndex, { targetWeight: e.target.value })}
-                                placeholder="150 lbs"
-                                className="mt-1"
-                              />
-                            </div>
+                            
+                            {/* Conditional Fields: Show EITHER duration OR reps/weight */}
+                            {set.duration && set.duration > 0 ? (
+                              <>
+                                <div>
+                                  <Label className="text-sm">Duration (seconds)</Label>
+                                  <Input
+                                    type="number"
+                                    value={set.duration}
+                                    onChange={(e) => handleUpdateSet(setIndex, { duration: parseInt(e.target.value) || 60 })}
+                                    placeholder="60"
+                                    className="mt-1"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {set.duration < 60 ? `${set.duration} sec` : 
+                                     set.duration === 60 ? '1 min' :
+                                     set.duration % 60 === 0 ? `${set.duration / 60} min` :
+                                     `${Math.floor(set.duration / 60)}:${(set.duration % 60).toString().padStart(2, '0')}`}
+                                  </p>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div>
+                                  <Label className="text-sm">Reps</Label>
+                                  <Input
+                                    value={set.targetReps}
+                                    onChange={(e) => handleUpdateSet(setIndex, { targetReps: e.target.value })}
+                                    placeholder="8-12"
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <Label className="text-sm">Weight</Label>
+                                  <Input
+                                    value={set.targetWeight}
+                                    onChange={(e) => handleUpdateSet(setIndex, { targetWeight: e.target.value })}
+                                    placeholder="150 lbs or AHAP"
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </>
+                            )}
+                            
                             <div>
                               <Label className="text-sm">Rest (seconds)</Label>
                               <Input
@@ -934,8 +991,15 @@ export default function CreateWorkoutPage() {
                                   }`}>
                                     {set.type === 'warmup' ? 'Warmup' : 'Working'}
                                   </span>
-                                  <span className="text-gray-700 font-medium">{set.targetReps} reps</span>
-                                  <span className="text-gray-700">× {set.targetWeight}{/^\d+$/.test(set.targetWeight.trim()) ? ' lbs' : ''}</span>
+                                  {/* Smart display: Show duration OR reps/weight */}
+                                  {isTimeBased(set) ? (
+                                    <span className="text-gray-700 font-medium">{set.duration} sec</span>
+                                  ) : (
+                                    <>
+                                      <span className="text-gray-700 font-medium">{set.targetReps} reps</span>
+                                      <span className="text-gray-700">× {set.targetWeight}{/^\d+$/.test(set.targetWeight.trim()) ? ' lbs' : ''}</span>
+                                    </>
+                                  )}
                                   <span className="text-gray-500">• {set.intensity}</span>
                                   <span className="text-gray-500">• {set.restSeconds}s rest</span>
                                   {set.rpeTarget && <span className="text-gray-500">• RPE {set.rpeTarget}</span>}
