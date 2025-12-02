@@ -248,7 +248,7 @@ export default function WorkoutLibraryPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Workout Library</h1>
-              <p className="text-muted-foreground mt-1">Create and manage workout templates</p>
+              <p className="text-muted-foreground mt-1">Create and manage your workout library</p>
             </div>
             <Link href="/dashboard/trainer/workouts/create">
               <Button>

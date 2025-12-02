@@ -192,7 +192,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 >
                   <Link href="/dashboard/trainer/workouts">
                     <ClipboardList className="w-4 h-4" />
-                    <span className="font-medium">Workout Templates</span>
+                    <span className="font-medium">Workout Library</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -203,7 +203,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 >
                   <Link href="/dashboard/trainer/assignments">
                     <ListChecks className="w-4 h-4" />
-                    <span className="font-medium">Assignments</span>
+                    <span className="font-medium">Workout Assignments</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
