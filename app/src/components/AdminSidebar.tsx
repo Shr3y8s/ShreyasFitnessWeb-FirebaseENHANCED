@@ -51,6 +51,17 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
     }
   };
 
+  // Get smart role label based on role and canTrain
+  const getRoleLabel = () => {
+    if (!userData?.role) return 'Admin';
+    
+    if (userData.role === 'admin') {
+      return userData.canTrain ? 'Admin + Trainer' : 'Business Admin';
+    }
+    
+    return userData.role;
+  };
+
   return (
     <Sidebar variant="floating">
       <SidebarHeader>
@@ -58,13 +69,16 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
             SF
           </div>
-          <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+            <span className="text-xs text-muted-foreground">Admin Portal</span>
+          </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         {/* Overview Section */}
-        <SidebarGroup>
+        <SidebarGroup className="-mb-2">
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
             Overview
           </SidebarGroupLabel>
@@ -86,7 +100,7 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
         </SidebarGroup>
 
         {/* Financial Section */}
-        <SidebarGroup>
+        <SidebarGroup className="-mb-2">
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
             Financial
           </SidebarGroupLabel>
@@ -119,7 +133,7 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
         </SidebarGroup>
 
         {/* Business Operations Section */}
-        <SidebarGroup>
+        <SidebarGroup className="-mb-2">
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
             Business Operations
           </SidebarGroupLabel>
@@ -198,8 +212,8 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
         {/* Dashboard Switcher - Only if user can train */}
         {canAccessTrainerDashboard && (
           <>
-            <div className="my-2 border-t border-sidebar-border" />
-            <SidebarGroup>
+            <div className="border-t border-sidebar-border" />
+            <SidebarGroup className="py-1">
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
@@ -207,51 +221,52 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
                       onClick={() => router.push('/dashboard/trainer')}
                       className="cursor-pointer"
                     >
-                      <Briefcase className="w-4 h-4" />
+                      <Briefcase className="w-4 h-4 text-amber-500" />
                       <span className="font-medium">Training Dashboard</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+            <div className="border-t border-sidebar-border" />
           </>
         )}
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="p-3 border-t border-white/10 space-y-3">
+        <div className="p-2 border-t border-white/10">
           {/* User Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {userData?.profilePhotoSmall ? (
-                <img
-                  src={userData.profilePhotoSmall}
-                  alt={userData?.name || 'Admin'}
-                  className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                  {userData?.name ? userData.name.charAt(0).toUpperCase() : 'A'}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-sidebar-foreground truncate">
-                  {userData?.name || 'Admin'}
-                </p>
-                <p className="text-xs text-primary font-medium truncate">
-                  Admin
-                </p>
+          <div className="flex items-center gap-3 mb-4">
+            {userData?.profilePhotoSmall ? (
+              <img
+                src={userData.profilePhotoSmall}
+                alt={userData?.name || 'Admin'}
+                className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                {userData?.name ? userData.name.charAt(0).toUpperCase() : 'A'}
               </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-sidebar-foreground truncate">
+                {userData?.name || 'Admin'}
+              </p>
+              <p className="text-xs text-primary font-medium truncate">
+                {getRoleLabel()}
+              </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
           </div>
+
+          {/* Logout Button */}
+          <Button 
+            variant="destructive"
+            onClick={handleLogout}
+            className="w-full justify-center gap-2 mb-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </Button>
 
           {/* Legal Links */}
           <div className="text-xs text-center text-muted-foreground pt-2 border-t border-white/10">
