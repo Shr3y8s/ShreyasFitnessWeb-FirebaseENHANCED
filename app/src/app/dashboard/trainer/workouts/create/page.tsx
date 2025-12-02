@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db, listenToExercises } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { 
   ArrowLeft,
   Plus,
@@ -141,6 +141,8 @@ function SortableExerciseItem({
 
 export default function CreateWorkoutPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const workoutId = searchParams.get('id');
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -194,6 +196,25 @@ export default function CreateWorkoutPage() {
           setFilteredLibraryExercises(exerciseList);
         });
 
+        // Load existing workout if editing
+        if (workoutId) {
+          const workoutDoc = await getDoc(doc(db, 'workout_templates', workoutId));
+          if (workoutDoc.exists()) {
+            const data = workoutDoc.data();
+            setWorkoutForm({
+              name: data.name || '',
+              description: data.description || '',
+              difficulty: data.difficulty || 'beginner',
+              category: data.category || 'strength',
+              estimatedDuration: data.estimatedDuration || 30,
+              exercises: [],
+              tags: data.tags || [],
+              scope: data.scope || 'personal'
+            });
+            setWorkoutExercises(data.exercises || []);
+          }
+        }
+
         setLoading(false);
         return () => unsubscribe();
       } catch (error) {
@@ -202,7 +223,7 @@ export default function CreateWorkoutPage() {
     };
 
     checkAccess();
-  }, [user, router]);
+  }, [user, router, workoutId]);
 
   // Filter library exercises
   useEffect(() => {
@@ -336,20 +357,30 @@ export default function CreateWorkoutPage() {
         category: workoutForm.category,
         exercises: workoutExercises.map((ex, idx) => ({ ...ex, order: idx })),
         scope: workoutForm.scope,
-        isActive: true,
-        usageCount: 0,
-        createdBy: user.uid,
-        createdByName: user.displayName || user.email || 'Unknown',
-        createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
 
-      await addDoc(collection(db, 'workout_templates'), workoutData);
-      alert('Workout created successfully!');
+      if (workoutId) {
+        // Update existing workout
+        await updateDoc(doc(db, 'workout_templates', workoutId), workoutData);
+        alert('Workout updated successfully!');
+      } else {
+        // Create new workout
+        await addDoc(collection(db, 'workout_templates'), {
+          ...workoutData,
+          isActive: true,
+          usageCount: 0,
+          createdBy: user.uid,
+          createdByName: user.displayName || user.email || 'Unknown',
+          createdAt: serverTimestamp()
+        });
+        alert('Workout created successfully!');
+      }
+      
       router.push('/dashboard/trainer/workouts');
     } catch (error) {
       console.error('Error saving workout:', error);
-      alert('Failed to create workout. Please try again.');
+      alert(`Failed to ${workoutId ? 'update' : 'create'} workout. Please try again.`);
     } finally {
       setSaving(false);
     }
@@ -390,26 +421,19 @@ export default function CreateWorkoutPage() {
             <div className="max-w-7xl mx-auto px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">Create New Workout</h1>
-                  <p className="text-muted-foreground mt-1">Build a workout with detailed set prescriptions</p>
+                  <h1 className="text-2xl font-bold text-foreground">{workoutId ? 'Edit Workout' : 'Create New Workout'}</h1>
+                  <p className="text-muted-foreground mt-1">{workoutId ? 'Update workout details and exercises' : 'Build a workout with detailed set prescriptions'}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                {currentStep !== 'preview' && (
                   <Button
                     variant="outline"
                     onClick={() => setCurrentStep('preview')}
-                    disabled={workoutExercises.length === 0}
+                    disabled={!workoutForm.name || workoutExercises.length === 0}
                   >
                     <Eye className="h-4 w-4 mr-2" />
-                    Preview
+                    Preview & Save
                   </Button>
-                  <Button
-                    onClick={handleSaveWorkout}
-                    disabled={!workoutForm.name || workoutExercises.length === 0 || saving}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Workout'}
-                  </Button>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -834,16 +858,16 @@ export default function CreateWorkoutPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="text-xl font-semibold">Workout Preview</h2>
-                      <p className="text-gray-600 mt-1">Review your workout before saving</p>
+                      <p className="text-gray-600 mt-1">Review your workout before {workoutId ? 'updating' : 'saving'}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Button variant="outline" onClick={() => setCurrentStep('exercises')}>
                         <ArrowLeft className="h-4 w-4 mr-2" />
-                        Edit Workout
+                        Back to Exercises
                       </Button>
                       <Button onClick={handleSaveWorkout} disabled={saving}>
                         <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Workout'}
+                        {saving ? 'Saving...' : workoutId ? 'Update Workout' : 'Save Workout'}
                       </Button>
                     </div>
                   </div>

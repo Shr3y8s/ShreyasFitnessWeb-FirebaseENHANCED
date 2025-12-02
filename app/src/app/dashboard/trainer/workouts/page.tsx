@@ -587,7 +587,7 @@ export default function WorkoutLibraryPage() {
                               <h4 className="font-medium mb-1">{exercise.name}</h4>
                               <p className="text-sm text-gray-600 mb-2">{exercise.instructions}</p>
                               <div className="flex flex-wrap gap-3 text-sm">
-                                {exercise.sets && <span className="text-gray-600">Sets: <strong>{exercise.sets}</strong></span>}
+                                {exercise.sets?.length > 0 && <span className="text-gray-600">Sets: <strong>{exercise.sets.length}</strong></span>}
                                 {exercise.reps && <span className="text-gray-600">Reps: <strong>{exercise.reps}</strong></span>}
                                 {exercise.duration && <span className="text-gray-600">Duration: <strong>{exercise.duration}s</strong></span>}
                                 {exercise.restTime && <span className="text-gray-600">Rest: <strong>{exercise.restTime}s</strong></span>}
