@@ -71,35 +71,6 @@ export interface WorkoutExercise {
   notes?: string;              // Workout-specific instructions or coaching cues
 }
 
-// Exercise reference in workouts (Phase 2) - DEPRECATED: Use WorkoutExercise instead
-export interface ExerciseReference {
-  exerciseId: string; // Reference to exercise in library
-  sets?: number;
-  reps?: number;
-  duration?: number; // in seconds
-  restTime?: number; // in seconds
-  weight?: number;
-  notes?: string; // Workout-specific notes
-  order: number; // Position in workout
-}
-
-// For backward compatibility and custom exercises
-export interface EmbeddedExercise {
-  id: string;
-  name: string;
-  instructions: string;
-  sets?: number;
-  reps?: number;
-  duration?: number;
-  restTime?: number;
-  weight?: number;
-  notes?: string;
-  mediaUrl?: string;
-  category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
-  targetMuscleGroups: string[];
-  equipment: string[];
-}
-
 /**
  * WorkoutTemplate - Complete workout prescription
  * A workout is a collection of exercises with prescribed sets
@@ -133,8 +104,6 @@ export interface WorkoutTemplate {
   // Usage analytics
   usageCount?: number; // Track how many times this template is assigned
   
-  // Legacy field (deprecated - use scope instead)
-  isPublic?: boolean;
   tags: string[];
 }
 
@@ -345,7 +314,7 @@ export const EQUIPMENT_CATEGORIES = {
   }
 } as const;
 
-// Flat list of all equipment for backward compatibility
+// Flat list of all equipment items
 export const EQUIPMENT_OPTIONS = Object.values(EQUIPMENT_CATEGORIES).flatMap(category => category.items);
 
 export const POSTURE_OPTIONS = [
