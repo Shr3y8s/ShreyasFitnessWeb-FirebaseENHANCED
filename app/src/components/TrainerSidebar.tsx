@@ -107,11 +107,8 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Overview Section */}
+        {/* Dashboard - Top Level */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
-            Overview
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -143,7 +140,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 >
                   <Link href="/dashboard/trainer/clients">
                     <Users className="w-4 h-4" />
-                    <span className="font-medium">Clients</span>
+                    <span className="font-medium">Client Roster</span>
                     {clientCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {clientCount}
@@ -159,7 +156,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                 >
                   <Link href="/dashboard/trainer/clients-messages">
                     <Mail className="w-4 h-4" />
-                    <span className="font-medium">Client Messages</span>
+                    <span className="font-medium">Client Inbox</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -45,6 +45,7 @@ import {
 } from '@/types/workout';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import {
   DndContext,
   closestCenter,
@@ -420,7 +421,12 @@ export default function CreateWorkoutPage() {
           {/* Header */}
           <div className="bg-white border-b">
             <div className="max-w-7xl mx-auto px-6 py-4">
-              <div className="flex items-center justify-between">
+              <Breadcrumb items={[
+                { label: 'Training' },
+                { label: 'Workout Library', href: '/dashboard/trainer/workouts' },
+                { label: workoutId ? 'Edit Workout' : 'Create New Workout' }
+              ]} />
+              <div className="flex items-center justify-between mt-2">
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">{workoutId ? 'Edit Workout' : 'Create New Workout'}</h1>
                   <p className="text-muted-foreground mt-1">{workoutId ? 'Update workout details and exercises' : 'Build a workout with detailed set prescriptions'}</p>

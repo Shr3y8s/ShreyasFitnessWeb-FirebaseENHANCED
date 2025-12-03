@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { AdminOnlySection } from '@/components/dashboard/AdminOnlySection';
 import {
   Users,
@@ -523,9 +524,17 @@ export default function ClientsPage() {
       <TrainerSidebar currentPage="clients" />
       <SidebarInset>
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        {/* Breadcrumb */}
+        <div className="mb-2">
+          <Breadcrumb items={[
+            { label: 'Client Management' },
+            { label: 'Client Roster' }
+          ]} />
+        </div>
+        
         {/* Header */}
         <div className="mb-3 flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Client Management</h1>
+          <h1 className="text-2xl font-bold text-foreground">Client Roster</h1>
           <span className="text-lg text-muted-foreground">•</span>
           <span className="text-lg text-muted-foreground">
             {filteredClients.length} of {clients.length} clients

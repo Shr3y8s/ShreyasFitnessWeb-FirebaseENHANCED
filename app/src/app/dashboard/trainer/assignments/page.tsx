@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import {
   Calendar,
   Eye,
@@ -349,16 +350,10 @@ export default function WorkoutAssignmentsPage() {
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header with Breadcrumb */}
         <div className="mb-6">
-          <div className="flex items-center text-sm text-gray-600 mb-2">
-            <button 
-              onClick={() => router.push('/dashboard/trainer/clients')}
-              className="text-gray-900 font-medium hover:text-primary transition-colors"
-            >
-              Client Management
-            </button>
-            <ChevronRight className="h-4 w-4 mx-2" />
-            <span className="text-gray-900 font-medium">Workout Assignments</span>
-          </div>
+          <Breadcrumb items={[
+            { label: 'Training' },
+            { label: 'Workout Assignments' }
+          ]} />
           <h1 className="text-2xl font-bold text-foreground">Workout Assignments</h1>
           <p className="text-muted-foreground mt-1">
             {assignmentCounts.total} total • {assignmentCounts.active} active • {assignmentCounts.overdue} overdue

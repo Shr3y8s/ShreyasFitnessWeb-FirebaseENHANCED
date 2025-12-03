@@ -8,6 +8,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Shield, Camera, Loader2, Briefcase, Link, Plus, X } from 'lucide-react';
 import { ImageCropModal } from '@/components/profile/ImageCropModal';
@@ -673,7 +674,11 @@ export default function TrainerProfilePage() {
             
             {/* Page Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground">Trainer Profile</h1>
+              <Breadcrumb items={[
+                { label: 'Account' },
+                { label: 'My Profile' }
+              ]} />
+              <h1 className="text-3xl font-bold text-foreground mt-2">Trainer Profile</h1>
               <p className="text-muted-foreground mt-2">
                 Manage your professional profile and account settings
               </p>

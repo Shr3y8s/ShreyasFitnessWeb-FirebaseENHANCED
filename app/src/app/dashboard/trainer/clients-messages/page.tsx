@@ -20,6 +20,7 @@ import {
 } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import {
   Users,
   Search,
@@ -508,17 +509,11 @@ export default function ClientMessagesPage() {
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         {/* Header with Breadcrumb */}
         <div className="mb-6">
-          <div className="flex items-center text-sm text-gray-600 mb-2">
-            <button 
-              onClick={() => router.push('/dashboard/trainer/clients')}
-              className="text-gray-900 font-medium hover:text-primary transition-colors"
-            >
-              Client Management
-            </button>
-            <ChevronRight className="h-4 w-4 mx-2" />
-            <span className="text-gray-900 font-medium">Client Inbox</span>
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Client Inbox</h1>
+          <Breadcrumb items={[
+            { label: 'Client Management' },
+            { label: 'Client Inbox' }
+          ]} />
+          <h1 className="text-2xl font-bold text-foreground mt-2">Client Inbox</h1>
           <p className="text-muted-foreground mt-1">
             {conversations.size} conversations • {Array.from(conversations.values()).reduce((sum, conv) => sum + conv.unreadCount, 0)} unread
           </p>

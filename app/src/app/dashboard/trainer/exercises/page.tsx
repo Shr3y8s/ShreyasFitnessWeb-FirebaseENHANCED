@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import {
   Exercise,
   EXERCISE_CATEGORIES,
@@ -434,18 +435,24 @@ export default function ExerciseLibraryPage() {
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Exercise Library</h1>
-              <p className="text-muted-foreground mt-1">Manage your exercise collection and build reusable workouts</p>
+          <div>
+            <Breadcrumb items={[
+              { label: 'Training' },
+              { label: 'Exercise Library' }
+            ]} />
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Exercise Library</h1>
+                <p className="text-muted-foreground mt-1">Manage your exercise collection and build reusable workouts</p>
+              </div>
+              <Button
+                onClick={() => setIsCreating(true)}
+                disabled={isCreating}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Exercise
+              </Button>
             </div>
-            <Button
-              onClick={() => setIsCreating(true)}
-              disabled={isCreating}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Exercise
-            </Button>
           </div>
 
           <div className="space-y-6">

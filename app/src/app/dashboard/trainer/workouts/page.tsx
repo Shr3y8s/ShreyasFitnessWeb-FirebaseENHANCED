@@ -17,6 +17,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { 
   Plus,
   Search,
@@ -245,17 +246,23 @@ export default function WorkoutLibraryPage() {
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Workout Library</h1>
-              <p className="text-muted-foreground mt-1">Create and manage your workout library</p>
+          <div>
+            <Breadcrumb items={[
+              { label: 'Training' },
+              { label: 'Workout Library' }
+            ]} />
+            <div className="flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Workout Library</h1>
+                <p className="text-muted-foreground mt-1">Create and manage your workout library</p>
+              </div>
+              <Link href="/dashboard/trainer/workouts/create">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Workout
+                </Button>
+              </Link>
             </div>
-            <Link href="/dashboard/trainer/workouts/create">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Workout
-              </Button>
-            </Link>
           </div>
 
           {/* Summary Stats Bar */}
