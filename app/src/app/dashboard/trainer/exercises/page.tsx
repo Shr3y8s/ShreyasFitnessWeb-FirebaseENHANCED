@@ -72,8 +72,9 @@ export default function ExerciseLibraryPage() {
     aliases: string[];
     description: string;
     instructions: string;
-    category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
+    category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
     videoUrl: string;
+    imageUrl: string;
     posture: string;
     primaryMuscles: string[];
     secondaryMuscles: string[];
@@ -92,6 +93,7 @@ export default function ExerciseLibraryPage() {
     instructions: '',
     category: 'strength',
     videoUrl: '',
+    imageUrl: '',
     posture: '',
     primaryMuscles: [],
     secondaryMuscles: [],
@@ -225,6 +227,7 @@ export default function ExerciseLibraryPage() {
       instructions: '',
       category: 'strength',
       videoUrl: '',
+      imageUrl: '',
       posture: '',
       primaryMuscles: [],
       secondaryMuscles: [],
@@ -277,6 +280,7 @@ export default function ExerciseLibraryPage() {
       instructions: exercise.instructions || '',
       category: exercise.category,
       videoUrl: exercise.videoUrl || '',
+      imageUrl: exercise.imageUrl || '',
       posture: exercise.posture || '',
       primaryMuscles: [...(exercise.primaryMuscles || [])],
       secondaryMuscles: [...(exercise.secondaryMuscles || [])],
@@ -655,13 +659,25 @@ export default function ExerciseLibraryPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="videoUrl">Video/Media URL</Label>
+                    <Label htmlFor="videoUrl">Video URL</Label>
                     <Input
                       id="videoUrl"
                       type="url"
                       placeholder="https://example.com/video.mp4"
                       value={exerciseForm.videoUrl}
                       onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="imageUrl">Image/Thumbnail URL</Label>
+                    <Input
+                      id="imageUrl"
+                      type="url"
+                      placeholder="https://example.com/image.jpg"
+                      value={exerciseForm.imageUrl}
+                      onChange={(e) => setExerciseForm(prev => ({ ...prev, imageUrl: e.target.value }))}
                       className="mt-2"
                     />
                   </div>
@@ -1012,12 +1028,22 @@ export default function ExerciseLibraryPage() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor={`edit-videoUrl-${exercise.id}`}>Video/Media URL</Label>
+                            <Label htmlFor={`edit-videoUrl-${exercise.id}`}>Video URL</Label>
                             <Input
                               id={`edit-videoUrl-${exercise.id}`}
                               type="url"
                               value={exerciseForm.videoUrl}
                               onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`edit-imageUrl-${exercise.id}`}>Image/Thumbnail URL</Label>
+                            <Input
+                              id={`edit-imageUrl-${exercise.id}`}
+                              type="url"
+                              value={exerciseForm.imageUrl}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, imageUrl: e.target.value }))}
                               className="mt-1"
                             />
                           </div>

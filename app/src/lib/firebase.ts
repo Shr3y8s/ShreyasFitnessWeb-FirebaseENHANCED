@@ -312,7 +312,7 @@ export async function checkExerciseUsage(exerciseId: string): Promise<{
   try {
     // Check if exercise is used in workout templates
     const workoutsQuery = query(
-      collection(db, 'workout_templates'),
+      collection(db, 'workoutTemplates'),
       where('isActive', '==', true)
     );
     const workoutsSnapshot = await getDocs(workoutsQuery);
@@ -326,13 +326,13 @@ export async function checkExerciseUsage(exerciseId: string): Promise<{
       }
     });
     
-    // Note: We could also check assigned_workouts if needed in the future
+    // Note: We could also check workoutAssignments if needed in the future
     // For now, checking workout templates is sufficient
     
     return {
       isUsed: workoutsCount > 0,
       usedInWorkouts: workoutsCount,
-      usedInAssignments: 0 // Future: check assigned_workouts
+      usedInAssignments: 0 // Future: check workoutAssignments
     };
   } catch (error) {
     console.error('Error checking exercise usage:', error);
@@ -525,13 +525,13 @@ export async function assignWorkoutToClients(assignment: {
     const assignments: string[] = [];
 
     // Increment usage count for the workout template
-    const templateRef = doc(db, 'workout_templates', assignment.templateId);
+    const templateRef = doc(db, 'workoutTemplates', assignment.templateId);
     batch.update(templateRef, {
       usageCount: increment(assignment.clientIds.length)
     });
 
     for (const clientId of assignment.clientIds) {
-      const assignmentRef = doc(collection(db, 'assigned_workouts'));
+      const assignmentRef = doc(collection(db, 'workoutAssignments'));
       batch.set(assignmentRef, {
         templateId: assignment.templateId,
         clientId,
@@ -561,7 +561,7 @@ export async function assignWorkoutToClients(assignment: {
 
 export function listenToTrainerAssignments(trainerId: string, callback: (assignments: AssignedWorkout[]) => void) {
   const assignmentsQuery = query(
-    collection(db, 'assigned_workouts'),
+    collection(db, 'workoutAssignments'),
     where('trainerId', '==', trainerId),
     orderBy('assignedDate', 'desc')
   );
@@ -588,7 +588,7 @@ export function listenToTrainerAssignments(trainerId: string, callback: (assignm
 
 export function listenToClientAssignments(clientId: string, callback: (assignments: AssignedWorkout[]) => void) {
   const assignmentsQuery = query(
-    collection(db, 'assigned_workouts'),
+    collection(db, 'workoutAssignments'),
     where('clientId', '==', clientId),
     orderBy('assignedDate', 'desc')
   );
@@ -621,13 +621,13 @@ export function listenToWorkoutTemplates(trainerId: string, callback: (templates
   // Query personal templates
   const personalQuery = includeInactive 
     ? query(
-        collection(db, 'workout_templates'),
+        collection(db, 'workoutTemplates'),
         where('createdBy', '==', trainerId),
         where('scope', '==', 'personal'),
         orderBy('createdAt', 'desc')
       )
     : query(
-        collection(db, 'workout_templates'),
+        collection(db, 'workoutTemplates'),
         where('createdBy', '==', trainerId),
         where('scope', '==', 'personal'),
         where('isActive', '==', true),
@@ -637,12 +637,12 @@ export function listenToWorkoutTemplates(trainerId: string, callback: (templates
   // Query company-wide templates
   const companyQuery = includeInactive
     ? query(
-        collection(db, 'workout_templates'),
+        collection(db, 'workoutTemplates'),
         where('scope', '==', 'company'),
         orderBy('createdAt', 'desc')
       )
     : query(
-        collection(db, 'workout_templates'),
+        collection(db, 'workoutTemplates'),
         where('scope', '==', 'company'),
         where('isActive', '==', true),
         orderBy('createdAt', 'desc')
@@ -696,7 +696,7 @@ export function listenToWorkoutTemplates(trainerId: string, callback: (templates
 
 export async function getWorkoutTemplate(templateId: string) {
   try {
-    const docRef = doc(db, 'workout_templates', templateId);
+    const docRef = doc(db, 'workoutTemplates', templateId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
@@ -720,7 +720,7 @@ export async function getWorkoutTemplate(templateId: string) {
 
 export async function updateWorkoutTemplate(templateId: string, updates: any) {
   try {
-    await updateDoc(doc(db, 'workout_templates', templateId), {
+    await updateDoc(doc(db, 'workoutTemplates', templateId), {
       ...updates,
       updatedAt: serverTimestamp()
     });
@@ -738,7 +738,7 @@ export async function checkWorkoutUsage(templateId: string): Promise<{
 }> {
   try {
     // Get the workout template to check usageCount
-    const templateDoc = await getDoc(doc(db, 'workout_templates', templateId));
+    const templateDoc = await getDoc(doc(db, 'workoutTemplates', templateId));
     if (!templateDoc.exists()) {
       return { isUsed: false, usedInAssignments: 0, activeAssignments: 0 };
     }
@@ -763,7 +763,7 @@ export async function deactivateWorkoutTemplate(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Get template to check ownership
-    const templateDoc = await getDoc(doc(db, 'workout_templates', templateId));
+    const templateDoc = await getDoc(doc(db, 'workoutTemplates', templateId));
     if (!templateDoc.exists()) {
       return { success: false, error: 'Workout template not found' };
     }
@@ -775,7 +775,7 @@ export async function deactivateWorkoutTemplate(
       return { success: false, error: 'Permission denied: You can only archive your own workout templates' };
     }
     
-    await updateDoc(doc(db, 'workout_templates', templateId), {
+    await updateDoc(doc(db, 'workoutTemplates', templateId), {
       isActive: false,
       deactivatedAt: serverTimestamp(),
       deactivatedBy: userId
@@ -790,7 +790,7 @@ export async function deactivateWorkoutTemplate(
 
 export async function reactivateWorkoutTemplate(templateId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    await updateDoc(doc(db, 'workout_templates', templateId), {
+    await updateDoc(doc(db, 'workoutTemplates', templateId), {
       isActive: true,
       reactivatedAt: serverTimestamp()
     });
@@ -809,7 +809,7 @@ export async function deleteWorkoutTemplate(
   try {
     // If userId provided, check permissions
     if (userId) {
-      const templateDoc = await getDoc(doc(db, 'workout_templates', templateId));
+      const templateDoc = await getDoc(doc(db, 'workoutTemplates', templateId));
       if (!templateDoc.exists()) {
         return { success: false, error: 'Workout template not found' };
       }
@@ -832,7 +832,7 @@ export async function deleteWorkoutTemplate(
     }
     
     // Permanently delete
-    await deleteDoc(doc(db, 'workout_templates', templateId));
+    await deleteDoc(doc(db, 'workoutTemplates', templateId));
     return { success: true };
   } catch (error) {
     console.error('Error deleting workout template:', error);
@@ -842,7 +842,7 @@ export async function deleteWorkoutTemplate(
 
 export async function incrementWorkoutUsage(templateId: string) {
   try {
-    const templateRef = doc(db, 'workout_templates', templateId);
+    const templateRef = doc(db, 'workoutTemplates', templateId);
     await updateDoc(templateRef, {
       usageCount: increment(1)
     });
@@ -853,7 +853,7 @@ export async function incrementWorkoutUsage(templateId: string) {
 
 export async function decrementWorkoutUsage(templateId: string) {
   try {
-    const templateRef = doc(db, 'workout_templates', templateId);
+    const templateRef = doc(db, 'workoutTemplates', templateId);
     await updateDoc(templateRef, {
       usageCount: increment(-1)
     });
@@ -865,7 +865,7 @@ export async function decrementWorkoutUsage(templateId: string) {
 export async function unassignWorkout(assignmentId: string): Promise<{ success: boolean; error?: string }> {
   try {
     // Get the assignment to find the templateId
-    const assignmentDoc = await getDoc(doc(db, 'assigned_workouts', assignmentId));
+    const assignmentDoc = await getDoc(doc(db, 'workoutAssignments', assignmentId));
     if (!assignmentDoc.exists()) {
       return { success: false, error: 'Assignment not found' };
     }
@@ -874,8 +874,8 @@ export async function unassignWorkout(assignmentId: string): Promise<{ success: 
     
     // Delete the assignment and decrement usage count in a batch
     const batch = writeBatch(db);
-    batch.delete(doc(db, 'assigned_workouts', assignmentId));
-    batch.update(doc(db, 'workout_templates', templateId), {
+    batch.delete(doc(db, 'workoutAssignments', assignmentId));
+    batch.update(doc(db, 'workoutTemplates', templateId), {
       usageCount: increment(-1)
     });
     

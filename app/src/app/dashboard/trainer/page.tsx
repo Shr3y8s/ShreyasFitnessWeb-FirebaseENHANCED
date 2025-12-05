@@ -80,7 +80,7 @@ export default function TrainerDashboardPage() {
           
           // Fetch assignments for stats
           const assignmentsQuery = query(
-            collection(db, 'assigned_workouts'),
+            collection(db, 'workoutAssignments'),
             where('trainerId', '==', user.uid)
           );
           const assignmentsSnapshot = await getDocs(assignmentsQuery);
@@ -91,8 +91,9 @@ export default function TrainerDashboardPage() {
               id: doc.id,
               ...data,
               completedAt: data.completedAt?.toDate(),
-              assignedDate: data.assignedDate?.toDate(),
-              dueDate: data.dueDate?.toDate()
+              assignedAt: data.assignedAt?.toDate(),
+              scheduledDate: data.scheduledDate, // String: "YYYY-MM-DD"
+              dueDate: data.dueDate // String: "YYYY-MM-DD" or undefined
             });
           });
           
@@ -135,7 +136,7 @@ export default function TrainerDashboardPage() {
 
           // Fetch workout templates
           const workoutsQuery = query(
-            collection(db, 'workout_templates'),
+            collection(db, 'workoutTemplates'),
             where('createdBy', '==', user.uid)
           );
           const workoutsSnapshot = await getDocs(workoutsQuery);

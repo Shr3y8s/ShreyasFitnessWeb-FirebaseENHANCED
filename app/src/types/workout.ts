@@ -5,10 +5,12 @@ export interface Exercise {
   id: string;
   name: string;
   aliases?: string[]; // Alternative names
-  category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
+  category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+  difficulty?: 'beginner' | 'intermediate' | 'advanced'; // NEW: Exercise difficulty level
   description?: string; // Overview of the exercise
   instructions?: string; // General instructions for the exercise
   videoUrl?: string; // Link to demonstration video
+  imageUrl?: string; // Link to exercise image/thumbnail
   equipment: string[];
   posture?: string; // standing, seated, prone, supine, kneeling, plank
   primaryMuscles: string[]; // Main muscles worked
@@ -19,7 +21,6 @@ export interface Exercise {
   armLegType: 'single' | 'double'; // Single or double arm/leg movement
   gripType?: string; // overhand, underhand, neutral, wide, narrow, mixed
   notes?: string;
-  mediaUrl?: string;
   
   // Ownership & Attribution (persists even if user deleted)
   createdBy: string; // User ID
@@ -38,6 +39,118 @@ export interface Exercise {
   
   // Usage analytics
   usageCount?: number; // Track how often this exercise is used
+}
+
+// ============================================================================
+// POLYMORPHIC EXERCISE CONFIGURATION SYSTEM (Phase 1: Strength + Cardio)
+// ============================================================================
+
+/**
+ * Base configuration interface - all exercise configurations extend this
+ * The exerciseType field acts as a discriminator for TypeScript type narrowing
+ */
+export interface ExerciseConfiguration {
+  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+}
+
+/**
+ * Strength Exercise Configuration
+ * For weight training exercises with sets, reps, and weight
+ */
+export interface StrengthConfiguration extends ExerciseConfiguration {
+  exerciseType: 'strength';
+  strengthSubType: 'free_weight' | 'machine' | 'bodyweight' | 'cable' | 'resistance_band';
+  sets: Array<{
+    setNumber: number;
+    setType: 'warm_up' | 'working' | 'drop_set' | 'rest_pause' | 'pyramid' | 'to_failure' | 'amrap';
+    targetReps: number | string;  // Can be a number (8), string range ("8-12"), or "AMRAP"
+    repsRange?: { min: number; max: number };
+    weight: number;
+    weightUnit: 'lbs' | 'kg';
+    restSeconds: number;
+    rpeTarget?: number;  // Rate of Perceived Exertion (1-10)
+    rirTarget?: number;  // Reps In Reserve
+    notes?: string;
+  }>;
+  trackableFields: string[];
+  progressionScheme?: 'linear' | 'double_progression' | 'percentage_based';
+}
+
+/**
+ * Cardio Steady State Configuration
+ * For continuous cardio exercises at a steady pace
+ */
+export interface CardioSteadyStateConfiguration extends ExerciseConfiguration {
+  exerciseType: 'cardio';
+  cardioSubType: 'steady_state';
+  machineType: 'treadmill' | 'stationary_bike' | 'recumbent_bike' | 'rowing_machine' | 
+                'elliptical' | 'stair_climber' | 'air_bike' | 'skierg' | 'vertical_climber';
+  durationSeconds: number;
+  targetPace: string;  // e.g., "6.0 mph", "2:00 per 500m"
+  intensity: 'light' | 'moderate' | 'high';
+  targetHeartRate?: number;
+  heartRateZone?: 'z1' | 'z2' | 'z3' | 'z4' | 'z5';
+  notes?: string;
+}
+
+/**
+ * Cardio Intervals Configuration
+ * For HIIT and interval-based cardio training
+ */
+export interface CardioIntervalsConfiguration extends ExerciseConfiguration {
+  exerciseType: 'cardio';
+  cardioSubType: 'intervals';
+  machineType: 'treadmill' | 'stationary_bike' | 'air_bike' | 'rowing_machine' | 'ski_erg' | 'none';
+  intervals: Array<{
+    intervalNumber: number;
+    type: 'work' | 'rest' | 'recovery';
+    durationSeconds: number;
+    intensity: 'light' | 'moderate' | 'high';
+    targetPace?: string;
+    targetHeartRate?: number;
+    notes?: string;
+  }>;
+  totalRounds: number;
+  restBetweenRounds?: number;
+  notes?: string;
+}
+
+/**
+ * Phase 1 Configuration Union Type
+ * Only includes Strength and Cardio (Steady State + Intervals)
+ * Additional types will be added in Phase 2 and Phase 3
+ */
+export type ExerciseConfigurationType = 
+  | StrengthConfiguration
+  | CardioSteadyStateConfiguration
+  | CardioIntervalsConfiguration;
+
+/**
+ * Type guard to check if a configuration is for strength exercises
+ */
+export function isStrengthConfiguration(config: ExerciseConfiguration): config is StrengthConfiguration {
+  return config.exerciseType === 'strength';
+}
+
+/**
+ * Type guard to check if a configuration is for cardio exercises
+ */
+export function isCardioConfiguration(config: ExerciseConfiguration): config is CardioSteadyStateConfiguration | CardioIntervalsConfiguration {
+  return config.exerciseType === 'cardio';
+}
+
+/**
+ * Type guard to check if a configuration is for steady state cardio
+ */
+export function isSteadyStateCardio(config: ExerciseConfiguration): config is CardioSteadyStateConfiguration {
+  return config.exerciseType === 'cardio' && 'cardioSubType' in config && config.cardioSubType === 'steady_state';
+}
+
+/**
+ * Type guard to check if a configuration is for interval cardio
+ */
+export function isIntervalCardio(config: ExerciseConfiguration): config is CardioIntervalsConfiguration {
+  return config.exerciseType === 'cardio' && 'cardioSubType' in config && config.cardioSubType === 'intervals';
 }
 
 // ============================================================================
@@ -61,25 +174,28 @@ export interface WorkoutSet {
 }
 
 /**
- * WorkoutExercise - Exercise prescription within a workout template
- * References an exercise from the library and defines how it should be performed
+ * WorkoutTemplateExercise - Exercise reference in a workout template (Blueprint only)
+ * Templates now just reference exercises without concrete configuration.
+ * Configuration happens at assignment time per client.
+ * Exercise order is determined by array position.
+ * 
+ * Note: Coaching cues should be added at the Exercise level (generic) or 
+ * Assignment level (client-specific), not at the template level.
  */
-export interface WorkoutExercise {
+export interface WorkoutTemplateExercise {
   exerciseId: string;          // Reference to Exercise in the exercise library
-  sets: WorkoutSet[];          // Array of prescribed sets for this exercise
-  order: number;               // Position in workout sequence (1, 2, 3, etc.)
-  notes?: string;              // Workout-specific instructions or coaching cues
 }
 
 /**
- * WorkoutTemplate - Complete workout prescription
- * A workout is a collection of exercises with prescribed sets
+ * WorkoutTemplate - Workout Blueprint (No concrete values)
+ * A template is now just a collection of exercise references.
+ * Trainers configure sets, reps, weights when assigning to clients.
  */
 export interface WorkoutTemplate {
   id: string;
   name: string;
   description: string;
-  exercises: WorkoutExercise[];  // Array of exercises with set prescriptions
+  exercises: WorkoutTemplateExercise[];  // Array of exercise references only (no configuration)
   estimatedDuration: number; // in minutes
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   category: 'strength' | 'cardio' | 'hiit' | 'flexibility' | 'mixed';
@@ -105,6 +221,107 @@ export interface WorkoutTemplate {
   usageCount?: number; // Track how many times this template is assigned
   
   tags: string[];
+}
+
+// ============================================================================
+// WORKOUT ASSIGNMENT (Where Configuration Happens!)
+// ============================================================================
+
+/**
+ * WorkoutAssignmentExercise - Configured exercise within an assignment
+ * This is where the trainer specifies concrete values (sets, reps, weights, etc.)
+ * Exercise order is determined by array position (same as template).
+ */
+export interface WorkoutAssignmentExercise {
+  exerciseId: string;
+  exerciseName: string;      // Denormalized for display
+  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+  configuration: ExerciseConfigurationType;  // Polymorphic configuration based on exercise type
+  notes?: string;            // Assignment-specific coaching cues
+}
+
+/**
+ * WorkoutAssignment - Instance of a workout assigned to a specific client
+ * Contains actual configured parameters for that client (sets, reps, weights, etc.)
+ * This is what gets saved to Firestore when a trainer assigns a workout.
+ * Assignments ALWAYS reference a template - no custom workouts.
+ */
+export interface WorkoutAssignment {
+  id: string;
+  workoutTemplateId: string;  // Required - every assignment comes from a template
+  clientId: string;
+  trainerId: string;
+  
+  name: string;                // Can differ from template name
+  // Note: Description comes from template, not stored here
+  scheduledDate: string;       // ISO 8601 date (YYYY-MM-DD)
+  assignedAt: Date;            // Timestamp when assigned
+  dueDate?: string;            // Optional due date (YYYY-MM-DD)
+  
+  status: 'scheduled' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
+  completionPercentage: number;  // 0-100, calculated based on exercises completed
+  
+  exercises: WorkoutAssignmentExercise[];  // Configured exercises with concrete values (array position = order)
+  
+  notes?: string;              // Trainer notes for this assignment
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// WORKOUT EXECUTION (Tracking Actual Performance)
+// ============================================================================
+
+/**
+ * WorkoutExecutionExercise - Records actual performance for an exercise
+ * Contains both planned configuration and actual results
+ */
+export interface WorkoutExecutionExercise {
+  exerciseId: string;
+  exerciseName: string;
+  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+  
+  completionStatus: 'not_started' | 'partial' | 'completed';
+  completionPercentage: number;  // 0-100
+  
+  plannedConfiguration: ExerciseConfigurationType;  // What was assigned
+  actualConfiguration: ExerciseConfigurationType;   // What was actually performed
+  
+  notes?: string;                // Client notes about the exercise
+  deviations?: string[];         // Array of notes about what differed from plan
+}
+
+/**
+ * WorkoutExecution - Records actual client performance of an assigned workout
+ * Tracks what the client actually did vs. what was planned
+ */
+export interface WorkoutExecution {
+  id: string;
+  workoutAssignmentId: string;  // Reference to the assignment
+  clientId: string;
+  trainerId: string;
+  
+  startedAt: Date;              // When client started the workout
+  completedAt?: Date;           // When client completed (null if incomplete)
+  durationMinutes: number;      // Actual duration
+  
+  overallNotes?: string;        // Client's overall workout notes
+  completionStatus: 'not_started' | 'in_progress' | 'partial' | 'completed';
+  
+  exercises: WorkoutExecutionExercise[];  // Exercise-by-exercise actual performance
+  
+  createdAt: Date;
+}
+
+/**
+ * DEPRECATED: Old interfaces kept for reference during migration
+ * These will be removed once UI is updated
+ */
+export interface WorkoutExercise {
+  exerciseId: string;
+  sets: WorkoutSet[];
+  order: number;
+  notes?: string;
 }
 
 export interface AssignedWorkout {
@@ -375,9 +592,12 @@ export const WORKOUT_CATEGORIES = [
 export const EXERCISE_CATEGORIES = [
   { value: 'strength', label: 'Strength', color: 'blue' },
   { value: 'cardio', label: 'Cardio', color: 'red' },
-  { value: 'flexibility', label: 'Flexibility', color: 'green' },
   { value: 'core', label: 'Core', color: 'purple' },
-  { value: 'other', label: 'Other', color: 'gray' }
+  { value: 'flexibility', label: 'Flexibility', color: 'green' },
+  { value: 'balance', label: 'Balance', color: 'orange' },
+  { value: 'mobility', label: 'Mobility', color: 'cyan' },
+  { value: 'plyometric', label: 'Plyometric', color: 'yellow' },
+  { value: 'yoga_pilates', label: 'Yoga/Pilates', color: 'pink' }
 ] as const;
 
 // Set defaults and options

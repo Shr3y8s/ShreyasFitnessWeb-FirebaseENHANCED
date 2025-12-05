@@ -54,6 +54,7 @@ interface WorkoutTemplate {
 
 interface Assignment {
   id: string;
+  name: string;  // Assignment name (may differ from template name)
   clientId: string;
   templateId: string;
   trainerId: string;
@@ -71,8 +72,8 @@ export default function WorkoutAssignmentsPage() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
 
-  // Mode state
-  const [mode, setMode] = useState<'create' | 'view'>('create');
+  // Mode state - always view mode
+  const [mode, setMode] = useState<'create' | 'view'>('view');
   
   // Data state
   const [loading, setLoading] = useState(true);
@@ -153,7 +154,7 @@ export default function WorkoutAssignmentsPage() {
 
         // Fetch workout templates
         const workoutsQuery = query(
-          collection(db, 'workout_templates'),
+          collection(db, 'workoutTemplates'),
           where('createdBy', '==', user.uid),
           orderBy('createdAt', 'desc')
         );
@@ -175,9 +176,9 @@ export default function WorkoutAssignmentsPage() {
 
         // Fetch assignments
         const assignmentsQuery = query(
-          collection(db, 'assigned_workouts'),
+          collection(db, 'workoutAssignments'),
           where('trainerId', '==', user.uid),
-          orderBy('assignedDate', 'desc')
+          orderBy('assignedAt', 'desc')
         );
         const assignmentsSnapshot = await getDocs(assignmentsQuery);
         const assignmentsData: Assignment[] = [];
@@ -185,11 +186,12 @@ export default function WorkoutAssignmentsPage() {
           const data = doc.data();
           assignmentsData.push({
             id: doc.id,
+            name: data.name || 'Unnamed Assignment',
             clientId: data.clientId,
             templateId: data.templateId,
             trainerId: data.trainerId,
-            assignedDate: data.assignedDate?.toDate(),
-            dueDate: data.dueDate?.toDate(),
+            assignedDate: data.assignedAt?.toDate() || new Date(),
+            dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : data.dueDate?.toDate(),
             status: data.status || 'assigned',
             progress: data.progress,
             notes: data.notes
@@ -287,7 +289,7 @@ export default function WorkoutAssignmentsPage() {
         
         // Reload assignments
         const assignmentsQuery = query(
-          collection(db, 'assigned_workouts'),
+          collection(db, 'workoutAssignments'),
           where('trainerId', '==', user.uid),
           orderBy('assignedDate', 'desc')
         );
@@ -297,6 +299,7 @@ export default function WorkoutAssignmentsPage() {
           const data = doc.data();
           assignmentsData.push({
             id: doc.id,
+            name: data.name || 'Unnamed Assignment',
             clientId: data.clientId,
             templateId: data.templateId,
             trainerId: data.trainerId,
@@ -360,139 +363,21 @@ export default function WorkoutAssignmentsPage() {
           </p>
         </div>
 
-        {/* Mode Toggle - Segmented Control */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1">
-            <button
-              onClick={() => setMode('create')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                mode === 'create'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Dumbbell className="h-4 w-4 inline mr-2" />
-              New Assignment
-            </button>
-            <button
-              onClick={() => setMode('view')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                mode === 'view'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Eye className="h-4 w-4 inline mr-2" />
-              View Existing
-            </button>
-          </div>
+        {/* New Assignment Button */}
+        <div className="flex justify-end mb-6">
+          <Button
+            onClick={() => router.push('/dashboard/trainer/assignments/create')}
+            className="bg-primary text-white"
+          >
+            <Dumbbell className="h-4 w-4 mr-2" />
+            New Assignment
+          </Button>
         </div>
 
         {/* Master-Detail Split View */}
         <div className="flex gap-6 h-[calc(100vh-280px)]">
-          {/* LEFT PANEL */}
+          {/* LEFT PANEL - Assignment List */}
           <div className="w-[35%] flex flex-col bg-white rounded-xl border overflow-hidden">
-            {mode === 'create' ? (
-              /* CREATE MODE: Client Selector */
-              <>
-                <div className="p-4 border-b flex-shrink-0">
-                  <h3 className="font-semibold mb-3">Select Clients</h3>
-                  
-                  {showPreSelectionBanner && (
-                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                      <p className="text-blue-800">
-                        {selectedClientIds.length} client{selectedClientIds.length !== 1 ? 's' : ''} pre-selected from Client Management
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="relative mb-3">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search clients..."
-                      value={clientSearchQuery}
-                      onChange={(e) => setClientSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <label className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedClientIds.length === filteredClients.length && filteredClients.length > 0}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary"
-                    />
-                    Select All ({filteredClients.length})
-                  </label>
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                  {filteredClients.map((client) => {
-                    const isSelected = selectedClientIds.includes(client.id);
-                    const clientAssignments = assignments.filter(a => a.clientId === client.id);
-                    const overdueCount = clientAssignments.filter(a => 
-                      a.status !== 'completed' && new Date(a.dueDate) < new Date()
-                    ).length;
-                    
-                    return (
-                      <div
-                        key={client.id}
-                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                          isSelected ? 'bg-blue-50' : ''
-                        }`}
-                        onClick={() => toggleClientSelection(client.id)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}}
-                            className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-2 focus:ring-primary"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                                {client.name.charAt(0)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium truncate">{client.name}</p>
-                                <p className="text-sm text-gray-600 truncate">{client.email}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 mt-2 text-xs text-gray-600">
-                              <span>{clientAssignments.length} assigned</span>
-                              {overdueCount > 0 && (
-                                <span className="text-red-600">• {overdueCount} overdue</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {selectedClientIds.length > 0 && (
-                  <div className="p-4 border-t bg-gray-50 flex-shrink-0">
-                    <p className="text-sm font-medium mb-2">
-                      {selectedClientIds.length} client{selectedClientIds.length !== 1 ? 's' : ''} selected
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearSelection}
-                      className="w-full"
-                    >
-                      Clear Selection
-                    </Button>
-                  </div>
-                )}
-              </>
-            ) : (
-              /* VIEW MODE: Assignment List */
-              <>
                 <div className="p-4 border-b flex-shrink-0">
                   <h3 className="font-semibold mb-3">Assignments</h3>
                   
@@ -588,8 +473,6 @@ export default function WorkoutAssignmentsPage() {
                     </div>
                   </div>
                 </div>
-              </>
-            )}
           </div>
 
           {/* RIGHT PANEL */}
@@ -598,9 +481,23 @@ export default function WorkoutAssignmentsPage() {
               /* CREATE MODE: Workout Selection & Form */
               selectedClientIds.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                  <Users className="h-16 w-16 text-gray-400 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">Select Clients to Get Started</h3>
-                  <p className="text-gray-600">Choose one or more clients from the list to assign a workout</p>
+                  <AlertCircle className="h-16 w-16 text-orange-400 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">⚠️ Quick Assign Mode</h3>
+                  <p className="text-gray-600 mb-4">
+                    This is a simplified assignment view without exercise configuration.<br/>
+                    For proper workout assignments with sets, reps, and weights:
+                  </p>
+                  <Button 
+                    onClick={() => router.push('/dashboard/trainer/assignments/create')}
+                    size="lg"
+                    className="mt-2"
+                  >
+                    <Dumbbell className="h-5 w-5 mr-2" />
+                    Use Full Assignment Wizard
+                  </Button>
+                  <p className="text-sm text-gray-500 mt-4">
+                    The wizard guides you through 5 steps including exercise configuration
+                  </p>
                 </div>
               ) : (
                 <>
@@ -864,15 +761,15 @@ export default function WorkoutAssignmentsPage() {
                                     new Date(selectedAssignment.dueDate).toISOString().split('T')[0]
                                   );
                                   if (newDeadline) {
-                                    updateDoc(doc(db, 'assigned_workouts', selectedAssignment.id), {
+                                    updateDoc(doc(db, 'workoutAssignments', selectedAssignment.id), {
                                       dueDate: Timestamp.fromDate(new Date(newDeadline))
                                     }).then(() => {
                                       alert('Deadline updated!');
                                       // Reload assignments
                                       const assignmentsQuery = query(
-                                        collection(db, 'assigned_workouts'),
+                                        collection(db, 'workoutAssignments'),
                                         where('trainerId', '==', user!.uid),
-                                        orderBy('assignedDate', 'desc')
+                                        orderBy('assignedAt', 'desc')
                                       );
                                       getDocs(assignmentsQuery).then(snapshot => {
                                         const assignmentsData: Assignment[] = [];
@@ -880,11 +777,12 @@ export default function WorkoutAssignmentsPage() {
                                           const data = doc.data();
                                           assignmentsData.push({
                                             id: doc.id,
+                                            name: data.name || 'Unnamed Assignment',
                                             clientId: data.clientId,
                                             templateId: data.templateId,
                                             trainerId: data.trainerId,
-                                            assignedDate: data.assignedDate?.toDate(),
-                                            dueDate: data.dueDate?.toDate(),
+                                            assignedDate: data.assignedAt?.toDate() || new Date(),
+                                            dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : data.dueDate?.toDate(),
                                             status: data.status || 'assigned',
                                             progress: data.progress,
                                             notes: data.notes

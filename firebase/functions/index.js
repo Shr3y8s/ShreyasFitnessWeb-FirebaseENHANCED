@@ -601,6 +601,22 @@ exports.expireSessionPackages = sessionFunctions.expireSessionPackages;
 exports.cancelSession = sessionFunctions.cancelSession;
 
 /**
+ * WORKOUT MANAGEMENT SYSTEM (POLYMORPHIC)
+ * Import and export workout management functions
+ * Supports the new polymorphic workout system with:
+ * - workoutTemplates (blueprints)
+ * - workoutAssignments (configured per client)
+ * - workoutExecutions (actual performance tracking)
+ */
+const workoutFunctions = require("./workouts");
+
+// Export workout management functions
+exports.assignWorkout = workoutFunctions.assignWorkout;
+exports.startWorkoutExecution = workoutFunctions.startWorkoutExecution;
+exports.updateWorkoutExecution = workoutFunctions.updateWorkoutExecution;
+exports.completeWorkoutExecution = workoutFunctions.completeWorkoutExecution;
+
+/**
  * Firestore trigger to sync subscription status from stripe_customers to users
  * This bridges the Stripe Extension (which updates stripe_customers)
  * with our users collection

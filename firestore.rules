@@ -197,26 +197,30 @@ service cloud.firestore {
       }
     }
     
-    // WORKOUT MANAGEMENT SYSTEM - Phase 1 & 2
+    // POLYMORPHIC WORKOUT MANAGEMENT SYSTEM - Phase 1 (Strength + Cardio)
     
-    // Exercise Library Collection - Phase 2: Shared exercise library
+    // Exercise Library Collection - Supports 8 exercise categories with polymorphic configurations
     match /exercises/{exerciseId} {
-      // Trainers can create, read, update, and delete exercises
+      // Trainers can create, read, update, and manage exercises
       allow read, write: if isTrainerOrAdmin();
       
-      // Clients can read public exercises (for viewing workout details)
-      allow read: if isAuthenticated() && resource.data.isPublic == true;
+      // Clients can read exercises from their company or personal exercises created by their trainer
+      // Also allow reading exercises that are part of their assigned workouts
+      allow read: if isAuthenticated();
       
-      // Exercise validation
+      // Exercise validation - Updated for new schema
       function validateExercise() {
         let data = request.resource.data;
-        return data.keys().hasAll(['name', 'instructions', 'category', 'createdBy']) &&
+        return data.keys().hasAll(['name', 'category', 'createdBy', 'equipment', 'primaryMuscles', 'scope', 'isActive']) &&
                data.name is string && data.name.size() > 0 &&
-               data.instructions is string && data.instructions.size() > 0 &&
-               data.category in ['strength', 'cardio', 'flexibility', 'core', 'other'] &&
+               data.category in ['strength', 'cardio', 'core', 'flexibility', 'balance', 'mobility', 'plyometric', 'yoga_pilates'] &&
                data.createdBy is string &&
-               data.targetMuscleGroups is list &&
-               data.equipment is list;
+               data.scope in ['personal', 'company'] &&
+               data.isActive is bool &&
+               data.equipment is list &&
+               data.primaryMuscles is list &&
+               // Optional difficulty field
+               (!data.keys().hasAny(['difficulty']) || data.difficulty in ['beginner', 'intermediate', 'advanced']);
       }
       
       // Apply validation on create and update
@@ -224,49 +228,120 @@ service cloud.firestore {
       allow update: if isTrainerOrAdmin() && validateExercise();
     }
     
-    // Workout Templates Collection - Core functionality for trainer dashboard
-    match /workout_templates/{templateId} {
-      // Trainers can create, read, update, and delete workout templates
-      allow read, write: if isTrainerOrAdmin();
+    // Workout Templates Collection - Blueprint-only (no concrete configurations)
+    match /workoutTemplates/{templateId} {
+      // Trainers can read templates
+      allow read: if isTrainerOrAdmin();
       
-      // Clients can read public workout templates (for future assignment features)
-      allow read: if isAuthenticated() && resource.data.isPublic == true;
+      // Clients can read templates from their company scope (for viewing)
+      allow read: if isAuthenticated() && resource.data.scope == 'company';
       
-      // Workout template validation
-      function validateWorkoutTemplate() {
+      // Workout template validation for CREATE - requires all fields
+      function validateWorkoutTemplateCreate() {
         let data = request.resource.data;
-        return data.keys().hasAll(['name', 'createdBy', 'exercises', 'difficulty', 'category']) &&
+        return data.keys().hasAll(['name', 'createdBy', 'exercises', 'difficulty', 'category', 'scope', 'isActive']) &&
                data.name is string && data.name.size() > 0 &&
                data.createdBy is string &&
                data.exercises is list &&
                data.difficulty in ['beginner', 'intermediate', 'advanced'] &&
                data.category in ['strength', 'cardio', 'hiit', 'flexibility', 'mixed'] &&
+               data.scope in ['personal', 'company'] &&
+               data.isActive is bool &&
                data.estimatedDuration is number && data.estimatedDuration > 0;
       }
       
-      // Apply validation on create and update
-      allow create: if isTrainerOrAdmin() && validateWorkoutTemplate();
-      allow update: if isTrainerOrAdmin() && validateWorkoutTemplate();
+      // Workout template validation for UPDATE - only validates fields being changed
+      function validateWorkoutTemplateUpdate() {
+        let data = request.resource.data;
+        return data.name is string && data.name.size() > 0 &&
+               data.exercises is list &&
+               data.difficulty in ['beginner', 'intermediate', 'advanced'] &&
+               data.category in ['strength', 'cardio', 'hiit', 'flexibility', 'mixed'] &&
+               data.scope in ['personal', 'company'] &&
+               data.isActive is bool &&
+               data.estimatedDuration is number && data.estimatedDuration > 0 &&
+               // Ensure required fields aren't removed
+               data.keys().hasAll(['name', 'createdBy', 'exercises', 'difficulty', 'category', 'scope', 'isActive']) &&
+               // Prevent changing createdBy
+               data.createdBy == resource.data.createdBy;
+      }
+      
+      // Apply validation separately for create and update
+      allow create: if isTrainerOrAdmin() && validateWorkoutTemplateCreate();
+      allow update: if isTrainerOrAdmin() && validateWorkoutTemplateUpdate();
+      allow delete: if isTrainerOrAdmin();
     }
     
-    // Future collections for workout assignments and progress tracking
-    // These will be added in Phase 2
-    match /assigned_workouts/{assignmentId} {
-      // Trainers can assign and manage workouts
+    // Workout Assignments Collection - Configured workouts assigned to clients
+    match /workoutAssignments/{assignmentId} {
+      // Trainers can create, read, update, and manage assignments
       allow read, write: if isTrainerOrAdmin();
       
-      // Clients can read and update their own assigned workouts
-      allow read, update: if isAuthenticated() && 
-                          request.auth.uid == resource.data.clientId;
+      // Clients can read their own assignments
+      allow read: if isAuthenticated() && 
+                  request.auth.uid == resource.data.clientId;
+      
+      // Clients can update status and completionPercentage of their own assignments
+      allow update: if isAuthenticated() && 
+                    request.auth.uid == resource.data.clientId &&
+                    request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['status', 'completionPercentage', 'updatedAt']);
+      
+      // Assignment validation
+      function validateWorkoutAssignment() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['workoutTemplateId', 'clientId', 'trainerId', 'name', 'exercises', 'status', 'completionPercentage']) &&
+               data.workoutTemplateId is string && data.workoutTemplateId.size() > 0 &&
+               data.clientId is string &&
+               data.trainerId is string &&
+               data.name is string && data.name.size() > 0 &&
+               data.exercises is list &&
+               data.status in ['scheduled', 'in_progress', 'completed', 'skipped', 'cancelled'] &&
+               data.completionPercentage is number && 
+               data.completionPercentage >= 0 && data.completionPercentage <= 100;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isTrainerOrAdmin() && validateWorkoutAssignment();
+      allow update: if isTrainerOrAdmin() && validateWorkoutAssignment();
     }
     
-    match /workout_progress/{progressId} {
-      // Trainers can view all progress data
+    // Workout Executions Collection - Actual performance tracking (planned vs actual)
+    match /workoutExecutions/{executionId} {
+      // Trainers can read all execution data for analytics
       allow read: if isTrainerOrAdmin();
       
-      // Clients can read and update their own workout progress
-      allow read, write: if isAuthenticated() && 
-                         request.auth.uid == resource.data.clientId;
+      // Clients can read their own execution history
+      allow read: if isAuthenticated() && 
+                  request.auth.uid == resource.data.clientId;
+      
+      // Clients can create and update their own execution records
+      allow create, update: if isAuthenticated() && 
+                            request.auth.uid == request.resource.data.clientId;
+      
+      // No deletions allowed (historical data preservation)
+      allow delete: if false;
+      
+      // Execution validation
+      function validateWorkoutExecution() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['workoutAssignmentId', 'clientId', 'trainerId', 'startedAt', 'exercises', 'completionStatus']) &&
+               data.workoutAssignmentId is string &&
+               data.clientId is string &&
+               data.trainerId is string &&
+               data.startedAt is timestamp &&
+               data.exercises is list &&
+               data.completionStatus in ['not_started', 'in_progress', 'partial', 'completed'] &&
+               data.durationMinutes is number && data.durationMinutes >= 0;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isAuthenticated() && 
+                    request.resource.data.clientId == request.auth.uid &&
+                    validateWorkoutExecution();
+      allow update: if isAuthenticated() && 
+                    resource.data.clientId == request.auth.uid &&
+                    validateWorkoutExecution();
     }
 
     // CLIENT MESSAGING SYSTEM - Phase 3
