@@ -516,16 +516,10 @@ export default function WorkoutLibraryPage() {
                     )}
 
                     <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="grid grid-cols-3 gap-3 text-sm">
                         <div className="flex items-center gap-2">
                           <Dumbbell className="h-4 w-4 text-primary" />
                           <span className="text-gray-700 font-medium">{workout.exercises?.length || 0} exercises</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Target className="h-4 w-4 text-primary" />
-                          <span className="text-gray-700 font-medium">
-                            {workout.exercises?.reduce((total: number, ex: any) => total + (ex.sets?.length || 0), 0) || 0} sets
-                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-primary" />
@@ -666,7 +660,7 @@ export default function WorkoutLibraryPage() {
                   </div>
 
                   {/* Metadata Cards */}
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white rounded-lg border p-3">
                       <div className="text-xs text-gray-500 mb-1">Duration</div>
                       <div className="flex items-center gap-2">
@@ -681,15 +675,6 @@ export default function WorkoutLibraryPage() {
                       <div className="flex items-center gap-2">
                         <Dumbbell className="h-4 w-4 text-primary" />
                         <span className="font-semibold">{selectedWorkout.exercises?.length || 0}</span>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-lg border p-3">
-                      <div className="text-xs text-gray-500 mb-1">Total Sets</div>
-                      <div className="flex items-center gap-2">
-                        <Target className="h-4 w-4 text-primary" />
-                        <span className="font-semibold">
-                          {selectedWorkout.exercises?.reduce((total: number, ex: any) => total + (ex.sets?.length || 0), 0) || 0}
-                        </span>
                       </div>
                     </div>
                     <div className="bg-white rounded-lg border p-3">
@@ -741,54 +726,85 @@ export default function WorkoutLibraryPage() {
                     </h3>
                     <div className="space-y-4">
                       {selectedWorkout.exercises?.map((workoutExercise: any, index: number) => {
-                        // Get exercise name from library or fallback to stored name
-                        const exerciseName = workoutExercise.exerciseId 
-                          ? getExerciseName(workoutExercise.exerciseId)
-                          : (workoutExercise.name || 'Unknown Exercise');
+                        // Get full exercise data from library
+                        const exercise = workoutExercise.exerciseId 
+                          ? exerciseLibrary.get(workoutExercise.exerciseId)
+                          : null;
+                        const exerciseName = exercise?.name || workoutExercise.name || 'Unknown Exercise';
                         
                         return (
                           <div key={index} className="border rounded-xl overflow-hidden bg-white">
-                            <div className="bg-gray-50 px-4 py-3 border-b flex items-center gap-3">
-                              <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
-                                {index + 1}
+                            <div className="bg-gray-50 px-4 py-3 border-b">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="flex-shrink-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold">
+                                  {index + 1}
+                                </div>
+                                <h4 className="font-semibold text-lg flex-1">{exerciseName}</h4>
                               </div>
-                              <h4 className="font-semibold text-lg flex-1">{exerciseName}</h4>
-                              <span className="text-sm text-gray-600">{workoutExercise.sets?.length || 0} sets</span>
-                            </div>
-                            
-                            {workoutExercise.sets && workoutExercise.sets.length > 0 ? (
-                              <div className="p-4 space-y-2">
-                                {workoutExercise.sets.map((set: any, setIndex: number) => (
-                                  <div key={setIndex} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg text-sm">
-                                    <span className="font-semibold text-gray-700 w-16">Set {set.setNumber || setIndex + 1}</span>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      set.type === 'warmup' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                                    }`}>
-                                      {set.type === 'warmup' ? 'Warmup' : 'Working'}
+                              
+                              {/* Exercise Metadata - Compact 4-Column Grid */}
+                              {exercise && (
+                                <div className="ml-11 grid grid-cols-4 gap-4 text-xs">
+                                  {/* Category Column */}
+                                  <div>
+                                    <div className="text-gray-500 font-medium mb-1">Category</div>
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium flex items-center gap-1 w-fit">
+                                      {getCategoryIcon(exercise.category)}
+                                      {exercise.category}
                                     </span>
-                                    {/* Smart display: Show duration OR reps, not both */}
-                                    {isTimeBased(set) ? (
-                                      <span className="text-gray-700 font-medium">{set.duration} sec</span>
-                                    ) : (
-                                      <>
-                                        <span className="text-gray-700 font-medium">{set.targetReps} reps</span>
-                                        <span className="text-gray-700">× {set.targetWeight}</span>
-                                      </>
-                                    )}
-                                    <span className="text-gray-500">• {set.intensity}</span>
-                                    <span className="text-gray-500">• {set.restSeconds}s rest</span>
-                                    {set.rpeTarget && <span className="text-gray-500">• RPE {set.rpeTarget}</span>}
                                   </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="p-4 text-sm text-gray-500">No set details available</div>
-                            )}
+                                  
+                                  {/* Muscle Group Column */}
+                                  <div>
+                                    <div className="text-gray-500 font-medium mb-1">Muscle Group</div>
+                                    {exercise.muscleGroup ? (
+                                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded font-medium inline-block">
+                                        {exercise.muscleGroup.replace('_', ' ')}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Equipment Column */}
+                                  <div>
+                                    <div className="text-gray-500 font-medium mb-1">Equipment</div>
+                                    {exercise.equipment && exercise.equipment.length > 0 && exercise.equipment[0] !== 'none' ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {exercise.equipment.map((eq: string) => (
+                                          <span key={eq} className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded">
+                                            {eq.replace('_', ' ')}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">None</span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Primary Muscles Column */}
+                                  <div>
+                                    <div className="text-gray-500 font-medium mb-1">Targets</div>
+                                    {exercise.primaryMuscles && exercise.primaryMuscles.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {exercise.primaryMuscles.map((muscle: string) => (
+                                          <span key={muscle} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded">
+                                            {muscle.replace('_', ' ')}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
 
                             {workoutExercise.notes && (
-                              <div className="px-4 pb-4">
+                              <div className="p-4">
                                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                  <div className="text-xs font-semibold text-yellow-800 mb-1">Notes:</div>
+                                  <div className="text-xs font-semibold text-yellow-800 mb-1">Coaching Notes:</div>
                                   <div className="text-sm text-yellow-700">{workoutExercise.notes}</div>
                                 </div>
                               </div>
