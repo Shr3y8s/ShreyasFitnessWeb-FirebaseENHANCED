@@ -62,7 +62,7 @@ export interface StrengthConfiguration extends ExerciseConfiguration {
   strengthSubType: 'free_weight' | 'machine' | 'bodyweight' | 'cable' | 'resistance_band';
   sets: Array<{
     setNumber: number;
-    setType: 'warm_up' | 'working' | 'drop_set' | 'rest_pause' | 'pyramid' | 'to_failure' | 'amrap';
+    setType: 'warm_up' | 'working' | 'drop_set' | 'rest_pause' | 'pyramid' | 'pre_exhaustion' | 'cluster' | 'to_failure';
     targetReps: number | string;  // Can be a number (8), string range ("8-12"), or "AMRAP"
     repsRange?: { min: number; max: number };
     weight: number;
@@ -87,7 +87,6 @@ export interface CardioSteadyStateConfiguration extends ExerciseConfiguration {
                 'elliptical' | 'stair_climber' | 'air_bike' | 'skierg' | 'vertical_climber';
   durationSeconds: number;
   targetPace: string;  // e.g., "6.0 mph", "2:00 per 500m"
-  intensity: 'light' | 'moderate' | 'high';
   targetHeartRate?: number;
   heartRateZone?: 'z1' | 'z2' | 'z3' | 'z4' | 'z5';
   notes?: string;
@@ -116,14 +115,180 @@ export interface CardioIntervalsConfiguration extends ExerciseConfiguration {
 }
 
 /**
- * Phase 1 Configuration Union Type
- * Only includes Strength and Cardio (Steady State + Intervals)
- * Additional types will be added in Phase 2 and Phase 3
+ * Core Rep-Based Configuration
+ * For core exercises measured by reps (crunches, leg raises)
+ */
+export interface CoreRepBasedConfiguration extends ExerciseConfiguration {
+  exerciseType: 'core';
+  coreSubType: 'rep_based';
+  sets: Array<{
+    setNumber: number;
+    targetReps: number;
+    restSeconds: number;
+    notes?: string;
+  }>;
+  trackableFields: string[];
+}
+
+/**
+ * Core Duration-Based Configuration
+ * For core exercises measured by time (plank, hollow hold)
+ * Supports two formats: simple duration OR rounds array
+ */
+export interface CoreDurationBasedConfiguration extends ExerciseConfiguration {
+  exerciseType: 'core';
+  coreSubType: 'duration_based';
+  // Simple format: just a single duration
+  durationSeconds?: number;
+  // Complex format: multiple rounds
+  rounds?: Array<{
+    roundNumber: number;
+    durationSeconds: number;
+    restSeconds?: number;
+    intensity?: 'light' | 'moderate' | 'high';
+    notes?: string;
+  }>;
+  trackableFields: string[];
+}
+
+/**
+ * Cardio Activity-Based Configuration
+ * For free-form activities (basketball, tennis, running outdoors, hiking)
+ */
+export interface CardioActivityBasedConfiguration extends ExerciseConfiguration {
+  exerciseType: 'cardio';
+  cardioSubType: 'activity_based';
+  activity: 'walking' | 'running' | 'hiking' | 'basketball' | 'tennis' | 'soccer' | 'climbing' | 'swimming' | 'other';
+  durationSeconds: number;
+  intensity: 'light' | 'moderate' | 'high';
+  targetHeartRate?: number;
+  notes?: string;
+}
+
+/**
+ * Cardio Steps-Based Configuration
+ * For step/rep-counted cardio (stair climbing, step platform)
+ */
+export interface CardioStepsBasedConfiguration extends ExerciseConfiguration {
+  exerciseType: 'cardio';
+  cardioSubType: 'steps_based';
+  machineType: 'none' | 'stair_climber' | 'step_platform';
+  targetSteps: number;
+  pace: 'slow' | 'moderate' | 'fast';
+  durationTargetSeconds?: number;
+  notes?: string;
+}
+
+/**
+ * Flexibility Configuration
+ * For stretching and flexibility work
+ */
+export interface FlexibilityConfiguration extends ExerciseConfiguration {
+  exerciseType: 'flexibility';
+  flexibilitySubType: 'static_stretch' | 'dynamic_stretch' | 'pnf';
+  targetAreas: string[];
+  stretches: Array<{
+    stretchNumber: number;
+    muscleGroup: string;
+    durationSeconds: number;
+    reps?: number;
+    notes?: string;
+  }>;
+  totalDurationSeconds: number;
+  intensity: 'light' | 'moderate';
+  notes?: string;
+}
+
+/**
+ * Balance Configuration
+ * For balance and proprioceptive training
+ */
+export interface BalanceConfiguration extends ExerciseConfiguration {
+  exerciseType: 'balance';
+  balanceSubType: 'bodyweight' | 'equipment_assisted' | 'unstable_surface';
+  equipment?: string;
+  rounds: Array<{
+    roundNumber: number;
+    durationSeconds?: number;
+    reps?: number;
+    restSeconds?: number;
+    intensity?: 'light' | 'moderate' | 'high';
+    notes?: string;
+  }>;
+  trackableFields: string[];
+  notes?: string;
+}
+
+/**
+ * Mobility Configuration
+ * For myofascial release and mobility drills (foam rolling, trigger point work)
+ */
+export interface MobilityConfiguration extends ExerciseConfiguration {
+  exerciseType: 'mobility';
+  mobilitySubType: 'foam_roll' | 'trigger_point' | 'dynamic_drill';
+  equipment: string;
+  targetAreas: string[];
+  areas: Array<{
+    areaNumber: number;
+    muscleGroup: string;
+    durationSeconds: number;
+    intensity?: 'light' | 'moderate' | 'high';
+    notes?: string;
+  }>;
+  totalDurationSeconds: number;
+  notes?: string;
+}
+
+/**
+ * Plyometric Configuration
+ * For explosive/ballistic movements (similar to strength but emphasizes power/speed)
+ */
+export interface PlyometricConfiguration extends ExerciseConfiguration {
+  exerciseType: 'plyometric';
+  plyometricSubType: 'jumping' | 'throwing' | 'bounding';
+  sets: Array<{
+    setNumber: number;
+    setType: 'warm_up' | 'working' | 'to_failure';
+    targetReps: number;
+    restSeconds: number;
+    intensity?: 'light' | 'moderate' | 'high';
+    notes?: string;
+  }>;
+  trackableFields: string[];
+  notes?: string;
+}
+
+/**
+ * Yoga/Pilates Configuration
+ * For yoga flows, Pilates sessions
+ */
+export interface YogaPilatesConfiguration extends ExerciseConfiguration {
+  exerciseType: 'yoga_pilates';
+  yogaSubType: 'yoga_flow' | 'yoga_poses' | 'pilates_mat' | 'pilates_reformer';
+  style?: string;
+  durationSeconds: number;
+  intensity: 'light' | 'moderate' | 'high';
+  focusAreas?: string[];
+  notes?: string;
+}
+
+/**
+ * Complete Configuration Union Type
+ * Includes all 12 exercise configuration types
  */
 export type ExerciseConfigurationType = 
   | StrengthConfiguration
   | CardioSteadyStateConfiguration
-  | CardioIntervalsConfiguration;
+  | CardioIntervalsConfiguration
+  | CardioActivityBasedConfiguration
+  | CardioStepsBasedConfiguration
+  | CoreRepBasedConfiguration
+  | CoreDurationBasedConfiguration
+  | FlexibilityConfiguration
+  | BalanceConfiguration
+  | MobilityConfiguration
+  | PlyometricConfiguration
+  | YogaPilatesConfiguration;
 
 /**
  * Type guard to check if a configuration is for strength exercises

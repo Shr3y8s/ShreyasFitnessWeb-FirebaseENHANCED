@@ -187,7 +187,7 @@ export default function ClientsPage() {
           
           // Fetch assignments for stats
           const assignmentsQuery = query(
-            collection(db, 'assigned_workouts'),
+            collection(db, 'workoutAssignments'),
             where('trainerId', '==', user.uid)
           );
           const assignmentsSnapshot = await getDocs(assignmentsQuery);
@@ -197,9 +197,9 @@ export default function ClientsPage() {
             allAssignments.push({
               id: doc.id,
               ...data,
-              completedAt: data.completedAt?.toDate(),
-              assignedDate: data.assignedDate?.toDate(),
-              dueDate: data.dueDate?.toDate()
+              completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt,
+              assignedDate: data.assignedDate?.toDate ? data.assignedDate.toDate() : data.assignedDate,
+              dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate
             });
           });
           
@@ -275,7 +275,7 @@ export default function ClientsPage() {
       const loadWorkouts = async () => {
         try {
           const workoutsQuery = query(
-            collection(db, 'workout_templates'),
+            collection(db, 'workoutTemplates'),
             where('createdBy', '==', user.uid),
             orderBy('createdAt', 'desc')
           );
@@ -1578,7 +1578,7 @@ export default function ClientsPage() {
                       
                       // Reload assignments
                       const assignmentsQuery = query(
-                        collection(db, 'assigned_workouts'),
+                        collection(db, 'workoutAssignments'),
                         where('trainerId', '==', user.uid)
                       );
                       const assignmentsSnapshot = await getDocs(assignmentsQuery);
@@ -1588,8 +1588,8 @@ export default function ClientsPage() {
                         assignmentsData.push({
                           id: doc.id,
                           ...data,
-                          assignedDate: data.assignedDate?.toDate(),
-                          dueDate: data.dueDate?.toDate()
+                          assignedDate: data.assignedDate?.toDate ? data.assignedDate.toDate() : data.assignedDate,
+                          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate
                         });
                       });
                       setAssignments(assignmentsData);
@@ -1758,7 +1758,7 @@ export default function ClientsPage() {
                       
                       // Reload assignments
                       const assignmentsQuery = query(
-                        collection(db, 'assigned_workouts'),
+                        collection(db, 'workoutAssignments'),
                         where('trainerId', '==', user.uid)
                       );
                       const assignmentsSnapshot = await getDocs(assignmentsQuery);
@@ -1768,8 +1768,8 @@ export default function ClientsPage() {
                         assignmentsData.push({
                           id: doc.id,
                           ...data,
-                          assignedDate: data.assignedDate?.toDate(),
-                          dueDate: data.dueDate?.toDate()
+                          assignedDate: data.assignedDate?.toDate ? data.assignedDate.toDate() : data.assignedDate,
+                          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate
                         });
                       });
                       setAssignments(assignmentsData);

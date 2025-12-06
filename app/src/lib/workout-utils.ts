@@ -51,7 +51,7 @@ export function formatConfigurationDetailed(config: ExerciseConfigurationType): 
     const firstSet = workingSets[0];
     return `${workingSets.length}×${firstSet.targetReps} @ ${firstSet.weight} ${firstSet.weightUnit}`;
   } else if (isSteadyStateCardio(config)) {
-    return `${formatDuration(config.durationSeconds)} @ ${config.targetPace} (${config.intensity})`;
+    return `${formatDuration(config.durationSeconds)} @ ${config.targetPace}`;
   } else if (isIntervalCardio(config)) {
     const workInterval = config.intervals.find(i => i.type === 'work');
     const restInterval = config.intervals.find(i => i.type === 'rest');
@@ -332,7 +332,7 @@ export function createDefaultStrengthConfiguration(): StrengthConfiguration {
       {
         setNumber: 1,
         setType: 'warm_up',
-        targetReps: '',  // Empty so dropdown shows all options
+        targetReps: '8-12',  // Most common default value
         repsRange: { min: 8, max: 12 },
         weight: 135,
         weightUnit: 'lbs',
@@ -341,7 +341,7 @@ export function createDefaultStrengthConfiguration(): StrengthConfiguration {
       {
         setNumber: 2,
         setType: 'working',
-        targetReps: '',  // Empty so dropdown shows all options
+        targetReps: '8-12',  // Most common default value
         repsRange: { min: 8, max: 12 },
         weight: 150,
         weightUnit: 'lbs',
@@ -350,7 +350,7 @@ export function createDefaultStrengthConfiguration(): StrengthConfiguration {
       {
         setNumber: 3,
         setType: 'working',
-        targetReps: '',  // Empty so dropdown shows all options
+        targetReps: '8-12',  // Most common default value
         repsRange: { min: 8, max: 12 },
         weight: 150,
         weightUnit: 'lbs',
@@ -371,7 +371,6 @@ export function createDefaultCardioSteadyStateConfiguration(): CardioSteadyState
     machineType: 'treadmill',
     durationSeconds: 1800, // 30 minutes
     targetPace: '6.0 mph',
-    intensity: 'moderate',
   };
 }
 
@@ -398,6 +397,145 @@ export function createDefaultCardioIntervalsConfiguration(): CardioIntervalsConf
       },
     ],
     totalRounds: 8,
+  };
+}
+
+/**
+ * Create a default core rep-based configuration
+ */
+export function createDefaultCoreRepBasedConfiguration() {
+  return {
+    exerciseType: 'core' as const,
+    coreSubType: 'rep_based' as const,
+    sets: [
+      { setNumber: 1, targetReps: 15, restSeconds: 60 },
+      { setNumber: 2, targetReps: 15, restSeconds: 60 },
+      { setNumber: 3, targetReps: 15, restSeconds: 60 },
+    ],
+    trackableFields: ['reps', 'rest_time'],
+  };
+}
+
+/**
+ * Create a default core duration-based configuration
+ */
+export function createDefaultCoreDurationBasedConfiguration() {
+  return {
+    exerciseType: 'core' as const,
+    coreSubType: 'duration_based' as const,
+    rounds: [
+      { roundNumber: 1, durationSeconds: 60, restSeconds: 60 },
+      { roundNumber: 2, durationSeconds: 60, restSeconds: 60 },
+      { roundNumber: 3, durationSeconds: 60 },
+    ],
+    trackableFields: ['duration'],
+  };
+}
+
+/**
+ * Create a default cardio activity-based configuration
+ */
+export function createDefaultCardioActivityBasedConfiguration() {
+  return {
+    exerciseType: 'cardio' as const,
+    cardioSubType: 'activity_based' as const,
+    activity: 'running' as const,
+    durationSeconds: 1800, // 30 minutes
+    intensity: 'moderate' as const,
+  };
+}
+
+/**
+ * Create a default cardio steps-based configuration
+ */
+export function createDefaultCardioStepsBasedConfiguration() {
+  return {
+    exerciseType: 'cardio' as const,
+    cardioSubType: 'steps_based' as const,
+    machineType: 'none' as const,  // Default to 'none' for walking
+    targetSteps: 500,
+    pace: 'moderate' as const,
+  };
+}
+
+/**
+ * Create a default flexibility configuration
+ */
+export function createDefaultFlexibilityConfiguration() {
+  return {
+    exerciseType: 'flexibility' as const,
+    flexibilitySubType: 'static_stretch' as const,
+    targetAreas: ['hamstrings', 'quadriceps', 'hip_flexors'],
+    stretches: [
+      { stretchNumber: 1, muscleGroup: 'hamstrings', durationSeconds: 30 },
+      { stretchNumber: 2, muscleGroup: 'quadriceps', durationSeconds: 30 },
+      { stretchNumber: 3, muscleGroup: 'hip_flexors', durationSeconds: 30 },
+    ],
+    totalDurationSeconds: 180,
+    intensity: 'light' as const,
+  };
+}
+
+/**
+ * Create a default balance configuration
+ */
+export function createDefaultBalanceConfiguration() {
+  return {
+    exerciseType: 'balance' as const,
+    balanceSubType: 'bodyweight' as const,
+    rounds: [
+      { roundNumber: 1, durationSeconds: 30, restSeconds: 30 },
+      { roundNumber: 2, durationSeconds: 30, restSeconds: 30 },
+      { roundNumber: 3, durationSeconds: 30 },
+    ],
+    trackableFields: ['duration'],
+  };
+}
+
+/**
+ * Create a default mobility configuration
+ */
+export function createDefaultMobilityConfiguration() {
+  return {
+    exerciseType: 'mobility' as const,
+    mobilitySubType: 'foam_roll' as const,
+    equipment: 'foam_roller',
+    targetAreas: ['quads', 'hamstrings', 'back'],
+    areas: [
+      { areaNumber: 1, muscleGroup: 'quads', durationSeconds: 60 },
+      { areaNumber: 2, muscleGroup: 'hamstrings', durationSeconds: 60 },
+      { areaNumber: 3, muscleGroup: 'back', durationSeconds: 60 },
+    ],
+    totalDurationSeconds: 180,
+  };
+}
+
+/**
+ * Create a default plyometric configuration
+ */
+export function createDefaultPlyometricConfiguration() {
+  return {
+    exerciseType: 'plyometric' as const,
+    plyometricSubType: 'jumping' as const,
+    sets: [
+      { setNumber: 1, setType: 'warm_up' as const, targetReps: 5, restSeconds: 120 },
+      { setNumber: 2, setType: 'working' as const, targetReps: 10, restSeconds: 180 },
+      { setNumber: 3, setType: 'working' as const, targetReps: 10, restSeconds: 180 },
+    ],
+    trackableFields: ['reps', 'rest_time'],
+  };
+}
+
+/**
+ * Create a default yoga/pilates configuration
+ */
+export function createDefaultYogaPilatesConfiguration() {
+  return {
+    exerciseType: 'yoga_pilates' as const,
+    yogaSubType: 'yoga_flow' as const,
+    durationSeconds: 1800, // 30 minutes
+    intensity: 'moderate' as const,
+    focusAreas: ['flexibility', 'balance', 'mindfulness'],
   };
 }
 

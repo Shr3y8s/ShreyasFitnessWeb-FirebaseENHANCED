@@ -37,6 +37,15 @@ import {
   createDefaultStrengthConfiguration,
   createDefaultCardioSteadyStateConfiguration,
   createDefaultCardioIntervalsConfiguration,
+  createDefaultCoreRepBasedConfiguration,
+  createDefaultCoreDurationBasedConfiguration,
+  createDefaultCardioActivityBasedConfiguration,
+  createDefaultCardioStepsBasedConfiguration,
+  createDefaultFlexibilityConfiguration,
+  createDefaultBalanceConfiguration,
+  createDefaultMobilityConfiguration,
+  createDefaultPlyometricConfiguration,
+  createDefaultYogaPilatesConfiguration,
 } from '@/lib/workout-utils';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -166,7 +175,7 @@ export default function CreateAssignmentPage() {
             exerciseName: 'Unknown Exercise',
             exerciseType: 'strength',
             configuration: createDefaultStrengthConfiguration(),
-            notes: templateEx.notes || '',
+            notes: '', // Assignment-level notes (client-specific)
           };
         }
 
@@ -174,7 +183,6 @@ export default function CreateAssignmentPage() {
         
         switch (exercise.category) {
           case 'strength':
-          case 'plyometric':
             defaultConfig = createDefaultStrengthConfiguration();
             break;
           case 'cardio':
@@ -182,9 +190,23 @@ export default function CreateAssignmentPage() {
             defaultConfig = createDefaultCardioSteadyStateConfiguration();
             break;
           case 'core':
-            // Core can be rep-based (treat like strength) or duration-based
-            // Default to rep-based
-            defaultConfig = createDefaultStrengthConfiguration();
+            // Default to duration-based (planks, holds)
+            defaultConfig = createDefaultCoreDurationBasedConfiguration();
+            break;
+          case 'flexibility':
+            defaultConfig = createDefaultFlexibilityConfiguration();
+            break;
+          case 'balance':
+            defaultConfig = createDefaultBalanceConfiguration();
+            break;
+          case 'mobility':
+            defaultConfig = createDefaultMobilityConfiguration();
+            break;
+          case 'plyometric':
+            defaultConfig = createDefaultPlyometricConfiguration();
+            break;
+          case 'yoga_pilates':
+            defaultConfig = createDefaultYogaPilatesConfiguration();
             break;
           default:
             defaultConfig = createDefaultStrengthConfiguration();
@@ -724,19 +746,48 @@ function ExerciseConfigurator({
 
                     <div>
                       <Label className="text-xs">Reps</Label>
-                      <input
-                        type="text"
-                        value={set.targetReps}
-                        onChange={(e) => handleUpdateSet(setIndex, 'targetReps', e.target.value)}
-                        list={`reps-options-${setIndex}`}
-                        placeholder="e.g., 8-12"
-                        className="mt-1 w-full px-2 py-1.5 border rounded text-sm"
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                      />
-                      <datalist id={`reps-options-${setIndex}`}>
-                        <option value="8-12" />
-                        <option value="AMRAP" />
-                      </datalist>
+                      {set.targetReps === 'custom' || (set.targetReps && !['8-12', '6-8', '10-15', '12-15', '15-20', 'AMRAP'].includes(String(set.targetReps))) ? (
+                        // Custom input mode
+                        <div className="flex gap-1">
+                          <input
+                            type="text"
+                            value={set.targetReps === 'custom' ? '' : set.targetReps}
+                            onChange={(e) => handleUpdateSet(setIndex, 'targetReps', e.target.value)}
+                            placeholder="Enter reps"
+                            className="mt-1 flex-1 px-2 py-1.5 border rounded text-sm"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleUpdateSet(setIndex, 'targetReps', '8-12')}
+                            className="mt-1 px-2 py-1.5 border rounded text-sm hover:bg-gray-100"
+                            title="Back to dropdown"
+                          >
+                            ↩
+                          </button>
+                        </div>
+                      ) : (
+                        // Dropdown mode
+                        <select
+                          value={set.targetReps}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === 'custom') {
+                              handleUpdateSet(setIndex, 'targetReps', 'custom');
+                            } else {
+                              handleUpdateSet(setIndex, 'targetReps', value);
+                            }
+                          }}
+                          className="mt-1 w-full px-2 py-1.5 border rounded text-sm"
+                        >
+                          <option value="8-12">8-12 reps (Hypertrophy)</option>
+                          <option value="6-8">6-8 reps (Strength)</option>
+                          <option value="10-15">10-15 reps (Endurance)</option>
+                          <option value="12-15">12-15 reps (Toning)</option>
+                          <option value="15-20">15-20 reps (High Volume)</option>
+                          <option value="AMRAP">AMRAP (As Many As Possible)</option>
+                          <option value="custom">Custom... ✏️</option>
+                        </select>
+                      )}
                     </div>
 
                     <div>
@@ -764,17 +815,518 @@ function ExerciseConfigurator({
             </div>
           )}
 
-          {/* Cardio Configuration - Simplified for now */}
+          {/* Cardio Sub-Type Selector */}
           {config.exerciseType === 'cardio' && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">Cardio configuration coming soon...</p>
+            <div className="mb-6 pb-4 border-b">
+              <Label>Cardio Type</Label>
+              <select
+                value={(config as any).cardioSubType}
+                onChange={(e) => {
+                  const newSubType = e.target.value;
+                  let newConfig: any;
+                  
+                  // Switch to appropriate default config based on sub-type
+                  switch (newSubType) {
+                    case 'steady_state':
+                      newConfig = createDefaultCardioSteadyStateConfiguration();
+                      break;
+                    case 'intervals':
+                      newConfig = createDefaultCardioIntervalsConfiguration();
+                      break;
+                    case 'activity_based':
+                      newConfig = createDefaultCardioActivityBasedConfiguration();
+                      break;
+                    case 'steps_based':
+                      newConfig = createDefaultCardioStepsBasedConfiguration();
+                      break;
+                    default:
+                      newConfig = config;
+                  }
+                  onUpdate(newConfig);
+                }}
+                className="mt-2 w-full px-3 py-2 border rounded"
+              >
+                <option value="steady_state">Machine - Steady State</option>
+                <option value="intervals">Machine - Intervals (HIIT)</option>
+                <option value="activity_based">Activity Based (Walking, Running, Sports)</option>
+                <option value="steps_based">Steps Based (Stair Climber, Step Platform, Walking)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {(config as any).cardioSubType === 'steady_state' && 'Continuous cardio on a machine at steady pace'}
+                {(config as any).cardioSubType === 'intervals' && 'High-intensity intervals with work/rest periods'}
+                {(config as any).cardioSubType === 'activity_based' && 'Outdoor activities, sports, or free-form cardio'}
+                {(config as any).cardioSubType === 'steps_based' && 'Step-counted exercises like stair climbing'}
+              </p>
             </div>
           )}
 
-          {/* Other exercise types */}
-          {!['strength', 'cardio'].includes(config.exerciseType) && (
+          {/* Cardio Steady State Configuration */}
+          {config.exerciseType === 'cardio' && 'cardioSubType' in config && config.cardioSubType === 'steady_state' && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">Configuration for other exercise types coming soon...</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Machine Type</Label>
+                  <select
+                    value={(config as CardioSteadyStateConfiguration).machineType}
+                    onChange={(e) => onUpdate({ ...config, machineType: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="treadmill">Treadmill</option>
+                    <option value="stationary_bike">Stationary Bike</option>
+                    <option value="rowing_machine">Rowing Machine</option>
+                    <option value="elliptical">Elliptical</option>
+                    <option value="stair_climber">Stair Climber</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Duration (minutes)</Label>
+                  <Input
+                    type="number"
+                    value={Math.round((config as CardioSteadyStateConfiguration).durationSeconds / 60)}
+                    onChange={(e) => onUpdate({ ...config, durationSeconds: parseInt(e.target.value) * 60 } as any)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Target Pace</Label>
+                  <Input
+                    value={(config as CardioSteadyStateConfiguration).targetPace}
+                    onChange={(e) => onUpdate({ ...config, targetPace: e.target.value } as any)}
+                    placeholder="e.g., 6.0 mph"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cardio Intervals Configuration */}
+          {config.exerciseType === 'cardio' && 'cardioSubType' in config && config.cardioSubType === 'intervals' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Machine Type</Label>
+                  <select
+                    value={(config as CardioIntervalsConfiguration).machineType}
+                    onChange={(e) => onUpdate({ ...config, machineType: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="treadmill">Treadmill</option>
+                    <option value="air_bike">Air Bike</option>
+                    <option value="rowing_machine">Rowing Machine</option>
+                    <option value="none">None (Bodyweight)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Total Rounds</Label>
+                  <Input
+                    type="number"
+                    value={(config as CardioIntervalsConfiguration).totalRounds}
+                    onChange={(e) => onUpdate({ ...config, totalRounds: parseInt(e.target.value) || 1 } as any)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="text-sm text-gray-600">
+                {(config as CardioIntervalsConfiguration).intervals.length} intervals configured
+              </div>
+            </div>
+          )}
+
+          {/* Cardio Activity-Based Configuration */}
+          {config.exerciseType === 'cardio' && 'cardioSubType' in config && config.cardioSubType === 'activity_based' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Activity</Label>
+                  <select
+                    value={(config as any).activity}
+                    onChange={(e) => onUpdate({ ...config, activity: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="walking">Walking</option>
+                    <option value="running">Running (Outdoor)</option>
+                    <option value="hiking">Hiking</option>
+                    <option value="basketball">Basketball</option>
+                    <option value="tennis">Tennis</option>
+                    <option value="soccer">Soccer</option>
+                    <option value="climbing">Climbing</option>
+                    <option value="swimming">Swimming</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Duration (minutes)</Label>
+                  <Input
+                    type="number"
+                    value={Math.round((config as any).durationSeconds / 60)}
+                    onChange={(e) => onUpdate({ ...config, durationSeconds: parseInt(e.target.value) * 60 } as any)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Intensity</Label>
+                  <select
+                    value={(config as any).intensity}
+                    onChange={(e) => onUpdate({ ...config, intensity: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="light">Light</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <Label>Target Heart Rate (optional)</Label>
+                <Input
+                  type="number"
+                  value={(config as any).targetHeartRate || ''}
+                  onChange={(e) => onUpdate({ ...config, targetHeartRate: parseInt(e.target.value) || undefined } as any)}
+                  placeholder="e.g., 140 bpm"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Cardio Steps-Based Configuration */}
+          {config.exerciseType === 'cardio' && 'cardioSubType' in config && config.cardioSubType === 'steps_based' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Machine Type</Label>
+                  <select
+                    value={(config as any).machineType}
+                    onChange={(e) => onUpdate({ ...config, machineType: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="none">None / Walking</option>
+                    <option value="stair_climber">Stair Climber</option>
+                    <option value="step_platform">Step Platform</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Target Steps</Label>
+                  <Input
+                    type="number"
+                    value={(config as any).targetSteps}
+                    onChange={(e) => onUpdate({ ...config, targetSteps: parseInt(e.target.value) || 0 } as any)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Pace</Label>
+                  <select
+                    value={(config as any).pace}
+                    onChange={(e) => onUpdate({ ...config, pace: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="slow">Slow</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="fast">Fast</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Core Rep-Based Configuration */}
+          {config.exerciseType === 'core' && 'coreSubType' in config && config.coreSubType === 'rep_based' && (
+            <div className="space-y-4">
+              <h4 className="font-medium">Sets Configuration</h4>
+              {(config as any).sets.map((set: any, idx: number) => (
+                <div key={idx} className="bg-white p-3 rounded border grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Set {set.setNumber}</Label>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Target Reps</Label>
+                    <Input
+                      type="number"
+                      value={set.targetReps}
+                      onChange={(e) => {
+                        const newSets = [...(config as any).sets];
+                        newSets[idx] = { ...set, targetReps: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, sets: newSets } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Rest (sec)</Label>
+                    <Input
+                      type="number"
+                      value={set.restSeconds}
+                      onChange={(e) => {
+                        const newSets = [...(config as any).sets];
+                        newSets[idx] = { ...set, restSeconds: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, sets: newSets } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Core Duration-Based Configuration */}
+          {config.exerciseType === 'core' && 'coreSubType' in config && config.coreSubType === 'duration_based' && (
+            <div className="space-y-4">
+              <h4 className="font-medium">Rounds Configuration</h4>
+              {(config as any).rounds.map((round: any, idx: number) => (
+                <div key={idx} className="bg-white p-3 rounded border grid grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Round {round.roundNumber}</Label>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Duration (sec)</Label>
+                    <Input
+                      type="number"
+                      value={round.durationSeconds}
+                      onChange={(e) => {
+                        const newRounds = [...(config as any).rounds];
+                        newRounds[idx] = { ...round, durationSeconds: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, rounds: newRounds } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Rest (sec)</Label>
+                    <Input
+                      type="number"
+                      value={round.restSeconds || 0}
+                      onChange={(e) => {
+                        const newRounds = [...(config as any).rounds];
+                        newRounds[idx] = { ...round, restSeconds: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, rounds: newRounds } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Flexibility Configuration */}
+          {config.exerciseType === 'flexibility' && (
+            <div className="space-y-4">
+              <div>
+                <Label>Flexibility Sub-Type</Label>
+                <select
+                  value={(config as any).flexibilitySubType}
+                  onChange={(e) => onUpdate({ ...config, flexibilitySubType: e.target.value } as any)}
+                  className="mt-1 w-full px-3 py-2 border rounded"
+                >
+                  <option value="static_stretch">Static Stretch</option>
+                  <option value="dynamic_stretch">Dynamic Stretch</option>
+                  <option value="pnf">PNF</option>
+                </select>
+              </div>
+              <div>
+                <Label>Total Duration (seconds)</Label>
+                <Input
+                  type="number"
+                  value={(config as any).totalDurationSeconds}
+                  onChange={(e) => onUpdate({ ...config, totalDurationSeconds: parseInt(e.target.value) || 0 } as any)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Balance Configuration */}
+          {config.exerciseType === 'balance' && (
+            <div className="space-y-4">
+              <div>
+                <Label>Balance Sub-Type</Label>
+                <select
+                  value={(config as any).balanceSubType}
+                  onChange={(e) => onUpdate({ ...config, balanceSubType: e.target.value } as any)}
+                  className="mt-1 w-full px-3 py-2 border rounded"
+                >
+                  <option value="bodyweight">Bodyweight</option>
+                  <option value="equipment_assisted">Equipment Assisted</option>
+                  <option value="unstable_surface">Unstable Surface</option>
+                </select>
+              </div>
+              <h4 className="font-medium">Rounds Configuration</h4>
+              {(config as any).rounds.map((round: any, idx: number) => (
+                <div key={idx} className="bg-white p-3 rounded border grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Duration (sec)</Label>
+                    <Input
+                      type="number"
+                      value={round.durationSeconds || 0}
+                      onChange={(e) => {
+                        const newRounds = [...(config as any).rounds];
+                        newRounds[idx] = { ...round, durationSeconds: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, rounds: newRounds } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Rest (sec)</Label>
+                    <Input
+                      type="number"
+                      value={round.restSeconds || 0}
+                      onChange={(e) => {
+                        const newRounds = [...(config as any).rounds];
+                        newRounds[idx] = { ...round, restSeconds: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, rounds: newRounds } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Mobility Configuration */}
+          {config.exerciseType === 'mobility' && (
+            <div className="space-y-4">
+              <div>
+                <Label>Mobility Sub-Type</Label>
+                <select
+                  value={(config as any).mobilitySubType}
+                  onChange={(e) => onUpdate({ ...config, mobilitySubType: e.target.value } as any)}
+                  className="mt-1 w-full px-3 py-2 border rounded"
+                >
+                  <option value="foam_roll">Foam Roll</option>
+                  <option value="trigger_point">Trigger Point</option>
+                  <option value="dynamic_drill">Dynamic Drill</option>
+                </select>
+              </div>
+              <div>
+                <Label>Equipment</Label>
+                <Input
+                  value={(config as any).equipment}
+                  onChange={(e) => onUpdate({ ...config, equipment: e.target.value } as any)}
+                  placeholder="e.g., foam roller"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Total Duration (seconds)</Label>
+                <Input
+                  type="number"
+                  value={(config as any).totalDurationSeconds}
+                  onChange={(e) => onUpdate({ ...config, totalDurationSeconds: parseInt(e.target.value) || 0 } as any)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Plyometric Configuration */}
+          {config.exerciseType === 'plyometric' && (
+            <div className="space-y-4">
+              <div>
+                <Label>Plyometric Sub-Type</Label>
+                <select
+                  value={(config as any).plyometricSubType}
+                  onChange={(e) => onUpdate({ ...config, plyometricSubType: e.target.value } as any)}
+                  className="mt-1 w-full px-3 py-2 border rounded"
+                >
+                  <option value="jumping">Jumping</option>
+                  <option value="throwing">Throwing</option>
+                  <option value="bounding">Bounding</option>
+                </select>
+              </div>
+              <h4 className="font-medium">Sets Configuration</h4>
+              {(config as any).sets.map((set: any, idx: number) => (
+                <div key={idx} className="bg-white p-3 rounded border grid grid-cols-4 gap-3">
+                  <div>
+                    <Label className="text-xs">Set Type</Label>
+                    <select
+                      value={set.setType}
+                      onChange={(e) => {
+                        const newSets = [...(config as any).sets];
+                        newSets[idx] = { ...set, setType: e.target.value };
+                        onUpdate({ ...config, sets: newSets } as any);
+                      }}
+                      className="mt-1 w-full px-2 py-1 border rounded text-sm"
+                    >
+                      <option value="warm_up">Warm-up</option>
+                      <option value="working">Working</option>
+                      <option value="to_failure">To Failure</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Target Reps</Label>
+                    <Input
+                      type="number"
+                      value={set.targetReps}
+                      onChange={(e) => {
+                        const newSets = [...(config as any).sets];
+                        newSets[idx] = { ...set, targetReps: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, sets: newSets } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Rest (sec)</Label>
+                    <Input
+                      type="number"
+                      value={set.restSeconds}
+                      onChange={(e) => {
+                        const newSets = [...(config as any).sets];
+                        newSets[idx] = { ...set, restSeconds: parseInt(e.target.value) || 0 };
+                        onUpdate({ ...config, sets: newSets } as any);
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Yoga/Pilates Configuration */}
+          {config.exerciseType === 'yoga_pilates' && (
+            <div className="space-y-4">
+              <div>
+                <Label>Yoga/Pilates Sub-Type</Label>
+                <select
+                  value={(config as any).yogaSubType}
+                  onChange={(e) => onUpdate({ ...config, yogaSubType: e.target.value } as any)}
+                  className="mt-1 w-full px-3 py-2 border rounded"
+                >
+                  <option value="yoga_flow">Yoga Flow</option>
+                  <option value="yoga_poses">Yoga Poses</option>
+                  <option value="pilates_mat">Pilates Mat</option>
+                  <option value="pilates_reformer">Pilates Reformer</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Duration (minutes)</Label>
+                  <Input
+                    type="number"
+                    value={Math.round((config as any).durationSeconds / 60)}
+                    onChange={(e) => onUpdate({ ...config, durationSeconds: parseInt(e.target.value) * 60 } as any)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Intensity</Label>
+                  <select
+                    value={(config as any).intensity}
+                    onChange={(e) => onUpdate({ ...config, intensity: e.target.value } as any)}
+                    className="mt-1 w-full px-3 py-2 border rounded"
+                  >
+                    <option value="light">Light</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
         </div>
