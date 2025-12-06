@@ -304,6 +304,7 @@ export default function WorkoutLibraryPage() {
           {workoutTemplates.length > 0 && (
             <div className="bg-white rounded-xl border p-6">
               <div className="space-y-4">
+                {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
@@ -315,160 +316,188 @@ export default function WorkoutLibraryPage() {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2 items-center">
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
-                    aria-label="Filter by status"
-                  >
-                    <option value="active">Active Only</option>
-                    <option value="all">All Status</option>
-                    <option value="inactive">Inactive Only</option>
-                  </select>
-                  
-                  <select
-                    value={selectedScope}
-                    onChange={(e) => setSelectedScope(e.target.value)}
-                    className="px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50 transition-colors"
-                    aria-label="Filter by scope"
-                  >
-                    <option value="all">All Workouts</option>
-                    <option value="personal">My Workouts</option>
-                    <option value="company">Company Library</option>
-                  </select>
-
-                  <div className="h-6 w-px bg-gray-300" />
-
+                {/* Status & Scope Filters + Sort */}
+                <div className="flex items-center justify-between gap-4 pb-4 border-b">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 font-medium">Difficulty:</span>
-                    <button
-                      onClick={() => setSelectedDifficulty('all')}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedDifficulty === 'all' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
+                      aria-label="Filter by status"
                     >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setSelectedDifficulty('beginner')}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedDifficulty === 'beginner' ? 'bg-green-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
+                      <option value="active">Active Only</option>
+                      <option value="all">All Status</option>
+                      <option value="inactive">Inactive Only</option>
+                    </select>
+                    
+                    <select
+                      value={selectedScope}
+                      onChange={(e) => setSelectedScope(e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
+                      aria-label="Filter by scope"
                     >
-                      Beginner
-                    </button>
-                    <button
-                      onClick={() => setSelectedDifficulty('intermediate')}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedDifficulty === 'intermediate' ? 'bg-yellow-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Intermediate
-                    </button>
-                    <button
-                      onClick={() => setSelectedDifficulty('advanced')}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedDifficulty === 'advanced' ? 'bg-red-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      Advanced
-                    </button>
+                      <option value="all">All Workouts</option>
+                      <option value="personal">My Workouts</option>
+                      <option value="company">Company Library</option>
+                    </select>
                   </div>
 
-                  <div className="h-6 w-px bg-gray-300 mx-2" />
-
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 font-medium">Category:</span>
-                    <button
-                      onClick={() => setSelectedCategory('all')}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedCategory === 'all' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
+                    <span className="text-sm text-gray-600 font-medium">Sort by:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-3 py-2 border rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
                     >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setSelectedCategory('strength')}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 transition-colors ${
-                        selectedCategory === 'strength' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Dumbbell className="h-3 w-3" />
-                      Strength
-                    </button>
-                    <button
-                      onClick={() => setSelectedCategory('cardio')}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 transition-colors ${
-                        selectedCategory === 'cardio' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Heart className="h-3 w-3" />
-                      Cardio
-                    </button>
-                    <button
-                      onClick={() => setSelectedCategory('hiit')}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 transition-colors ${
-                        selectedCategory === 'hiit' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Zap className="h-3 w-3" />
-                      HIIT
-                    </button>
-                    <button
-                      onClick={() => setSelectedCategory('flexibility')}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 transition-colors ${
-                        selectedCategory === 'flexibility' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Wind className="h-3 w-3" />
-                      Flexibility
-                    </button>
-                    <button
-                      onClick={() => setSelectedCategory('mixed')}
-                      className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 transition-colors ${
-                        selectedCategory === 'mixed' ? 'bg-primary text-white' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Activity className="h-3 w-3" />
-                      Mixed
-                    </button>
+                      <option value="modified">Recently Modified</option>
+                      <option value="name">Name (A-Z)</option>
+                      <option value="used">Most Used</option>
+                    </select>
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-600">
-                  Showing {filteredWorkouts.length} of {workoutTemplates.length} workout{workoutTemplates.length !== 1 ? 's' : ''}
+                {/* Difficulty Filter Row */}
+                <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-4 border">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-700 min-w-[80px]">Difficulty:</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedDifficulty('all')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedDifficulty === 'all' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setSelectedDifficulty('beginner')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedDifficulty === 'beginner' 
+                            ? 'bg-green-500 text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-green-300 hover:shadow-sm'
+                        }`}
+                      >
+                        Beginner
+                      </button>
+                      <button
+                        onClick={() => setSelectedDifficulty('intermediate')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedDifficulty === 'intermediate' 
+                            ? 'bg-yellow-500 text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-yellow-300 hover:shadow-sm'
+                        }`}
+                      >
+                        Intermediate
+                      </button>
+                      <button
+                        onClick={() => setSelectedDifficulty('advanced')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedDifficulty === 'advanced' 
+                            ? 'bg-red-500 text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-red-300 hover:shadow-sm'
+                        }`}
+                      >
+                        Advanced
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Filter Row */}
+                <div className="bg-gradient-to-r from-gray-50 to-white rounded-lg p-4 border">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-700 min-w-[80px]">Category:</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setSelectedCategory('all')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedCategory === 'all' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setSelectedCategory('strength')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all ${
+                          selectedCategory === 'strength' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <Dumbbell className="h-4 w-4" />
+                        Strength
+                      </button>
+                      <button
+                        onClick={() => setSelectedCategory('cardio')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all ${
+                          selectedCategory === 'cardio' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-red-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <Heart className="h-4 w-4" />
+                        Cardio
+                      </button>
+                      <button
+                        onClick={() => setSelectedCategory('hiit')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all ${
+                          selectedCategory === 'hiit' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-yellow-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <Zap className="h-4 w-4" />
+                        HIIT
+                      </button>
+                      <button
+                        onClick={() => setSelectedCategory('flexibility')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all ${
+                          selectedCategory === 'flexibility' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-green-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <Wind className="h-4 w-4" />
+                        Flexibility
+                      </button>
+                      <button
+                        onClick={() => setSelectedCategory('mixed')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all ${
+                          selectedCategory === 'mixed' 
+                            ? 'bg-primary text-white shadow-md' 
+                            : 'bg-white border border-gray-200 text-gray-700 hover:border-purple-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <Activity className="h-4 w-4" />
+                        Mixed
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Results Count */}
+                <div className="text-sm text-gray-600 pt-2 border-t">
+                  Showing <span className="font-semibold text-gray-900">{filteredWorkouts.length}</span> of <span className="font-semibold text-gray-900">{workoutTemplates.length}</span> workout{workoutTemplates.length !== 1 ? 's' : ''}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Section Header with Sort Controls */}
+          {/* Section Header */}
           {filteredWorkouts.length > 0 && (
             <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Dumbbell className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Workout Library
-                  </h2>
-                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
-                    {filteredWorkouts.length} {filteredWorkouts.length === 1 ? 'Workout' : 'Workouts'}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 font-medium">Sort by:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="modified">Recently Modified</option>
-                    <option value="name">Name (A-Z)</option>
-                    <option value="used">Most Used</option>
-                  </select>
-                </div>
+              <div className="flex items-center gap-3">
+                <Dumbbell className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Workout Library
+                </h2>
+                <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium">
+                  {filteredWorkouts.length} {filteredWorkouts.length === 1 ? 'Workout' : 'Workouts'}
+                </span>
               </div>
             </div>
           )}
