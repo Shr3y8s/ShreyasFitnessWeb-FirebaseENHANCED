@@ -519,3 +519,424 @@ exports.completeWorkoutExecution = onCall({
     throw new Error(`Failed to complete workout execution: ${error.message}`);
   }
 });
+
+/**
+ * Create a new workout template with atomic exercise usage count updates
+ * Ensures data integrity by using transactions
+ * 
+ * @param {Object} request.data
+ * @param {string} request.data.name - Template name
+ * @param {string} request.data.description - Template description
+ * @param {string} request.data.difficulty - beginner | intermediate | advanced
+ * @param {string} request.data.category - strength | cardio | hiit | flexibility | mixed
+ * @param {number} request.data.estimatedDuration - Duration in minutes
+ * @param {string} request.data.scope - personal | company
+ * @param {Array} request.data.tags - Tags array
+ * @param {Array} request.data.exercises - Array of {exerciseId: string}
+ * @param {Array} request.data.targetMuscleGroups - Muscle groups array
+ * @param {Array} request.data.equipment - Equipment array
+ * @return {Object} Created template with ID
+ */
+exports.createWorkoutTemplate = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Require authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const trainerId = request.auth.uid;
+    const data = request.data;
+
+    // Validate required fields
+    if (!data.name || !data.exercises || !Array.isArray(data.exercises) || data.exercises.length === 0) {
+      throw new Error("Missing required fields: name and exercises array");
+    }
+
+    logger.info("Creating workout template", {
+      trainerId,
+      name: data.name,
+      exerciseCount: data.exercises.length,
+    });
+
+    // Extract unique exercise IDs
+    const exerciseIds = [...new Set(data.exercises.map((ex) => ex.exerciseId))];
+
+    // Validate all exercises exist
+    const exerciseRefs = exerciseIds.map((id) => admin.firestore().collection("exercises").doc(id));
+    const exerciseDocs = await admin.firestore().getAll(...exerciseRefs);
+
+    const missingExercises = exerciseDocs
+        .map((doc, index) => ({doc, id: exerciseIds[index]}))
+        .filter(({doc}) => !doc.exists)
+        .map(({id}) => id);
+
+    if (missingExercises.length > 0) {
+      throw new Error(`Exercise(s) not found: ${missingExercises.join(", ")}`);
+    }
+
+    // Get trainer's name
+    let trainerName = "Unknown Trainer";
+    try {
+      const adminDoc = await admin.firestore().collection("admins").doc(trainerId).get();
+      if (adminDoc.exists) {
+        trainerName = adminDoc.data().name;
+      } else {
+        const trainerDoc = await admin.firestore().collection("trainers").doc(trainerId).get();
+        if (trainerDoc.exists) {
+          trainerName = trainerDoc.data().name;
+        }
+      }
+    } catch (error) {
+      logger.warn("Could not fetch trainer name", {trainerId, error: error.message});
+    }
+
+    const now = admin.firestore.Timestamp.now();
+    const templateRef = admin.firestore().collection("workoutTemplates").doc();
+
+    const templateData = {
+      id: templateRef.id,
+      name: data.name,
+      description: data.description || "",
+      difficulty: data.difficulty || "beginner",
+      category: data.category || "strength",
+      estimatedDuration: data.estimatedDuration || 45,
+      scope: data.scope || "personal",
+      tags: data.tags || [],
+      targetMuscleGroups: data.targetMuscleGroups || [],
+      equipment: data.equipment || [],
+      exercises: data.exercises,
+      isActive: true,
+      usageCount: 0,
+      createdBy: trainerId,
+      createdByName: trainerName,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Use transaction to create template and increment exercise usage counts atomically
+    await admin.firestore().runTransaction(async (transaction) => {
+      // Create template
+      transaction.set(templateRef, templateData);
+
+      // Increment usageCount for each exercise
+      for (const exerciseId of exerciseIds) {
+        const exerciseRef = admin.firestore().collection("exercises").doc(exerciseId);
+        transaction.update(exerciseRef, {
+          usageCount: admin.firestore.FieldValue.increment(1),
+          updatedAt: now,
+        });
+      }
+    });
+
+    logger.info("Workout template created successfully", {
+      templateId: templateRef.id,
+      trainerId,
+      name: data.name,
+      exerciseCount: exerciseIds.length,
+    });
+
+    return {
+      success: true,
+      templateId: templateRef.id,
+      template: templateData,
+    };
+  } catch (error) {
+    logger.error("Error creating workout template", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Failed to create workout template: ${error.message}`);
+  }
+});
+
+/**
+ * Update an existing workout template with atomic exercise usage count updates
+ * Handles the diff of added/removed exercises to maintain accurate counts
+ * 
+ * @param {Object} request.data
+ * @param {string} request.data.templateId - Template to update
+ * @param {string} request.data.name - Updated name
+ * @param {string} request.data.description - Updated description
+ * @param {string} request.data.difficulty - Updated difficulty
+ * @param {string} request.data.category - Updated category
+ * @param {number} request.data.estimatedDuration - Updated duration
+ * @param {string} request.data.scope - Updated scope
+ * @param {Array} request.data.tags - Updated tags
+ * @param {Array} request.data.exercises - Updated exercises array
+ * @param {Array} request.data.targetMuscleGroups - Updated muscle groups
+ * @param {Array} request.data.equipment - Updated equipment
+ * @return {Object} Success response
+ */
+exports.updateWorkoutTemplate = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Require authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const trainerId = request.auth.uid;
+    const data = request.data;
+
+    // Validate required fields
+    if (!data.templateId) {
+      throw new Error("Missing required field: templateId");
+    }
+
+    if (!data.exercises || !Array.isArray(data.exercises) || data.exercises.length === 0) {
+      throw new Error("Exercises array is required and must not be empty");
+    }
+
+    logger.info("Updating workout template", {
+      trainerId,
+      templateId: data.templateId,
+      exerciseCount: data.exercises.length,
+    });
+
+    const templateRef = admin.firestore().collection("workoutTemplates").doc(data.templateId);
+    const templateDoc = await templateRef.get();
+
+    if (!templateDoc.exists) {
+      throw new Error("Workout template not found");
+    }
+
+    const oldTemplateData = templateDoc.data();
+
+    // Verify ownership (trainers can only edit their own templates)
+    if (oldTemplateData.createdBy !== trainerId) {
+      throw new Error("Unauthorized: You can only edit your own templates");
+    }
+
+    // Extract old and new exercise IDs
+    const oldExerciseIds = [...new Set((oldTemplateData.exercises || []).map((ex) => ex.exerciseId))];
+    const newExerciseIds = [...new Set(data.exercises.map((ex) => ex.exerciseId))];
+
+    // Calculate diff
+    const addedExerciseIds = newExerciseIds.filter((id) => !oldExerciseIds.includes(id));
+    const removedExerciseIds = oldExerciseIds.filter((id) => !newExerciseIds.includes(id));
+
+    // Validate all new exercises exist
+    if (addedExerciseIds.length > 0) {
+      const exerciseRefs = addedExerciseIds.map((id) => admin.firestore().collection("exercises").doc(id));
+      const exerciseDocs = await admin.firestore().getAll(...exerciseRefs);
+
+      const missingExercises = exerciseDocs
+          .map((doc, index) => ({doc, id: addedExerciseIds[index]}))
+          .filter(({doc}) => !doc.exists)
+          .map(({id}) => id);
+
+      if (missingExercises.length > 0) {
+        throw new Error(`Exercise(s) not found: ${missingExercises.join(", ")}`);
+      }
+    }
+
+    // Get trainer's name for lastEditedBy
+    let trainerName = "Unknown Trainer";
+    try {
+      const adminDoc = await admin.firestore().collection("admins").doc(trainerId).get();
+      if (adminDoc.exists) {
+        trainerName = adminDoc.data().name;
+      } else {
+        const trainerDoc = await admin.firestore().collection("trainers").doc(trainerId).get();
+        if (trainerDoc.exists) {
+          trainerName = trainerDoc.data().name;
+        }
+      }
+    } catch (error) {
+      logger.warn("Could not fetch trainer name", {trainerId, error: error.message});
+    }
+
+    const now = admin.firestore.Timestamp.now();
+
+    const updatedTemplateData = {
+      name: data.name,
+      description: data.description || "",
+      difficulty: data.difficulty || oldTemplateData.difficulty,
+      category: data.category || oldTemplateData.category,
+      estimatedDuration: data.estimatedDuration || oldTemplateData.estimatedDuration,
+      scope: data.scope || oldTemplateData.scope,
+      tags: data.tags || [],
+      targetMuscleGroups: data.targetMuscleGroups || [],
+      equipment: data.equipment || [],
+      exercises: data.exercises,
+      lastEditedBy: trainerId,
+      lastEditedByName: trainerName,
+      lastEditedAt: now,
+      updatedAt: now,
+    };
+
+    // Use transaction to update template and adjust exercise usage counts atomically
+    await admin.firestore().runTransaction(async (transaction) => {
+      // Update template
+      transaction.update(templateRef, updatedTemplateData);
+
+      // Increment usageCount for newly added exercises
+      for (const exerciseId of addedExerciseIds) {
+        const exerciseRef = admin.firestore().collection("exercises").doc(exerciseId);
+        transaction.update(exerciseRef, {
+          usageCount: admin.firestore.FieldValue.increment(1),
+          updatedAt: now,
+        });
+      }
+
+      // Decrement usageCount for removed exercises
+      for (const exerciseId of removedExerciseIds) {
+        const exerciseRef = admin.firestore().collection("exercises").doc(exerciseId);
+        transaction.update(exerciseRef, {
+          usageCount: admin.firestore.FieldValue.increment(-1),
+          updatedAt: now,
+        });
+      }
+    });
+
+    logger.info("Workout template updated successfully", {
+      templateId: data.templateId,
+      trainerId,
+      addedExercises: addedExerciseIds.length,
+      removedExercises: removedExerciseIds.length,
+    });
+
+    return {
+      success: true,
+      templateId: data.templateId,
+      changes: {
+        addedExercises: addedExerciseIds.length,
+        removedExercises: removedExerciseIds.length,
+      },
+    };
+  } catch (error) {
+    logger.error("Error updating workout template", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Failed to update workout template: ${error.message}`);
+  }
+});
+
+/**
+ * Delete a workout template with atomic exercise usage count updates
+ * Checks for active assignments and decrements exercise usage counts
+ * 
+ * @param {Object} request.data
+ * @param {string} request.data.templateId - Template to delete
+ * @param {boolean} request.data.force - Force delete even if assigned (defaults to false)
+ * @return {Object} Success response
+ */
+exports.deleteWorkoutTemplate = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Require authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const trainerId = request.auth.uid;
+    const data = request.data;
+
+    // Validate required fields
+    if (!data.templateId) {
+      throw new Error("Missing required field: templateId");
+    }
+
+    logger.info("Deleting workout template", {
+      trainerId,
+      templateId: data.templateId,
+      force: data.force || false,
+    });
+
+    const templateRef = admin.firestore().collection("workoutTemplates").doc(data.templateId);
+    const templateDoc = await templateRef.get();
+
+    if (!templateDoc.exists) {
+      throw new Error("Workout template not found");
+    }
+
+    const templateData = templateDoc.data();
+
+    // Verify ownership
+    if (templateData.createdBy !== trainerId) {
+      throw new Error("Unauthorized: You can only delete your own templates");
+    }
+
+    // Check for active assignments unless force is true
+    if (!data.force) {
+      const activeAssignmentsQuery = await admin.firestore()
+          .collection("workoutAssignments")
+          .where("workoutTemplateId", "==", data.templateId)
+          .where("status", "in", ["scheduled", "in_progress"])
+          .limit(1)
+          .get();
+
+      if (!activeAssignmentsQuery.empty) {
+        throw new Error(
+            "Cannot delete template: It has active assignments. " +
+        "Please complete or cancel those assignments first, or use force=true to delete anyway."
+        );
+      }
+    }
+
+    // Extract exercise IDs to decrement their usage counts
+    const exerciseIds = [...new Set((templateData.exercises || []).map((ex) => ex.exerciseId))];
+
+    const now = admin.firestore.Timestamp.now();
+
+    // Use transaction to delete template and decrement exercise usage counts atomically
+    await admin.firestore().runTransaction(async (transaction) => {
+      // Mark template as inactive (soft delete) or hard delete
+      if (data.force) {
+        transaction.delete(templateRef);
+      } else {
+        transaction.update(templateRef, {
+          isActive: false,
+          updatedAt: now,
+        });
+      }
+
+      // Decrement usageCount for all exercises
+      for (const exerciseId of exerciseIds) {
+        const exerciseRef = admin.firestore().collection("exercises").doc(exerciseId);
+        // Get the exercise to check if it exists before updating
+        const exerciseDoc = await transaction.get(exerciseRef);
+        if (exerciseDoc.exists) {
+          transaction.update(exerciseRef, {
+            usageCount: admin.firestore.FieldValue.increment(-1),
+            updatedAt: now,
+          });
+        }
+      }
+    });
+
+    logger.info("Workout template deleted successfully", {
+      templateId: data.templateId,
+      trainerId,
+      exerciseCount: exerciseIds.length,
+      hardDelete: data.force || false,
+    });
+
+    return {
+      success: true,
+      templateId: data.templateId,
+      deleted: data.force ? "hard" : "soft",
+      exercisesUpdated: exerciseIds.length,
+    };
+  } catch (error) {
+    logger.error("Error deleting workout template", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Failed to delete workout template: ${error.message}`);
+  }
+});

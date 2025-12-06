@@ -615,6 +615,9 @@ exports.assignWorkout = workoutFunctions.assignWorkout;
 exports.startWorkoutExecution = workoutFunctions.startWorkoutExecution;
 exports.updateWorkoutExecution = workoutFunctions.updateWorkoutExecution;
 exports.completeWorkoutExecution = workoutFunctions.completeWorkoutExecution;
+exports.createWorkoutTemplate = workoutFunctions.createWorkoutTemplate;
+exports.updateWorkoutTemplate = workoutFunctions.updateWorkoutTemplate;
+exports.deleteWorkoutTemplate = workoutFunctions.deleteWorkoutTemplate;
 
 /**
  * Firestore trigger to sync subscription status from stripe_customers to users

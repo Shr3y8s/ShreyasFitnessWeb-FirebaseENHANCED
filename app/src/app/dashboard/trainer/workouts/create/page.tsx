@@ -306,45 +306,20 @@ export default function CreateWorkoutTemplatePage() {
         exercises: templateExercises.map(ex => ({
           exerciseId: ex.exerciseId,
         })),
-        updatedAt: serverTimestamp(),
       };
 
       if (templateId) {
-        // Get existing doc to preserve required fields
-        const existingDoc = await getDoc(doc(db, 'workoutTemplates', templateId));
-        if (!existingDoc.exists()) {
-          throw new Error('Template not found');
-        }
-        const existingData = existingDoc.data();
-        
-        await updateDoc(doc(db, 'workoutTemplates', templateId), {
+        // Update existing template using cloud function
+        const { updateWorkoutTemplate } = await import('@/lib/workout-api');
+        await updateWorkoutTemplate({
+          templateId,
           ...templateData,
-          createdBy: existingData.createdBy, // Preserve required field
-          isActive: existingData.isActive,   // Preserve required field
         });
         alert('Workout template updated successfully!');
       } else {
-        // Get trainer's name from correct collections (admins first, then trainers)
-        let adminDoc = await getDoc(doc(db, 'admins', user.uid));
-        let trainerName = adminDoc.exists() ? adminDoc.data().name : null;
-
-        // If not admin, check trainers collection
-        if (!trainerName) {
-          const trainerDoc = await getDoc(doc(db, 'trainers', user.uid));
-          trainerName = trainerDoc.exists() ? trainerDoc.data().name : null;
-        }
-
-        // Final fallback (should never happen)
-        trainerName = trainerName || 'Unknown Trainer';
-
-        await addDoc(collection(db, 'workoutTemplates'), {
-          ...templateData,
-          isActive: true,
-          usageCount: 0,
-          createdBy: user.uid,
-          createdByName: trainerName,
-          createdAt: serverTimestamp(),
-        });
+        // Create new template using cloud function
+        const { createWorkoutTemplate } = await import('@/lib/workout-api');
+        await createWorkoutTemplate(templateData);
         alert('Workout template created successfully!');
       }
       

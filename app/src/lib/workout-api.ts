@@ -243,3 +243,182 @@ export function calculateDuration(startTime: Date, endTime?: Date): number {
   const end = endTime || new Date();
   return Math.round((end.getTime() - startTime.getTime()) / 60000);
 }
+
+// ============================================================================
+// WORKOUT TEMPLATE MANAGEMENT
+// ============================================================================
+
+interface CreateWorkoutTemplateRequest {
+  name: string;
+  description?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  category?: 'strength' | 'cardio' | 'hiit' | 'flexibility' | 'mixed';
+  estimatedDuration?: number;
+  scope?: 'personal' | 'company';
+  tags?: string[];
+  exercises: Array<{ exerciseId: string }>;
+  targetMuscleGroups?: string[];
+  equipment?: string[];
+}
+
+interface CreateWorkoutTemplateResponse {
+  success: boolean;
+  templateId: string;
+  template: any;
+}
+
+interface UpdateWorkoutTemplateRequest {
+  templateId: string;
+  name: string;
+  description?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  category?: 'strength' | 'cardio' | 'hiit' | 'flexibility' | 'mixed';
+  estimatedDuration?: number;
+  scope?: 'personal' | 'company';
+  tags?: string[];
+  exercises: Array<{ exerciseId: string }>;
+  targetMuscleGroups?: string[];
+  equipment?: string[];
+}
+
+interface UpdateWorkoutTemplateResponse {
+  success: boolean;
+  templateId: string;
+  changes: {
+    addedExercises: number;
+    removedExercises: number;
+  };
+}
+
+interface DeleteWorkoutTemplateRequest {
+  templateId: string;
+  force?: boolean;
+}
+
+interface DeleteWorkoutTemplateResponse {
+  success: boolean;
+  templateId: string;
+  deleted: 'hard' | 'soft';
+  exercisesUpdated: number;
+}
+
+/**
+ * Create a new workout template with atomic exercise usage count updates
+ * Ensures data integrity by using transactions
+ * 
+ * @param data - Template data including exercises
+ * @returns Promise with template ID and data
+ * 
+ * @example
+ * ```typescript
+ * const result = await createWorkoutTemplate({
+ *   name: 'Upper Body Strength',
+ *   description: 'Focus on chest, back, and shoulders',
+ *   difficulty: 'intermediate',
+ *   category: 'strength',
+ *   estimatedDuration: 60,
+ *   scope: 'company',
+ *   exercises: [
+ *     { exerciseId: 'bench_press_123' },
+ *     { exerciseId: 'pullups_456' }
+ *   ],
+ *   tags: ['push', 'pull'],
+ *   targetMuscleGroups: ['Chest', 'Back', 'Shoulders'],
+ *   equipment: ['Barbell', 'Pull-up Bar']
+ * });
+ * console.log('Created template:', result.templateId);
+ * ```
+ */
+export async function createWorkoutTemplate(
+  data: CreateWorkoutTemplateRequest
+): Promise<CreateWorkoutTemplateResponse> {
+  const createTemplateFn = httpsCallable<CreateWorkoutTemplateRequest, CreateWorkoutTemplateResponse>(
+    functions,
+    'createWorkoutTemplate'
+  );
+
+  try {
+    const result = await createTemplateFn(data);
+    return result.data;
+  } catch (error: any) {
+    console.error('Error creating workout template:', error);
+    throw new Error(error.message || 'Failed to create workout template');
+  }
+}
+
+/**
+ * Update an existing workout template with atomic exercise usage count updates
+ * Handles the diff of added/removed exercises to maintain accurate counts
+ * 
+ * @param data - Updated template data
+ * @returns Promise with success status and change statistics
+ * 
+ * @example
+ * ```typescript
+ * const result = await updateWorkoutTemplate({
+ *   templateId: 'template_123',
+ *   name: 'Upper Body Strength - Updated',
+ *   exercises: [
+ *     { exerciseId: 'bench_press_123' },
+ *     { exerciseId: 'shoulder_press_789' } // new exercise
+ *   ],
+ *   // pullups_456 was removed
+ * });
+ * console.log(`Added: ${result.changes.addedExercises}, Removed: ${result.changes.removedExercises}`);
+ * ```
+ */
+export async function updateWorkoutTemplate(
+  data: UpdateWorkoutTemplateRequest
+): Promise<UpdateWorkoutTemplateResponse> {
+  const updateTemplateFn = httpsCallable<UpdateWorkoutTemplateRequest, UpdateWorkoutTemplateResponse>(
+    functions,
+    'updateWorkoutTemplate'
+  );
+
+  try {
+    const result = await updateTemplateFn(data);
+    return result.data;
+  } catch (error: any) {
+    console.error('Error updating workout template:', error);
+    throw new Error(error.message || 'Failed to update workout template');
+  }
+}
+
+/**
+ * Delete a workout template with atomic exercise usage count updates
+ * Checks for active assignments and decrements exercise usage counts
+ * 
+ * @param data - Template ID and optional force flag
+ * @returns Promise with success status
+ * 
+ * @example
+ * ```typescript
+ * // Soft delete (marks as inactive)
+ * const result = await deleteWorkoutTemplate({
+ *   templateId: 'template_123'
+ * });
+ * 
+ * // Force delete (hard delete even if assigned)
+ * const result = await deleteWorkoutTemplate({
+ *   templateId: 'template_123',
+ *   force: true
+ * });
+ * console.log(`Template ${result.deleted === 'hard' ? 'deleted' : 'deactivated'}`);
+ * ```
+ */
+export async function deleteWorkoutTemplate(
+  data: DeleteWorkoutTemplateRequest
+): Promise<DeleteWorkoutTemplateResponse> {
+  const deleteTemplateFn = httpsCallable<DeleteWorkoutTemplateRequest, DeleteWorkoutTemplateResponse>(
+    functions,
+    'deleteWorkoutTemplate'
+  );
+
+  try {
+    const result = await deleteTemplateFn(data);
+    return result.data;
+  } catch (error: any) {
+    console.error('Error deleting workout template:', error);
+    throw new Error(error.message || 'Failed to delete workout template');
+  }
+}
