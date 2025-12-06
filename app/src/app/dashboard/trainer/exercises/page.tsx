@@ -571,11 +571,11 @@ export default function ExerciseLibraryPage() {
             </div>
 
             <div className="space-y-8">
-              {/* SECTION 1: Basic Identity */}
+              {/* SECTION 1: Basic Information */}
               <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Basic Identity</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
+                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Basic Information</h4>
+                <div className="space-y-4">
+                  <div>
                     <Label htmlFor="name">Exercise Name *</Label>
                     <Input
                       id="name"
@@ -586,7 +586,7 @@ export default function ExerciseLibraryPage() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  <div>
                     <Label htmlFor="description">Description</Label>
                     <textarea
                       id="description"
@@ -597,7 +597,65 @@ export default function ExerciseLibraryPage() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                  {/* Visual Category Selector */}
+                  <div>
+                    <Label>Exercise Category *</Label>
+                    <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {EXERCISE_CATEGORIES.map((category) => (
+                        <button
+                          key={category.value}
+                          type="button"
+                          onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
+                          className={`relative p-2.5 rounded-lg border-2 transition-all duration-200 ${
+                            exerciseForm.category === category.value
+                              ? 'border-primary shadow-md scale-105'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          } ${
+                            category.value === 'strength' ? 'bg-gradient-to-br from-blue-50 to-indigo-100' :
+                            category.value === 'cardio' ? 'bg-gradient-to-br from-red-50 to-pink-100' :
+                            category.value === 'flexibility' ? 'bg-gradient-to-br from-emerald-50 to-teal-100' :
+                            category.value === 'core' ? 'bg-gradient-to-br from-purple-50 to-violet-100' :
+                            category.value === 'balance' ? 'bg-gradient-to-br from-amber-50 to-orange-100' :
+                            category.value === 'mobility' ? 'bg-gradient-to-br from-teal-50 to-cyan-100' :
+                            category.value === 'plyometric' ? 'bg-gradient-to-br from-rose-50 to-red-100' :
+                            'bg-gradient-to-br from-indigo-50 to-purple-100'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className={`h-6 w-6 ${
+                              category.value === 'strength' ? 'text-blue-600' :
+                              category.value === 'cardio' ? 'text-red-600' :
+                              category.value === 'flexibility' ? 'text-emerald-600' :
+                              category.value === 'core' ? 'text-purple-600' :
+                              category.value === 'balance' ? 'text-amber-600' :
+                              category.value === 'mobility' ? 'text-teal-600' :
+                              category.value === 'plyometric' ? 'text-rose-600' :
+                              'text-indigo-600'
+                            }`}>
+                              {getCategoryIcon(category.value)}
+                            </div>
+                            <span className={`text-xs font-semibold ${
+                              category.value === 'strength' ? 'text-blue-700' :
+                              category.value === 'cardio' ? 'text-red-700' :
+                              category.value === 'flexibility' ? 'text-emerald-700' :
+                              category.value === 'core' ? 'text-purple-700' :
+                              category.value === 'balance' ? 'text-amber-700' :
+                              category.value === 'mobility' ? 'text-teal-700' :
+                              category.value === 'plyometric' ? 'text-rose-700' :
+                              'text-indigo-700'
+                            }`}>{category.label}</span>
+                          </div>
+                          {exerciseForm.category === category.value && (
+                            <div className="absolute top-1 right-1">
+                              <CheckCircle2 className="h-4 w-4 text-primary fill-primary" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
                     <Label>Aliases (Alternative Names)</Label>
                     <div className="mt-2 space-y-2">
                       <div className="flex gap-2">
@@ -648,13 +706,7 @@ export default function ExerciseLibraryPage() {
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* SECTION 2: Instructions & Guidance */}
-              <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Instructions & Guidance</h4>
-                <div className="space-y-4">
                   <div>
                     <Label htmlFor="instructions">Instructions</Label>
                     <textarea
@@ -666,31 +718,35 @@ export default function ExerciseLibraryPage() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="videoUrl">Video URL</Label>
-                    <Input
-                      id="videoUrl"
-                      type="url"
-                      placeholder="https://example.com/video.mp4"
-                      value={exerciseForm.videoUrl}
-                      onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
-                      className="mt-2"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="videoUrl">Video URL</Label>
+                      <Input
+                        id="videoUrl"
+                        type="url"
+                        placeholder="https://example.com/video.mp4"
+                        value={exerciseForm.videoUrl}
+                        onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
+                        className="mt-2"
+                      />
+                    </div>
 
-                  <div>
-                    <Label htmlFor="imageUrl">Image/Thumbnail URL</Label>
-                    <Input
-                      id="imageUrl"
-                      type="url"
-                      placeholder="https://example.com/image.jpg"
-                      value={exerciseForm.imageUrl}
-                      onChange={(e) => setExerciseForm(prev => ({ ...prev, imageUrl: e.target.value }))}
-                      className="mt-2"
-                    />
+                    <div>
+                      <Label htmlFor="imageUrl">Image/Thumbnail URL</Label>
+                      <Input
+                        id="imageUrl"
+                        type="url"
+                        placeholder="https://example.com/image.jpg"
+                        value={exerciseForm.imageUrl}
+                        onChange={(e) => setExerciseForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                        className="mt-2"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* SECTION 2: Muscle & Movement Data */}
 
               {/* SECTION 3: Muscle & Movement Data */}
               <div>
@@ -772,30 +828,11 @@ export default function ExerciseLibraryPage() {
                 </div>
               </div>
 
-              {/* SECTION 4: Exercise Setup & Equipment */}
+              {/* SECTION 3: Equipment & Setup */}
               <div>
-                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Exercise Setup & Equipment</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h4 className="text-md font-semibold text-gray-900 mb-4 pb-2 border-b">Equipment & Setup</h4>
+                <div className="space-y-4">
                   <div>
-                    <Label>Category</Label>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      {EXERCISE_CATEGORIES.map((category) => (
-                        <button
-                          key={category.value}
-                          onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
-                          className={`p-2 rounded-lg border text-sm transition-colors ${
-                            exerciseForm.category === category.value
-                              ? 'border-primary bg-primary text-white'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          {category.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="md:col-span-2">
                     <Label>Equipment Required *</Label>
                     <div className="mt-2">
                       {/* Equipment Category Tabs */}
@@ -858,35 +895,37 @@ export default function ExerciseLibraryPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <Label>Posture/Position</Label>
-                    <select
-                      value={exerciseForm.posture}
-                      onChange={(e) => setExerciseForm(prev => ({ ...prev, posture: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
-                    >
-                      <option value="">Select...</option>
-                      {POSTURE_OPTIONS.map((posture) => (
-                        <option key={posture} value={posture.toLowerCase()}>{posture}</option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Posture/Position</Label>
+                      <select
+                        value={exerciseForm.posture}
+                        onChange={(e) => setExerciseForm(prev => ({ ...prev, posture: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                      >
+                        <option value="">Select...</option>
+                        {POSTURE_OPTIONS.map((posture) => (
+                          <option key={posture} value={posture.toLowerCase()}>{posture}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <Label>Grip Type</Label>
+                      <select
+                        value={exerciseForm.gripType}
+                        onChange={(e) => setExerciseForm(prev => ({ ...prev, gripType: e.target.value }))}
+                        className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
+                      >
+                        <option value="">Select...</option>
+                        {GRIP_TYPES.map((grip) => (
+                          <option key={grip} value={grip.toLowerCase()}>{grip}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
                   <div>
-                    <Label>Grip Type</Label>
-                    <select
-                      value={exerciseForm.gripType}
-                      onChange={(e) => setExerciseForm(prev => ({ ...prev, gripType: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
-                    >
-                      <option value="">Select...</option>
-                      {GRIP_TYPES.map((grip) => (
-                        <option key={grip} value={grip.toLowerCase()}>{grip}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="md:col-span-2">
                     <Label>Single vs Double Arm/Leg</Label>
                     <select
                       value={exerciseForm.armLegType}
@@ -997,9 +1036,9 @@ export default function ExerciseLibraryPage() {
                         </Button>
                       </div>
 
-                      {/* SECTION 1: Basic Identity */}
+                      {/* SECTION 1: Basic Information */}
                       <div>
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Basic Identity</h5>
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Basic Information</h5>
                         <div className="space-y-3">
                           <div>
                             <Label htmlFor={`edit-name-${exercise.id}`}>Exercise Name *</Label>
@@ -1019,13 +1058,65 @@ export default function ExerciseLibraryPage() {
                               className="w-full min-h-[60px] px-3 py-2 border rounded-md mt-1"
                             />
                           </div>
-                        </div>
-                      </div>
-
-                      {/* SECTION 2: Instructions & Guidance */}
-                      <div>
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Instructions & Guidance</h5>
-                        <div className="space-y-3">
+                          
+                          {/* Visual Category Selector */}
+                          <div>
+                            <Label>Exercise Category *</Label>
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                              {EXERCISE_CATEGORIES.map((category) => (
+                                <button
+                                  key={category.value}
+                                  type="button"
+                                  onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
+                                  className={`relative p-2 rounded-lg border-2 transition-all duration-200 ${
+                                    exerciseForm.category === category.value
+                                      ? 'border-primary shadow-md scale-105'
+                                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                                  } ${
+                                    category.value === 'strength' ? 'bg-gradient-to-br from-blue-50 to-indigo-100' :
+                                    category.value === 'cardio' ? 'bg-gradient-to-br from-red-50 to-pink-100' :
+                                    category.value === 'flexibility' ? 'bg-gradient-to-br from-emerald-50 to-teal-100' :
+                                    category.value === 'core' ? 'bg-gradient-to-br from-purple-50 to-violet-100' :
+                                    category.value === 'balance' ? 'bg-gradient-to-br from-amber-50 to-orange-100' :
+                                    category.value === 'mobility' ? 'bg-gradient-to-br from-teal-50 to-cyan-100' :
+                                    category.value === 'plyometric' ? 'bg-gradient-to-br from-rose-50 to-red-100' :
+                                    'bg-gradient-to-br from-indigo-50 to-purple-100'
+                                  }`}
+                                >
+                                  <div className="flex flex-col items-center gap-1">
+                                    <div className={`h-5 w-5 ${
+                                      category.value === 'strength' ? 'text-blue-600' :
+                                      category.value === 'cardio' ? 'text-red-600' :
+                                      category.value === 'flexibility' ? 'text-emerald-600' :
+                                      category.value === 'core' ? 'text-purple-600' :
+                                      category.value === 'balance' ? 'text-amber-600' :
+                                      category.value === 'mobility' ? 'text-teal-600' :
+                                      category.value === 'plyometric' ? 'text-rose-600' :
+                                      'text-indigo-600'
+                                    }`}>
+                                      {getCategoryIcon(category.value)}
+                                    </div>
+                                    <span className={`text-xs font-semibold ${
+                                      category.value === 'strength' ? 'text-blue-700' :
+                                      category.value === 'cardio' ? 'text-red-700' :
+                                      category.value === 'flexibility' ? 'text-emerald-700' :
+                                      category.value === 'core' ? 'text-purple-700' :
+                                      category.value === 'balance' ? 'text-amber-700' :
+                                      category.value === 'mobility' ? 'text-teal-700' :
+                                      category.value === 'plyometric' ? 'text-rose-700' :
+                                      'text-indigo-700'
+                                    }`}>{category.label}</span>
+                                  </div>
+                                  {exerciseForm.category === category.value && (
+                                    <div className="absolute top-0.5 right-0.5">
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-primary fill-primary" />
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          
                           <div>
                             <Label htmlFor={`edit-instructions-${exercise.id}`}>Instructions</Label>
                             <textarea
@@ -1035,25 +1126,28 @@ export default function ExerciseLibraryPage() {
                               className="w-full min-h-[80px] px-3 py-2 border rounded-md mt-1"
                             />
                           </div>
-                          <div>
-                            <Label htmlFor={`edit-videoUrl-${exercise.id}`}>Video URL</Label>
-                            <Input
-                              id={`edit-videoUrl-${exercise.id}`}
-                              type="url"
-                              value={exerciseForm.videoUrl}
-                              onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`edit-imageUrl-${exercise.id}`}>Image/Thumbnail URL</Label>
-                            <Input
-                              id={`edit-imageUrl-${exercise.id}`}
-                              type="url"
-                              value={exerciseForm.imageUrl}
-                              onChange={(e) => setExerciseForm(prev => ({ ...prev, imageUrl: e.target.value }))}
-                              className="mt-1"
-                            />
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label htmlFor={`edit-videoUrl-${exercise.id}`}>Video URL</Label>
+                              <Input
+                                id={`edit-videoUrl-${exercise.id}`}
+                                type="url"
+                                value={exerciseForm.videoUrl}
+                                onChange={(e) => setExerciseForm(prev => ({ ...prev, videoUrl: e.target.value }))}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`edit-imageUrl-${exercise.id}`}>Image/Thumbnail URL</Label>
+                              <Input
+                                id={`edit-imageUrl-${exercise.id}`}
+                                type="url"
+                                value={exerciseForm.imageUrl}
+                                onChange={(e) => setExerciseForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                                className="mt-1"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1121,30 +1215,10 @@ export default function ExerciseLibraryPage() {
                         </div>
                       </div>
 
-                      {/* SECTION 4: Exercise Setup & Equipment */}
+                      {/* SECTION 3: Equipment & Setup */}
                       <div>
-                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Exercise Setup & Equipment</h5>
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Equipment & Setup</h5>
                         <div className="space-y-3">
-                          <div>
-                            <Label>Category</Label>
-                            <div className="mt-1 grid grid-cols-2 gap-2">
-                              {EXERCISE_CATEGORIES.map((category) => (
-                                <button
-                                  key={category.value}
-                                  type="button"
-                                  onClick={() => setExerciseForm(prev => ({ ...prev, category: category.value }))}
-                                  className={`p-2 rounded-lg border text-sm transition-colors ${
-                                    exerciseForm.category === category.value
-                                      ? 'border-primary bg-primary text-white'
-                                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                                  }`}
-                                >
-                                  {category.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
                           <div>
                             <Label>Equipment Required *</Label>
                             <div className="mt-1">
@@ -1234,6 +1308,53 @@ export default function ExerciseLibraryPage() {
                               </select>
                             </div>
                           </div>
+
+                          <div>
+                            <Label>Single vs Double Arm/Leg</Label>
+                            <select
+                              value={exerciseForm.armLegType}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, armLegType: e.target.value as 'single' | 'double' }))}
+                              className="w-full px-3 py-2 border rounded-md mt-1 text-sm bg-white"
+                            >
+                              <option value="double">Double (Both Arms/Legs)</option>
+                              <option value="single">Single (One Arm/Leg at a Time)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Exercise Scope */}
+                      <div>
+                        <h5 className="text-sm font-semibold text-gray-900 mb-3">Exercise Scope</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <label className="flex items-start gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white">
+                            <input
+                              type="radio"
+                              name={`scope-${exercise.id}`}
+                              value="personal"
+                              checked={exerciseForm.scope === 'personal'}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'personal' }))}
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">Personal Exercise</div>
+                              <div className="text-xs text-gray-600">Only you can see and use this</div>
+                            </div>
+                          </label>
+                          <label className="flex items-start gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white">
+                            <input
+                              type="radio"
+                              name={`scope-${exercise.id}`}
+                              value="company"
+                              checked={exerciseForm.scope === 'company'}
+                              onChange={(e) => setExerciseForm(prev => ({ ...prev, scope: 'company' }))}
+                              className="mt-0.5"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium">Company Library</div>
+                              <div className="text-xs text-gray-600">All trainers can see and use this</div>
+                            </div>
+                          </label>
                         </div>
                       </div>
 
