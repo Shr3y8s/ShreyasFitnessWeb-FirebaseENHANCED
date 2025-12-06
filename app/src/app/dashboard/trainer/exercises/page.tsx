@@ -1563,7 +1563,7 @@ export default function ExerciseLibraryPage() {
                           </div>
                           <div className="flex items-center gap-2 justify-center">
                             {exercise.updatedAt && exercise.updatedAt !== exercise.createdAt && (
-                              <span className="text-blue-600 font-medium">Updated {new Date(exercise.updatedAt).toLocaleDateString()}</span>
+                              <span className="text-blue-600">Updated {new Date(exercise.updatedAt).toLocaleDateString()}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 justify-end">
