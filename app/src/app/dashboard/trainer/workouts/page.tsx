@@ -546,19 +546,19 @@ export default function WorkoutLibraryPage() {
 
                     <div className="bg-gray-50 rounded-lg p-3 mb-4">
                       <div className="grid grid-cols-3 gap-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Dumbbell className="h-4 w-4 text-primary" />
-                          <span className="text-gray-700 font-medium">{workout.exercises?.length || 0} exercises</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Dumbbell className="h-4 w-4 text-primary flex-shrink-0" />
+                          <span className="text-gray-700 font-medium whitespace-nowrap">{workout.exercises?.length || 0} exercises</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-primary" />
-                          <span className="text-gray-700 font-medium">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Clock className="h-4 w-4 text-primary flex-shrink-0" />
+                          <span className="text-gray-700 font-medium whitespace-nowrap">
                             {workout.estimatedDuration ? `${workout.estimatedDuration} min` : 'Not set'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-primary" />
-                          <span className="text-gray-700 font-medium">Used {workout.usageCount || 0}×</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Activity className="h-4 w-4 text-primary flex-shrink-0" />
+                          <span className="text-gray-700 font-medium whitespace-nowrap">Used {workout.usageCount || 0}×</span>
                         </div>
                       </div>
                     </div>
@@ -582,7 +582,7 @@ export default function WorkoutLibraryPage() {
                     <div className="space-y-2 pt-4 border-t">
                       <div className="flex gap-2">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           className="flex-1"
                           onClick={() => setSelectedWorkout(workout)}

@@ -324,12 +324,25 @@ export default function CreateWorkoutTemplatePage() {
         });
         alert('Workout template updated successfully!');
       } else {
+        // Get trainer's name from correct collections (admins first, then trainers)
+        let adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        let trainerName = adminDoc.exists() ? adminDoc.data().name : null;
+
+        // If not admin, check trainers collection
+        if (!trainerName) {
+          const trainerDoc = await getDoc(doc(db, 'trainers', user.uid));
+          trainerName = trainerDoc.exists() ? trainerDoc.data().name : null;
+        }
+
+        // Final fallback (should never happen)
+        trainerName = trainerName || 'Unknown Trainer';
+
         await addDoc(collection(db, 'workoutTemplates'), {
           ...templateData,
           isActive: true,
           usageCount: 0,
           createdBy: user.uid,
-          createdByName: user.displayName || user.email || 'Unknown',
+          createdByName: trainerName,
           createdAt: serverTimestamp(),
         });
         alert('Workout template created successfully!');

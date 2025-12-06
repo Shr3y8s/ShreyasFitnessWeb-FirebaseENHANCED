@@ -255,16 +255,25 @@ export default function ExerciseLibraryPage() {
   const handleCreateExercise = async () => {
     if (!user || !exerciseForm.name || exerciseForm.primaryMuscles.length === 0 || !exerciseForm.muscleGroup || exerciseForm.equipment.length === 0) return;
 
-    // Get user's name from Firestore
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    const userName = userDoc.exists() ? userDoc.data().name || user.email || 'Unknown' : user.email || 'Unknown';
+    // Get trainer's name from correct collections (admins first, then trainers)
+    let adminDoc = await getDoc(doc(db, 'admins', user.uid));
+    let trainerName = adminDoc.exists() ? adminDoc.data().name : null;
+
+    // If not admin, check trainers collection
+    if (!trainerName) {
+      const trainerDoc = await getDoc(doc(db, 'trainers', user.uid));
+      trainerName = trainerDoc.exists() ? trainerDoc.data().name : null;
+    }
+
+    // Final fallback (should never happen)
+    trainerName = trainerName || 'Unknown Trainer';
 
     setSaving(true);
     try {
       const result = await createExercise({
         ...exerciseForm,
         createdBy: user.uid,
-        createdByName: userName,
+        createdByName: trainerName,
         isActive: true
       });
 
@@ -1373,18 +1382,13 @@ export default function ExerciseLibraryPage() {
                     </div>
                   ) : (
                     /* Display Mode */
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
+                    <div className="space-y-3">
+                      {/* Header Row */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3 flex-1">
                           <div className="flex items-center gap-2">
                             {getCategoryIcon(exercise.category)}
                             <h4 className="font-semibold text-lg">{exercise.name}</h4>
-                            {/* Status Badge */}
-                            {exercise.isActive === false && (
-                              <span className="px-2 py-1 bg-gray-500 text-white text-xs rounded-full font-medium">
-                                Inactive
-                              </span>
-                            )}
                           </div>
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.color === 'blue' ? 'bg-blue-100 text-blue-800' :
@@ -1404,154 +1408,176 @@ export default function ExerciseLibraryPage() {
                               Personal
                             </span>
                           )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                          {exercise.createdByName && (
-                            <>
-                              <span>Created by {exercise.createdByName}</span>
-                              {exercise.createdAt && (
-                                <>
-                                  <span>·</span>
-                                  <span>{new Date(exercise.createdAt).toLocaleDateString()}</span>
-                                </>
-                              )}
-                            </>
-                          )}
-                          {exercise.updatedAt && exercise.updatedAt !== exercise.createdAt && (
-                            <>
-                              <span>·</span>
-                              <span className="text-blue-600">Updated {new Date(exercise.updatedAt).toLocaleDateString()}</span>
-                            </>
+                          {exercise.isActive === false && (
+                            <span className="px-2 py-1 bg-gray-500 text-white text-xs rounded-full font-medium">
+                              Inactive
+                            </span>
                           )}
                         </div>
-                        
-                        {exercise.description && (
-                          <p className="text-gray-600 mb-2">{exercise.description}</p>
-                        )}
-                        
-                        {exercise.instructions && (
-                          <div className="mb-3">
-                            <span className="text-sm font-medium text-gray-700">Instructions:</span>
-                            {Array.isArray(exercise.instructions) ? (
-                              <ol className="list-decimal list-inside text-sm text-gray-600 mt-1 space-y-1">
-                                {exercise.instructions.map((step, index) => (
-                                  <li key={index}>{step}</li>
-                                ))}
-                              </ol>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditExercise(exercise)}
+                            disabled={!canEditExercise(exercise)}
+                            title={getEditTooltip(exercise)}
+                            className={!canEditExercise(exercise) 
+                              ? "text-gray-400 cursor-not-allowed" 
+                              : ""}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          
+                          {exercise.isActive !== false ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeactivate(exercise.id)}
+                              disabled={!canEditExercise(exercise)}
+                              title={!canEditExercise(exercise)
+                                ? 'Only the creator or admins can archive exercises'
+                                : 'Archive exercise (reversible)'}
+                              className={!canEditExercise(exercise)
+                                ? "text-gray-400 cursor-not-allowed" 
+                                : "text-orange-600 hover:text-orange-700"}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReactivate(exercise.id)}
+                              disabled={!canEditExercise(exercise)}
+                              title={!canEditExercise(exercise)
+                                ? 'Only the creator or admins can restore exercises'
+                                : 'Restore exercise to active library'}
+                              className={!canEditExercise(exercise)
+                                ? "text-gray-400 cursor-not-allowed" 
+                                : "text-blue-600 hover:text-blue-700"}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(exercise.id)}
+                            disabled={!canEditExercise(exercise)}
+                            title={!canEditExercise(exercise)
+                              ? 'Only the creator or admins can delete exercises'
+                              : 'Permanently delete exercise (cannot be undone)'}
+                            className={!canEditExercise(exercise)
+                              ? "text-gray-400 cursor-not-allowed" 
+                              : "text-red-500 hover:text-red-700"}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Row 1: 4-Column Metadata Grid (matching workout view) */}
+                      <div className="bg-white rounded-lg border p-3">
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                          {/* Category */}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1 font-medium">Category</div>
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                              EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.color === 'blue' ? 'bg-blue-100 text-blue-800' :
+                              EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.color === 'red' ? 'bg-red-100 text-red-800' :
+                              EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.color === 'green' ? 'bg-green-100 text-green-800' :
+                              EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.color === 'purple' ? 'bg-purple-100 text-purple-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {getCategoryIcon(exercise.category)}
+                              {EXERCISE_CATEGORIES.find(cat => cat.value === exercise.category)?.label || exercise.category}
+                            </span>
+                          </div>
+
+                          {/* Muscle Group */}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1 font-medium">Muscle Group</div>
+                            {exercise.muscleGroup ? (
+                              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium inline-block">
+                                {exercise.muscleGroup.replace('_', ' ')}
+                              </span>
                             ) : (
-                              <p className="text-sm text-gray-600 mt-1">{exercise.instructions}</p>
+                              <span className="text-gray-400 text-xs">Not specified</span>
                             )}
                           </div>
-                        )}
-                        
-                        {(exercise.primaryMuscles || []).length > 0 && (
-                          <div className="mb-2">
-                            <span className="text-sm font-medium text-gray-700 mr-2">Primary Muscles:</span>
-                            <div className="inline-flex flex-wrap gap-1">
-                              {(exercise.primaryMuscles || []).map((muscle: string) => (
-                                <span key={muscle} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                  {muscle}
+
+                          {/* Equipment */}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1 font-medium">Equipment</div>
+                            <div className="flex flex-wrap gap-1">
+                              {exercise.equipment.length > 0 ? (
+                                exercise.equipment.slice(0, 2).map((eq) => (
+                                  <span key={eq} className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
+                                    {eq}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-gray-400 text-xs">None</span>
+                              )}
+                              {exercise.equipment.length > 2 && (
+                                <span className="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs font-medium">
+                                  +{exercise.equipment.length - 2}
                                 </span>
-                              ))}
+                              )}
                             </div>
                           </div>
-                        )}
-                        
-                        {(exercise.secondaryMuscles || []).length > 0 && (
-                          <div className="mb-2">
-                            <span className="text-sm font-medium text-gray-700 mr-2">Secondary Muscles:</span>
-                            <div className="inline-flex flex-wrap gap-1">
-                              {(exercise.secondaryMuscles || []).map((muscle: string) => (
-                                <span key={muscle} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                                  {muscle}
+
+                          {/* Targets */}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1 font-medium">Targets</div>
+                            <div className="flex flex-wrap gap-1">
+                              {(exercise.primaryMuscles || []).length > 0 ? (
+                                (exercise.primaryMuscles || []).slice(0, 2).map((muscle: string) => (
+                                  <span key={muscle} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-xs">
+                                    {muscle}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-gray-400 text-xs">Not specified</span>
+                              )}
+                              {(exercise.primaryMuscles || []).length > 2 && (
+                                <span className="px-2 py-0.5 bg-indigo-200 text-indigo-700 rounded text-xs font-medium">
+                                  +{(exercise.primaryMuscles || []).length - 2}
                                 </span>
-                              ))}
+                              )}
                             </div>
                           </div>
-                        )}
-                        
-                        {exercise.equipment.length > 0 && (
-                          <div className="mb-2">
-                            <span className="text-sm font-medium text-gray-700 mr-2">Equipment:</span>
-                            <div className="inline-flex flex-wrap gap-1">
-                              {exercise.equipment.map((eq) => (
-                                <span key={eq} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                  {eq}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        <p className="text-xs text-gray-500 mt-2">
-                          Used in {exercise.usageCount || 0} workout{(exercise.usageCount || 0) !== 1 ? 's' : ''}
-                        </p>
+                        </div>
                       </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditExercise(exercise)}
-                          disabled={!canEditExercise(exercise)}
-                          title={getEditTooltip(exercise)}
-                          className={!canEditExercise(exercise) 
-                            ? "text-gray-400 cursor-not-allowed" 
-                            : ""}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        
-                        {/* Archive/Restore Button */}
-                        {exercise.isActive !== false ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeactivate(exercise.id)}
-                            disabled={!canEditExercise(exercise)}
-                            title={!canEditExercise(exercise)
-                              ? 'Only the creator or admins can archive exercises'
-                              : 'Archive exercise (reversible)'}
-                            className={!canEditExercise(exercise)
-                              ? "text-gray-400 cursor-not-allowed" 
-                              : "text-orange-600 hover:text-orange-700"}
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReactivate(exercise.id)}
-                            disabled={!canEditExercise(exercise)}
-                            title={!canEditExercise(exercise)
-                              ? 'Only the creator or admins can restore exercises'
-                              : 'Restore exercise to active library'}
-                            className={!canEditExercise(exercise)
-                              ? "text-gray-400 cursor-not-allowed" 
-                              : "text-blue-600 hover:text-blue-700"}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
-                        
-                        {/* Delete Button */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(exercise.id)}
-                          disabled={!canEditExercise(exercise)}
-                          title={!canEditExercise(exercise)
-                            ? 'Only the creator or admins can delete exercises'
-                            : 'Permanently delete exercise (cannot be undone)'}
-                          className={!canEditExercise(exercise)
-                            ? "text-gray-400 cursor-not-allowed" 
-                            : "text-red-500 hover:text-red-700"}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+
+                      {/* Row 2: Created/Updated/Usage Metadata */}
+                      <div className="bg-gray-50 rounded-lg border p-3">
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600">Created {exercise.createdAt ? new Date(exercise.createdAt).toLocaleDateString() : 'Unknown'}</span>
+                            {exercise.createdByName && (
+                              <span className="text-gray-500">by {exercise.createdByName}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 justify-center">
+                            {exercise.updatedAt && exercise.updatedAt !== exercise.createdAt && (
+                              <span className="text-blue-600 font-medium">Updated {new Date(exercise.updatedAt).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 justify-end">
+                            <span className="text-gray-600">Used in <span className="font-semibold text-gray-900">{exercise.usageCount || 0}</span> workout{(exercise.usageCount || 0) !== 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Description (if exists) */}
+                      {exercise.description && (
+                        <div className="pt-2">
+                          <p className="text-gray-600 text-sm">{exercise.description}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
