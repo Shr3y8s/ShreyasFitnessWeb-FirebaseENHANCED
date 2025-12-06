@@ -1465,13 +1465,19 @@ export default function ExerciseLibraryPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(exercise.id)}
-                            disabled={!canEditExercise(exercise)}
-                            title={!canEditExercise(exercise)
-                              ? 'Only the creator or admins can delete exercises'
-                              : 'Permanently delete exercise (cannot be undone)'}
-                            className={!canEditExercise(exercise)
-                              ? "text-gray-400 cursor-not-allowed" 
-                              : "text-red-500 hover:text-red-700"}
+                            disabled={!canEditExercise(exercise) || (exercise.usageCount || 0) > 0}
+                            title={
+                              !canEditExercise(exercise)
+                                ? 'Only the creator or admins can delete exercises'
+                                : (exercise.usageCount || 0) > 0
+                                ? `Cannot delete: Used in ${exercise.usageCount} workout template${exercise.usageCount !== 1 ? 's' : ''}. Archive it instead.`
+                                : 'Permanently delete exercise (cannot be undone)'
+                            }
+                            className={
+                              !canEditExercise(exercise) || (exercise.usageCount || 0) > 0
+                                ? "text-gray-400 cursor-not-allowed" 
+                                : "text-red-500 hover:text-red-700"
+                            }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
