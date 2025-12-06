@@ -84,7 +84,14 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
       setAvailableSessions(0);
     });
 
-    return () => unsubscribe();
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user]);
 
   // Listen for unread messages from trainer
@@ -124,6 +131,12 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
             }
           }
         );
+
+        // Register with centralized registry
+        if (unsubscribe) {
+          const { registerListener } = require('@/lib/listener-registry');
+          registerListener(unsubscribe);
+        }
       } catch (error) {
         console.error('Error setting up message listener:', error);
       }
@@ -134,6 +147,8 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
     // Cleanup function to unsubscribe when component unmounts or dependencies change
     return () => {
       if (unsubscribe) {
+        const { unregisterListener } = require('@/lib/listener-registry');
+        unregisterListener(unsubscribe);
         unsubscribe();
       }
     };

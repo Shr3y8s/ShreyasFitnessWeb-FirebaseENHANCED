@@ -77,7 +77,14 @@ export default function ScheduleSessionsPage() {
       console.error('Error listening to session balance:', error);
     });
 
-    return () => unsubscribe();
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user]);
 
   // Fetch real upcoming sessions from Firestore
@@ -152,7 +159,14 @@ export default function ScheduleSessionsPage() {
       setLoadingSessions(false);
     });
 
-    return () => unsubscribe();
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user]);
 
   // Initialize Calendly widget on component mount

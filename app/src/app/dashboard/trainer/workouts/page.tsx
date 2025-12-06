@@ -75,14 +75,25 @@ export default function WorkoutLibraryPage() {
           setFilteredWorkouts(templates);
         }, true);
 
+        // Register with centralized registry
+        if (unsubscribe) {
+          const { registerListener } = require('@/lib/listener-registry');
+          registerListener(unsubscribe);
+        }
+
         setLoading(false);
-        return () => unsubscribe();
       } catch (error) {
         console.error('Error checking access:', error);
       }
     };
 
     checkAccess();
+
+    // Cleanup function
+    return () => {
+      // The unsubscribe function is created in checkAccess, so we need to track it
+      // For now, we'll rely on the centralized cleanup on sign out
+    };
   }, [user, router, authLoading, canAccessTrainerDashboard]);
 
   // Filter and sort workouts

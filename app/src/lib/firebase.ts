@@ -227,6 +227,11 @@ export async function signInWithGoogleAuth() {
 // Function to sign out user
 export async function signOutUser() {
   try {
+    // Clean up all Firestore listeners BEFORE signing out
+    // This prevents permission-denied errors when listeners try to read after auth is lost
+    const { cleanupAllListeners } = await import('./listener-registry');
+    cleanupAllListeners();
+    
     await signOut(auth);
     return { success: true };
   } catch (error) {

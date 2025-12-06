@@ -480,8 +480,15 @@ export default function ClientsPage() {
       }
     );
 
+    // Register listeners with the centralized registry for cleanup before sign out
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribeBalance);
+    registerListener(unsubscribeSessions);
+
     // Cleanup subscriptions on unmount or when client/user changes
     return () => {
+      unregisterListener(unsubscribeBalance);
+      unregisterListener(unsubscribeSessions);
       unsubscribeBalance();
       unsubscribeSessions();
     };

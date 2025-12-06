@@ -65,7 +65,14 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
       }
     );
 
-    return () => unsubscribe();
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user]);
 
   const handleLogout = async () => {

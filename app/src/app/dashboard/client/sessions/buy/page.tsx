@@ -69,8 +69,15 @@ export default function BuySessionsPage() {
       setLoading(false);
     });
 
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
     // Cleanup listener on unmount
-    return () => unsubscribe();
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user]);
 
   const handleLogout = async () => {

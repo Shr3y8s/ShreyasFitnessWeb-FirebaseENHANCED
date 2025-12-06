@@ -227,7 +227,14 @@ export default function ClientMessagesPage() {
       }
     });
 
-    return () => unsubscribe();
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user, activeClientId, mode]);
 
   // Load conversation summaries with real-time updates
@@ -283,9 +290,16 @@ export default function ClientMessagesPage() {
       unsubscribers.push(unsubscribe);
     });
 
+    // Register all conversation listeners with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    unsubscribers.forEach(unsub => registerListener(unsub));
+
     // Cleanup all listeners
     return () => {
-      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.forEach(unsub => {
+        unregisterListener(unsub);
+        unsub();
+      });
     };
   }, [user, clients.length]); // Use clients.length instead of clients array
 

@@ -138,6 +138,12 @@ export default function ExerciseLibraryPage() {
           setFilteredExercises(exerciseList);
         }, true); // Always include inactive so we can filter them in UI
 
+        // Register with centralized registry
+        if (unsubscribe) {
+          const { registerListener } = require('@/lib/listener-registry');
+          registerListener(unsubscribe);
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error checking access:', error);
@@ -149,6 +155,8 @@ export default function ExerciseLibraryPage() {
     // Return cleanup function directly to React
     return () => {
       if (unsubscribe) {
+        const { unregisterListener } = require('@/lib/listener-registry');
+        unregisterListener(unsubscribe);
         unsubscribe();
       }
     };
