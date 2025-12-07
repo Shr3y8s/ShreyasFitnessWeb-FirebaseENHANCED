@@ -178,21 +178,26 @@ export default function WorkoutLibraryPage() {
   const handleDeleteWorkout = async (workoutId: string) => {
     if (!user) return;
     
-    // Check if workout is used anywhere (future: check assignments/programs)
-    const usage = await checkWorkoutUsage(workoutId);
-    
-    if (usage.isUsed) {
-      alert(`Cannot delete: This workout is used in ${usage.usedInAssignments} assignment(s). Please archive it instead.`);
-      return;
-    }
-    
-    if (confirm('⚠️ PERMANENTLY DELETE this workout? This action cannot be undone.\n\nTo keep the workout but hide it, use the Archive button instead.')) {
-      const result = await deleteWorkoutTemplate(workoutId, user.uid, canAccessAdminDashboard);
-      if (result.success) {
-        alert('Workout deleted successfully!');
-      } else {
-        alert(result.error || 'Failed to delete workout');
+    try {
+      // Check if workout is used anywhere (future: check assignments/programs)
+      const usage = await checkWorkoutUsage(workoutId);
+      
+      if (usage.isUsed) {
+        alert(`Cannot delete: This workout is used in ${usage.usedInAssignments} assignment(s). Please archive it instead.`);
+        return;
       }
+      
+      if (confirm('⚠️ PERMANENTLY DELETE this workout? This action cannot be undone.\n\nTo keep the workout but hide it, use the Archive button instead.')) {
+        const result = await deleteWorkoutTemplate(workoutId, user.uid, canAccessAdminDashboard);
+        if (result.success) {
+          alert('Workout deleted successfully!');
+        } else {
+          alert(result.error || 'Failed to delete workout');
+        }
+      }
+    } catch (error) {
+      // Handle errors from checkWorkoutUsage (e.g., permission errors, network issues)
+      alert((error as Error).message || 'Failed to verify workout usage. Please try again.');
     }
   };
 
@@ -614,14 +619,21 @@ export default function WorkoutLibraryPage() {
                             <ArchiveRestore className="h-4 w-4 text-blue-600" />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteWorkout(workout.id)}
-                          title="Permanently delete workout (cannot be undone)"
+                        <div
+                          title={(workout.usageCount || 0) > 0 
+                            ? `Cannot delete: Used in ${workout.usageCount} assignment(s). Archive instead.`
+                            : "Permanently delete workout (cannot be undone)"
+                          }
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteWorkout(workout.id)}
+                            disabled={(workout.usageCount || 0) > 0}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

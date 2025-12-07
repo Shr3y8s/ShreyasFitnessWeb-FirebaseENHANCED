@@ -757,7 +757,9 @@ export async function checkWorkoutUsage(templateId: string): Promise<{
     };
   } catch (error) {
     console.error('Error checking workout usage:', error);
-    return { isUsed: false, usedInAssignments: 0, activeAssignments: 0 };
+    // FAIL-SAFE: If we can't verify usage, assume it's in use to prevent accidental deletion
+    // This protects against permission errors, network issues, etc.
+    throw new Error('Unable to verify workout usage. Please try again or contact support if this persists.');
   }
 }
 

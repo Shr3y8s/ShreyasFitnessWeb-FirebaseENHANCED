@@ -69,8 +69,9 @@ export default function CreateAssignmentPage() {
   const [currentStep, setCurrentStep] = useState<'template' | 'client' | 'configure' | 'schedule' | 'review'>('template');
   
   // Step 1: Template selection
-  const [templates, setTemplates] = useState<(WorkoutTemplate & { id: string })[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<(WorkoutTemplate & { id: string }) | null>(null);
+  const [templates, setTemplates] = useState<(WorkoutTemplate & { id: string; hasArchivedExercises?: boolean; isAssignable?: boolean })[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<(WorkoutTemplate & { id: string; hasArchivedExercises?: boolean; isAssignable?: boolean }) | null>(null);
+  const [hideUnassignable, setHideUnassignable] = useState(false);
   
   // Step 2: Client selection
   const [clients, setClients] = useState<ClientOption[]>([]);
@@ -106,15 +107,41 @@ export default function CreateAssignmentPage() {
           where('isActive', '==', true)
         );
         const templatesSnapshot = await getDocs(templatesQuery);
-        const templatesData = templatesSnapshot.docs
+        const templatesDataRaw = templatesSnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() } as WorkoutTemplate & { id: string }))
           .filter(t => t.createdBy === user.uid || t.scope === 'company');
         
-        setTemplates(templatesData);
+        // Check each template for archived exercises
+        const templatesWithStatus = await Promise.all(
+          templatesDataRaw.map(async (template) => {
+            // Check if any exercises in template are archived
+            const exerciseStatuses = await Promise.all(
+              template.exercises.map(async (ex) => {
+                try {
+                  const exerciseDoc = await getDoc(doc(db, 'exercises', ex.exerciseId));
+                  return exerciseDoc.exists() && exerciseDoc.data().isActive !== false;
+                } catch (error) {
+                  console.error(`Error checking exercise ${ex.exerciseId}:`, error);
+                  return false; // Treat error as archived to be safe
+                }
+              })
+            );
+            
+            const hasArchivedExercises = exerciseStatuses.some(status => !status);
+            
+            return {
+              ...template,
+              hasArchivedExercises,
+              isAssignable: !hasArchivedExercises
+            };
+          })
+        );
+        
+        setTemplates(templatesWithStatus);
 
         // If template preselected, load it
         if (preselectedTemplateId) {
-          const template = templatesData.find(t => t.id === preselectedTemplateId);
+          const template = templatesWithStatus.find((t: any) => t.id === preselectedTemplateId);
           if (template) {
             setSelectedTemplate(template);
             setCustomName(template.name);
@@ -360,6 +387,38 @@ export default function CreateAssignmentPage() {
                 <h2 className="text-xl font-semibold mb-4">Select Workout Template</h2>
                 <p className="text-gray-600 mb-6">Choose a template to assign to your client</p>
                 
+                {/* Info banner if any templates are blocked */}
+                {templates.some(t => !t.isAssignable) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-blue-900">
+                        <strong>Some templates cannot be assigned</strong>
+                        <p className="mt-1">
+                          Templates containing archived exercises are disabled. You can either 
+                          reactivate the archived exercises or edit the template to use 
+                          different exercises.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter toggle */}
+                {templates.some(t => !t.isAssignable) && (
+                  <div className="mb-4 flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hideUnassignable}
+                        onChange={(e) => setHideUnassignable(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Hide templates with archived exercises</span>
+                    </label>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {templates.length === 0 ? (
                     <div className="col-span-full text-center py-12">
@@ -373,23 +432,66 @@ export default function CreateAssignmentPage() {
                       </Button>
                     </div>
                   ) : (
-                    templates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => handleTemplateSelect(template)}
-                        className="text-left border rounded-lg p-4 hover:shadow-md hover:border-primary transition-all"
-                      >
-                        <h3 className="font-semibold mb-2">{template.name}</h3>
-                        {template.description && (
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{template.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <span className="px-2 py-1 bg-gray-100 rounded">{template.difficulty}</span>
-                          <span className="px-2 py-1 bg-gray-100 rounded">{template.category}</span>
-                          <span className="px-2 py-1 bg-gray-100 rounded">{template.exercises.length} exercises</span>
-                        </div>
-                      </button>
-                    ))
+                    templates
+                      .filter(t => !hideUnassignable || t.isAssignable)
+                      .map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => template.isAssignable && handleTemplateSelect(template)}
+                          disabled={!template.isAssignable}
+                          title={!template.isAssignable 
+                            ? 'This template contains archived exercises and cannot be assigned'
+                            : 'Click to assign this template'
+                          }
+                          className={`text-left border rounded-lg p-4 transition-all ${
+                            template.isAssignable 
+                              ? 'hover:shadow-md hover:border-primary cursor-pointer'
+                              : 'opacity-50 cursor-not-allowed bg-gray-100'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-semibold">{template.name}</h3>
+                            {!template.isAssignable && (
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full whitespace-nowrap ml-2">
+                                Archived Exercises
+                              </span>
+                            )}
+                          </div>
+                          {template.description && (
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{template.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <span className="px-2 py-1 bg-gray-100 rounded">{template.difficulty}</span>
+                            <span className="px-2 py-1 bg-gray-100 rounded">{template.category}</span>
+                            <span className="px-2 py-1 bg-gray-100 rounded">{template.exercises.length} exercises</span>
+                          </div>
+                          
+                          {/* Quick action buttons for blocked templates */}
+                          {!template.isAssignable && (
+                            <div className="mt-3 pt-3 border-t flex gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/dashboard/trainer/workouts/create?id=${template.id}`);
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                              >
+                                Edit Template
+                              </button>
+                              <span className="text-gray-400">•</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push('/dashboard/trainer/exercises');
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                              >
+                                Manage Exercises
+                              </button>
+                            </div>
+                          )}
+                        </button>
+                      ))
                   )}
                 </div>
               </div>
