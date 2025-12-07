@@ -21,6 +21,7 @@ import {
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
+import { ExerciseConfigurationDisplay } from '@/components/workouts/ExerciseConfigurationDisplay';
 import {
   Calendar,
   Eye,
@@ -65,6 +66,7 @@ interface Assignment {
     completionPercentage: number;
   };
   notes?: string;
+  exercises?: any[];  // Exercise configurations from assignment
 }
 
 export default function WorkoutAssignmentsPage() {
@@ -194,7 +196,8 @@ export default function WorkoutAssignmentsPage() {
             dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : data.dueDate?.toDate(),
             status: data.status || 'assigned',
             progress: data.progress,
-            notes: data.notes
+            notes: data.notes,
+            exercises: data.exercises || []
           });
         });
         setAssignments(assignmentsData);
@@ -307,7 +310,8 @@ export default function WorkoutAssignmentsPage() {
             dueDate: data.dueDate?.toDate(),
             status: data.status || 'assigned',
             progress: data.progress,
-            notes: data.notes
+            notes: data.notes,
+            exercises: data.exercises || []
           });
         });
         setAssignments(assignmentsData);
@@ -681,6 +685,10 @@ export default function WorkoutAssignmentsPage() {
                                 <span className="font-medium">{new Date(selectedAssignment.assignedDate).toLocaleDateString()}</span>
                               </div>
                               <div className="flex justify-between">
+                                <span className="text-gray-600">Scheduled Date:</span>
+                                <span className="font-medium">{new Date(selectedAssignment.assignedDate).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex justify-between">
                                 <span className="text-gray-600">Due Date:</span>
                                 <span className="font-medium">{new Date(selectedAssignment.dueDate).toLocaleDateString()}</span>
                               </div>
@@ -688,12 +696,18 @@ export default function WorkoutAssignmentsPage() {
                                 <span className="text-gray-600">Progress:</span>
                                 <span className="font-medium">{selectedAssignment.progress?.completionPercentage || 0}%</span>
                               </div>
-                              {selectedAssignment.notes && (
-                                <div>
-                                  <span className="text-gray-600 block mb-1">Notes:</span>
-                                  <p className="text-sm">{selectedAssignment.notes}</p>
-                                </div>
-                              )}
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600">Description:</span>
+                                <span className="font-medium text-right flex-1 ml-4">
+                                  {workout?.description || <span className="text-gray-400 italic">None</span>}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-start">
+                                <span className="text-gray-600">Notes:</span>
+                                <span className="font-medium text-right flex-1 ml-4">
+                                  {selectedAssignment.notes || <span className="text-gray-400 italic">None</span>}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
@@ -716,6 +730,14 @@ export default function WorkoutAssignmentsPage() {
                                   <span className="text-gray-600">Exercises: <strong>{workout.exercises?.length || 0}</strong></span>
                                 </div>
                               </div>
+                            </div>
+                          )}
+
+                          {/* Exercise Configuration */}
+                          {selectedAssignment.exercises && selectedAssignment.exercises.length > 0 && (
+                            <div className="bg-white border rounded-xl p-6">
+                              <h3 className="font-semibold mb-4">Exercise Configuration</h3>
+                              <ExerciseConfigurationDisplay exercises={selectedAssignment.exercises} />
                             </div>
                           )}
 
@@ -768,7 +790,8 @@ export default function WorkoutAssignmentsPage() {
                                             dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : data.dueDate?.toDate(),
                                             status: data.status || 'assigned',
                                             progress: data.progress,
-                                            notes: data.notes
+                                            notes: data.notes,
+                                            exercises: data.exercises || []
                                           });
                                         });
                                         setAssignments(assignmentsData);

@@ -50,12 +50,25 @@ import {
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
+import { ExerciseConfiguration } from '@/components/workouts/ExerciseConfiguration';
 
 // Client selection interface
 interface ClientOption {
   id: string;
   name: string;
   email: string;
+}
+
+// Helper function to format date strings without timezone conversion
+function formatDateForDisplay(dateStr: string): string {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return date.toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
 }
 
 export default function CreateAssignmentPage() {
@@ -658,33 +671,85 @@ export default function CreateAssignmentPage() {
               <div className="bg-white rounded-xl border p-6">
                 <h2 className="text-xl font-semibold mb-6">Review Assignment</h2>
                 
-                <div className="space-y-6">
-                  <div className="border-b pb-4">
-                    <h3 className="font-semibold mb-2">Assignment</h3>
-                    <p className="text-gray-700 font-medium">{customName || selectedTemplate.name}</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Template: <span className="font-medium">{selectedTemplate.name}</span>
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">{selectedTemplate.exercises.length} exercises • ~{selectedTemplate.estimatedDuration} min</p>
-                  </div>
-
-                  <div className="border-b pb-4">
-                    <h3 className="font-semibold mb-2">Client</h3>
-                    <p className="text-gray-700">{clients.find(c => c.id === selectedClientId)?.name}</p>
-                  </div>
-
-                  <div className="border-b pb-4">
-                    <h3 className="font-semibold mb-2">Schedule</h3>
-                    <p className="text-gray-700">Scheduled: {new Date(scheduledDate).toLocaleDateString()}</p>
-                    {dueDate && <p className="text-gray-700">Due: {new Date(dueDate).toLocaleDateString()}</p>}
-                  </div>
-
-                  {assignmentNotes && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Notes</h3>
-                      <p className="text-gray-700">{assignmentNotes}</p>
+                {/* Three Column Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  {/* Column 1: Assignment */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Dumbbell className="h-4 w-4 text-primary" />
+                      Assignment
+                    </h3>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Name</p>
+                        <p className="font-medium text-gray-900">{customName || selectedTemplate.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Template</p>
+                        <p className="text-sm text-gray-700">{selectedTemplate.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Details</p>
+                        <p className="text-sm text-gray-700">{selectedTemplate.exercises.length} exercises • {selectedTemplate.estimatedDuration} min</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Column 2: Client */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" />
+                      Client
+                    </h3>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Name</p>
+                        <p className="font-medium text-gray-900">{clients.find(c => c.id === selectedClientId)?.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Email</p>
+                        <p className="text-sm text-gray-700">{clients.find(c => c.id === selectedClientId)?.email}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 3: Schedule */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      Schedule
+                    </h3>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs text-gray-500">Scheduled</p>
+                        <p className="font-medium text-gray-900">{formatDateForDisplay(scheduledDate)}</p>
+                      </div>
+                      {dueDate && (
+                        <div>
+                          <p className="text-xs text-gray-500">Due Date</p>
+                          <p className="text-sm text-gray-700">{formatDateForDisplay(dueDate)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes - Full Width Below */}
+                {assignmentNotes && (
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 className="font-semibold mb-2">Notes</h3>
+                    <p className="text-gray-700">{assignmentNotes}</p>
+                  </div>
+                )}
+
+                {/* Exercise Configuration Preview */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Exercise Configuration</h3>
+                  <ExerciseConfiguration
+                    exercises={configuredExercises}
+                    mode="display"
+                    readOnly={true}
+                  />
                 </div>
 
                 <div className="flex justify-between mt-8">
@@ -990,14 +1055,26 @@ function ExerciseConfigurator({
                   />
                 </div>
                 <div>
-                  <Label>Target Pace</Label>
+                  <Label>Target Heart Rate (bpm) *</Label>
                   <Input
-                    value={(config as CardioSteadyStateConfiguration).targetPace}
-                    onChange={(e) => onUpdate({ ...config, targetPace: e.target.value } as any)}
-                    placeholder="e.g., 6.0 mph"
+                    type="text"
+                    value={(config as any).targetHeartRate || ''}
+                    onChange={(e) => onUpdate({ ...config, targetHeartRate: e.target.value } as any)}
+                    placeholder="e.g., 140-160 or 150"
                     className="mt-1"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Primary metric</p>
                 </div>
+              </div>
+              <div>
+                <Label>Target Pace (optional)</Label>
+                <Input
+                  value={(config as CardioSteadyStateConfiguration).targetPace}
+                  onChange={(e) => onUpdate({ ...config, targetPace: e.target.value } as any)}
+                  placeholder="e.g., 6.0 mph (secondary metric)"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">Note: 6mph on one machine ≠ 6mph on another. Use heart rate as primary metric.</p>
               </div>
             </div>
           )}

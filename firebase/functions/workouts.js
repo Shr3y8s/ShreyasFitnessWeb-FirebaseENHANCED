@@ -95,6 +95,15 @@ exports.assignWorkout = onCall({
       }
     }
 
+    // Helper function to parse date string (YYYY-MM-DD) to Timestamp
+    const parseDate = (dateStr) => {
+      if (!dateStr) return null;
+      const [year, month, day] = dateStr.split('-');
+      // Create date at midnight UTC for the given date
+      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
+      return admin.firestore.Timestamp.fromDate(date);
+    };
+
     // Create assignment document
     const assignmentRef = admin.firestore().collection("workoutAssignments").doc();
     const now = admin.firestore.Timestamp.now();
@@ -106,9 +115,9 @@ exports.assignWorkout = onCall({
       trainerId: trainerId,
       name: data.name || templateData.name,
       description: data.description || templateData.description || "",
-      scheduledDate: data.scheduledDate,
+      scheduledDate: parseDate(data.scheduledDate),
       assignedAt: now,
-      dueDate: data.dueDate || null,
+      dueDate: parseDate(data.dueDate),
       status: "scheduled",
       completionPercentage: 0,
       exercises: data.exercises,
