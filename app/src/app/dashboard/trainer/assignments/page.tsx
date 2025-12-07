@@ -456,23 +456,6 @@ export default function WorkoutAssignmentsPage() {
                     </div>
                   )}
                 </div>
-
-                <div className="p-4 border-t bg-gray-50 flex-shrink-0">
-                  <div className="text-xs text-gray-600 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Total:</span>
-                      <span className="font-medium">{filteredAssignments.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Active:</span>
-                      <span className="font-medium">{assignmentCounts.active}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Overdue:</span>
-                      <span className="font-medium text-red-600">{assignmentCounts.overdue}</span>
-                    </div>
-                  </div>
-                </div>
           </div>
 
           {/* RIGHT PANEL */}
