@@ -569,33 +569,47 @@ function CoreExerciseView({
   
   if (config.coreSubType === 'rep_based') {
     return (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-sm text-gray-600 mb-3">Rep-Based Core Exercise</p>
-        <div className="space-y-2">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-primary/20">
+            <TableHead className="text-center">Set</TableHead>
+            <TableHead className="text-center">Target Reps</TableHead>
+            <TableHead className="text-center">Rest</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {config.sets?.map((set: any, idx: number) => (
-            <div key={idx} className="flex justify-between text-sm">
-              <span className="text-gray-700">Set {set.setNumber}:</span>
-              <span className="font-medium">{set.targetReps} reps • {set.restSeconds}s rest</span>
-            </div>
+            <TableRow key={idx} className="border-primary/20">
+              <TableCell className="text-center font-medium">{set.setNumber}</TableCell>
+              <TableCell className="text-center">{set.targetReps} reps</TableCell>
+              <TableCell className="text-center">{set.restSeconds}s</TableCell>
+            </TableRow>
           ))}
-        </div>
-      </div>
+        </TableBody>
+      </Table>
     );
   }
   
   if (config.coreSubType === 'duration_based') {
     return (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <p className="text-sm text-gray-600 mb-3">Duration-Based Core Exercise (Planks, Holds)</p>
-        <div className="space-y-2">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-primary/20">
+            <TableHead className="text-center">Round</TableHead>
+            <TableHead className="text-center">Hold Duration</TableHead>
+            <TableHead className="text-center">Rest</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {config.rounds?.map((round: any, idx: number) => (
-            <div key={idx} className="flex justify-between text-sm">
-              <span className="text-gray-700">Round {round.roundNumber}:</span>
-              <span className="font-medium">{round.durationSeconds}s hold • {round.restSeconds}s rest</span>
-            </div>
+            <TableRow key={idx} className="border-primary/20">
+              <TableCell className="text-center font-medium">{round.roundNumber}</TableCell>
+              <TableCell className="text-center">{round.durationSeconds}s</TableCell>
+              <TableCell className="text-center">{round.restSeconds}s</TableCell>
+            </TableRow>
           ))}
-        </div>
-      </div>
+        </TableBody>
+      </Table>
     );
   }
   
@@ -611,12 +625,24 @@ function FlexibilityExerciseView({
   const config = exercise.configuration as any;
   
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <InfoRow label="Type" value={config.flexibilitySubType?.replace('_', ' ')} />
-        <InfoRow label="Duration" value={`${config.totalDurationSeconds}s`} />
-      </div>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow className="border-primary/20">
+          <TableHead className="text-center">Type</TableHead>
+          <TableHead className="text-center">Total Duration</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow className="border-primary/20">
+          <TableCell className="text-center capitalize font-medium">
+            {config.flexibilitySubType?.replace('_', ' ')}
+          </TableCell>
+          <TableCell className="text-center">
+            {config.totalDurationSeconds}s
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -629,17 +655,24 @@ function BalanceExerciseView({
   const config = exercise.configuration as any;
   
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <p className="text-sm text-gray-600 mb-3">{config.balanceSubType?.replace('_', ' ')}</p>
-      <div className="space-y-2">
+    <Table>
+      <TableHeader>
+        <TableRow className="border-primary/20">
+          <TableHead className="text-center">Round</TableHead>
+          <TableHead className="text-center">Duration</TableHead>
+          <TableHead className="text-center">Rest</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {config.rounds?.map((round: any, idx: number) => (
-          <div key={idx} className="flex justify-between text-sm">
-            <span className="text-gray-700">Round {idx + 1}:</span>
-            <span className="font-medium">{round.durationSeconds}s • {round.restSeconds}s rest</span>
-          </div>
+          <TableRow key={idx} className="border-primary/20">
+            <TableCell className="text-center font-medium">{idx + 1}</TableCell>
+            <TableCell className="text-center">{round.durationSeconds}s</TableCell>
+            <TableCell className="text-center">{round.restSeconds}s</TableCell>
+          </TableRow>
         ))}
-      </div>
-    </div>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -652,15 +685,30 @@ function MobilityExerciseView({
   const config = exercise.configuration as any;
   
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <InfoRow label="Type" value={config.mobilitySubType?.replace('_', ' ')} />
-        <InfoRow label="Duration" value={`${config.totalDurationSeconds}s`} />
-        {config.equipment && (
-          <InfoRow label="Equipment" value={config.equipment} className="col-span-2" />
-        )}
-      </div>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow className="border-primary/20">
+          <TableHead className="text-center">Type</TableHead>
+          <TableHead className="text-center">Total Duration</TableHead>
+          {config.equipment && <TableHead className="text-center">Equipment</TableHead>}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow className="border-primary/20">
+          <TableCell className="text-center capitalize font-medium">
+            {config.mobilitySubType?.replace('_', ' ')}
+          </TableCell>
+          <TableCell className="text-center">
+            {config.totalDurationSeconds}s
+          </TableCell>
+          {config.equipment && (
+            <TableCell className="text-center capitalize">
+              {config.equipment}
+            </TableCell>
+          )}
+        </TableRow>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -673,17 +721,26 @@ function PlyometricExerciseView({
   const config = exercise.configuration as any;
   
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <p className="text-sm text-gray-600 mb-3">{config.plyometricSubType}</p>
-      <div className="space-y-2">
+    <Table>
+      <TableHeader>
+        <TableRow className="border-primary/20">
+          <TableHead className="text-center">Set</TableHead>
+          <TableHead className="text-center">Type</TableHead>
+          <TableHead className="text-center">Target Reps</TableHead>
+          <TableHead className="text-center">Rest</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {config.sets?.map((set: any, idx: number) => (
-          <div key={idx} className="flex justify-between text-sm">
-            <span className="text-gray-700">Set {set.setNumber} ({set.setType}):</span>
-            <span className="font-medium">{set.targetReps} reps • {set.restSeconds}s rest</span>
-          </div>
+          <TableRow key={idx} className="border-primary/20">
+            <TableCell className="text-center font-medium">{set.setNumber}</TableCell>
+            <TableCell className="text-center capitalize">{set.setType?.replace('_', ' ')}</TableCell>
+            <TableCell className="text-center">{set.targetReps} reps</TableCell>
+            <TableCell className="text-center">{set.restSeconds}s</TableCell>
+          </TableRow>
         ))}
-      </div>
-    </div>
+      </TableBody>
+    </Table>
   );
 }
 
@@ -696,13 +753,28 @@ function YogaPilatesExerciseView({
   const config = exercise.configuration as any;
   
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <InfoRow label="Type" value={config.yogaSubType?.replace('_', ' ')} />
-        <InfoRow label="Duration" value={`${Math.round(config.durationSeconds / 60)} min`} />
-        <InfoRow label="Intensity" value={config.intensity} />
-      </div>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow className="border-primary/20">
+          <TableHead className="text-center">Type</TableHead>
+          <TableHead className="text-center">Duration</TableHead>
+          <TableHead className="text-center">Intensity</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow className="border-primary/20">
+          <TableCell className="text-center capitalize font-medium">
+            {config.yogaSubType?.replace('_', ' ')}
+          </TableCell>
+          <TableCell className="text-center">
+            {Math.round(config.durationSeconds / 60)} min
+          </TableCell>
+          <TableCell className="text-center capitalize">
+            {config.intensity}
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
   );
 }
 
