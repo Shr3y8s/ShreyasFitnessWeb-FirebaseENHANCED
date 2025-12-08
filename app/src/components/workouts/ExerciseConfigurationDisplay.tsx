@@ -120,13 +120,15 @@ function CardioDisplay({ config }: { config: any }) {
         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
           <InfoRow label="Machine" value={config.machineType?.replace('_', ' ')} />
           <InfoRow label="Duration" value={formatTime(config.durationSeconds)} />
+          {/* Prioritize Heart Rate (Primary Metric) */}
           {config.targetHeartRate && (
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Target Heart Rate:</span>
               <span className="font-medium text-red-600">{config.targetHeartRate} bpm</span>
             </div>
           )}
-          {config.targetPace && <InfoRow label="Target Pace (secondary)" value={config.targetPace} />}
+          {/* Target Pace (Secondary/Optional) */}
+          {config.targetPace && <InfoRow label="Target Pace (optional)" value={config.targetPace} />}
         </div>
       )}
 

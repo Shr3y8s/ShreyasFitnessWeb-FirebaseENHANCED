@@ -81,7 +81,6 @@ export default function ExerciseLibraryPage() {
     muscleGroup: string;
     movementPattern: string;
     planeOfMotion: string;
-    armLegType: 'single' | 'double';
     gripType: string;
     equipment: string[];
     notes: string;
@@ -100,7 +99,6 @@ export default function ExerciseLibraryPage() {
     muscleGroup: '',
     movementPattern: '',
     planeOfMotion: '',
-    armLegType: 'double',
     gripType: '',
     equipment: [],
     notes: '',
@@ -242,7 +240,6 @@ export default function ExerciseLibraryPage() {
       muscleGroup: '',
       movementPattern: '',
       planeOfMotion: '',
-      armLegType: 'double',
       gripType: '',
       equipment: [],
       notes: '',
@@ -304,7 +301,6 @@ export default function ExerciseLibraryPage() {
       muscleGroup: exercise.muscleGroup || '',
       movementPattern: exercise.movementPattern || '',
       planeOfMotion: exercise.planeOfMotion || '',
-      armLegType: exercise.armLegType || 'double',
       gripType: exercise.gripType || '',
       equipment: [...exercise.equipment],
       notes: exercise.notes || '',
@@ -933,18 +929,6 @@ export default function ExerciseLibraryPage() {
                       </select>
                     </div>
                   </div>
-
-                  <div>
-                    <Label>Single vs Double Arm/Leg</Label>
-                    <select
-                      value={exerciseForm.armLegType}
-                      onChange={(e) => setExerciseForm(prev => ({ ...prev, armLegType: e.target.value as 'single' | 'double' }))}
-                      className="w-full px-3 py-2 border rounded-md mt-2 text-sm"
-                    >
-                      <option value="double">Double (Both Arms/Legs)</option>
-                      <option value="single">Single (One Arm/Leg at a Time)</option>
-                    </select>
-                  </div>
                 </div>
               </div>
 
@@ -1316,18 +1300,6 @@ export default function ExerciseLibraryPage() {
                                 ))}
                               </select>
                             </div>
-                          </div>
-
-                          <div>
-                            <Label>Single vs Double Arm/Leg</Label>
-                            <select
-                              value={exerciseForm.armLegType}
-                              onChange={(e) => setExerciseForm(prev => ({ ...prev, armLegType: e.target.value as 'single' | 'double' }))}
-                              className="w-full px-3 py-2 border rounded-md mt-1 text-sm bg-white"
-                            >
-                              <option value="double">Double (Both Arms/Legs)</option>
-                              <option value="single">Single (One Arm/Leg at a Time)</option>
-                            </select>
                           </div>
                         </div>
                       </div>

@@ -18,7 +18,6 @@ export interface Exercise {
   muscleGroup: string; // upper_body, lower_body, core, full_body
   movementPattern?: string; // squat, hinge, push, pull, carry, rotation, lunge
   planeOfMotion?: string; // sagittal, frontal, transverse
-  armLegType: 'single' | 'double'; // Single or double arm/leg movement
   gripType?: string; // overhand, underhand, neutral, wide, narrow, mixed
   notes?: string;
   
@@ -59,6 +58,7 @@ export interface ExerciseConfiguration {
  */
 export interface StrengthConfiguration extends ExerciseConfiguration {
   exerciseType: 'strength';
+  armLegType: 'single' | 'double' | 'alternate';
   strengthSubType: 'free_weight' | 'machine' | 'bodyweight' | 'cable' | 'resistance_band';
   sets: Array<{
     setNumber: number;
@@ -86,8 +86,8 @@ export interface CardioSteadyStateConfiguration extends ExerciseConfiguration {
   machineType: 'treadmill' | 'stationary_bike' | 'recumbent_bike' | 'rowing_machine' | 
                 'elliptical' | 'stair_climber' | 'air_bike' | 'skierg' | 'vertical_climber';
   durationSeconds: number;
-  targetPace: string;  // e.g., "6.0 mph", "2:00 per 500m"
-  targetHeartRate?: number;
+  targetPace: string;  // e.g., "6.0 mph", "2:00 per 500m" - Optional, defaults to empty
+  targetHeartRate?: string;  // e.g., "125", "120-130", "140-150" - Primary metric
   heartRateZone?: 'z1' | 'z2' | 'z3' | 'z4' | 'z5';
   notes?: string;
 }
@@ -185,13 +185,14 @@ export interface CardioStepsBasedConfiguration extends ExerciseConfiguration {
  */
 export interface FlexibilityConfiguration extends ExerciseConfiguration {
   exerciseType: 'flexibility';
+  armLegType: 'single' | 'double' | 'alternate';
   flexibilitySubType: 'static_stretch' | 'dynamic_stretch' | 'pnf';
-  targetAreas: string[];
   stretches: Array<{
     stretchNumber: number;
-    muscleGroup: string;
+    targetMuscles: string[];  // Multiple muscles per stretch (realistic!)
+    primaryMuscle?: string;   // Optional: main focus muscle
     durationSeconds: number;
-    reps?: number;
+    reps?: number;  // For PNF
     notes?: string;
   }>;
   totalDurationSeconds: number;

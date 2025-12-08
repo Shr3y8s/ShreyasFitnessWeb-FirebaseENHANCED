@@ -32,7 +32,13 @@ export function formatConfiguration(config: ExerciseConfigurationType): string {
     return `${sets} sets (${workingSets} working)`;
   } else if (isSteadyStateCardio(config)) {
     const minutes = Math.round(config.durationSeconds / 60);
-    return `${minutes} min @ ${config.targetPace}`;
+    // Prioritize heart rate over pace
+    if (config.targetHeartRate) {
+      return `${minutes} min @ ${config.targetHeartRate} bpm`;
+    } else if (config.targetPace) {
+      return `${minutes} min @ ${config.targetPace}`;
+    }
+    return `${minutes} min`;
   } else if (isIntervalCardio(config)) {
     return `${config.totalRounds} rounds × ${config.intervals.length} intervals`;
   }
@@ -51,7 +57,13 @@ export function formatConfigurationDetailed(config: ExerciseConfigurationType): 
     const firstSet = workingSets[0];
     return `${workingSets.length}×${firstSet.targetReps} @ ${firstSet.weight} ${firstSet.weightUnit}`;
   } else if (isSteadyStateCardio(config)) {
-    return `${formatDuration(config.durationSeconds)} @ ${config.targetPace}`;
+    // Prioritize heart rate over pace in detailed view too
+    if (config.targetHeartRate) {
+      return `${formatDuration(config.durationSeconds)} @ ${config.targetHeartRate} bpm`;
+    } else if (config.targetPace) {
+      return `${formatDuration(config.durationSeconds)} @ ${config.targetPace}`;
+    }
+    return `${formatDuration(config.durationSeconds)}`;
   } else if (isIntervalCardio(config)) {
     const workInterval = config.intervals.find(i => i.type === 'work');
     const restInterval = config.intervals.find(i => i.type === 'rest');
@@ -192,12 +204,24 @@ export function validateCardioSteadyStateConfiguration(config: CardioSteadyState
     errors.push('Duration must be greater than 0');
   }
   
-  if (!config.targetPace || config.targetPace.trim().length === 0) {
-    errors.push('Target pace is required');
-  }
+  // Target pace is optional now
   
-  if (config.targetHeartRate && (config.targetHeartRate < 40 || config.targetHeartRate > 220)) {
-    errors.push('Target heart rate must be between 40 and 220 bpm');
+  // Validate target heart rate if provided (can be string like "120-130" or "125")
+  if (config.targetHeartRate) {
+    const hrStr = config.targetHeartRate.trim();
+    if (hrStr.includes('-')) {
+      // Range format: "120-130"
+      const [min, max] = hrStr.split('-').map(s => parseInt(s.trim()));
+      if (isNaN(min) || isNaN(max) || min < 40 || max > 220 || min >= max) {
+        errors.push('Invalid heart rate range. Format: "120-130" (40-220 bpm)');
+      }
+    } else {
+      // Single value format: "125"
+      const hr = parseInt(hrStr);
+      if (isNaN(hr) || hr < 40 || hr > 220) {
+        errors.push('Target heart rate must be between 40 and 220 bpm');
+      }
+    }
   }
   
   return errors;
@@ -327,6 +351,7 @@ export function calculateExerciseCompletion(
 export function createDefaultStrengthConfiguration(): StrengthConfiguration {
   return {
     exerciseType: 'strength',
+    armLegType: 'double',
     strengthSubType: 'free_weight',
     sets: [
       {
@@ -370,7 +395,8 @@ export function createDefaultCardioSteadyStateConfiguration(): CardioSteadyState
     cardioSubType: 'steady_state',
     machineType: 'treadmill',
     durationSeconds: 1800, // 30 minutes
-    targetPace: '6.0 mph',
+    targetPace: '', // Optional - trainer fills if needed
+    targetHeartRate: '120-130', // Primary metric - default range
   };
 }
 
@@ -464,6 +490,7 @@ export function createDefaultCardioStepsBasedConfiguration() {
 export function createDefaultFlexibilityConfiguration() {
   return {
     exerciseType: 'flexibility' as const,
+    armLegType: 'double' as const,
     flexibilitySubType: 'static_stretch' as const,
     targetAreas: ['hamstrings', 'quadriceps', 'hip_flexors'],
     stretches: [

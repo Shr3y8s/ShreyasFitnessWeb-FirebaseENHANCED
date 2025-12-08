@@ -19,6 +19,16 @@ import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { StrengthExerciseView } from './StrengthExerciseView';
+import { CardioExerciseView } from './CardioExerciseView';
+import { CoreExerciseView } from './CoreExerciseView';
+import { 
+  FlexibilityExerciseView,
+  BalanceExerciseView,
+  MobilityExerciseView,
+  PlyometricExerciseView,
+  YogaPilatesExerciseView
+} from './OtherExerciseViews';
 
 /**
  * Unified Exercise Configuration Component
@@ -36,8 +46,8 @@ interface ExerciseConfigurationProps {
   exercises: WorkoutAssignmentExercise[];
   mode: ExerciseConfigurationMode;
   
-  // For configure & input modes
-  onUpdate?: (exercises: WorkoutAssignmentExercise[]) => void;
+  // For configure mode - callback with exercise index and updated config
+  onExerciseUpdate?: (exerciseIndex: number, updatedConfig: ExerciseConfigurationType) => void;
   
   // For track & input modes (actual performance data)
   executionExercises?: WorkoutExecutionExercise[];
@@ -56,7 +66,7 @@ interface ExerciseConfigurationProps {
 export function ExerciseConfiguration({
   exercises,
   mode,
-  onUpdate,
+  onExerciseUpdate,
   executionExercises,
   completedExercises = {},
   onExerciseCompletedChange,
@@ -200,6 +210,7 @@ export function ExerciseConfiguration({
                       readOnly={readOnly}
                       performanceData={performanceData}
                       onPerformanceChange={setPerformanceData}
+                      onExerciseUpdate={onExerciseUpdate}
                     />
                   )}
                   
@@ -209,19 +220,29 @@ export function ExerciseConfiguration({
                       exIndex={exIndex}
                       mode={mode}
                       readOnly={readOnly}
+                      performanceData={performanceData}
+                      onPerformanceChange={setPerformanceData}
+                      onExerciseUpdate={onExerciseUpdate}
                     />
                   )}
                   
                   {config.exerciseType === 'core' && (
                     <CoreExerciseView
                       exercise={exercise}
+                      exIndex={exIndex}
                       mode={mode}
+                      readOnly={readOnly}
+                      onExerciseUpdate={onExerciseUpdate}
                     />
                   )}
                   
                   {config.exerciseType === 'flexibility' && (
                     <FlexibilityExerciseView
                       exercise={exercise}
+                      exIndex={exIndex}
+                      mode={mode}
+                      readOnly={readOnly}
+                      onExerciseUpdate={onExerciseUpdate}
                     />
                   )}
                   
@@ -327,455 +348,6 @@ function ExerciseSummaryLine({ exercise }: { exercise: WorkoutAssignmentExercise
   }
   
   return <div className="text-sm text-muted-foreground mt-1 capitalize">{config.exerciseType}</div>;
-}
-
-// Strength Exercise View
-function StrengthExerciseView({
-  exercise,
-  exIndex,
-  mode,
-  readOnly,
-  performanceData,
-  onPerformanceChange,
-}: {
-  exercise: WorkoutAssignmentExercise;
-  exIndex: number;
-  mode: ExerciseConfigurationMode;
-  readOnly: boolean;
-  performanceData: { [key: string]: any };
-  onPerformanceChange: (data: { [key: string]: any }) => void;
-}) {
-  const config = exercise.configuration as any;
-  const sets = config.sets || [];
-
-  const handleInputChange = (setId: string, field: 'weight' | 'reps', value: string) => {
-    onPerformanceChange({
-      ...performanceData,
-      [setId]: {
-        ...(performanceData[setId] || {}),
-        [field]: value,
-      },
-    });
-  };
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          <TableHead className="w-16 text-center">Set</TableHead>
-          <TableHead className="text-center">Target</TableHead>
-          {mode === 'input' && (
-            <>
-              <TableHead className="w-32 text-center">Weight (lbs)</TableHead>
-              <TableHead className="w-32 text-center">Actual Reps</TableHead>
-            </>
-          )}
-          {mode === 'display' && (
-            <TableHead className="text-center">Parameters</TableHead>
-          )}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sets.map((set: any, setIndex: number) => {
-          const setId = `${exIndex}-${setIndex}`;
-          const setData = performanceData[setId] || {};
-
-          return (
-            <TableRow key={setId} className="border-primary/20">
-              <TableCell className="text-center font-medium">
-                <Badge variant="secondary" className="w-8 h-8 flex items-center justify-center">
-                  {set.setNumber}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-center">
-                <div className="flex flex-col items-center gap-1">
-                  {set.weight && (
-                    <span className="text-xs font-semibold text-primary">
-                      {set.weight} {set.weightUnit}
-                    </span>
-                  )}
-                  <Badge variant="outline" className="border-primary text-primary">
-                    {set.targetReps} reps
-                  </Badge>
-                </div>
-              </TableCell>
-              {mode === 'input' && (
-                <>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      placeholder={set.weight?.toString() || "0"}
-                      className="text-center border-primary/20"
-                      value={setData.weight || ''}
-                      onChange={(e) => handleInputChange(setId, 'weight', e.target.value)}
-                      disabled={readOnly}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      className="text-center border-primary/20"
-                      value={setData.reps || ''}
-                      onChange={(e) => handleInputChange(setId, 'reps', e.target.value)}
-                      disabled={readOnly}
-                    />
-                  </TableCell>
-                </>
-              )}
-              {mode === 'display' && (
-                <TableCell className="text-center text-sm">
-                  {set.weight} {set.weightUnit} × {set.targetReps} reps ({set.restSeconds}s rest)
-                </TableCell>
-              )}
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
-}
-
-// Cardio Exercise View
-function CardioExerciseView({
-  exercise,
-  exIndex,
-  mode,
-  readOnly,
-}: {
-  exercise: WorkoutAssignmentExercise;
-  exIndex: number;
-  mode: ExerciseConfigurationMode;
-  readOnly: boolean;
-}) {
-  const config = exercise.configuration as any;
-  
-  // Render as compact table
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          {config.cardioSubType === 'steady_state' && (
-            <>
-              <TableHead className="text-center">Machine</TableHead>
-              <TableHead className="text-center">Duration</TableHead>
-              <TableHead className="text-center">Target HR</TableHead>
-              {config.targetPace && <TableHead className="text-center">Target Pace</TableHead>}
-            </>
-          )}
-          {config.cardioSubType === 'intervals' && (
-            <>
-              <TableHead className="text-center">Machine</TableHead>
-              <TableHead className="text-center">Total Rounds</TableHead>
-              <TableHead className="text-center">Intervals</TableHead>
-            </>
-          )}
-          {config.cardioSubType === 'activity_based' && (
-            <>
-              <TableHead className="text-center">Activity</TableHead>
-              <TableHead className="text-center">Intensity</TableHead>
-              <TableHead className="text-center">Duration</TableHead>
-              {config.targetHeartRate && <TableHead className="text-center">Target HR</TableHead>}
-            </>
-          )}
-          {config.cardioSubType === 'steps_based' && (
-            <>
-              <TableHead className="text-center">Machine</TableHead>
-              <TableHead className="text-center">Target Steps</TableHead>
-              <TableHead className="text-center">Pace</TableHead>
-            </>
-          )}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow className="border-primary/20">
-          {config.cardioSubType === 'steady_state' && (
-            <>
-              <TableCell className="text-center capitalize">
-                {config.machineType?.replace('_', ' ')}
-              </TableCell>
-              <TableCell className="text-center font-medium">
-                {Math.round(config.durationSeconds / 60)} min
-              </TableCell>
-              <TableCell className="text-center">
-                {config.targetHeartRate ? `${config.targetHeartRate} bpm` : '-'}
-              </TableCell>
-              {config.targetPace && (
-                <TableCell className="text-center">
-                  {config.targetPace}
-                </TableCell>
-              )}
-            </>
-          )}
-          {config.cardioSubType === 'intervals' && (
-            <>
-              <TableCell className="text-center capitalize">
-                {config.machineType?.replace('_', ' ')}
-              </TableCell>
-              <TableCell className="text-center font-medium">
-                {config.totalRounds}
-              </TableCell>
-              <TableCell className="text-center">
-                {config.intervals?.length || 0} configured
-              </TableCell>
-            </>
-          )}
-          {config.cardioSubType === 'activity_based' && (
-            <>
-              <TableCell className="text-center capitalize font-medium">
-                {config.activity}
-              </TableCell>
-              <TableCell className="text-center capitalize">
-                {config.intensity}
-              </TableCell>
-              <TableCell className="text-center font-medium">
-                {Math.round(config.durationSeconds / 60)} min
-              </TableCell>
-              {config.targetHeartRate && (
-                <TableCell className="text-center">
-                  {config.targetHeartRate} bpm
-                </TableCell>
-              )}
-            </>
-          )}
-          {config.cardioSubType === 'steps_based' && (
-            <>
-              <TableCell className="text-center capitalize">
-                {config.machineType?.replace('_', ' ') || 'None'}
-              </TableCell>
-              <TableCell className="text-center font-medium">
-                {config.targetSteps?.toLocaleString()}
-              </TableCell>
-              <TableCell className="text-center capitalize">
-                {config.pace}
-              </TableCell>
-            </>
-          )}
-        </TableRow>
-      </TableBody>
-    </Table>
-  );
-}
-
-// Core Exercise View
-function CoreExerciseView({
-  exercise,
-  mode,
-}: {
-  exercise: WorkoutAssignmentExercise;
-  mode: ExerciseConfigurationMode;
-}) {
-  const config = exercise.configuration as any;
-  
-  if (config.coreSubType === 'rep_based') {
-    return (
-      <Table>
-        <TableHeader>
-          <TableRow className="border-primary/20">
-            <TableHead className="text-center">Set</TableHead>
-            <TableHead className="text-center">Target Reps</TableHead>
-            <TableHead className="text-center">Rest</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {config.sets?.map((set: any, idx: number) => (
-            <TableRow key={idx} className="border-primary/20">
-              <TableCell className="text-center font-medium">{set.setNumber}</TableCell>
-              <TableCell className="text-center">{set.targetReps} reps</TableCell>
-              <TableCell className="text-center">{set.restSeconds}s</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    );
-  }
-  
-  if (config.coreSubType === 'duration_based') {
-    return (
-      <Table>
-        <TableHeader>
-          <TableRow className="border-primary/20">
-            <TableHead className="text-center">Round</TableHead>
-            <TableHead className="text-center">Hold Duration</TableHead>
-            <TableHead className="text-center">Rest</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {config.rounds?.map((round: any, idx: number) => (
-            <TableRow key={idx} className="border-primary/20">
-              <TableCell className="text-center font-medium">{round.roundNumber}</TableCell>
-              <TableCell className="text-center">{round.durationSeconds}s</TableCell>
-              <TableCell className="text-center">{round.restSeconds}s</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    );
-  }
-  
-  return <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">Core exercise configuration</div>;
-}
-
-// Flexibility Exercise View
-function FlexibilityExerciseView({
-  exercise,
-}: {
-  exercise: WorkoutAssignmentExercise;
-}) {
-  const config = exercise.configuration as any;
-  
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          <TableHead className="text-center">Type</TableHead>
-          <TableHead className="text-center">Total Duration</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow className="border-primary/20">
-          <TableCell className="text-center capitalize font-medium">
-            {config.flexibilitySubType?.replace('_', ' ')}
-          </TableCell>
-          <TableCell className="text-center">
-            {config.totalDurationSeconds}s
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
-  );
-}
-
-// Balance Exercise View
-function BalanceExerciseView({
-  exercise,
-}: {
-  exercise: WorkoutAssignmentExercise;
-}) {
-  const config = exercise.configuration as any;
-  
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          <TableHead className="text-center">Round</TableHead>
-          <TableHead className="text-center">Duration</TableHead>
-          <TableHead className="text-center">Rest</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {config.rounds?.map((round: any, idx: number) => (
-          <TableRow key={idx} className="border-primary/20">
-            <TableCell className="text-center font-medium">{idx + 1}</TableCell>
-            <TableCell className="text-center">{round.durationSeconds}s</TableCell>
-            <TableCell className="text-center">{round.restSeconds}s</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-// Mobility Exercise View
-function MobilityExerciseView({
-  exercise,
-}: {
-  exercise: WorkoutAssignmentExercise;
-}) {
-  const config = exercise.configuration as any;
-  
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          <TableHead className="text-center">Type</TableHead>
-          <TableHead className="text-center">Total Duration</TableHead>
-          {config.equipment && <TableHead className="text-center">Equipment</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow className="border-primary/20">
-          <TableCell className="text-center capitalize font-medium">
-            {config.mobilitySubType?.replace('_', ' ')}
-          </TableCell>
-          <TableCell className="text-center">
-            {config.totalDurationSeconds}s
-          </TableCell>
-          {config.equipment && (
-            <TableCell className="text-center capitalize">
-              {config.equipment}
-            </TableCell>
-          )}
-        </TableRow>
-      </TableBody>
-    </Table>
-  );
-}
-
-// Plyometric Exercise View
-function PlyometricExerciseView({
-  exercise,
-}: {
-  exercise: WorkoutAssignmentExercise;
-}) {
-  const config = exercise.configuration as any;
-  
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          <TableHead className="text-center">Set</TableHead>
-          <TableHead className="text-center">Type</TableHead>
-          <TableHead className="text-center">Target Reps</TableHead>
-          <TableHead className="text-center">Rest</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {config.sets?.map((set: any, idx: number) => (
-          <TableRow key={idx} className="border-primary/20">
-            <TableCell className="text-center font-medium">{set.setNumber}</TableCell>
-            <TableCell className="text-center capitalize">{set.setType?.replace('_', ' ')}</TableCell>
-            <TableCell className="text-center">{set.targetReps} reps</TableCell>
-            <TableCell className="text-center">{set.restSeconds}s</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-// Yoga/Pilates Exercise View
-function YogaPilatesExerciseView({
-  exercise,
-}: {
-  exercise: WorkoutAssignmentExercise;
-}) {
-  const config = exercise.configuration as any;
-  
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="border-primary/20">
-          <TableHead className="text-center">Type</TableHead>
-          <TableHead className="text-center">Duration</TableHead>
-          <TableHead className="text-center">Intensity</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        <TableRow className="border-primary/20">
-          <TableCell className="text-center capitalize font-medium">
-            {config.yogaSubType?.replace('_', ' ')}
-          </TableCell>
-          <TableCell className="text-center">
-            {Math.round(config.durationSeconds / 60)} min
-          </TableCell>
-          <TableCell className="text-center capitalize">
-            {config.intensity}
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
-  );
 }
 
 // Helper Components
