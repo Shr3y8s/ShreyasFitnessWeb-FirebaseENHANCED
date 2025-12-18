@@ -224,9 +224,9 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/workouts">
+              <SidebarMenuItem key="workouts-real">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/workouts">
                     <Dumbbell className="w-4 h-4" />
                     <span className="font-medium">My Workouts</span>
                     {workoutUpdatesCount > 0 && (
@@ -234,6 +234,14 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                         {workoutUpdatesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem key="workouts-mock">
+                <SidebarMenuButton asChild className={pathname === '/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/workouts">
+                    <Dumbbell className="w-4 h-4" />
+                    <span className="font-medium">My Workouts (Mock)</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

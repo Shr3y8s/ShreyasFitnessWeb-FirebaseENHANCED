@@ -567,6 +567,421 @@ export function createDefaultYogaPilatesConfiguration() {
 }
 
 // ============================================================================
+// WORKOUT EXECUTION COMPLETION CALCULATIONS (Phase 2)
+// ============================================================================
+
+import type {
+  ExerciseActualData,
+  StrengthActualData,
+  CardioSteadyStateActualData,
+  CardioIntervalsActualData,
+  CardioActivityActualData,
+  CardioStepsActualData,
+  CoreRepBasedActualData,
+  CoreDurationActualData,
+  FlexibilityActualData,
+  BalanceActualData,
+  MobilityActualData,
+  PlyometricActualData,
+  YogaPilatesActualData,
+  WorkoutExecutionExercise,
+  CoreRepBasedConfiguration,
+  CoreDurationBasedConfiguration,
+  CardioActivityBasedConfiguration,
+  CardioStepsBasedConfiguration,
+  FlexibilityConfiguration,
+  BalanceConfiguration,
+  MobilityConfiguration,
+  PlyometricConfiguration,
+  YogaPilatesConfiguration,
+} from '@/types/workout';
+
+/**
+ * Calculate exercise completion percentage based on planned vs actual data
+ * Returns 0-100 percentage
+ */
+export function calculateExerciseCompletionPercentage(
+  planned: ExerciseConfigurationType,
+  actual: ExerciseActualData
+): number {
+  // Type-based calculation
+  switch (actual.type) {
+    case 'strength':
+      return calculateStrengthCompletion(planned as StrengthConfiguration, actual);
+    
+    case 'cardio_steady_state':
+      return calculateCardioSteadyStateCompletion(planned as CardioSteadyStateConfiguration, actual);
+    
+    case 'cardio_intervals':
+      return calculateCardioIntervalsCompletion(planned as CardioIntervalsConfiguration, actual);
+    
+    case 'cardio_activity':
+      return calculateCardioActivityCompletion(planned as CardioActivityBasedConfiguration, actual);
+    
+    case 'cardio_steps':
+      return calculateCardioStepsCompletion(planned as CardioStepsBasedConfiguration, actual);
+    
+    case 'core_rep_based':
+      return calculateCoreRepBasedCompletion(planned as CoreRepBasedConfiguration, actual);
+    
+    case 'core_duration':
+      return calculateCoreDurationCompletion(planned as CoreDurationBasedConfiguration, actual);
+    
+    case 'flexibility':
+      return calculateFlexibilityCompletion(planned as FlexibilityConfiguration, actual);
+    
+    case 'balance':
+      return calculateBalanceCompletion(planned as BalanceConfiguration, actual);
+    
+    case 'mobility':
+      return calculateMobilityCompletion(planned as MobilityConfiguration, actual);
+    
+    case 'plyometric':
+      return calculatePlyometricCompletion(planned as PlyometricConfiguration, actual);
+    
+    case 'yoga_pilates':
+      return calculateYogaPilatesCompletion(planned as YogaPilatesConfiguration, actual);
+    
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Strength exercise completion: count completed sets
+ */
+function calculateStrengthCompletion(
+  planned: StrengthConfiguration,
+  actual: StrengthActualData
+): number {
+  if (!planned.sets || planned.sets.length === 0) return 0;
+  
+  const totalSets = planned.sets.length;
+  const completedSets = actual.completedSets.filter(s => s.completed).length;
+  
+  return Math.round((completedSets / totalSets) * 100);
+}
+
+/**
+ * Cardio steady state completion: actual duration vs prescribed
+ */
+function calculateCardioSteadyStateCompletion(
+  planned: CardioSteadyStateConfiguration,
+  actual: CardioSteadyStateActualData
+): number {
+  if (planned.durationSeconds === 0) return 0;
+  
+  const percentage = (actual.actualDurationSeconds / planned.durationSeconds) * 100;
+  return Math.min(Math.round(percentage), 100); // Cap at 100%
+}
+
+/**
+ * Cardio intervals completion: rounds completed
+ */
+function calculateCardioIntervalsCompletion(
+  planned: CardioIntervalsConfiguration,
+  actual: CardioIntervalsActualData
+): number {
+  if (planned.totalRounds === 0) return 0;
+  
+  const percentage = (actual.completedRounds / planned.totalRounds) * 100;
+  return Math.min(Math.round(percentage), 100);
+}
+
+/**
+ * Cardio activity completion: actual duration vs prescribed
+ */
+function calculateCardioActivityCompletion(
+  planned: CardioActivityBasedConfiguration,
+  actual: CardioActivityActualData
+): number {
+  if (planned.durationSeconds === 0) return 0;
+  
+  const percentage = (actual.actualDurationSeconds / planned.durationSeconds) * 100;
+  return Math.min(Math.round(percentage), 100);
+}
+
+/**
+ * Cardio steps completion: actual steps vs target
+ */
+function calculateCardioStepsCompletion(
+  planned: CardioStepsBasedConfiguration,
+  actual: CardioStepsActualData
+): number {
+  if (planned.targetSteps === 0) return 0;
+  
+  const percentage = (actual.actualSteps / planned.targetSteps) * 100;
+  return Math.min(Math.round(percentage), 100);
+}
+
+/**
+ * Core rep-based completion: count completed sets
+ */
+function calculateCoreRepBasedCompletion(
+  planned: CoreRepBasedConfiguration,
+  actual: CoreRepBasedActualData
+): number {
+  if (!planned.sets || planned.sets.length === 0) return 0;
+  
+  const totalSets = planned.sets.length;
+  const completedSets = actual.completedSets.filter(s => s.completed).length;
+  
+  return Math.round((completedSets / totalSets) * 100);
+}
+
+/**
+ * Core duration completion: handle both simple and rounds format
+ */
+function calculateCoreDurationCompletion(
+  planned: CoreDurationBasedConfiguration,
+  actual: CoreDurationActualData
+): number {
+  // Simple format: single duration
+  if (planned.durationSeconds && actual.actualDurationSeconds) {
+    const percentage = (actual.actualDurationSeconds / planned.durationSeconds) * 100;
+    return Math.min(Math.round(percentage), 100);
+  }
+  
+  // Rounds format: count completed rounds
+  if (planned.rounds && actual.completedRounds) {
+    const totalRounds = planned.rounds.length;
+    const completedRounds = actual.completedRounds.filter(r => r.completed).length;
+    return Math.round((completedRounds / totalRounds) * 100);
+  }
+  
+  return 0;
+}
+
+/**
+ * Flexibility completion: count completed stretches
+ */
+function calculateFlexibilityCompletion(
+  planned: FlexibilityConfiguration,
+  actual: FlexibilityActualData
+): number {
+  if (!planned.stretches || planned.stretches.length === 0) return 0;
+  
+  const totalStretches = planned.stretches.length;
+  const completedStretches = actual.completedStretches.length;
+  
+  return Math.round((completedStretches / totalStretches) * 100);
+}
+
+/**
+ * Balance completion: count completed rounds
+ */
+function calculateBalanceCompletion(
+  planned: BalanceConfiguration,
+  actual: BalanceActualData
+): number {
+  if (!planned.rounds || planned.rounds.length === 0) return 0;
+  
+  const totalRounds = planned.rounds.length;
+  const completedRounds = actual.completedRounds.filter(r => r.completed).length;
+  
+  return Math.round((completedRounds / totalRounds) * 100);
+}
+
+/**
+ * Mobility completion: count completed areas
+ */
+function calculateMobilityCompletion(
+  planned: MobilityConfiguration,
+  actual: MobilityActualData
+): number {
+  if (!planned.areas || planned.areas.length === 0) return 0;
+  
+  const totalAreas = planned.areas.length;
+  const completedAreas = actual.completedAreas.length;
+  
+  return Math.round((completedAreas / totalAreas) * 100);
+}
+
+/**
+ * Plyometric completion: count completed sets
+ */
+function calculatePlyometricCompletion(
+  planned: PlyometricConfiguration,
+  actual: PlyometricActualData
+): number {
+  if (!planned.sets || planned.sets.length === 0) return 0;
+  
+  const totalSets = planned.sets.length;
+  const completedSets = actual.completedSets.filter(s => s.completed).length;
+  
+  return Math.round((completedSets / totalSets) * 100);
+}
+
+/**
+ * Yoga/Pilates completion: actual duration vs prescribed
+ */
+function calculateYogaPilatesCompletion(
+  planned: YogaPilatesConfiguration,
+  actual: YogaPilatesActualData
+): number {
+  if (planned.durationSeconds === 0) return 0;
+  
+  const percentage = (actual.actualDurationSeconds / planned.durationSeconds) * 100;
+  return Math.min(Math.round(percentage), 100);
+}
+
+/**
+ * Calculate overall workout completion from exercise completions
+ * Simple average of all exercise completion percentages
+ */
+export function calculateWorkoutCompletionPercentage(
+  exercises: WorkoutExecutionExercise[]
+): number {
+  if (exercises.length === 0) return 0;
+  
+  const totalCompletion = exercises.reduce(
+    (sum, ex) => sum + ex.completionPercentage,
+    0
+  );
+  
+  return Math.round(totalCompletion / exercises.length);
+}
+
+/**
+ * Determine completion status based on percentage
+ */
+export function determineCompletionStatus(
+  percentage: number
+): 'not_started' | 'partial' | 'completed' {
+  if (percentage === 0) return 'not_started';
+  if (percentage === 100) return 'completed';
+  return 'partial';
+}
+
+/**
+ * Get status icon/indicator for display
+ */
+export function getCompletionStatusIcon(status: string): string {
+  switch (status) {
+    case 'completed':
+      return '✓';
+    case 'partial':
+      return '⚠️';
+    case 'not_started':
+      return '⏳';
+    default:
+      return '○';
+  }
+}
+
+/**
+ * Get status color for display
+ */
+export function getCompletionStatusColor(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'green';
+    case 'partial':
+      return 'yellow';
+    case 'not_started':
+      return 'gray';
+    default:
+      return 'gray';
+  }
+}
+
+/**
+ * Format completion percentage for display
+ * Examples: "100%", "67%", "0%"
+ */
+export function formatCompletionPercentage(percentage: number): string {
+  return `${percentage}%`;
+}
+
+/**
+ * Format completion fraction for display
+ * Examples: "2/3 sets", "3/5 rounds", "15/30 min"
+ */
+export function formatCompletionFraction(
+  completed: number,
+  total: number,
+  unit: string
+): string {
+  return `${completed}/${total} ${unit}`;
+}
+
+/**
+ * Get human-readable summary of exercise completion
+ * Examples: "2/3 sets (67%)", "15/30 min (50%)", "All rounds complete"
+ */
+export function getExerciseCompletionSummary(
+  exercise: WorkoutExecutionExercise
+): string {
+  const percentage = exercise.completionPercentage;
+  const actual = exercise.actualData;
+  
+  if (percentage === 100) {
+    return 'Complete';
+  }
+  
+  if (percentage === 0) {
+    return 'Not started';
+  }
+  
+  // Type-specific summaries
+  switch (actual.type) {
+    case 'strength':
+    case 'core_rep_based':
+    case 'plyometric': {
+      const completed = actual.completedSets.filter(s => s.completed).length;
+      const total = actual.completedSets.length;
+      return `${completed}/${total} sets (${percentage}%)`;
+    }
+    
+    case 'cardio_steady_state':
+    case 'cardio_activity':
+    case 'yoga_pilates': {
+      const config = exercise.plannedConfiguration as any;
+      const actualMin = Math.round(actual.actualDurationSeconds / 60);
+      const plannedMin = Math.round(config.durationSeconds / 60);
+      return `${actualMin}/${plannedMin} min (${percentage}%)`;
+    }
+    
+    case 'cardio_intervals': {
+      return `${actual.completedRounds}/${(exercise.plannedConfiguration as CardioIntervalsConfiguration).totalRounds} rounds (${percentage}%)`;
+    }
+    
+    case 'cardio_steps': {
+      return `${actual.actualSteps}/${(exercise.plannedConfiguration as CardioStepsBasedConfiguration).targetSteps} steps (${percentage}%)`;
+    }
+    
+    case 'core_duration': {
+      const config = exercise.plannedConfiguration as CoreDurationBasedConfiguration;
+      if (config.rounds && actual.completedRounds) {
+        const completed = actual.completedRounds.filter(r => r.completed).length;
+        const total = config.rounds.length;
+        return `${completed}/${total} rounds (${percentage}%)`;
+      }
+      return `${percentage}% complete`;
+    }
+    
+    case 'flexibility': {
+      const config = exercise.plannedConfiguration as FlexibilityConfiguration;
+      return `${actual.completedStretches.length}/${config.stretches.length} stretches (${percentage}%)`;
+    }
+    
+    case 'balance': {
+      const config = exercise.plannedConfiguration as BalanceConfiguration;
+      const completed = actual.completedRounds.filter(r => r.completed).length;
+      return `${completed}/${config.rounds.length} rounds (${percentage}%)`;
+    }
+    
+    case 'mobility': {
+      const config = exercise.plannedConfiguration as MobilityConfiguration;
+      return `${actual.completedAreas.length}/${config.areas.length} areas (${percentage}%)`;
+    }
+    
+    default:
+      return `${percentage}% complete`;
+  }
+}
+
+// ============================================================================
 // EXPORT ALL TYPE GUARDS FOR CONVENIENCE
 // ============================================================================
 

@@ -49,6 +49,25 @@ export default function TrainerDashboardPage() {
   const [failedPaymentsCount, setFailedPaymentsCount] = useState(0);
   const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState(0);
 
+  // Helper function to convert Firestore Timestamp or Date to milliseconds
+  const getTimestamp = (dateOrTimestamp: any): number => {
+    if (!dateOrTimestamp) return Date.now();
+    
+    // Check if it's a Date object
+    if (dateOrTimestamp instanceof Date) {
+      return dateOrTimestamp.getTime();
+    }
+    
+    // Check if it's a Firestore Timestamp (has toDate method)
+    if (dateOrTimestamp?.toDate && typeof dateOrTimestamp.toDate === 'function') {
+      return dateOrTimestamp.toDate().getTime();
+    }
+    
+    // Try to parse as string/number
+    const parsed = new Date(dateOrTimestamp).getTime();
+    return isNaN(parsed) ? Date.now() : parsed;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (authLoading) {
@@ -114,8 +133,9 @@ export default function TrainerDashboardPage() {
             let status: 'active' | 'inactive' | 'pending' = 'active';
             if (clientAssignments.length === 0) {
               status = 'pending';
-            } else if (lastCompletedWorkout) {
-              const daysSinceLastWorkout = Math.floor((Date.now() - lastCompletedWorkout.completedAt.getTime()) / (1000 * 60 * 60 * 24));
+            } else if (lastCompletedWorkout && lastCompletedWorkout.completedAt) {
+              const completedAtTime = getTimestamp(lastCompletedWorkout.completedAt);
+              const daysSinceLastWorkout = Math.floor((Date.now() - completedAtTime) / (1000 * 60 * 60 * 24));
               if (daysSinceLastWorkout > 14) {
                 status = 'inactive';
               }

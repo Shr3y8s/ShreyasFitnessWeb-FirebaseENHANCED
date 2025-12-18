@@ -122,7 +122,6 @@ exports.assignWorkout = onCall({
       completionPercentage: 0,
       exercises: data.exercises,
       notes: data.notes || "",
-      createdAt: now,
       updatedAt: now,
     };
 
@@ -393,6 +392,174 @@ exports.updateWorkoutExecution = onCall({
     });
 
     throw new Error(`Failed to update workout execution: ${error.message}`);
+  }
+});
+
+/**
+ * Save workout execution (unified create/update)
+ * Handles both creating new executions and updating existing ones
+ * This is the primary function for the "Save Progress" button
+ * 
+ * @param {Object} request.data
+ * @param {string} request.data.workoutAssignmentId - Assignment being executed
+ * @param {Object} request.data.execution - Full execution data including exercises with actualData
+ * @return {Object} Saved execution with ID
+ */
+exports.saveWorkoutExecution = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Require authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const clientId = request.auth.uid;
+    const data = request.data;
+
+    // Validate required fields
+    if (!data.workoutAssignmentId || !data.execution) {
+      throw new Error("Missing required fields: workoutAssignmentId and execution");
+    }
+
+    logger.info("Saving workout execution", {
+      clientId,
+      assignmentId: data.workoutAssignmentId,
+    });
+
+    // Get assignment
+    const assignmentRef = admin.firestore().collection("workoutAssignments").doc(data.workoutAssignmentId);
+    const assignmentDoc = await assignmentRef.get();
+
+    if (!assignmentDoc.exists) {
+      throw new Error("Workout assignment not found");
+    }
+
+    const assignmentData = assignmentDoc.data();
+
+    // Verify client owns this assignment
+    if (assignmentData.clientId !== clientId) {
+      throw new Error("Unauthorized: You can only save your own workouts");
+    }
+
+    // Check if execution already exists
+    const existingExecutionsQuery = await admin.firestore()
+        .collection("workoutExecutions")
+        .where("workoutAssignmentId", "==", data.workoutAssignmentId)
+        .where("clientId", "==", clientId)
+        .limit(1)
+        .get();
+
+    const now = admin.firestore.Timestamp.now();
+    let executionRef;
+    let isUpdate = false;
+
+    if (!existingExecutionsQuery.empty) {
+      // Update existing execution
+      executionRef = existingExecutionsQuery.docs[0].ref;
+      isUpdate = true;
+    } else {
+      // Create new execution
+      executionRef = admin.firestore().collection("workoutExecutions").doc();
+    }
+
+    // Prepare execution data
+    const executionData = {
+      ...data.execution,
+      id: executionRef.id,
+      workoutAssignmentId: data.workoutAssignmentId,
+      clientId: clientId,
+      trainerId: assignmentData.trainerId,
+      updatedAt: now,
+    };
+
+    // Convert Date objects to Timestamps if needed
+    // Handle various date formats: Date objects, ISO strings, Timestamps
+    if (executionData.startedAt && !(executionData.startedAt instanceof admin.firestore.Timestamp)) {
+      try {
+        const startDate = executionData.startedAt instanceof Date 
+          ? executionData.startedAt 
+          : new Date(executionData.startedAt);
+        
+        if (isNaN(startDate.getTime())) {
+          throw new Error("Invalid startedAt date");
+        }
+        executionData.startedAt = admin.firestore.Timestamp.fromDate(startDate);
+      } catch (error) {
+        logger.error("Error converting startedAt to Timestamp", {error: error.message});
+        executionData.startedAt = now; // Fallback to current time
+      }
+    }
+    
+    if (executionData.completedAt && !(executionData.completedAt instanceof admin.firestore.Timestamp)) {
+      try {
+        const completeDate = executionData.completedAt instanceof Date 
+          ? executionData.completedAt 
+          : new Date(executionData.completedAt);
+        
+        if (isNaN(completeDate.getTime())) {
+          throw new Error("Invalid completedAt date");
+        }
+        executionData.completedAt = admin.firestore.Timestamp.fromDate(completeDate);
+      } catch (error) {
+        logger.error("Error converting completedAt to Timestamp", {error: error.message});
+        executionData.completedAt = now; // Fallback to current time
+      }
+    }
+    
+    if (!executionData.createdAt) {
+      executionData.createdAt = now;
+    }
+
+    // Calculate overall completion percentage from exercises
+    if (executionData.exercises && Array.isArray(executionData.exercises)) {
+      let totalCompletion = 0;
+      executionData.exercises.forEach((exercise) => {
+        totalCompletion += exercise.completionPercentage || 0;
+      });
+      executionData.completionPercentage = Math.round(totalCompletion / executionData.exercises.length);
+    }
+
+    // Use transaction to save execution and update assignment
+    await admin.firestore().runTransaction(async (transaction) => {
+      if (isUpdate) {
+        transaction.update(executionRef, executionData);
+      } else {
+        transaction.set(executionRef, executionData);
+      }
+
+      // Update assignment status
+      const assignmentUpdate = {
+        status: executionData.completionStatus === "completed" ? "completed" : "in_progress",
+        completionPercentage: executionData.completionPercentage || 0,
+        updatedAt: now,
+      };
+      transaction.update(assignmentRef, assignmentUpdate);
+    });
+
+    logger.info("Workout execution saved successfully", {
+      executionId: executionRef.id,
+      clientId,
+      assignmentId: data.workoutAssignmentId,
+      isUpdate,
+      completionPercentage: executionData.completionPercentage,
+    });
+
+    return {
+      success: true,
+      executionId: executionRef.id,
+      execution: executionData,
+      isUpdate,
+    };
+  } catch (error) {
+    logger.error("Error saving workout execution", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Failed to save workout execution: ${error.message}`);
   }
 });
 

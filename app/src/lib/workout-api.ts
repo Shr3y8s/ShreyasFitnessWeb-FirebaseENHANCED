@@ -218,6 +218,51 @@ export async function completeWorkoutExecution(
   }
 }
 
+/**
+ * Save workout execution (unified create/update)
+ * Handles both creating new executions and updating existing ones
+ * This is the primary function for the "Save Progress" button
+ * 
+ * @param workoutAssignmentId - ID of the assignment being executed
+ * @param execution - Full execution data including exercises with actualData
+ * @returns Promise with execution ID and data
+ * 
+ * @example
+ * ```typescript
+ * const result = await saveWorkoutExecution(
+ *   'assignment_123',
+ *   workoutExecutionData
+ * );
+ * if (result.isUpdate) {
+ *   console.log('Progress updated');
+ * } else {
+ *   console.log('Execution created');
+ * }
+ * ```
+ */
+export async function saveWorkoutExecution(
+  workoutAssignmentId: string,
+  execution: WorkoutExecution
+): Promise<{
+  success: boolean;
+  executionId: string;
+  execution: WorkoutExecution;
+  isUpdate: boolean;
+}> {
+  const saveFn = httpsCallable<
+    { workoutAssignmentId: string; execution: WorkoutExecution },
+    { success: boolean; executionId: string; execution: WorkoutExecution; isUpdate: boolean }
+  >(functions, 'saveWorkoutExecution');
+
+  try {
+    const result = await saveFn({ workoutAssignmentId, execution });
+    return result.data;
+  } catch (error: any) {
+    console.error('Error saving workout execution:', error);
+    throw new Error(error.message || 'Failed to save workout execution');
+  }
+}
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================

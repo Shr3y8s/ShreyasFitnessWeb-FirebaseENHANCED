@@ -421,7 +421,7 @@ export interface WorkoutAssignment {
   name: string;                // Can differ from template name
   // Note: Description comes from template, not stored here
   scheduledDate: string;       // ISO 8601 date (YYYY-MM-DD)
-  assignedAt: Date;            // Timestamp when assigned
+  assignedAt: Date;            // When trainer assigned this workout
   dueDate?: string;            // Optional due date (YYYY-MM-DD)
   
   status: 'scheduled' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
@@ -430,36 +430,16 @@ export interface WorkoutAssignment {
   exercises: WorkoutAssignmentExercise[];  // Configured exercises with concrete values (array position = order)
   
   notes?: string;              // Trainer notes for this assignment
-  createdAt: Date;
-  updatedAt: Date;
+  updatedAt: Date;             // Last modification timestamp
 }
 
 // ============================================================================
-// WORKOUT EXECUTION (Tracking Actual Performance)
+// WORKOUT EXECUTION TRACKING (Actual Performance Data)
 // ============================================================================
-
-/**
- * WorkoutExecutionExercise - Records actual performance for an exercise
- * Contains both planned configuration and actual results
- */
-export interface WorkoutExecutionExercise {
-  exerciseId: string;
-  exerciseName: string;
-  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
-  
-  completionStatus: 'not_started' | 'partial' | 'completed';
-  completionPercentage: number;  // 0-100
-  
-  plannedConfiguration: ExerciseConfigurationType;  // What was assigned
-  actualConfiguration: ExerciseConfigurationType;   // What was actually performed
-  
-  notes?: string;                // Client notes about the exercise
-  deviations?: string[];         // Array of notes about what differed from plan
-}
 
 /**
  * WorkoutExecution - Records actual client performance of an assigned workout
- * Tracks what the client actually did vs. what was planned
+ * This is the "what actually happened" data structure
  */
 export interface WorkoutExecution {
   id: string;
@@ -471,13 +451,205 @@ export interface WorkoutExecution {
   completedAt?: Date;           // When client completed (null if incomplete)
   durationMinutes: number;      // Actual duration
   
+  // Overall workout feedback
+  overallDifficulty?: 'easy' | 'moderate' | 'hard' | 'very_hard';
   overallNotes?: string;        // Client's overall workout notes
-  completionStatus: 'not_started' | 'in_progress' | 'partial' | 'completed';
   
-  exercises: WorkoutExecutionExercise[];  // Exercise-by-exercise actual performance
+  // Completion tracking
+  completionStatus: 'not_started' | 'in_progress' | 'partial' | 'completed';
+  completionPercentage: number; // 0-100, calculated from exercises
+  
+  // Exercise-by-exercise actual performance
+  exercises: WorkoutExecutionExercise[];
   
   createdAt: Date;
+  updatedAt: Date;
 }
+
+/**
+ * WorkoutExecutionExercise - Records actual performance for an exercise
+ * Contains both planned configuration and actual results
+ */
+export interface WorkoutExecutionExercise {
+  exerciseId: string;
+  exerciseName: string;      // Denormalized for display
+  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+  
+  // Completion tracking
+  completionStatus: 'not_started' | 'partial' | 'completed';
+  completionPercentage: number;  // 0-100
+  
+  // What was prescribed
+  plannedConfiguration: ExerciseConfigurationType;
+  
+  // What was actually done
+  actualData: ExerciseActualData;
+  
+  // Exercise-specific notes
+  notes?: string;
+  deviations?: string[];     // Array of notes about what differed from plan
+}
+
+/**
+ * ExerciseActualData - Polymorphic union of all actual performance data types
+ */
+export type ExerciseActualData = 
+  | StrengthActualData
+  | CardioSteadyStateActualData
+  | CardioIntervalsActualData
+  | CardioActivityActualData
+  | CardioStepsActualData
+  | CoreRepBasedActualData
+  | CoreDurationActualData
+  | FlexibilityActualData
+  | BalanceActualData
+  | MobilityActualData
+  | PlyometricActualData
+  | YogaPilatesActualData;
+
+/**
+ * Strength Exercise - Actual Performance
+ * Tracks set-by-set completion with optional actual weight/reps
+ */
+export interface StrengthActualData {
+  type: 'strength';
+  completedSets: Array<{
+    setNumber: number;
+    completed: boolean;
+    actualReps?: number;
+    actualWeight?: number;
+    actualWeightUnit?: 'lbs' | 'kg';
+    notes?: string;
+  }>;
+}
+
+/**
+ * Cardio Steady State - Actual Performance
+ * Tracks actual duration and metrics vs prescribed
+ */
+export interface CardioSteadyStateActualData {
+  type: 'cardio_steady_state';
+  actualDurationSeconds: number;
+  actualPace?: string;
+  actualHeartRate?: string;
+}
+
+/**
+ * Cardio Intervals - Actual Performance
+ * Tracks completed rounds and intervals
+ */
+export interface CardioIntervalsActualData {
+  type: 'cardio_intervals';
+  completedRounds: number;       // Out of totalRounds
+  completedIntervals?: number[]; // Array of completed interval indices
+}
+
+/**
+ * Cardio Activity - Actual Performance
+ * Tracks actual time spent on activity
+ */
+export interface CardioActivityActualData {
+  type: 'cardio_activity';
+  actualDurationSeconds: number;
+}
+
+/**
+ * Cardio Steps - Actual Performance
+ * Tracks actual steps completed
+ */
+export interface CardioStepsActualData {
+  type: 'cardio_steps';
+  actualSteps: number;
+  actualPace?: 'slow' | 'moderate' | 'fast';
+}
+
+/**
+ * Core Rep-Based - Actual Performance
+ * Tracks set-by-set completion
+ */
+export interface CoreRepBasedActualData {
+  type: 'core_rep_based';
+  completedSets: Array<{
+    setNumber: number;
+    completed: boolean;
+    actualReps?: number;
+  }>;
+}
+
+/**
+ * Core Duration - Actual Performance
+ * Handles both simple duration and rounds-based format
+ */
+export interface CoreDurationActualData {
+  type: 'core_duration';
+  // Simple format: just a single duration
+  actualDurationSeconds?: number;
+  // Rounds format: multiple rounds
+  completedRounds?: Array<{
+    roundNumber: number;
+    completed: boolean;
+    actualDurationSeconds?: number;
+  }>;
+}
+
+/**
+ * Flexibility - Actual Performance
+ * Tracks which stretches were completed
+ */
+export interface FlexibilityActualData {
+  type: 'flexibility';
+  completedStretches: number[]; // Array of completed stretch indices
+}
+
+/**
+ * Balance - Actual Performance
+ * Tracks round-by-round completion
+ */
+export interface BalanceActualData {
+  type: 'balance';
+  completedRounds: Array<{
+    roundNumber: number;
+    completed: boolean;
+    actualDurationSeconds?: number;
+    actualReps?: number;
+  }>;
+}
+
+/**
+ * Mobility - Actual Performance
+ * Tracks which areas were worked
+ */
+export interface MobilityActualData {
+  type: 'mobility';
+  completedAreas: number[]; // Array of completed area indices
+}
+
+/**
+ * Plyometric - Actual Performance
+ * Tracks set-by-set completion
+ */
+export interface PlyometricActualData {
+  type: 'plyometric';
+  completedSets: Array<{
+    setNumber: number;
+    completed: boolean;
+    actualReps?: number;
+  }>;
+}
+
+/**
+ * Yoga/Pilates - Actual Performance
+ * Tracks actual session duration
+ */
+export interface YogaPilatesActualData {
+  type: 'yoga_pilates';
+  actualDurationSeconds: number;
+  actualIntensity?: 'light' | 'moderate' | 'high';
+}
+
+// ============================================================================
+// DEPRECATED INTERFACES (Legacy - To Be Removed)
+// ============================================================================
 
 /**
  * DEPRECATED: Old interfaces kept for reference during migration

@@ -614,6 +614,7 @@ const workoutFunctions = require("./workouts");
 exports.assignWorkout = workoutFunctions.assignWorkout;
 exports.startWorkoutExecution = workoutFunctions.startWorkoutExecution;
 exports.updateWorkoutExecution = workoutFunctions.updateWorkoutExecution;
+exports.saveWorkoutExecution = workoutFunctions.saveWorkoutExecution;
 exports.completeWorkoutExecution = workoutFunctions.completeWorkoutExecution;
 exports.createWorkoutTemplate = workoutFunctions.createWorkoutTemplate;
 exports.updateWorkoutTemplate = workoutFunctions.updateWorkoutTemplate;
