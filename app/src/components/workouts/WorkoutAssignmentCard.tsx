@@ -104,6 +104,13 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
     loadExistingExecution();
   }, [assignment.id, assignment.status, isCompleted]);
 
+  // Reset mode to display when card is closed
+  useEffect(() => {
+    if (!isOpen && mode !== 'display') {
+      setMode('display');
+    }
+  }, [isOpen, mode]);
+
   // Initialize workout execution when starting tracking
   const handleStartTracking = () => {
     // If we already have a loaded execution (from useEffect), just switch to track mode
@@ -480,23 +487,12 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
                 <div className="flex items-center justify-between gap-4 pt-4 border-t">
                   {/* Save Progress Button - Always visible */}
                   <Button 
-                    variant="outline"
                     size="lg"
                     onClick={handleSaveProgress}
                     disabled={isSaving}
-                    className="flex-1"
+                    className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
                   >
-                    {isSaving ? (
-                      <>
-                        <span className="animate-pulse">💾</span>
-                        <span className="ml-2">Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>💾</span>
-                        <span className="ml-2">Save Progress</span>
-                      </>
-                    )}
+                    {isSaving ? 'Saving...' : 'Save Progress'}
                   </Button>
 
                   {/* Mark Complete Button - Only at 80%+ */}
