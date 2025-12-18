@@ -24,6 +24,7 @@ import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { ExerciseConfigurationDisplay } from '@/components/workouts/ExerciseConfigurationDisplay';
 import { WorkoutExecutionDetailView } from '@/components/workouts/WorkoutExecutionDetailView';
+import { AllClientsOverviewDashboard } from '@/components/workouts/AllClientsOverviewDashboard';
 import { WorkoutExecution } from '@/types/workout';
 import {
   Calendar,
@@ -104,16 +105,21 @@ export default function WorkoutAssignmentsPage() {
   const [workoutSearchQuery, setWorkoutSearchQuery] = useState('');
   const [assignmentSearchQuery, setAssignmentSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedViewClientId, setSelectedViewClientId] = useState<string | null>(null);
+  const [timeWindowWeeks, setTimeWindowWeeks] = useState(2); // Default: 2 weeks back + forward
   
   // UI state
   const [showPreSelectionBanner, setShowPreSelectionBanner] = useState(false);
 
-  // Check for pre-selected clients from URL
+  // Check for pre-selected client from URL
   useEffect(() => {
+    const urlClient = searchParams.get('client');
     const preSelectedClients = searchParams.get('clients');
     const urlMode = searchParams.get('mode');
     
-    if (preSelectedClients) {
+    if (urlClient) {
+      setSelectedViewClientId(urlClient);
+    } else if (preSelectedClients) {
       const clientIds = preSelectedClients.split(',');
       setSelectedClientIds(clientIds);
       setShowPreSelectionBanner(true);
@@ -281,8 +287,29 @@ export default function WorkoutAssignmentsPage() {
     return matchesSearch;
   });
 
-  // Filter assignments
+  // Filter assignments by selected client and time window
   const filteredAssignments = assignments.filter(assignment => {
+    // Client filter - REQUIRED when in view mode
+    if (mode === 'view' && selectedViewClientId) {
+      if (assignment.clientId !== selectedViewClientId) {
+        return false;
+      }
+    }
+    
+    // Time window filter (only in view mode with client selected)
+    if (mode === 'view' && selectedViewClientId) {
+      const weeksAgo = new Date();
+      weeksAgo.setDate(weeksAgo.getDate() - (timeWindowWeeks * 7));
+      
+      const weeksForward = new Date();
+      weeksForward.setDate(weeksForward.getDate() + (timeWindowWeeks * 7));
+      
+      const dueDate = new Date(assignment.dueDate);
+      if (dueDate < weeksAgo || dueDate > weeksForward) {
+        return false;
+      }
+    }
+    
     const client = clients.find(c => c.id === assignment.clientId);
     const workout = workoutTemplates.find(w => w.id === assignment.templateId);
     
@@ -300,6 +327,16 @@ export default function WorkoutAssignmentsPage() {
     
     return matchesSearch && matchesStatus;
   });
+
+  // Get client-specific stats
+  const getClientStats = (clientId: string) => {
+    const clientAssignments = assignments.filter(a => a.clientId === clientId);
+    const active = clientAssignments.filter(a => a.status !== 'completed').length;
+    const overdue = clientAssignments.filter(a => 
+      a.status !== 'completed' && new Date(a.dueDate) < new Date()
+    ).length;
+    return { active, overdue, total: clientAssignments.length };
+  };
 
   // Selection handlers
   const toggleClientSelection = (clientId: string) => {
@@ -432,35 +469,133 @@ export default function WorkoutAssignmentsPage() {
           </Button>
         </div>
 
-        {/* Master-Detail Split View */}
-        <div className="flex gap-6 h-[calc(100vh-280px)]">
-          {/* LEFT PANEL - Assignment List */}
-          <div className="w-[35%] flex flex-col bg-white rounded-xl border overflow-hidden">
+        {/* Filter Bar */}
+        <div className="bg-white rounded-xl border p-4 mb-6">
+          <div className="flex items-end gap-4">
+            {/* Client Selector */}
+            <div className="w-[30%]">
+              <label className="text-xs text-gray-600 block mb-1 font-medium">Client</label>
+              <select
+                value={selectedViewClientId || ''}
+                onChange={(e) => {
+                  const clientId = e.target.value || null;
+                  setSelectedViewClientId(clientId);
+                  setSelectedAssignment(null);
+                  // Update URL
+                  if (clientId) {
+                    router.push(`/dashboard/trainer/assignments?client=${clientId}`);
+                  } else {
+                    router.push('/dashboard/trainer/assignments');
+                  }
+                }}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary font-medium"
+              >
+                <option value="">📊 All Clients Overview</option>
+                {clients.map(client => {
+                  const stats = getClientStats(client.id);
+                  return (
+                    <option key={client.id} value={client.id}>
+                      {client.name} {stats.overdue > 0 ? '🔴' : stats.active > 0 ? '🟢' : '⚪'}
+                      {' '}({stats.active} active)
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Time Window Selector - Only show when client is selected */}
+            {selectedViewClientId && (
+              <div className="w-[25%]">
+                <label className="text-xs text-gray-600 block mb-1 font-medium">Time Window</label>
+                <select
+                  value={timeWindowWeeks}
+                  onChange={(e) => setTimeWindowWeeks(Number(e.target.value))}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+                >
+                  <option value="1">Last 1 week + Next 1 week</option>
+                  <option value="2">Last 2 weeks + Next 2 weeks</option>
+                  <option value="3">Last 3 weeks + Next 3 weeks</option>
+                  <option value="4">Last 4 weeks + Next 4 weeks</option>
+                </select>
+              </div>
+            )}
+            
+            {/* Search */}
+            <div className="flex-1">
+              <label className="text-xs text-gray-600 block mb-1 font-medium">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search assignments..."
+                  value={assignmentSearchQuery}
+                  onChange={(e) => setAssignmentSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            {/* Status Filter */}
+            <div className="w-[20%]">
+              <label className="text-xs text-gray-600 block mb-1 font-medium">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+              >
+                <option value="all">All Status</option>
+                <option value="assigned">Assigned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="overdue">Overdue</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Active Filters Summary */}
+          {(selectedViewClientId || statusFilter !== 'all' || assignmentSearchQuery) && (
+            <div className="mt-3 pt-3 border-t flex items-center gap-2 text-sm">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-600">
+                Showing <strong>{filteredAssignments.length}</strong> assignment{filteredAssignments.length !== 1 ? 's' : ''}
+                {selectedViewClientId && (() => {
+                  const client = clients.find(c => c.id === selectedViewClientId);
+                  return client ? ` for ${client.name}` : '';
+                })()}
+                {selectedViewClientId && ` (${timeWindowWeeks} weeks back/forward)`}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Conditional: Dashboard or Split View */}
+        {!selectedViewClientId ? (
+          /* ALL CLIENTS OVERVIEW - Full Width Dashboard */
+          <AllClientsOverviewDashboard
+            clients={clients}
+            assignments={assignments}
+            onSelectClient={(clientId) => {
+              setSelectedViewClientId(clientId);
+              router.push(`/dashboard/trainer/assignments?client=${clientId}`);
+            }}
+          />
+        ) : (
+          /* CLIENT SELECTED - Master-Detail Split View */
+          <div className="flex gap-6 h-[calc(100vh-360px)]">
+            {/* LEFT PANEL - Assignment List */}
+            <div className="w-[35%] flex flex-col bg-white rounded-xl border overflow-hidden">
                 <div className="p-4 border-b flex-shrink-0">
-                  <h3 className="font-semibold mb-3">Assignments</h3>
-                  
-                  <div className="relative mb-3">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search assignments..."
-                      value={assignmentSearchQuery}
-                      onChange={(e) => setAssignmentSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="assigned">Assigned</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="overdue">Overdue</option>
-                  </select>
+                  <h3 className="font-semibold">
+                    {selectedViewClientId 
+                      ? (() => {
+                          const client = clients.find(c => c.id === selectedViewClientId);
+                          return `${client?.name}'s Workouts`;
+                        })()
+                      : 'All Assignments'}
+                  </h3>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {filteredAssignments.length} workout{filteredAssignments.length !== 1 ? 's' : ''}
+                  </p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
@@ -917,6 +1052,7 @@ export default function WorkoutAssignmentsPage() {
             )}
           </div>
         </div>
+        )}
         </div>
       </SidebarInset>
     </SidebarProvider>
