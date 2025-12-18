@@ -313,9 +313,14 @@ export default function WorkoutAssignmentsPage() {
     const client = clients.find(c => c.id === assignment.clientId);
     const workout = workoutTemplates.find(w => w.id === assignment.templateId);
     
+    // Context-aware search - exclude client name when client is already selected
+    const searchLower = assignmentSearchQuery.toLowerCase();
     const matchesSearch = 
-      client?.name.toLowerCase().includes(assignmentSearchQuery.toLowerCase()) ||
-      workout?.name.toLowerCase().includes(assignmentSearchQuery.toLowerCase());
+      !assignmentSearchQuery || // If no search query, match all
+      workout?.name.toLowerCase().includes(searchLower) ||
+      workout?.description?.toLowerCase().includes(searchLower) ||
+      assignment.name?.toLowerCase().includes(searchLower) ||
+      assignment.notes?.toLowerCase().includes(searchLower);
     
     const isOverdue = assignment.status !== 'completed' && new Date(assignment.dueDate) < new Date();
     const actualStatus = isOverdue ? 'overdue' : assignment.status;
@@ -520,36 +525,40 @@ export default function WorkoutAssignmentsPage() {
               </div>
             )}
             
-            {/* Search */}
-            <div className="flex-1">
-              <label className="text-xs text-gray-600 block mb-1 font-medium">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search assignments..."
-                  value={assignmentSearchQuery}
-                  onChange={(e) => setAssignmentSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
+            {/* Search - Only show when client is selected */}
+            {selectedViewClientId && (
+              <div className="flex-1">
+                <label className="text-xs text-gray-600 block mb-1 font-medium">Search Workouts</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by workout, description, or notes..."
+                    value={assignmentSearchQuery}
+                    onChange={(e) => setAssignmentSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
               </div>
-            </div>
+            )}
             
-            {/* Status Filter */}
-            <div className="w-[20%]">
-              <label className="text-xs text-gray-600 block mb-1 font-medium">Status</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
-              >
-                <option value="all">All Status</option>
-                <option value="assigned">Assigned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="overdue">Overdue</option>
-              </select>
-            </div>
+            {/* Status Filter - Only show when client is selected */}
+            {selectedViewClientId && (
+              <div className="w-[20%]">
+                <label className="text-xs text-gray-600 block mb-1 font-medium">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Status</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="overdue">Overdue</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Active Filters Summary */}
