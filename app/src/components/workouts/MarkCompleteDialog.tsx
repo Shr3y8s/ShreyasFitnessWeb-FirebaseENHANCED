@@ -18,7 +18,7 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 interface MarkCompleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onComplete: (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', notes?: string) => Promise<void>;
+  onComplete: (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', completionDate: Date, notes?: string) => Promise<void>;
   workoutName: string;
   completionPercentage: number;
 }
@@ -35,20 +35,35 @@ export function MarkCompleteDialog({
   completionPercentage,
 }: MarkCompleteDialogProps) {
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'hard' | 'very_hard'>('moderate');
+  const [completionDate, setCompletionDate] = useState(new Date());
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-      await onComplete(difficulty, notes || undefined);
+      await onComplete(difficulty, completionDate, notes || undefined);
       // Reset form
       setDifficulty('moderate');
+      setCompletionDate(new Date());
       setNotes('');
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  // Get today's date for max constraint
+  const today = formatDateForInput(new Date());
+  
+  // Get 30 days ago for min constraint
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const minDate = formatDateForInput(thirtyDaysAgo);
 
   const difficultyOptions = [
     { value: 'easy', label: 'Easy', emoji: '😊', description: 'Felt comfortable throughout' },
@@ -105,6 +120,23 @@ export function MarkCompleteDialog({
                 </div>
               ))}
             </RadioGroup>
+          </div>
+
+          {/* Completion Date */}
+          <div className="space-y-2">
+            <Label htmlFor="completion-date" className="text-base font-semibold">Completion Date</Label>
+            <input
+              type="date"
+              id="completion-date"
+              value={formatDateForInput(completionDate)}
+              onChange={(e) => setCompletionDate(new Date(e.target.value))}
+              min={minDate}
+              max={today}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+            <p className="text-xs text-muted-foreground">
+              When did you complete this workout? (Can backdate up to 30 days)
+            </p>
           </div>
 
           {/* Optional Notes */}

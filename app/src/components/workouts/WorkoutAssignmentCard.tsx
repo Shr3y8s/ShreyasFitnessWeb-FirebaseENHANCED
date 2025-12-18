@@ -315,19 +315,20 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
   };
 
   // Handle marking workout complete
-  const handleComplete = async (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', notes?: string) => {
+  const handleComplete = async (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', completionDate: Date, notes?: string) => {
     if (!workoutExecution) return;
 
     setIsSaving(true);
     try {
       // Calculate duration using the helper function
       const startTime = getTimestamp(workoutExecution.startedAt);
-      const durationMinutes = Math.round((Date.now() - startTime) / 60000);
+      const completionTime = getTimestamp(completionDate);
+      const durationMinutes = Math.round((completionTime - startTime) / 60000);
 
       // Update execution with final data
       const completedExecution: WorkoutExecution = {
         ...workoutExecution,
-        completedAt: new Date(),
+        completedAt: completionDate,
         durationMinutes,
         overallDifficulty: difficulty,
         overallNotes: notes,
@@ -374,11 +375,18 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
       day: 'numeric' 
     });
 
-  // Build display string with optional due date
-  const dateDisplay = endDate && 
-    startDate.toDateString() !== endDate.toDateString()
-    ? `${formatCompact(startDate)} → ${formatCompact(endDate)}`
-    : formatCompact(startDate);
+  // Build display string
+  let dateDisplay: string;
+  if (isCompleted && workoutExecution?.completedAt) {
+    // For completed workouts, show completion date
+    dateDisplay = `Completed ${formatCompact(workoutExecution.completedAt)}`;
+  } else if (endDate && startDate.toDateString() !== endDate.toDateString()) {
+    // For upcoming workouts with different scheduled and due dates
+    dateDisplay = `${formatCompact(startDate)} → ${formatCompact(endDate)}`;
+  } else {
+    // For upcoming workouts with same or no due date
+    dateDisplay = formatCompact(startDate);
+  }
 
   return (
     <Card
