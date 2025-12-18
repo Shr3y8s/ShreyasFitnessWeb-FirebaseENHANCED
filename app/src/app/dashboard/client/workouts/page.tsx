@@ -177,7 +177,7 @@ export default function ClientWorkoutsPage() {
               </Tabs>
             </div>
 
-            {/* Desktop: Two-Column Layout */}
+            {/* Desktop: Vertical Layout */}
             <div className="hidden lg:block">
               <div className="mb-6">
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground">My Workouts</h1>
@@ -186,10 +186,10 @@ export default function ClientWorkoutsPage() {
                 </p>
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-6">
-                {/* Upcoming Workouts Column */}
+              <div className="space-y-8">
+                {/* Upcoming Workouts Section */}
                 <div>
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-6">
                     <Calendar className="h-5 w-5 text-primary" />
                     <h2 className="text-2xl font-bold text-foreground">Upcoming Workouts</h2>
                     <span className="ml-auto bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-medium">
@@ -216,9 +216,21 @@ export default function ClientWorkoutsPage() {
                   )}
                 </div>
 
-                {/* Completed Workouts Column */}
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-background px-4 text-sm text-muted-foreground font-medium">
+                      Completed
+                    </span>
+                  </div>
+                </div>
+
+                {/* Completed Workouts Section */}
                 <div>
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-6">
                     <CheckCircle className="h-5 w-5 text-primary" />
                     <h2 className="text-2xl font-bold text-foreground">Completed Workouts</h2>
                     <span className="ml-auto bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-sm font-medium">
