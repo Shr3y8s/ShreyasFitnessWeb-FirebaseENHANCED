@@ -16,12 +16,15 @@ import {
   addDoc,
   serverTimestamp,
   updateDoc,
-  Timestamp
+  Timestamp,
+  limit
 } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { ExerciseConfigurationDisplay } from '@/components/workouts/ExerciseConfigurationDisplay';
+import { WorkoutExecutionDetailView } from '@/components/workouts/WorkoutExecutionDetailView';
+import { WorkoutExecution } from '@/types/workout';
 import {
   Calendar,
   Eye,
@@ -33,7 +36,8 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Filter
+  Filter,
+  Activity
 } from 'lucide-react';
 
 interface ClientData {
@@ -87,6 +91,8 @@ export default function WorkoutAssignmentsPage() {
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutTemplate | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [workoutExecution, setWorkoutExecution] = useState<WorkoutExecution | null>(null);
+  const [loadingExecution, setLoadingExecution] = useState(false);
   
   // Form state
   const [dueDate, setDueDate] = useState('');
@@ -210,6 +216,54 @@ export default function WorkoutAssignmentsPage() {
 
     fetchData();
   }, [user, router, authLoading, canAccessTrainerDashboard]);
+
+  // Fetch workout execution when assignment is selected
+  useEffect(() => {
+    const fetchExecution = async () => {
+      if (!selectedAssignment) {
+        setWorkoutExecution(null);
+        return;
+      }
+
+      setLoadingExecution(true);
+      try {
+        // Query for execution data
+        const executionsQuery = query(
+          collection(db, 'workoutExecutions'),
+          where('workoutAssignmentId', '==', selectedAssignment.id),
+          limit(1)
+        );
+        
+        const executionsSnapshot = await getDocs(executionsQuery);
+        
+        if (!executionsSnapshot.empty) {
+          const executionDoc = executionsSnapshot.docs[0];
+          const executionData = executionDoc.data();
+          
+          // Convert Firestore Timestamps to Dates
+          const execution: WorkoutExecution = {
+            ...executionData,
+            id: executionDoc.id,
+            startedAt: executionData.startedAt?.toDate ? executionData.startedAt.toDate() : new Date(executionData.startedAt),
+            completedAt: executionData.completedAt?.toDate ? executionData.completedAt.toDate() : executionData.completedAt ? new Date(executionData.completedAt) : undefined,
+            createdAt: executionData.createdAt?.toDate ? executionData.createdAt.toDate() : new Date(executionData.createdAt),
+            updatedAt: executionData.updatedAt?.toDate ? executionData.updatedAt.toDate() : new Date(executionData.updatedAt),
+          } as WorkoutExecution;
+          
+          setWorkoutExecution(execution);
+        } else {
+          setWorkoutExecution(null);
+        }
+      } catch (error) {
+        console.error('Error fetching workout execution:', error);
+        setWorkoutExecution(null);
+      } finally {
+        setLoadingExecution(false);
+      }
+    };
+
+    fetchExecution();
+  }, [selectedAssignment]);
 
   // Filter clients
   const filteredClients = clients.filter(client => {
@@ -738,6 +792,45 @@ export default function WorkoutAssignmentsPage() {
                             <div className="bg-white border rounded-xl p-6">
                               <h3 className="font-semibold mb-4">Exercise Configuration</h3>
                               <ExerciseConfigurationDisplay exercises={selectedAssignment.exercises} />
+                            </div>
+                          )}
+
+                          {/* Workout Execution Details */}
+                          {loadingExecution ? (
+                            <div className="bg-white border rounded-xl p-6">
+                              <div className="flex items-center justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                                <span className="ml-3 text-gray-600">Loading execution data...</span>
+                              </div>
+                            </div>
+                          ) : workoutExecution ? (
+                            <div>
+                              <div className="flex items-center gap-2 mb-4">
+                                <Activity className="h-5 w-5 text-primary" />
+                                <h3 className="font-semibold">Client Performance</h3>
+                              </div>
+                              <WorkoutExecutionDetailView 
+                                execution={workoutExecution} 
+                                showClientNotes={true}
+                              />
+                            </div>
+                          ) : selectedAssignment.status !== 'scheduled' && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+                              <div className="flex items-start gap-3">
+                                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                                <div>
+                                  <h3 className="font-semibold text-amber-900 mb-1">No Execution Data Yet</h3>
+                                  <p className="text-sm text-amber-700">
+                                    The client hasn't started tracking this workout yet. Once they begin, you'll see detailed performance data here including:
+                                  </p>
+                                  <ul className="text-sm text-amber-700 mt-2 space-y-1 list-disc list-inside">
+                                    <li>Exercise-by-exercise completion status</li>
+                                    <li>Actual sets, reps, and weights used</li>
+                                    <li>Workout duration and difficulty rating</li>
+                                    <li>Client notes and feedback</li>
+                                  </ul>
+                                </div>
+                              </div>
                             </div>
                           )}
 
