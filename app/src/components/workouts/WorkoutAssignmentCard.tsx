@@ -23,6 +23,7 @@ import { ExerciseConfiguration } from './ExerciseConfiguration';
 import { ExerciseTracker } from './ExerciseTracker';
 import { WorkoutProgress } from './WorkoutProgress';
 import { MarkCompleteDialog } from './MarkCompleteDialog';
+import { WorkoutExecutionDetailView } from './WorkoutExecutionDetailView';
 import { saveWorkoutExecution } from '@/lib/workout-api';
 
 interface WorkoutAssignmentCardProps {
@@ -62,8 +63,8 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
   // Load existing workout execution if it exists
   useEffect(() => {
     const loadExistingExecution = async () => {
-      // Only load if assignment is in_progress (has been started)
-      if (assignment.status !== 'in_progress' || isCompleted) return;
+      // Load execution for in_progress OR completed workouts
+      if (assignment.status !== 'in_progress' && !isCompleted) return;
 
       try {
         // Query for existing execution for this assignment
@@ -72,7 +73,6 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
           collection(db, 'workoutExecutions'),
           where('workoutAssignmentId', '==', assignment.id),
           where('clientId', '==', assignment.clientId),
-          where('completionStatus', '==', 'in_progress'),
           limit(1)
         );
 
@@ -94,10 +94,10 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
 
           // Load the execution into state
           setWorkoutExecution(loadedExecution);
-          console.log('Loaded existing workout execution:', loadedExecution.id);
+          console.log('Loaded workout execution:', loadedExecution.id);
         }
       } catch (error) {
-        console.error('Error loading existing execution:', error);
+        console.error('Error loading execution:', error);
       }
     };
 
@@ -443,14 +443,21 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
 
         <CollapsibleContent>
           <div className={cn('px-6 pb-6', isCompleted && 'bg-secondary/30')}>
-            {mode === 'display' && (
+            {mode === 'display' && !isCompleted && (
               <ExerciseConfiguration
                 exercises={assignment.exercises}
-                mode={isCompleted ? 'display' : 'input'}
+                mode="input"
                 completedExercises={completedExercises}
                 onExerciseCompletedChange={setCompletedExercises}
-                readOnly={isCompleted}
+                readOnly={false}
                 showNotes={true}
+              />
+            )}
+
+            {mode === 'display' && isCompleted && workoutExecution && (
+              <WorkoutExecutionDetailView 
+                execution={workoutExecution} 
+                showClientNotes={true}
               />
             )}
 
