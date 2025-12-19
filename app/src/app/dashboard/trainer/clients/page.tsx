@@ -175,6 +175,25 @@ export default function ClientsPage() {
       }
       
       try {
+        // Helper function to safely convert any value to a Date or null
+        const toSafeDate = (value: any): Date | null => {
+          if (!value) return null;
+          
+          // Firestore Timestamp with toDate method
+          if (value?.toDate && typeof value.toDate === 'function') {
+            return value.toDate();
+          }
+          
+          // Already a Date object
+          if (value instanceof Date) {
+            return value;
+          }
+          
+          // Try to parse as string or number
+          const parsed = new Date(value);
+          return isNaN(parsed.getTime()) ? null : parsed;
+        };
+
         // Fetch clients assigned to this trainer
         const clientsQuery = query(
           collection(db, 'users'),
@@ -197,9 +216,9 @@ export default function ClientsPage() {
             allAssignments.push({
               id: doc.id,
               ...data,
-              completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : data.completedAt,
-              assignedDate: data.assignedDate?.toDate ? data.assignedDate.toDate() : data.assignedDate,
-              dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate
+              completedAt: toSafeDate(data.completedAt),
+              assignedDate: toSafeDate(data.assignedDate),
+              dueDate: toSafeDate(data.dueDate)
             });
           });
           
@@ -218,7 +237,7 @@ export default function ClientsPage() {
             let status: 'active' | 'inactive' | 'pending' = 'active';
             if (clientAssignments.length === 0) {
               status = 'pending';
-            } else if (lastCompletedWorkout) {
+            } else if (lastCompletedWorkout && lastCompletedWorkout.completedAt) {
               const daysSinceLastWorkout = Math.floor((Date.now() - lastCompletedWorkout.completedAt.getTime()) / (1000 * 60 * 60 * 24));
               if (daysSinceLastWorkout > 14) {
                 status = 'inactive';

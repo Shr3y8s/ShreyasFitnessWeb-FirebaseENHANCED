@@ -16,7 +16,6 @@ import {
   Plus,
   Calendar,
   TrendingUp,
-  Bell,
   BarChart3,
   Clock,
   CheckCircle2,
@@ -267,23 +266,11 @@ export default function TrainerDashboardPage() {
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground">
-                Trainer Dashboard
-              </h1>
-              <p className="text-muted-foreground mt-2">Manage your clients, workouts, and track progress</p>
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="relative text-primary hover:bg-primary/10"
-            >
-              <Bell className="h-4 w-4" />
-              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 text-white flex items-center justify-center text-xs">
-                2
-              </div>
-            </Button>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+              Trainer Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-2">Manage your clients, workouts, and track progress</p>
           </div>
 
           {/* Dashboard Stats */}
