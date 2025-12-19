@@ -451,10 +451,8 @@ export default function ClientsPage() {
       setBillingError(null);
       
       try {
-        console.log('[Trainer Clients] Fetching billing data for client:', activeClientId);
         const billingData = await fetchClientBillingData(activeClientId);
         setClientBillingData(billingData);
-        console.log('[Trainer Clients] Billing data loaded successfully');
       } catch (error) {
         console.error('[Trainer Clients] Error fetching billing data:', error);
         setBillingError('Failed to load billing information');
@@ -482,8 +480,6 @@ export default function ClientsPage() {
     const unsubscribeBalance = subscribeToSessionBalance(
       activeClientId,
       (balance, packages) => {
-        console.log('[Trainer Clients] Session balance updated:', balance);
-        console.log('[Trainer Clients] Session packages updated:', packages);
         setSessionBalance(balance);
         setSessionPackages(packages);
         setSessionLoading(false);
@@ -494,7 +490,6 @@ export default function ClientsPage() {
     const unsubscribeSessions = subscribeToUpcomingSessions(
       activeClientId,
       (sessions) => {
-        console.log('[Trainer Clients] Upcoming sessions updated:', sessions);
         setUpcomingSessions(sessions);
       }
     );

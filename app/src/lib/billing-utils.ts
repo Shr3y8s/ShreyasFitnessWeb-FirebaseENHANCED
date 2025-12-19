@@ -82,8 +82,6 @@ export async function fetchClientBillingData(userId: string): Promise<BillingDat
       };
     }
 
-    console.log('[Billing Utils] Fetching billing history from Stripe API for customer:', customerId);
-
     // Call the Cloud Function to get complete billing data
     const getBillingHistory = httpsCallable(functions, 'getBillingHistory');
     const result = await getBillingHistory({ customerId });
@@ -93,11 +91,6 @@ export async function fetchClientBillingData(userId: string): Promise<BillingDat
     if (!data.success) {
       throw new Error(data.error || 'Failed to fetch billing history');
     }
-
-    console.log('[Billing Utils] Billing data fetched successfully', {
-      invoices: data.invoices?.length || 0,
-      subscriptions: data.subscriptions?.length || 0,
-    });
 
     // Extract current payment method
     let paymentMethod = null;
