@@ -16,6 +16,13 @@ export default function DashboardWelcomePage() {
 
   useEffect(() => {
     const checkUserPreference = async () => {
+      // Handle unauthenticated users - redirect to login
+      if (!authLoading && !user) {
+        console.log('[Dashboard] No user detected - redirecting to login');
+        router.push('/login');
+        return;
+      }
+      
       if (!authLoading && user && userData) {
         try {
           // Check if returning from successful Stripe payment
@@ -130,6 +137,15 @@ export default function DashboardWelcomePage() {
     }
     router.push('/dashboard/client');
   };
+
+  // Show redirecting message for unauthenticated users (no loading flash)
+  if (!authLoading && !user) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-stone-600">Redirecting to login...</div>
+      </div>
+    );
+  }
 
   if (loading || authLoading) {
     return (

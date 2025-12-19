@@ -429,45 +429,53 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="p-3 border-t border-white/10 space-y-3">
+        <div className="p-2 border-t border-white/10">
           {/* Test Welcome Screen Button */}
           {onShowWelcome && (
             <Button
               variant="outline"
               size="sm"
               onClick={onShowWelcome}
-              className="w-full text-xs"
+              className="w-full text-xs mb-3"
             >
               Test Welcome Screen
             </Button>
           )}
           
           {/* User Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {userProfilePhoto ? (
-                <img
-                  src={userProfilePhoto}
-                  alt={userName || 'User'}
-                  className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm text-sidebar-foreground truncate">{userName || 'User'}</p>
-                {/* Only show tier display if we have a meaningful tierName */}
-                {userTierName && (
-                  <p className="text-xs text-primary font-medium truncate">{userTierName}</p>
-                )}
+          <div className="flex items-center gap-3 mb-3">
+            {userProfilePhoto ? (
+              <img
+                src={userProfilePhoto}
+                alt={userName || 'User'}
+                className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                {userName ? userName.charAt(0).toUpperCase() : 'U'}
               </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-sidebar-foreground truncate">{userName || 'User'}</p>
+              {/* Only show tier display if we have a meaningful tierName */}
+              {userTierName && (
+                <p className="text-xs text-primary font-medium truncate">{userTierName}</p>
+              )}
             </div>
-            <Button variant="ghost" size="icon" onClick={onLogout} className="h-8 w-8 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors flex-shrink-0">
-              <LogOut className="w-4 h-4" />
-            </Button>
           </div>
+
+          {/* Sign Out Link */}
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={onLogout}
+                className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 mb-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="font-medium">Sign Out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
           
           {/* Legal Links */}
           <div className="text-xs text-center text-muted-foreground pt-2 border-t border-white/10">

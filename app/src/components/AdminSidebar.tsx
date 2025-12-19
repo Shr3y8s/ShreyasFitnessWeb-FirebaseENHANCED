@@ -236,7 +236,7 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
       <SidebarFooter>
         <div className="p-2 border-t border-white/10">
           {/* User Info */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             {userData?.profilePhotoSmall ? (
               <img
                 src={userData.profilePhotoSmall}
@@ -258,15 +258,18 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
             </div>
           </div>
 
-          {/* Logout Button */}
-          <Button 
-            variant="destructive"
-            onClick={handleLogout}
-            className="w-full justify-center gap-2 mb-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </Button>
+          {/* Sign Out Link */}
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogout}
+                className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50 mb-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="font-medium">Sign Out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
 
           {/* Legal Links */}
           <div className="text-xs text-center text-muted-foreground pt-2 border-t border-white/10">
