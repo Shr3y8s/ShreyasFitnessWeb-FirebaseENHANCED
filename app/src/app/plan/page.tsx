@@ -14,6 +14,7 @@ import { TrainingProtocol } from '@/components/plan/training-protocol';
 import { NutritionProtocol } from '@/components/plan/nutrition-protocol';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
+import { getCurrentWeekISO } from '@/lib/week-utils';
 
 export default function MyPlanPage() {
   const router = useRouter();
@@ -120,7 +121,7 @@ export default function MyPlanPage() {
                   weeklyFocus={{
                     lastUpdated: new Date(),
                     weeks: [{
-                      weekStartDate: new Date().toISOString().split('T')[0],
+                      weekStartDate: getCurrentWeekISO(),
                       adjustments: [
                         "Added 100 calories to support energy levels",
                         "Increased protein to 180g daily"
@@ -148,16 +149,58 @@ export default function MyPlanPage() {
               {/* Right Column: Vision, Focus, Step Goal & Cardio (1/3 width) */}
               <div className="space-y-6 lg:col-span-1">
                 {/* Your Vision Card */}
-                <YourVision />
+                <YourVision 
+                  goals={[
+                    { text: "Lose 20 pounds and feel confident in my own skin" },
+                    { text: "Build strength to keep up with my kids" },
+                    { text: "Establish healthy habits that last a lifetime" }
+                  ]}
+                />
 
-                {/* Current Focus Card */}
-                <CurrentFocus />
+                {/* Daily Habits Card */}
+                <CurrentFocus 
+                  habits={[
+                    {
+                      id: "1",
+                      title: "Protein at Every Meal",
+                      description: "Aim for 30-40g protein at each main meal",
+                      iconType: "nutrition",
+                      order: 1
+                    },
+                    {
+                      id: "2", 
+                      title: "Hydration Check-ins",
+                      description: "Drink water with each meal and snack",
+                      iconType: "hydration",
+                      order: 2
+                    },
+                    {
+                      id: "3",
+                      title: "Quality Sleep",
+                      description: "7-8 hours per night, consistent schedule",
+                      iconType: "sleep",
+                      order: 3
+                    }
+                  ]}
+                />
 
                 {/* Step Goal Card */}
-                <StepGoalCard />
+                <StepGoalCard 
+                  target={10000}
+                  tips={[
+                    "Take a 10-min walk after meals",
+                    "Park farther away from entrances",
+                    "Take stairs when possible"
+                  ]}
+                />
 
                 {/* Cardio Protocol Card */}
-                <CardioProtocol />
+                <CardioProtocol 
+                  frequency="3-4x per week"
+                  duration="30-45 min"
+                  targetHeartRate="120-140 BPM"
+                  timing="Post-workout or fasted AM"
+                />
               </div>
             </div>
 
