@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
@@ -86,6 +86,7 @@ interface ClientData {
 
 export default function ClientsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
@@ -275,8 +276,11 @@ export default function ClientsPage() {
           
           setClients(clientsData);
           
-          // Auto-select first client
-          if (clientsData.length > 0) {
+          // Auto-select client from URL parameter, or first client if no parameter
+          const urlClientId = searchParams.get('clientId');
+          if (urlClientId && clientsData.find(c => c.id === urlClientId)) {
+            setActiveClientId(urlClientId);
+          } else if (clientsData.length > 0) {
             setActiveClientId(clientsData[0].id);
           }
         } catch (error) {

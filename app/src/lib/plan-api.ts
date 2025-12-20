@@ -13,7 +13,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { ClientPlan, VisionData, StepGoalData, LissCardioData } from '@/types/plan';
+import { ClientPlan, VisionData, StepGoalData, LissCardioData, WeeklyFocusData, WeeklyFocusHistory } from '@/types/plan';
 
 // Collection reference
 const PLANS_COLLECTION = 'clientPlans';
@@ -29,6 +29,15 @@ const timestampToDate = (timestamp: any): Date | null => {
   }
   if (timestamp instanceof Date) {
     return timestamp;
+  }
+  // Handle ISO string dates
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  // Handle Unix timestamps (numbers)
+  if (typeof timestamp === 'number') {
+    return new Date(timestamp);
   }
   return null;
 };
@@ -54,6 +63,28 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
       targetHeartRate: data.lissCardio.targetHeartRate || '',
       timing: data.lissCardio.timing || '',
       lastUpdated: timestampToDate(data.lissCardio.lastUpdated)
+    } : null,
+    weeklyFocus: data.weeklyFocus ? {
+      weeks: (data.weeklyFocus.weeks || []).map((week: any) => ({
+        weekStartDate: week.weekStartDate || '',
+        adjustments: week.adjustments || [],
+        priorities: week.priorities || [],
+        coachNotes: week.coachNotes || '',
+        createdAt: timestampToDate(week.createdAt),
+        updatedAt: timestampToDate(week.updatedAt)
+      })),
+      lastUpdated: timestampToDate(data.weeklyFocus.lastUpdated)
+    } : null,
+    dailyHabits: data.dailyHabits ? {
+      habits: (data.dailyHabits.habits || []).map((habit: any) => ({
+        id: habit.id || '',
+        title: habit.title || '',
+        description: habit.description || '',
+        iconType: habit.iconType || 'custom',
+        customIconUrl: habit.customIconUrl,
+        order: habit.order || 0
+      })),
+      lastUpdated: timestampToDate(data.dailyHabits.lastUpdated)
     } : null,
     createdAt: timestampToDate(data.createdAt),
     updatedAt: timestampToDate(data.updatedAt)
@@ -122,6 +153,20 @@ export async function saveClientPlan(plan: Partial<ClientPlan> & { clientId: str
       } : null;
     }
     
+    if (plan.weeklyFocus !== undefined) {
+      planData.weeklyFocus = plan.weeklyFocus ? {
+        weeks: plan.weeklyFocus.weeks.map(week => ({
+          weekStartDate: week.weekStartDate,
+          adjustments: week.adjustments,
+          priorities: week.priorities,
+          coachNotes: week.coachNotes,
+          createdAt: week.createdAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        })),
+        lastUpdated: serverTimestamp()
+      } : null;
+    }
+    
     if (existingPlan) {
       // Update existing plan
       await updateDoc(planRef, planData);
@@ -169,6 +214,8 @@ export async function updateVision(
         ...updateData,
         stepGoal: null,
         lissCardio: null,
+        weeklyFocus: null,
+        dailyHabits: null,
         createdAt: serverTimestamp()
       });
     }
@@ -212,6 +259,8 @@ export async function updateStepGoal(
         ...updateData,
         vision: null,
         lissCardio: null,
+        weeklyFocus: null,
+        dailyHabits: null,
         createdAt: serverTimestamp()
       });
     }
@@ -257,6 +306,8 @@ export async function updateLissCardio(
         ...updateData,
         vision: null,
         stepGoal: null,
+        weeklyFocus: null,
+        dailyHabits: null,
         createdAt: serverTimestamp()
       });
     }
@@ -264,6 +315,154 @@ export async function updateLissCardio(
     return { success: true };
   } catch (error) {
     console.error('Error updating LISS cardio:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update or add a week to the weekly focus history
+ * Maintains a sliding window of up to 4 weeks
+ * Uses clientId as the document ID
+ */
+export async function updateWeeklyFocus(
+  clientId: string,
+  trainerId: string,
+  weeklyFocusData: WeeklyFocusData
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+    
+    let weeks: any[] = [];
+    
+    if (existingPlan?.weeklyFocus?.weeks) {
+      // Get existing weeks
+      weeks = existingPlan.weeklyFocus.weeks.map(week => ({
+        weekStartDate: week.weekStartDate,
+        adjustments: week.adjustments,
+        priorities: week.priorities,
+        coachNotes: week.coachNotes,
+        createdAt: week.createdAt,
+        updatedAt: week.updatedAt
+      }));
+      
+      // Find if this week already exists
+      const existingIndex = weeks.findIndex(w => w.weekStartDate === weeklyFocusData.weekStartDate);
+      
+      if (existingIndex >= 0) {
+        // Update existing week
+        weeks[existingIndex] = {
+          weekStartDate: weeklyFocusData.weekStartDate,
+          adjustments: weeklyFocusData.adjustments,
+          priorities: weeklyFocusData.priorities,
+          coachNotes: weeklyFocusData.coachNotes,
+          createdAt: weeks[existingIndex].createdAt, // Keep original creation time
+          updatedAt: new Date().toISOString() // Use ISO string instead of serverTimestamp
+        };
+      } else {
+        // Add new week
+        const now = new Date().toISOString();
+        weeks.push({
+          weekStartDate: weeklyFocusData.weekStartDate,
+          adjustments: weeklyFocusData.adjustments,
+          priorities: weeklyFocusData.priorities,
+          coachNotes: weeklyFocusData.coachNotes,
+          createdAt: now, // Use ISO string instead of serverTimestamp
+          updatedAt: now  // Use ISO string instead of serverTimestamp
+        });
+      }
+      
+      // Sort by week start date
+      weeks.sort((a, b) => a.weekStartDate.localeCompare(b.weekStartDate));
+      
+      // Keep only the most recent 4 weeks
+      if (weeks.length > 4) {
+        weeks = weeks.slice(-4);
+      }
+    } else {
+      // First week
+      const now = new Date().toISOString();
+      weeks = [{
+        weekStartDate: weeklyFocusData.weekStartDate,
+        adjustments: weeklyFocusData.adjustments,
+        priorities: weeklyFocusData.priorities,
+        coachNotes: weeklyFocusData.coachNotes,
+        createdAt: now,  // Use ISO string instead of serverTimestamp
+        updatedAt: now   // Use ISO string instead of serverTimestamp
+      }];
+    }
+    
+    const updateData: any = {
+      weeklyFocus: {
+        weeks,
+        lastUpdated: serverTimestamp()
+      },
+      updatedAt: serverTimestamp()
+    };
+    
+    if (existingPlan) {
+      await updateDoc(planRef, updateData);
+    } else {
+      // Create new plan with just weekly focus, using clientId as document ID
+      await setDoc(planRef, {
+        clientId,
+        trainerId,
+        ...updateData,
+        vision: null,
+        stepGoal: null,
+        lissCardio: null,
+        dailyHabits: null,
+        createdAt: serverTimestamp()
+      });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating weekly focus:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update only the daily habits section of a client's plan
+ * Uses clientId as the document ID
+ */
+export async function updateDailyHabits(
+  clientId: string,
+  trainerId: string,
+  dailyHabitsData: { habits: any[] }
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+    
+    const updateData: any = {
+      dailyHabits: {
+        habits: dailyHabitsData.habits,
+        lastUpdated: serverTimestamp()
+      },
+      updatedAt: serverTimestamp()
+    };
+    
+    if (existingPlan) {
+      await updateDoc(planRef, updateData);
+    } else {
+      // Create new plan with just daily habits, using clientId as document ID
+      await setDoc(planRef, {
+        clientId,
+        trainerId,
+        ...updateData,
+        vision: null,
+        stepGoal: null,
+        lissCardio: null,
+        weeklyFocus: null,
+        createdAt: serverTimestamp()
+      });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating daily habits:', error);
     return { success: false, error };
   }
 }

@@ -12,8 +12,10 @@ import { Button } from '@/components/ui/button';
 import { VisionEditor } from '@/components/trainer/plan/VisionEditor';
 import { StepGoalEditor } from '@/components/trainer/plan/StepGoalEditor';
 import { LissCardioEditor } from '@/components/trainer/plan/LissCardioEditor';
-import { getClientPlan, updateVision, updateStepGoal, updateLissCardio } from '@/lib/plan-api';
-import { ClientPlan, VisionData, StepGoalData, LissCardioData } from '@/types/plan';
+import { WeeklyFocusEditor } from '@/components/trainer/plan/WeeklyFocusEditor';
+import { DailyHabitsEditor } from '@/components/trainer/plan/DailyHabitsEditor';
+import { getClientPlan, updateVision, updateStepGoal, updateLissCardio, updateWeeklyFocus, updateDailyHabits } from '@/lib/plan-api';
+import { ClientPlan, VisionData, StepGoalData, LissCardioData, WeeklyFocusData, DailyHabitsData } from '@/types/plan';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -30,6 +32,8 @@ export default function ClientPlanEditorPage() {
   const [savingVision, setSavingVision] = useState(false);
   const [savingStepGoal, setSavingStepGoal] = useState(false);
   const [savingLissCardio, setSavingLissCardio] = useState(false);
+  const [savingWeeklyFocus, setSavingWeeklyFocus] = useState(false);
+  const [savingDailyHabits, setSavingDailyHabits] = useState(false);
 
   // Load client and plan data
   useEffect(() => {
@@ -133,6 +137,50 @@ export default function ClientPlanEditorPage() {
     }
   };
 
+  const handleSaveWeeklyFocus = async (weeklyFocusData: WeeklyFocusData) => {
+    if (!user) return;
+    
+    setSavingWeeklyFocus(true);
+    try {
+      const result = await updateWeeklyFocus(clientId, user.uid, weeklyFocusData);
+      if (result.success) {
+        // Reload plan data
+        const updatedPlan = await getClientPlan(clientId);
+        setPlan(updatedPlan);
+        alert('Weekly Focus saved successfully!');
+      } else {
+        alert('Failed to save weekly focus. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving weekly focus:', error);
+      alert('An error occurred while saving.');
+    } finally {
+      setSavingWeeklyFocus(false);
+    }
+  };
+
+  const handleSaveDailyHabits = async (dailyHabitsData: DailyHabitsData) => {
+    if (!user) return;
+    
+    setSavingDailyHabits(true);
+    try {
+      const result = await updateDailyHabits(clientId, user.uid, dailyHabitsData);
+      if (result.success) {
+        // Reload plan data
+        const updatedPlan = await getClientPlan(clientId);
+        setPlan(updatedPlan);
+        alert('Daily Habits saved successfully!');
+      } else {
+        alert('Failed to save daily habits. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving daily habits:', error);
+      alert('An error occurred while saving.');
+    } finally {
+      setSavingDailyHabits(false);
+    }
+  };
+
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
@@ -154,7 +202,7 @@ export default function ClientPlanEditorPage() {
             <Breadcrumb items={[
               { label: 'Client Management' },
               { label: 'Client Roster', href: '/dashboard/trainer/clients' },
-              { label: clientName },
+              { label: clientName, href: `/dashboard/trainer/clients?clientId=${clientId}` },
               { label: 'Edit Plan' }
             ]} />
           </div>
@@ -172,24 +220,46 @@ export default function ClientPlanEditorPage() {
 
           {/* Tabbed Editor Interface */}
           <div className="bg-white rounded-xl border p-6 shadow-sm">
-            <Tabs defaultValue="vision" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+            <Tabs defaultValue="weeklyfocus" className="w-full">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
+                <TabsTrigger value="weeklyfocus">
+                  Weekly Focus
+                </TabsTrigger>
                 <TabsTrigger value="vision">
                   Your Vision
                 </TabsTrigger>
+                <TabsTrigger value="dailyhabits">
+                  Daily Habits
+                </TabsTrigger>
                 <TabsTrigger value="stepgoal">
-                  Daily Step Goal
+                  Step Goal
                 </TabsTrigger>
                 <TabsTrigger value="cardio">
                   LISS Cardio
                 </TabsTrigger>
               </TabsList>
 
+              <TabsContent value="weeklyfocus">
+                <WeeklyFocusEditor
+                  initialData={plan?.weeklyFocus || null}
+                  onSave={handleSaveWeeklyFocus}
+                  isSaving={savingWeeklyFocus}
+                />
+              </TabsContent>
+
               <TabsContent value="vision">
                 <VisionEditor
                   initialData={plan?.vision || null}
                   onSave={handleSaveVision}
                   isSaving={savingVision}
+                />
+              </TabsContent>
+
+              <TabsContent value="dailyhabits">
+                <DailyHabitsEditor
+                  initialData={plan?.dailyHabits || null}
+                  onSave={handleSaveDailyHabits}
+                  isSaving={savingDailyHabits}
                 />
               </TabsContent>
 
@@ -215,7 +285,11 @@ export default function ClientPlanEditorPage() {
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               <strong>💡 Tip:</strong> Each section can be saved independently. Your changes 
-              will be visible to your client immediately on their plan page at <code>/plan</code>.
+              will be visible to your client immediately on their plan page.
+            </p>
+            <p className="text-sm text-blue-800 mt-2">
+              <strong>Weekly Focus</strong> should be updated regularly to keep your client informed 
+              of adjustments and priorities for the current week.
             </p>
           </div>
         </div>

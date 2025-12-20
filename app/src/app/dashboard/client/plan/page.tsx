@@ -10,6 +10,8 @@ import { ClipboardList, Loader2, Calendar, TrendingUp } from 'lucide-react';
 import { YourVision } from '@/components/plan/your-vision';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
+import { PlanSummary } from '@/components/plan/plan-summary';
+import { DailyHabits } from '@/components/plan/current-focus';
 import { getClientPlan } from '@/lib/plan-api';
 import { ClientPlan } from '@/types/plan';
 import { Card, CardContent } from '@/components/ui/card';
@@ -86,7 +88,7 @@ export default function PlanPage() {
   }
 
   // Check if plan has any configured sections
-  const hasPlanData = plan && (plan.vision || plan.stepGoal || plan.lissCardio);
+  const hasPlanData = plan && (plan.vision || plan.stepGoal || plan.lissCardio || plan.weeklyFocus);
 
   return (
     <SidebarProvider>
@@ -130,22 +132,29 @@ export default function PlanPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column: Main content (2/3 width) */}
                   <div className="lg:col-span-2 space-y-6">
-                    {/* Placeholder for future components */}
-                    <Card className="border-dashed">
-                      <CardContent className="pt-6">
-                        <div className="text-center py-8 text-muted-foreground">
-                          <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                          <p className="font-medium">More plan details coming soon</p>
-                          <p className="text-sm mt-1">Training protocols, nutrition plans, and weekly focus</p>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {/* Weekly Focus / Plan Summary */}
+                    {plan?.weeklyFocus ? (
+                      <PlanSummary weeklyFocus={plan.weeklyFocus} />
+                    ) : (
+                      <Card className="border-dashed">
+                        <CardContent className="pt-6">
+                          <div className="text-center py-8 text-muted-foreground">
+                            <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p className="font-medium">Weekly plan coming soon</p>
+                            <p className="text-sm mt-1">Your trainer will add weekly focus, adjustments, and priorities</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
 
-                  {/* Right Column: Vision, Step Goal & Cardio (1/3 width) */}
+                  {/* Right Column: Vision, Daily Habits, Step Goal & Cardio (1/3 width) */}
                   <div className="space-y-6 lg:col-span-1">
                     {/* Your Vision Card */}
                     {plan?.vision && <YourVision goals={plan.vision.goals} />}
+
+                    {/* Daily Habits Card */}
+                    <DailyHabits habits={plan?.dailyHabits?.habits} />
 
                     {/* Step Goal Card */}
                     {plan?.stepGoal && (

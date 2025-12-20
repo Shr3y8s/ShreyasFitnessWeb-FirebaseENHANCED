@@ -23,6 +23,34 @@ export interface LissCardioData {
   lastUpdated: Date | null;
 }
 
+export interface WeeklyFocusData {
+  weekStartDate: string; // ISO date string for the Sunday (YYYY-MM-DD)
+  adjustments: string[];
+  priorities: string[];
+  coachNotes: string;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
+export interface WeeklyFocusHistory {
+  weeks: WeeklyFocusData[]; // Array of up to 4 weeks
+  lastUpdated: Date | null;
+}
+
+export interface DailyHabit {
+  id: string;
+  title: string;
+  description: string;
+  iconType: 'activity' | 'dumbbell' | 'nutrition' | 'hydration' | 'sleep' | 'custom';
+  customIconUrl?: string;
+  order: number;
+}
+
+export interface DailyHabitsData {
+  habits: DailyHabit[];
+  lastUpdated: Date | null;
+}
+
 export interface ClientPlan {
   id?: string;
   clientId: string;
@@ -31,6 +59,8 @@ export interface ClientPlan {
   vision: VisionData | null;
   stepGoal: StepGoalData | null;
   lissCardio: LissCardioData | null;
+  weeklyFocus: WeeklyFocusHistory | null;
+  dailyHabits: DailyHabitsData | null;
   
   createdAt: Date | null;
   updatedAt: Date | null;
