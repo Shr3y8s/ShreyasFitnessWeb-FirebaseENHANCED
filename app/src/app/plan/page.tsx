@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { signOutUser } from '@/lib/firebase';
-import { ClipboardList, Loader2 } from 'lucide-react';
+import { ClipboardList } from 'lucide-react';
 import { PlanSummary } from '@/components/plan/plan-summary';
 import { YourVision } from '@/components/plan/your-vision';
 import { CurrentFocus } from '@/components/plan/current-focus';
@@ -14,47 +14,32 @@ import { TrainingProtocol } from '@/components/plan/training-protocol';
 import { NutritionProtocol } from '@/components/plan/nutrition-protocol';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
-import { getClientPlan } from '@/lib/plan-api';
-import { ClientPlan } from '@/types/plan';
 
 export default function MyPlanPage() {
   const router = useRouter();
-  const { userData, loading: authLoading, user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [plan, setPlan] = useState<ClientPlan | null>(null);
+  const { userData, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const loadPlan = async () => {
-      if (authLoading) return;
+  React.useEffect(() => {
+    if (authLoading) return;
 
-      if (!userData || !user) {
-        router.push('/login');
-        return;
-      }
+    if (!userData) {
+      router.push('/login');
+      return;
+    }
 
-      if (userData.role !== 'client') {
-        router.push('/dashboard');
-        return;
-      }
+    if (userData.role !== 'client') {
+      router.push('/dashboard');
+      return;
+    }
 
-      if (!userData.accountActivated) {
-        router.push('/payment');
-        return;
-      }
+    if (!userData.accountActivated) {
+      router.push('/payment');
+      return;
+    }
 
-      try {
-        // Fetch plan data
-        const planData = await getClientPlan(user.uid);
-        setPlan(planData);
-      } catch (error) {
-        console.error('Error loading plan:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPlan();
-  }, [userData, authLoading, user, router]);
+    setLoading(false);
+  }, [userData, authLoading, router]);
 
   const handleLogout = async () => {
     try {
@@ -70,10 +55,7 @@ export default function MyPlanPage() {
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="flex items-center gap-2 text-stone-600">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading your plan...
-        </div>
+        <div className="text-stone-600">Loading...</div>
       </div>
     );
   }
@@ -101,16 +83,13 @@ export default function MyPlanPage() {
 
             {/* Status Badges & Metric Cards */}
             <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full text-sm font-semibold">
                   <div className="h-2 w-2 rounded-full bg-green-500"></div>
                   Active
                 </div>
                 <div className="inline-flex items-center px-3 py-1.5 border border-green-500/50 rounded-full text-sm font-medium text-green-600 dark:text-green-400">
                   Updated 7 days ago
-                </div>
-                <div className="inline-flex items-center px-3 py-1.5 border border-green-500/50 rounded-full text-sm font-medium text-green-600 dark:text-green-400">
-                  Next Check-in: Oct 28
                 </div>
               </div>
               <div className="hidden md:flex items-center gap-2">
@@ -137,11 +116,26 @@ export default function MyPlanPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column: Plan Summary, Training & Nutrition (2/3 width) */}
               <div className="lg:col-span-2 space-y-6">
-                <PlanSummary
-                  coachNote={{
-                    coachName: "Shreyas",
-                    message: "Weight down 2.5lbs this week, feeling good overall. Energy slightly low on leg days - added 100 calories and will watch for improvements. Keep pushing on upper body lifts, form is looking solid!"
+                <PlanSummary 
+                  weeklyFocus={{
+                    lastUpdated: new Date(),
+                    weeks: [{
+                      weekStartDate: new Date().toISOString().split('T')[0],
+                      adjustments: [
+                        "Added 100 calories to support energy levels",
+                        "Increased protein to 180g daily"
+                      ],
+                      priorities: [
+                        "Focus on progressive overload in upper body lifts",
+                        "Maintain consistency with 4x weekly training",
+                        "Track energy levels on leg days"
+                      ],
+                      coachNotes: "Weight down 2.5lbs this week, feeling good overall. Energy slightly low on leg days - added 100 calories and will watch for improvements. Keep pushing on upper body lifts, form is looking solid!",
+                      createdAt: new Date(),
+                      updatedAt: new Date()
+                    }]
                   }}
+                  coachName="Shreyas"
                 />
                 
                 {/* Training Protocol Card */}
@@ -154,28 +148,16 @@ export default function MyPlanPage() {
               {/* Right Column: Vision, Focus, Step Goal & Cardio (1/3 width) */}
               <div className="space-y-6 lg:col-span-1">
                 {/* Your Vision Card */}
-                {plan?.vision && <YourVision goals={plan.vision.goals} />}
+                <YourVision />
 
                 {/* Current Focus Card */}
                 <CurrentFocus />
 
                 {/* Step Goal Card */}
-                {plan?.stepGoal && (
-                  <StepGoalCard 
-                    target={plan.stepGoal.target} 
-                    tips={plan.stepGoal.tips} 
-                  />
-                )}
+                <StepGoalCard />
 
                 {/* Cardio Protocol Card */}
-                {plan?.lissCardio && (
-                  <CardioProtocol 
-                    frequency={plan.lissCardio.frequency}
-                    duration={plan.lissCardio.duration}
-                    targetHeartRate={plan.lissCardio.targetHeartRate}
-                    timing={plan.lissCardio.timing}
-                  />
-                )}
+                <CardioProtocol />
               </div>
             </div>
 
