@@ -9,7 +9,19 @@ import {
 } from '@/components/ui/card';
 import { HeartPulse } from 'lucide-react';
 
-export function CardioProtocol() {
+interface CardioProtocolProps {
+  frequency?: string;
+  duration?: string;
+  targetHeartRate?: string;
+  timing?: string;
+}
+
+export function CardioProtocol({ frequency, duration, targetHeartRate, timing }: CardioProtocolProps) {
+  // Show nothing if no cardio protocol is set
+  if (!frequency || !duration || !targetHeartRate || !timing) {
+    return null;
+  }
+
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
       <CardHeader className="relative">
@@ -26,19 +38,19 @@ export function CardioProtocol() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Frequency</p>
-                    <p className="font-bold">3x per week</p>
+                    <p className="font-bold">{frequency}</p>
                 </div>
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Duration</p>
-                    <p className="font-bold">20-30 min</p>
+                    <p className="font-bold">{duration}</p>
                 </div>
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Target HR</p>
-                    <p className="font-bold">120-130 BPM</p>
+                    <p className="font-bold">{targetHeartRate}</p>
                 </div>
                 <div className="space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">Timing</p>
-                    <p className="font-bold">Post-workout</p>
+                    <p className="font-bold">{timing}</p>
                 </div>
             </div>
          </div>

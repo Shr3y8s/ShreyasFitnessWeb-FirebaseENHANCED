@@ -533,6 +533,30 @@ service cloud.firestore {
       allow write: if false; // Only admins can write via backend
     }
     
+    // CLIENT TRAINING PLANS COLLECTION
+    match /clientPlans/{planId} {
+      // Trainers can read and manage plans for their clients
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read their own plan
+      // Check both document ID (for when using clientId as planId) and data field
+      allow read: if isAuthenticated() && 
+                  (request.auth.uid == planId || 
+                   (resource != null && request.auth.uid == resource.data.clientId));
+      
+      // Plan validation
+      function validatePlan() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['clientId', 'trainerId']) &&
+               data.clientId is string &&
+               data.trainerId is string;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isTrainerOrAdmin() && validatePlan();
+      allow update: if isTrainerOrAdmin() && validatePlan();
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

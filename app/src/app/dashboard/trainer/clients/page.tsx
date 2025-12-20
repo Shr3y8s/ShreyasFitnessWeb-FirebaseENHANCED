@@ -25,7 +25,8 @@ import {
   MapPin,
   CreditCard,
   ExternalLink,
-  Send
+  Send,
+  ClipboardList
 } from 'lucide-react';
 import { 
   fetchClientBillingData, 
@@ -923,7 +924,16 @@ export default function ClientsPage() {
                           <div className="flex gap-2 flex-shrink-0">
                             <Button 
                               size="sm" 
-                              variant="default"
+                              variant="outline"
+                              onClick={() => router.push(`/dashboard/trainer/clients/${activeClient.id}/plan`)}
+                              className="h-7 text-xs"
+                            >
+                              <ClipboardList className="h-3 w-3 mr-1" />
+                              Edit Plan
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
                               onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${activeClient.id}`)}
                               className="h-7 text-xs"
                             >

@@ -216,11 +216,19 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Training</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
+              <SidebarMenuItem key="plan-real">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/plan">
+                    <ClipboardList className="w-4 h-4" />
+                    <span className="font-medium">My Plan</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem key="plan-mock">
                 <SidebarMenuButton asChild className={pathname === '/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/plan">
                     <ClipboardList className="w-4 h-4" />
-                    <span className="font-medium">My Plan</span>
+                    <span className="font-medium">My Plan (mock)</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

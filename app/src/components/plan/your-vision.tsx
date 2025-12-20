@@ -11,14 +11,11 @@ interface YourVisionProps {
   goals?: VisionGoal[];
 }
 
-// Default mock data - replace with real data from Firebase/props
-const defaultGoals: VisionGoal[] = [
-  { text: 'Lose 35 pounds and feel confident in my body' },
-  { text: 'Build sustainable, lifelong fitness habits' },
-  { text: 'Have energy to keep up with my kids' },
-];
-
-export function YourVision({ goals = defaultGoals }: YourVisionProps) {
+export function YourVision({ goals }: YourVisionProps) {
+  // Show nothing if no goals are set
+  if (!goals || goals.length === 0) {
+    return null;
+  }
   return (
     <Card className="relative transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border border-primary/50">
       <Pin className="absolute top-4 right-4 h-5 w-5 text-primary/50" />

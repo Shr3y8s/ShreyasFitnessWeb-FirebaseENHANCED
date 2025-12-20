@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { signOutUser } from '@/lib/firebase';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Loader2 } from 'lucide-react';
 import { PlanSummary } from '@/components/plan/plan-summary';
 import { YourVision } from '@/components/plan/your-vision';
 import { CurrentFocus } from '@/components/plan/current-focus';
@@ -14,32 +14,47 @@ import { TrainingProtocol } from '@/components/plan/training-protocol';
 import { NutritionProtocol } from '@/components/plan/nutrition-protocol';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
+import { getClientPlan } from '@/lib/plan-api';
+import { ClientPlan } from '@/types/plan';
 
 export default function MyPlanPage() {
   const router = useRouter();
-  const { userData, loading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { userData, loading: authLoading, user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState<ClientPlan | null>(null);
 
-  React.useEffect(() => {
-    if (authLoading) return;
+  useEffect(() => {
+    const loadPlan = async () => {
+      if (authLoading) return;
 
-    if (!userData) {
-      router.push('/login');
-      return;
-    }
+      if (!userData || !user) {
+        router.push('/login');
+        return;
+      }
 
-    if (userData.role !== 'client') {
-      router.push('/dashboard');
-      return;
-    }
+      if (userData.role !== 'client') {
+        router.push('/dashboard');
+        return;
+      }
 
-    if (!userData.accountActivated) {
-      router.push('/payment');
-      return;
-    }
+      if (!userData.accountActivated) {
+        router.push('/payment');
+        return;
+      }
 
-    setLoading(false);
-  }, [userData, authLoading, router]);
+      try {
+        // Fetch plan data
+        const planData = await getClientPlan(user.uid);
+        setPlan(planData);
+      } catch (error) {
+        console.error('Error loading plan:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlan();
+  }, [userData, authLoading, user, router]);
 
   const handleLogout = async () => {
     try {
@@ -55,7 +70,10 @@ export default function MyPlanPage() {
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="text-stone-600">Loading...</div>
+        <div className="flex items-center gap-2 text-stone-600">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading your plan...
+        </div>
       </div>
     );
   }
@@ -136,16 +154,28 @@ export default function MyPlanPage() {
               {/* Right Column: Vision, Focus, Step Goal & Cardio (1/3 width) */}
               <div className="space-y-6 lg:col-span-1">
                 {/* Your Vision Card */}
-                <YourVision />
+                {plan?.vision && <YourVision goals={plan.vision.goals} />}
 
                 {/* Current Focus Card */}
                 <CurrentFocus />
 
                 {/* Step Goal Card */}
-                <StepGoalCard />
+                {plan?.stepGoal && (
+                  <StepGoalCard 
+                    target={plan.stepGoal.target} 
+                    tips={plan.stepGoal.tips} 
+                  />
+                )}
 
                 {/* Cardio Protocol Card */}
-                <CardioProtocol />
+                {plan?.lissCardio && (
+                  <CardioProtocol 
+                    frequency={plan.lissCardio.frequency}
+                    duration={plan.lissCardio.duration}
+                    targetHeartRate={plan.lissCardio.targetHeartRate}
+                    timing={plan.lissCardio.timing}
+                  />
+                )}
               </div>
             </div>
 
