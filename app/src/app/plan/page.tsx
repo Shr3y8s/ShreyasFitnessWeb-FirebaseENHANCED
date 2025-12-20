@@ -33,7 +33,7 @@ export default function MyPlanPage() {
       return;
     }
 
-    if (userData.paymentStatus !== 'active') {
+    if (!userData.accountActivated) {
       router.push('/payment');
       return;
     }
