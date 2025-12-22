@@ -132,6 +132,7 @@ export default function MyPlanPage() {
                         "Track energy levels on leg days"
                       ],
                       coachNotes: "Weight down 2.5lbs this week, feeling good overall. Energy slightly low on leg days - added 100 calories and will watch for improvements. Keep pushing on upper body lifts, form is looking solid!",
+                      lastCallDate: new Date('2024-12-15'),
                       createdAt: new Date(),
                       updatedAt: new Date()
                     }]

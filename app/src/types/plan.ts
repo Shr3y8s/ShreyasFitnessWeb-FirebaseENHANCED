@@ -28,6 +28,7 @@ export interface WeeklyFocusData {
   adjustments: string[];
   priorities: string[];
   coachNotes: string;
+  lastCallDate: Date | null; // Date of the last check-in call with client
   createdAt: Date | null;
   updatedAt: Date | null;
 }

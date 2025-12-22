@@ -99,7 +99,14 @@ export function PlanSummary({ weeklyFocus, coachName = "Your Coach" }: PlanSumma
         </div>
         {currentWeekData.coachNotes && (
           <div>
-              <h3 className="text-xs uppercase text-green-600 dark:text-green-500 mb-2 font-bold tracking-wide">Notes from Last Call:</h3>
+              <h3 className="text-xs uppercase text-green-600 dark:text-green-500 mb-2 font-bold tracking-wide">
+                Notes from Last Call
+                {currentWeekData.lastCallDate && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    ({new Date(currentWeekData.lastCallDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})
+                  </span>
+                )}:
+              </h3>
               <div className="p-4 bg-background/50 rounded-lg">
                   <p className="text-sm font-medium italic text-foreground/90">&quot;{currentWeekData.coachNotes}&quot;</p>
                   <p className="text-xs font-medium text-muted-foreground text-right mt-2">- Coach {coachName}</p>

@@ -29,6 +29,7 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
     adjustments: string[];
     priorities: string[];
     coachNotes: string;
+    lastCallDate: string;
   }>>({});
   
   const fourWeeks = get4Weeks();
@@ -45,10 +46,12 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
       const dataMap: Record<string, any> = {};
       
       initialData.weeks.forEach(week => {
+        const callDate = week.lastCallDate ? new Date(week.lastCallDate).toISOString().split('T')[0] : '';
         dataMap[week.weekStartDate] = {
           adjustments: week.adjustments.length > 0 ? week.adjustments : [''],
           priorities: week.priorities.length > 0 ? week.priorities : [''],
-          coachNotes: week.coachNotes
+          coachNotes: week.coachNotes,
+          lastCallDate: callDate
         };
       });
       
@@ -61,11 +64,12 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
     return weekData[activeWeek] || {
       adjustments: [''],
       priorities: [''],
-      coachNotes: ''
+      coachNotes: '',
+      lastCallDate: ''
     };
   };
 
-  const updateWeekData = (field: 'adjustments' | 'priorities' | 'coachNotes', value: any) => {
+  const updateWeekData = (field: 'adjustments' | 'priorities' | 'coachNotes' | 'lastCallDate', value: any) => {
     setWeekData(prev => ({
       ...prev,
       [activeWeek]: {
@@ -125,6 +129,7 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
       adjustments: filteredAdjustments,
       priorities: filteredPriorities,
       coachNotes: current.coachNotes.trim(),
+      lastCallDate: current.lastCallDate ? new Date(current.lastCallDate) : null,
       createdAt: null, // Will be set by server
       updatedAt: null // Will be set by server
     };
@@ -278,14 +283,31 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                   Your message to the client based on your last check-in
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="e.g., 'Weight down 2.5lbs this week, feeling good overall. Energy slightly low on leg days - added 100 calories and will watch for improvements...'"
-                  value={current.coachNotes}
-                  onChange={(e) => updateWeekData('coachNotes', e.target.value)}
-                  rows={4}
-                  className="resize-none"
-                />
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="lastCallDate" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Date of Last Call (Optional)
+                  </Label>
+                  <Input
+                    id="lastCallDate"
+                    type="date"
+                    value={current.lastCallDate}
+                    onChange={(e) => updateWeekData('lastCallDate', e.target.value)}
+                    className="w-full max-w-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="coachNotes">Your Notes</Label>
+                  <Textarea
+                    id="coachNotes"
+                    placeholder="e.g., 'Weight down 2.5lbs this week, feeling good overall. Energy slightly low on leg days - added 100 calories and will watch for improvements...'"
+                    value={current.coachNotes}
+                    onChange={(e) => updateWeekData('coachNotes', e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
               </CardContent>
             </Card>
 
