@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Activity, Dumbbell, UtensilsCrossed, Droplet, Moon } from 'lucide-react';
+import { Activity, Dumbbell, UtensilsCrossed, Droplet, Moon, ListChecks } from 'lucide-react';
 import { DailyHabit } from '@/types/plan';
 
 interface DailyHabitsProps {
@@ -49,12 +49,17 @@ export function DailyHabits({ habits }: DailyHabitsProps) {
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <CardHeader>
-        <CardTitle className="text-xl">
-          Daily Habits
-        </CardTitle>
-        <CardDescription>
-          Daily habits you&apos;re building consistency with
-        </CardDescription>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary/10 rounded-full">
+            <ListChecks className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-xl">Daily Habits</CardTitle>
+            <CardDescription>
+              Daily habits you&apos;re building consistency with
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {habits.map((habit) => (
