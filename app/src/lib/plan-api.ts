@@ -70,6 +70,7 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
         adjustments: week.adjustments || [],
         priorities: week.priorities || [],
         coachNotes: week.coachNotes || '',
+        lastCallDate: timestampToDate(week.lastCallDate),
         createdAt: timestampToDate(week.createdAt),
         updatedAt: timestampToDate(week.updatedAt)
       })),
@@ -356,6 +357,7 @@ export async function updateWeeklyFocus(
           adjustments: weeklyFocusData.adjustments,
           priorities: weeklyFocusData.priorities,
           coachNotes: weeklyFocusData.coachNotes,
+          lastCallDate: weeklyFocusData.lastCallDate ? new Date(weeklyFocusData.lastCallDate).toISOString() : null,
           createdAt: weeks[existingIndex].createdAt, // Keep original creation time
           updatedAt: new Date().toISOString() // Use ISO string instead of serverTimestamp
         };
@@ -367,6 +369,7 @@ export async function updateWeeklyFocus(
           adjustments: weeklyFocusData.adjustments,
           priorities: weeklyFocusData.priorities,
           coachNotes: weeklyFocusData.coachNotes,
+          lastCallDate: weeklyFocusData.lastCallDate ? new Date(weeklyFocusData.lastCallDate).toISOString() : null,
           createdAt: now, // Use ISO string instead of serverTimestamp
           updatedAt: now  // Use ISO string instead of serverTimestamp
         });

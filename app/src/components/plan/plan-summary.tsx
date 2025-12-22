@@ -55,7 +55,7 @@ export function PlanSummary({ weeklyFocus, coachName = "Your Coach" }: PlanSumma
   }
 
   return (
-    <Card className="transition-all duration-300 border-2 border-green-500/30 shadow-[0_4px_12px_rgba(34,197,94,0.25)] bg-green-50/50 dark:bg-green-950/20">
+    <Card className="transition-all duration-300 border-2 border-green-500/30 shadow-[0_4px_12px_rgba(34,197,94,0.25)] bg-green-50/50 dark:bg-green-950/20 hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(34,197,94,0.35)]">
       <CardHeader className="relative">
         <CardTitle className="flex items-center gap-3 text-xl">
             <Pin className="w-6 h-6 text-green-600" />
@@ -109,7 +109,6 @@ export function PlanSummary({ weeklyFocus, coachName = "Your Coach" }: PlanSumma
               </h3>
               <div className="p-4 bg-background/50 rounded-lg">
                   <p className="text-sm font-medium italic text-foreground/90">&quot;{currentWeekData.coachNotes}&quot;</p>
-                  <p className="text-xs font-medium text-muted-foreground text-right mt-2">- Coach {coachName}</p>
               </div>
           </div>
         )}
