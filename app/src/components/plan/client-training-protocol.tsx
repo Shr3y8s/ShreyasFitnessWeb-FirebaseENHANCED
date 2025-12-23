@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Dumbbell, Calendar, Check, Loader2 } from 'lucide-react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -82,6 +83,13 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
     }
   }, [clientId]);
 
+  // Get badge variant based on completion percentage
+  const getCompletionBadgeVariant = (percentage: number): "default" | "secondary" | "outline" => {
+    if (percentage === 100) return "default"; // Green for complete
+    if (percentage > 0) return "secondary"; // Yellow for in progress
+    return "outline"; // Gray for not started
+  };
+
   // Format date to "Mon, Dec 23"
   const formatDueDate = (dueDate: any) => {
     // Handle Firestore Timestamp objects
@@ -141,12 +149,20 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
               {assignments.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="p-4 bg-primary/5 rounded-lg text-center border border-primary/20 hover:bg-primary/10 transition-colors"
+                  className="p-4 bg-primary/5 rounded-lg border border-primary/20 hover:bg-primary/10 transition-colors"
                 >
-                  <p className="text-sm font-semibold text-primary">
-                    {assignment.dueDate ? formatDueDate(assignment.dueDate) : 'Not scheduled'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{assignment.name}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-primary">
+                      {assignment.dueDate ? formatDueDate(assignment.dueDate) : 'Not scheduled'}
+                    </p>
+                    <Badge 
+                      variant={getCompletionBadgeVariant(assignment.completionPercentage || 0)}
+                      className="text-xs"
+                    >
+                      {assignment.completionPercentage || 0}%
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{assignment.name}</p>
                 </div>
               ))}
             </div>
