@@ -237,7 +237,7 @@ export default function ClientPlanEditorPage() {
                   Training Protocol
                 </TabsTrigger>
                 <TabsTrigger value="nutrition">
-                  Nutrition
+                  Nutrition Protocol
                 </TabsTrigger>
                 <TabsTrigger value="stepgoal">
                   Step Goal

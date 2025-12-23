@@ -6,11 +6,110 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, Loader2, Plus, X, GripVertical, Sparkles } from 'lucide-react';
+import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot } from 'lucide-react';
 import { updateNutritionProtocol } from '@/lib/plan-api';
-import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory } from '@/types/plan';
+import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO } from '@/types/plan';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Icon mapper for dynamic icon rendering
+const iconMap: Record<string, any> = {
+  Utensils,
+  Drumstick,
+  Salad,
+  Droplet,
+  Clock,
+  Leaf,
+  CircleDot
+};
+
+const HabitIcon = ({ iconName, className }: { iconName: string; className?: string }) => {
+  const IconComponent = iconMap[iconName] || CircleDot;
+  return <IconComponent className={className} />;
+};
+
+// Sortable Habit Item Component
+function SortableHabitItem({ 
+  habit, 
+  onEdit, 
+  onRemove 
+}: { 
+  habit: NutritionHabit; 
+  onEdit: (id: string, field: 'title' | 'description', value: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: habit.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="border rounded-lg p-4 space-y-2 bg-white"
+    >
+      <div className="flex items-start gap-2">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing mt-2"
+        >
+          <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <Input
+            value={habit.title}
+            onChange={(e) => onEdit(habit.id, 'title', e.target.value)}
+            placeholder="Habit title"
+            className="font-semibold"
+          />
+          <Textarea
+            value={habit.description}
+            onChange={(e) => onEdit(habit.id, 'description', e.target.value)}
+            placeholder="Habit description"
+            rows={2}
+          />
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(habit.id)}
+          className="text-destructive hover:text-destructive flex-shrink-0"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 interface NutritionProtocolEditorProps {
   clientId: string;
@@ -41,6 +140,14 @@ export function NutritionProtocolEditor({
   const [newHabitTitle, setNewHabitTitle] = useState('');
   const [newHabitDescription, setNewHabitDescription] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Sync with initial data when it changes
   useEffect(() => {
@@ -90,6 +197,18 @@ export function NutritionProtocolEditor({
     setHabits(habits.map(h => 
       h.id === id ? { ...h, [field]: value } : h
     ));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setHabits((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -155,7 +274,7 @@ export function NutritionProtocolEditor({
             </TabsTrigger>
             <TabsTrigger value="meal_plan">
               <span className="mr-2">📋</span>
-              Meal Plan
+              Nutrition Protocol
             </TabsTrigger>
           </TabsList>
 
@@ -168,38 +287,28 @@ export function NutritionProtocolEditor({
               </p>
             </div>
 
-            {/* Existing habits */}
-            <div className="space-y-3">
-              {habits.map((habit) => (
-                <div key={habit.id} className="border rounded-lg p-4 space-y-2 bg-white">
-                  <div className="flex items-start gap-2">
-                    <GripVertical className="h-5 w-5 text-muted-foreground mt-2 flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Input
-                        value={habit.title}
-                        onChange={(e) => handleEditHabit(habit.id, 'title', e.target.value)}
-                        placeholder="Habit title"
-                        className="font-semibold"
-                      />
-                      <Textarea
-                        value={habit.description}
-                        onChange={(e) => handleEditHabit(habit.id, 'description', e.target.value)}
-                        placeholder="Habit description"
-                        rows={2}
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveHabit(habit.id)}
-                      className="text-destructive hover:text-destructive flex-shrink-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {/* Existing habits with drag-and-drop */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={habits.map(h => h.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3">
+                  {habits.map((habit) => (
+                    <SortableHabitItem
+                      key={habit.id}
+                      habit={habit}
+                      onEdit={handleEditHabit}
+                      onRemove={handleRemoveHabit}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
 
             {/* Template Browser Dialog */}
             <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
@@ -223,27 +332,60 @@ export function NutritionProtocolEditor({
                       acc[template.category].push(template);
                       return acc;
                     }, {} as Record<NutritionHabitCategory, typeof NUTRITION_HABIT_TEMPLATES>)
-                  ).map(([category, templates]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold mb-3 flex items-center gap-2">
-                        <Badge variant="secondary" className="capitalize">
-                          {category}
-                        </Badge>
-                      </h3>
-                      <div className="grid gap-2">
-                        {templates.map((template) => (
-                          <button
-                            key={template.id}
-                            onClick={() => handleAddFromTemplate(template.id)}
-                            className="text-left p-3 border rounded-lg hover:bg-accent hover:border-primary transition-colors"
-                          >
-                            <p className="font-medium">{template.title}</p>
-                            <p className="text-sm text-muted-foreground">{template.description}</p>
-                          </button>
-                        ))}
+                  ).map(([category, templates]) => {
+                    const categoryInfo = HABIT_CATEGORY_INFO[category as NutritionHabitCategory];
+                    // Background colors for categories
+                    const bgColorMap: Record<string, string> = {
+                      'meals': 'bg-blue-50 hover:bg-blue-100 border-blue-200',
+                      'protein': 'bg-rose-50 hover:bg-rose-100 border-rose-200',
+                      'vegetables': 'bg-green-50 hover:bg-green-100 border-green-200',
+                      'hydration': 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200',
+                      'timing': 'bg-purple-50 hover:bg-purple-100 border-purple-200',
+                      'quality': 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200'
+                    };
+                    const iconColorMap: Record<string, string> = {
+                      'meals': 'text-blue-600',
+                      'protein': 'text-rose-600',
+                      'vegetables': 'text-green-600',
+                      'hydration': 'text-cyan-600',
+                      'timing': 'text-purple-600',
+                      'quality': 'text-emerald-600'
+                    };
+                    
+                    return (
+                      <div key={category}>
+                        <h3 className="font-semibold mb-3 flex items-center gap-2">
+                          <HabitIcon 
+                            iconName={categoryInfo.icon} 
+                            className={`h-5 w-5 ${iconColorMap[category]}`} 
+                          />
+                          <Badge variant="secondary" className="capitalize">
+                            {categoryInfo.label}
+                          </Badge>
+                        </h3>
+                        <div className="grid gap-2">
+                          {templates.map((template) => (
+                            <button
+                              key={template.id}
+                              onClick={() => handleAddFromTemplate(template.id)}
+                              className={`text-left p-4 border rounded-lg transition-all hover:scale-[1.02] ${bgColorMap[category]}`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <HabitIcon 
+                                  iconName={template.icon} 
+                                  className={`h-5 w-5 mt-0.5 flex-shrink-0 ${iconColorMap[category]}`}
+                                />
+                                <div>
+                                  <p className="font-medium">{template.title}</p>
+                                  <p className="text-sm text-muted-foreground">{template.description}</p>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </DialogContent>
             </Dialog>
