@@ -78,12 +78,6 @@ export default function ClientDashboardPage() {
       return;
     }
 
-    console.log('[ClientDashboard] User data loaded:', { 
-      name: userDataFromAuth?.name, 
-      email: userDataFromAuth?.email, 
-      role: userDataFromAuth?.role
-    });
-
     setLoading(false);
   }, [userDataFromAuth, authLoading, router]);
 
@@ -253,7 +247,7 @@ export default function ClientDashboardPage() {
       <ClientSidebar
         userName={userDataFromAuth?.name}
         userTier={userDataFromAuth?.tier}
-        userProfilePhoto={userDataFromAuth?.profilePhotoSmall}
+        userProfilePhoto={userDataFromAuth?.profilePhotoSmall || undefined}
         onLogout={handleLogout}
       />
       <SidebarInset>

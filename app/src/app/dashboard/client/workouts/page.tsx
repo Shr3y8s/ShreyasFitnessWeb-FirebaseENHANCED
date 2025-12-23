@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -71,7 +72,13 @@ export default function ClientWorkoutsPage() {
       }
     );
 
-    return () => unsubscribe();
+    // Register listener for cleanup on sign out
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
   }, [user]);
 
   if (loading) {

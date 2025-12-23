@@ -284,8 +284,8 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/nutrition' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/nutrition">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/nutrition' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/nutrition">
                     <Apple className="w-4 h-4" />
                     <span className="font-medium">Nutrition Hub</span>
                     {nutritionUpdatesCount > 0 && (
@@ -293,6 +293,14 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                         {nutritionUpdatesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/nutrition' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/nutrition">
+                    <Apple className="w-4 h-4" />
+                    <span className="font-medium">Nutrition Hub (Mock)</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

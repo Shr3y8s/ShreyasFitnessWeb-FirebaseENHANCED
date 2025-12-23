@@ -557,6 +557,42 @@ service cloud.firestore {
       allow update: if isTrainerOrAdmin() && validatePlan();
     }
     
+    // NUTRITION LOGGING SYSTEM
+    match /nutritionLogs/{userId} {
+      // Users can read their own nutrition data
+      allow read: if isOwner(userId);
+      
+      // ADMINS can read all nutrition logs
+      // TRAINERS can only read their assigned clients' logs
+      allow read: if isAdmin() || isAssignedTrainer(userId);
+      
+      // Daily logs subcollection
+      match /daily/{dateId} {
+        // Users can read/write their own daily logs
+        allow read, write: if isOwner(userId);
+        
+        // ADMINS can read all, TRAINERS only their assigned clients
+        allow read: if isAdmin() || isAssignedTrainer(userId);
+        
+        // Validation for daily log data
+        function validateDailyLog() {
+          let data = request.resource.data;
+          return data.keys().hasAll(['meals', 'waterIntake', 'lastUpdated']) &&
+                 data.meals is map &&
+                 data.waterIntake is number &&
+                 data.waterIntake >= 0;
+        }
+        
+        allow write: if isOwner(userId) && validateDailyLog();
+      }
+      
+      // Habits tracking subcollection
+      match /habits/{dateId} {
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin() || isAssignedTrainer(userId);
+      }
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;
