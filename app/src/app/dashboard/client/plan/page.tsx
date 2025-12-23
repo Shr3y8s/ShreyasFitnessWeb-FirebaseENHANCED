@@ -13,6 +13,7 @@ import { CardioProtocol } from '@/components/plan/cardio-protocol';
 import { PlanSummary } from '@/components/plan/plan-summary';
 import { DailyHabits } from '@/components/plan/current-focus';
 import { ClientTrainingProtocol } from '@/components/plan/client-training-protocol';
+import { ClientNutritionProtocol } from '@/components/plan/client-nutrition-protocol';
 import { getClientPlan } from '@/lib/plan-api';
 import { ClientPlan } from '@/types/plan';
 import { Card, CardContent } from '@/components/ui/card';
@@ -155,6 +156,19 @@ export default function PlanPage() {
                         keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
                       />
                     )}
+
+                    {/* Nutrition Protocol */}
+          {plan?.nutritionProtocol && (
+            <ClientNutritionProtocol 
+              assignedApproach={plan.nutritionProtocol.approach}
+              lastUpdated={plan.nutritionProtocol.lastUpdated}
+              nutritionData={{
+                healthyHabits: plan.nutritionProtocol.healthyHabits,
+                macroTracking: plan.nutritionProtocol.macroTracking,
+                mealPlan: plan.nutritionProtocol.mealPlan
+              }}
+            />
+          )}
                   </div>
 
                   {/* Right Column: Vision, Daily Habits, Step Goal & Cardio (1/3 width) */}

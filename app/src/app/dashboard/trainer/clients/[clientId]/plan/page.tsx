@@ -15,6 +15,7 @@ import { LissCardioEditor } from '@/components/trainer/plan/LissCardioEditor';
 import { WeeklyFocusEditor } from '@/components/trainer/plan/WeeklyFocusEditor';
 import { DailyHabitsEditor } from '@/components/trainer/plan/DailyHabitsEditor';
 import { TrainingProtocolEditor } from '@/components/trainer/plan/TrainingProtocolEditor';
+import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProtocolEditor';
 import { getClientPlan, updateVision, updateStepGoal, updateLissCardio, updateWeeklyFocus, updateDailyHabits } from '@/lib/plan-api';
 import { ClientPlan, VisionData, StepGoalData, LissCardioData, WeeklyFocusData, DailyHabitsData } from '@/types/plan';
 import { doc, getDoc } from 'firebase/firestore';
@@ -222,7 +223,7 @@ export default function ClientPlanEditorPage() {
           {/* Tabbed Editor Interface */}
           <div className="bg-white rounded-xl border p-6 shadow-sm">
             <Tabs defaultValue="weeklyfocus" className="w-full">
-              <TabsList className="grid w-full grid-cols-6 mb-6">
+              <TabsList className="grid w-full grid-cols-7 mb-6">
                 <TabsTrigger value="weeklyfocus">
                   Weekly Focus
                 </TabsTrigger>
@@ -234,6 +235,9 @@ export default function ClientPlanEditorPage() {
                 </TabsTrigger>
                 <TabsTrigger value="trainingprotocol">
                   Training Protocol
+                </TabsTrigger>
+                <TabsTrigger value="nutrition">
+                  Nutrition
                 </TabsTrigger>
                 <TabsTrigger value="stepgoal">
                   Step Goal
@@ -281,6 +285,25 @@ export default function ClientPlanEditorPage() {
                     clientId={clientId}
                     trainerId={user.uid}
                     keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
+                    onUpdate={async () => {
+                      const updatedPlan = await getClientPlan(clientId);
+                      setPlan(updatedPlan);
+                    }}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="nutrition">
+                {user && (
+                  <NutritionProtocolEditor
+                    clientId={clientId}
+                    trainerId={user.uid}
+                    currentApproach={plan?.nutritionProtocol?.approach}
+                    currentData={{
+                      healthyHabits: plan?.nutritionProtocol?.healthyHabits,
+                      macroTracking: plan?.nutritionProtocol?.macroTracking,
+                      mealPlan: plan?.nutritionProtocol?.mealPlan
+                    }}
                     onUpdate={async () => {
                       const updatedPlan = await getClientPlan(clientId);
                       setPlan(updatedPlan);

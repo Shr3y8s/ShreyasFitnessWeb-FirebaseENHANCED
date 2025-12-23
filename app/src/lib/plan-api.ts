@@ -91,6 +91,13 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
       keyPriorities: data.trainingProtocol.keyPriorities || [],
       lastUpdated: timestampToDate(data.trainingProtocol.lastUpdated)
     } : null,
+    nutritionProtocol: data.nutritionProtocol ? {
+      approach: data.nutritionProtocol.approach || 'healthy_habits',
+      healthyHabits: data.nutritionProtocol.healthyHabits || undefined,
+      macroTracking: data.nutritionProtocol.macroTracking || undefined,
+      mealPlan: data.nutritionProtocol.mealPlan || undefined,
+      lastUpdated: timestampToDate(data.nutritionProtocol.lastUpdated)
+    } : null,
     createdAt: timestampToDate(data.createdAt),
     updatedAt: timestampToDate(data.updatedAt)
   };
@@ -221,6 +228,7 @@ export async function updateVision(
         lissCardio: null,
         weeklyFocus: null,
         dailyHabits: null,
+        nutritionProtocol: null,
         createdAt: serverTimestamp()
       });
     }
@@ -266,6 +274,7 @@ export async function updateStepGoal(
         lissCardio: null,
         weeklyFocus: null,
         dailyHabits: null,
+        nutritionProtocol: null,
         createdAt: serverTimestamp()
       });
     }
@@ -313,6 +322,7 @@ export async function updateLissCardio(
         stepGoal: null,
         weeklyFocus: null,
         dailyHabits: null,
+        nutritionProtocol: null,
         createdAt: serverTimestamp()
       });
     }
@@ -419,6 +429,7 @@ export async function updateWeeklyFocus(
         stepGoal: null,
         lissCardio: null,
         dailyHabits: null,
+        nutritionProtocol: null,
         createdAt: serverTimestamp()
       });
     }
@@ -463,6 +474,7 @@ export async function updateDailyHabits(
         stepGoal: null,
         lissCardio: null,
         weeklyFocus: null,
+        nutritionProtocol: null,
         createdAt: serverTimestamp()
       });
     }
@@ -509,6 +521,7 @@ export async function updateTrainingProtocol(
         weeklyFocus: null,
         dailyHabits: null,
         trainingProtocol: null,
+        nutritionProtocol: null,
         createdAt: serverTimestamp()
       });
     }
@@ -516,6 +529,70 @@ export async function updateTrainingProtocol(
     return { success: true };
   } catch (error) {
     console.error('Error updating training protocol:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update only the nutrition protocol section of a client's plan
+ * Uses clientId as the document ID
+ */
+export async function updateNutritionProtocol(
+  clientId: string,
+  trainerId: string,
+  nutritionProtocolData: {
+    approach: 'healthy_habits' | 'macro_tracking' | 'meal_plan';
+    healthyHabits?: any;
+    macroTracking?: any;
+    mealPlan?: any;
+  }
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+    
+    const nutritionData: any = {
+      approach: nutritionProtocolData.approach,
+      lastUpdated: serverTimestamp()
+    };
+    
+    // Add optional configuration data based on approach
+    if (nutritionProtocolData.healthyHabits) {
+      nutritionData.healthyHabits = nutritionProtocolData.healthyHabits;
+    }
+    if (nutritionProtocolData.macroTracking) {
+      nutritionData.macroTracking = nutritionProtocolData.macroTracking;
+    }
+    if (nutritionProtocolData.mealPlan) {
+      nutritionData.mealPlan = nutritionProtocolData.mealPlan;
+    }
+    
+    const updateData: any = {
+      nutritionProtocol: nutritionData,
+      updatedAt: serverTimestamp()
+    };
+    
+    if (existingPlan) {
+      await updateDoc(planRef, updateData);
+    } else {
+      // Create new plan with just nutrition protocol, using clientId as document ID
+      await setDoc(planRef, {
+        clientId,
+        trainerId,
+        ...updateData,
+        vision: null,
+        stepGoal: null,
+        lissCardio: null,
+        weeklyFocus: null,
+        dailyHabits: null,
+        trainingProtocol: null,
+        createdAt: serverTimestamp()
+      });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating nutrition protocol:', error);
     return { success: false, error };
   }
 }
