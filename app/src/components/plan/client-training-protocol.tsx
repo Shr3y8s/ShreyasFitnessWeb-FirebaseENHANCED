@@ -90,6 +90,27 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
     return "outline"; // Gray for not started
   };
 
+  // Get the most recent update date from assignments
+  const getLastUpdatedDate = (): string => {
+    if (assignments.length === 0) return 'Not updated';
+    
+    // Find the most recent updatedAt date
+    const mostRecent = assignments.reduce((latest, assignment) => {
+      const assignmentDate = assignment.updatedAt;
+      if (!assignmentDate) return latest;
+      
+      const date = assignmentDate instanceof Date ? assignmentDate : 
+                   (assignmentDate as any).toDate ? (assignmentDate as any).toDate() : 
+                   new Date(assignmentDate);
+      
+      return !latest || date > latest ? date : latest;
+    }, null as Date | null);
+
+    if (!mostRecent) return 'Not updated';
+    
+    return `Last updated: ${mostRecent.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  };
+
   // Format date to "Mon, Dec 23"
   const formatDueDate = (dueDate: any) => {
     // Handle Firestore Timestamp objects
@@ -135,16 +156,21 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         <CardDescription>
           Your current workout program and guidelines for this week.
         </CardDescription>
-        <div className="absolute top-4 right-4 text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1.5">
-          <Calendar className="h-3 w-3" />
-          {formatWeekRange(new Date(getCurrentWeekISO()))}
+        <div className="absolute top-4 right-4 text-xs text-muted-foreground">
+          {getLastUpdatedDate()}
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Weekly Workouts */}
         {assignments.length > 0 ? (
           <div>
-            <h3 className="font-bold mb-3">This Week&apos;s Workouts:</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="font-bold">This Week&apos;s Workouts:</h3>
+              <span className="text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1.5">
+                <Calendar className="h-3 w-3" />
+                {formatWeekRange(new Date(getCurrentWeekISO()))}
+              </span>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {assignments.map((assignment) => (
                 <div
