@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { CircularProgress } from '@/components/ui/circular-progress';
 import { Dumbbell, Calendar, Check, Loader2 } from 'lucide-react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -83,12 +83,6 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
     }
   }, [clientId]);
 
-  // Get badge variant based on completion percentage
-  const getCompletionBadgeVariant = (percentage: number): "default" | "secondary" | "outline" => {
-    if (percentage === 100) return "default"; // Green for complete
-    if (percentage > 0) return "secondary"; // Yellow for in progress
-    return "outline"; // Gray for not started
-  };
 
   // Get the most recent update date from assignments
   const getLastUpdatedDate = (): string => {
@@ -177,18 +171,19 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
                   key={assignment.id}
                   className="p-4 bg-primary/5 rounded-lg border border-primary/20 hover:bg-primary/10 transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-semibold text-primary">
-                      {assignment.dueDate ? formatDueDate(assignment.dueDate) : 'Not scheduled'}
-                    </p>
-                    <Badge 
-                      variant={getCompletionBadgeVariant(assignment.completionPercentage || 0)}
-                      className="text-xs"
-                    >
-                      {assignment.completionPercentage || 0}%
-                    </Badge>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0 mr-2">
+                      <p className="text-sm font-semibold text-primary">
+                        {assignment.dueDate ? formatDueDate(assignment.dueDate) : 'Not scheduled'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{assignment.name}</p>
+                    </div>
+                    <CircularProgress 
+                      percentage={assignment.completionPercentage || 0}
+                      size={44}
+                      strokeWidth={4}
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground">{assignment.name}</p>
                 </div>
               ))}
             </div>
@@ -202,19 +197,19 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         )}
 
         {/* Key Priorities */}
-        {keyPriorities && keyPriorities.length > 0 && (
-          <div>
-            <h3 className="font-bold mb-3">Key Priorities:</h3>
-            <ul className="space-y-3">
-              {keyPriorities.map((priority, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <Check className="h-5 w-5 mt-0.5 text-primary flex-shrink-0" />
-                  <span className="text-sm font-medium text-foreground">{priority}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+            {keyPriorities && keyPriorities.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2 text-sm">Key Priorities:</h3>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5">
+                  {keyPriorities.map((priority: string, index: number) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-foreground">{priority}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
       </CardContent>
     </Card>
   );

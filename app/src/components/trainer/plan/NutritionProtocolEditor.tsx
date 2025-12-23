@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy } from 'lucide-react';
 import { updateNutritionProtocol } from '@/lib/plan-api';
 import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO } from '@/types/plan';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -28,6 +30,15 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// Predefined meal types
+const MEAL_TYPES = [
+  'Breakfast',
+  'Post Training',
+  'Lunch',
+  'Dinner',
+  'Snack'
+] as const;
 
 // Icon mapper for dynamic icon rendering
 const iconMap: Record<string, any> = {
@@ -141,6 +152,51 @@ export function NutritionProtocolEditor({
   const [newHabitDescription, setNewHabitDescription] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
 
+  // Macro Tracking state
+  const [macroCalories, setMacroCalories] = useState(currentData?.macroTracking?.calories || '');
+  const [macroProtein, setMacroProtein] = useState(currentData?.macroTracking?.protein || '');
+  const [macroProteinPct, setMacroProteinPct] = useState(currentData?.macroTracking?.proteinPercentage || '');
+  const [macroCarbs, setMacroCarbs] = useState(currentData?.macroTracking?.carbs || '');
+  const [macroCarbsPct, setMacroCarbsPct] = useState(currentData?.macroTracking?.carbsPercentage || '');
+  const [macroFats, setMacroFats] = useState(currentData?.macroTracking?.fats || '');
+  const [macroFatsPct, setMacroFatsPct] = useState(currentData?.macroTracking?.fatsPercentage || '');
+  const [macroTiming, setMacroTiming] = useState<string[]>(
+    currentData?.macroTracking?.timing || []
+  );
+  const [macroGuidelines, setMacroGuidelines] = useState<string[]>(
+    currentData?.macroTracking?.guidelines || []
+  );
+
+  // Meal Plan state - Grid structure (meal type x day)
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  // Initialize meal plan grid: { mealType: { dayName: foodItems[] } }
+  const initializeMealGrid = () => {
+    const grid: Record<string, Record<string, string>> = {};
+    MEAL_TYPES.forEach(mealType => {
+      grid[mealType] = {};
+      DAYS.forEach(day => {
+        grid[mealType][day] = '';
+      });
+    });
+
+    // Load existing data if available
+    if (currentData?.mealPlan?.weeklyPlan) {
+      currentData.mealPlan.weeklyPlan.forEach((dayPlan: any) => {
+        dayPlan.meals.forEach((meal: any) => {
+          if (grid[meal.name]) {
+            grid[meal.name][dayPlan.day] = meal.items.join('\n');
+          }
+        });
+      });
+    }
+
+    return grid;
+  };
+
+  const [mealGrid, setMealGrid] = useState<Record<string, Record<string, string>>>(initializeMealGrid);
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -156,6 +212,20 @@ export function NutritionProtocolEditor({
     }
     if (currentData?.healthyHabits?.habits) {
       setHabits(currentData.healthyHabits.habits);
+    }
+    if (currentData?.macroTracking) {
+      setMacroCalories(currentData.macroTracking.calories || '');
+      setMacroProtein(currentData.macroTracking.protein || '');
+      setMacroProteinPct(currentData.macroTracking.proteinPercentage || '');
+      setMacroCarbs(currentData.macroTracking.carbs || '');
+      setMacroCarbsPct(currentData.macroTracking.carbsPercentage || '');
+      setMacroFats(currentData.macroTracking.fats || '');
+      setMacroFatsPct(currentData.macroTracking.fatsPercentage || '');
+      setMacroTiming(currentData.macroTracking.timing || []);
+      setMacroGuidelines(currentData.macroTracking.guidelines || []);
+    }
+    if (currentData?.mealPlan?.weeklyPlan) {
+      setMealGrid(initializeMealGrid());
     }
   }, [currentApproach, currentData]);
 
@@ -211,6 +281,73 @@ export function NutritionProtocolEditor({
     }
   };
 
+  // Update meal grid cell
+  const updateMealCell = (mealType: string, day: string, value: string) => {
+    setMealGrid(prev => ({
+      ...prev,
+      [mealType]: {
+        ...prev[mealType],
+        [day]: value
+      }
+    }));
+  };
+
+  // Copy meal to all days
+  const copyMealToAllDays = (mealType: string) => {
+    const mondayValue = mealGrid[mealType]['Monday'];
+    setMealGrid(prev => ({
+      ...prev,
+      [mealType]: DAYS.reduce((acc, day) => {
+        acc[day] = mondayValue;
+        return acc;
+      }, {} as Record<string, string>)
+    }));
+  };
+
+  // Macro Tracking - Timing Guidelines
+  const addTimingGuideline = () => {
+    setMacroTiming([...macroTiming, '']);
+  };
+
+  const updateTimingGuideline = (index: number, value: string) => {
+    const updated = [...macroTiming];
+    updated[index] = value;
+    setMacroTiming(updated);
+  };
+
+  const removeTimingGuideline = (index: number) => {
+    setMacroTiming(macroTiming.filter((_, i) => i !== index));
+  };
+
+  // Macro Tracking - General Guidelines
+  const addGeneralGuideline = () => {
+    setMacroGuidelines([...macroGuidelines, '']);
+  };
+
+  const updateGeneralGuideline = (index: number, value: string) => {
+    const updated = [...macroGuidelines];
+    updated[index] = value;
+    setMacroGuidelines(updated);
+  };
+
+  const removeGeneralGuideline = (index: number) => {
+    setMacroGuidelines(macroGuidelines.filter((_, i) => i !== index));
+  };
+
+  // Convert grid back to day-first structure for saving
+  const convertGridToDayPlan = () => {
+    return DAYS.map(day => ({
+      day,
+      meals: MEAL_TYPES.map(mealType => ({
+        name: mealType,
+        items: mealGrid[mealType][day]
+          .split('\n')
+          .map(item => item.trim())
+          .filter(item => item.length > 0)
+      })).filter(meal => meal.items.length > 0)
+    })).filter(dayPlan => dayPlan.meals.length > 0);
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -223,11 +360,21 @@ export function NutritionProtocolEditor({
       if (activeTab === 'healthy_habits') {
         nutritionData.healthyHabits = { habits };
       } else if (activeTab === 'macro_tracking') {
-        // Future: save macro tracking data
-        nutritionData.macroTracking = {};
+        nutritionData.macroTracking = {
+          calories: macroCalories,
+          protein: macroProtein,
+          proteinPercentage: macroProteinPct,
+          carbs: macroCarbs,
+          carbsPercentage: macroCarbsPct,
+          fats: macroFats,
+          fatsPercentage: macroFatsPct,
+          timing: macroTiming.filter(line => line.trim()),
+          guidelines: macroGuidelines.filter(line => line.trim())
+        };
       } else if (activeTab === 'meal_plan') {
-        // Future: save meal plan data
-        nutritionData.mealPlan = {};
+        nutritionData.mealPlan = {
+          weeklyPlan: convertGridToDayPlan()
+        };
       }
 
       const result = await updateNutritionProtocol(clientId, trainerId, nutritionData);
@@ -248,7 +395,19 @@ export function NutritionProtocolEditor({
   };
 
   const hasChanges = activeTab !== currentApproach || 
-    (activeTab === 'healthy_habits' && JSON.stringify(habits) !== JSON.stringify(currentData?.healthyHabits?.habits || []));
+    (activeTab === 'healthy_habits' && JSON.stringify(habits) !== JSON.stringify(currentData?.healthyHabits?.habits || [])) ||
+    (activeTab === 'macro_tracking' && (
+      macroCalories !== (currentData?.macroTracking?.calories || '') ||
+      macroProtein !== (currentData?.macroTracking?.protein || '') ||
+      macroProteinPct !== (currentData?.macroTracking?.proteinPercentage || '') ||
+      macroCarbs !== (currentData?.macroTracking?.carbs || '') ||
+      macroCarbsPct !== (currentData?.macroTracking?.carbsPercentage || '') ||
+      macroFats !== (currentData?.macroTracking?.fats || '') ||
+      macroFatsPct !== (currentData?.macroTracking?.fatsPercentage || '') ||
+      JSON.stringify(macroTiming) !== JSON.stringify(currentData?.macroTracking?.timing || []) ||
+      JSON.stringify(macroGuidelines) !== JSON.stringify(currentData?.macroTracking?.guidelines || [])
+    )) ||
+    (activeTab === 'meal_plan' && JSON.stringify(mealGrid) !== JSON.stringify(initializeMealGrid()));
 
   return (
     <Card>
@@ -274,7 +433,7 @@ export function NutritionProtocolEditor({
             </TabsTrigger>
             <TabsTrigger value="meal_plan">
               <span className="mr-2">📋</span>
-              Nutrition Protocol
+              Meal Plans
             </TabsTrigger>
           </TabsList>
 
@@ -418,19 +577,234 @@ export function NutritionProtocolEditor({
 
           {/* Macro Tracking Tab */}
           <TabsContent value="macro_tracking" className="space-y-4 mt-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-              <p className="text-sm text-amber-800">
-                <strong>Coming Soon:</strong> Configure daily macronutrient targets (calories, protein, carbs, fats)
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                <strong>📊 Precision Approach:</strong> Configure daily macro targets for your client to track
               </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-3">Daily Targets</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Calories</label>
+                    <Input
+                      type="number"
+                      value={macroCalories}
+                      onChange={(e) => setMacroCalories(e.target.value)}
+                      placeholder="2400"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Protein (g)</label>
+                      <Input
+                        type="number"
+                        value={macroProtein}
+                        onChange={(e) => setMacroProtein(e.target.value)}
+                        placeholder="180"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">% (optional)</label>
+                      <Input
+                        type="number"
+                        value={macroProteinPct}
+                        onChange={(e) => setMacroProteinPct(e.target.value)}
+                        placeholder="30"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Carbs (g)</label>
+                      <Input
+                        type="number"
+                        value={macroCarbs}
+                        onChange={(e) => setMacroCarbs(e.target.value)}
+                        placeholder="240"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">% (optional)</label>
+                      <Input
+                        type="number"
+                        value={macroCarbsPct}
+                        onChange={(e) => setMacroCarbsPct(e.target.value)}
+                        placeholder="40"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Fats (g)</label>
+                      <Input
+                        type="number"
+                        value={macroFats}
+                        onChange={(e) => setMacroFats(e.target.value)}
+                        placeholder="80"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">% (optional)</label>
+                      <Input
+                        type="number"
+                        value={macroFatsPct}
+                        onChange={(e) => setMacroFatsPct(e.target.value)}
+                        placeholder="30"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium">Meal Timing Guidelines</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addTimingGuideline}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Guideline
+                  </Button>
+                </div>
+                {macroTiming.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
+                    No timing guidelines yet. Click "Add Guideline" to create one.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {macroTiming.map((guideline, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-primary mt-2">•</span>
+                        <Input
+                          value={guideline}
+                          onChange={(e) => updateTimingGuideline(index, e.target.value)}
+                          placeholder="e.g., Pre-workout: 30-60g carbs"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeTimingGuideline(index)}
+                          className="flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium">General Guidelines</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addGeneralGuideline}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Guideline
+                  </Button>
+                </div>
+                {macroGuidelines.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
+                    No general guidelines yet. Click "Add Guideline" to create one.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {macroGuidelines.map((guideline, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-primary mt-2">•</span>
+                        <Input
+                          value={guideline}
+                          onChange={(e) => updateGeneralGuideline(index, e.target.value)}
+                          placeholder="e.g., Prioritize whole, minimally processed foods"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeGeneralGuideline(index)}
+                          className="flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
 
           {/* Meal Plan Tab */}
           <TabsContent value="meal_plan" className="space-y-4 mt-4">
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
               <p className="text-sm text-purple-800">
-                <strong>Coming Soon:</strong> Create structured meal plans with specific foods and portions
+                <strong>📋 Structured Approach:</strong> Create a weekly meal plan grid. Enter food items (one per line) in each cell.
               </p>
+            </div>
+
+            <div className="overflow-x-auto border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-32 font-semibold">Meal Type</TableHead>
+                    {DAYS_SHORT.map(day => (
+                      <TableHead key={day} className="text-center font-semibold min-w-[140px]">
+                        {day}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-24 text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {MEAL_TYPES.map(mealType => (
+                    <TableRow key={mealType}>
+                      <TableCell className="font-medium bg-muted/50">
+                        {mealType}
+                      </TableCell>
+                      {DAYS.map(day => (
+                        <TableCell key={day} className="p-2">
+                          <Textarea
+                            value={mealGrid[mealType][day]}
+                            onChange={(e) => updateMealCell(mealType, day, e.target.value)}
+                            placeholder="Enter foods&#10;(one per line)"
+                            className="min-h-[100px] text-sm resize-none"
+                            rows={4}
+                          />
+                        </TableCell>
+                      ))}
+                      <TableCell className="p-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyMealToAllDays(mealType)}
+                          className="w-full"
+                          title="Copy Monday to all days"
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg">
+              <p><strong>💡 Tip:</strong> Fill in Monday's meals, then use the "Copy" button to replicate across the week. Modify individual days as needed.</p>
             </div>
           </TabsContent>
         </Tabs>

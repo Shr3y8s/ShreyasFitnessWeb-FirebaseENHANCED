@@ -9,14 +9,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Flame, Utensils, Check, ArrowRight, Lock, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Flame, ArrowRight, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Target, Calendar, Check } from 'lucide-react';
 import { NutritionApproach, HABIT_CATEGORY_INFO, NutritionHabit } from '@/types/plan';
 
 // Icon mapper for dynamic icon rendering
 const iconMap: Record<string, any> = {
-  Utensils,
   Drumstick,
   Salad,
   Droplet,
@@ -40,215 +39,275 @@ interface ClientNutritionProtocolProps {
   };
 }
 
-// Mock data - for approaches not yet configured
-const dailyTargets = [
-    { label: 'Calories', value: '2,400', color: 'text-green-500' },
-    { label: 'Protein', value: '180g', percentage: '30%', color: 'text-green-500' },
-    { label: 'Carbs', value: '240g', percentage: '40%', color: 'text-green-500' },
-    { label: 'Fats', value: '80g', percentage: '30%', color: 'text-green-500' },
-];
+// Approach badge styles
+const approachBadgeStyles = {
+  healthy_habits: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30',
+  macro_tracking: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30',
+  meal_plan: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30',
+};
 
-const mealTiming = [
-    "Pre-workout: 30-60g carbs",
-    "Post-workout: 30g protein within 2 hours",
-    "Spread across 4-5 meals throughout the day"
-];
-
-const guidelines = [
-    "Prioritize whole, minimally processed foods",
-    "Track consistently on weekdays, flexible on weekends",
-    "Aim for 80% adherence to targets"
-];
-
-
-const wholeFoods = [
-    "Lean meats, fish, eggs",
-    "Vegetables and fruits",
-    "Rice, potatoes, oats",
-    "Nuts, seeds, olive oil"
-];
+const approachNames = {
+  healthy_habits: 'Healthy Habits',
+  macro_tracking: 'Macro Tracking',
+  meal_plan: 'Meal Plan',
+};
 
 export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutritionData }: ClientNutritionProtocolProps) {
-  // Get habits from trainer data or fall back to empty
   const healthyHabits: NutritionHabit[] = nutritionData?.healthyHabits?.habits || [];
-  // Format last updated date
+  const macroTracking = nutritionData?.macroTracking || null;
+  const mealPlan = nutritionData?.mealPlan || null;
+
   const formatLastUpdated = () => {
-    if (!lastUpdated) return 'Not updated';
+    if (!lastUpdated) return 'Not configured yet';
     return `Last updated: ${lastUpdated.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
-  // Check if tab is disabled
-  const isTabDisabled = (approach: NutritionApproach) => {
-    return approach !== assignedApproach;
+  // Icon color mapping
+  const iconColorMap: Record<string, string> = {
+    'meals': 'text-blue-500',
+    'protein': 'text-rose-500',
+    'vegetables': 'text-green-600',
+    'hydration': 'text-cyan-500',
+    'timing': 'text-purple-500',
+    'quality': 'text-emerald-500'
   };
 
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
-      <CardHeader className="relative">
+      <CardHeader className="relative pb-3">
         <CardTitle className="flex items-center gap-3 text-xl">
           <Flame className="w-6 h-6 text-primary" />
           <span>Nutrition Protocol</span>
         </CardTitle>
         <CardDescription>
-          Your assigned nutrition approach and guidelines.
+          Your personalized nutrition approach and guidelines
         </CardDescription>
-         <div className="absolute top-4 right-4 text-xs text-muted-foreground">
-            {formatLastUpdated()}
+        <div className="absolute top-4 right-4 text-xs text-muted-foreground">
+          {formatLastUpdated()}
         </div>
       </CardHeader>
-      <CardContent>
-        <Tabs value={assignedApproach} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger 
-              value="healthy_habits" 
-              disabled={isTabDisabled('healthy_habits')}
-              className="disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="flex items-center gap-1">
-                Healthy Habits
-                {isTabDisabled('healthy_habits') && <Lock className="h-3 w-3" />}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="macro_tracking" 
-              disabled={isTabDisabled('macro_tracking')}
-              className="disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="flex items-center gap-1">
-                Macro Tracking
-                {isTabDisabled('macro_tracking') && <Lock className="h-3 w-3" />}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="meal_plan" 
-              disabled={isTabDisabled('meal_plan')}
-              className="disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="flex items-center gap-1">
-                Meal Plan
-                {isTabDisabled('meal_plan') && <Lock className="h-3 w-3" />}
-              </span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="macro_tracking" className="mt-6">
-            <div className="space-y-6">
-                <div>
-                    <h3 className="font-bold mb-3">Daily Targets:</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {dailyTargets.map(target => (
-                             <div key={target.label} className="p-4 bg-primary/5 rounded-lg text-center">
-                                <p className="text-xs text-muted-foreground">{target.label}</p>
-                                <p className={`text-2xl font-bold ${target.color}`}>{target.value}</p>
-                                {target.percentage && <p className="text-xs text-muted-foreground">{target.percentage}</p>}
-                             </div>
-                        ))}
-                    </div>
-                </div>
+      <CardContent className="space-y-6">
+        {/* Approach Badge */}
+        <div className="flex items-center justify-between pb-4 border-b">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Your Approach:</span>
+            <Badge className={`${approachBadgeStyles[assignedApproach]} text-sm px-3 py-1`}>
+              {approachNames[assignedApproach]}
+            </Badge>
+          </div>
+        </div>
 
-                <div>
-                    <h3 className="font-bold mb-2">Meal Timing:</h3>
-                    <ul className="space-y-1 list-disc list-inside font-medium text-muted-foreground">
-                       {mealTiming.map((item, index) => (
-                            <li key={index}>{item}</li>
-                       ))}
-                    </ul>
-                </div>
-
-                 <div>
-                    <h3 className="font-bold mb-2">Guidelines:</h3>
-                    <ul className="space-y-1 list-disc list-inside font-medium text-muted-foreground">
-                        {guidelines.map((item, index) => (
-                            <li key={index}>{item}</li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="meal_plan" className="mt-6">
-            <div className="flex flex-col items-center justify-center py-12 px-4">
-              <Utensils className="h-16 w-16 text-primary mb-4" />
-              <h3 className="text-xl font-semibold mb-2 text-center">View Your Meal Plan</h3>
-              <p className="text-muted-foreground text-center mb-6 max-w-md">
-                Visit your nutrition hub to see your detailed meal plan, track your meals, and manage your nutrition goals.
+        {/* Healthy Habits Content */}
+        {assignedApproach === 'healthy_habits' && (
+          <div className="space-y-4">
+            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                💡 Beginner-Friendly Approach
               </p>
-              <Link href="/nutrition">
-                <Button size="lg" className="gap-2">
-                  Go to Nutrition Hub
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="healthy_habits" className="mt-6 space-y-6">
-            <div className="p-4 bg-green-500/10 rounded-lg">
-                <h3 className="font-semibold text-green-800 dark:text-green-300">Beginner Approach</h3>
-                <p className="text-sm text-green-700 dark:text-green-400">Focus on building healthy habits without strict tracking</p>
+              <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                Build healthy habits without strict tracking
+              </p>
             </div>
 
             {healthyHabits.length > 0 ? (
               <div>
-                  <h3 className="font-bold mb-3">Daily Habits:</h3>
-                  <div className="space-y-3">
-                      {healthyHabits.map((habit) => {
-                        const categoryInfo = HABIT_CATEGORY_INFO[habit.category];
-                        // Soft color mapping for dots
-                        const dotColorMap: Record<string, string> = {
-                          'meals': 'bg-blue-400',
-                          'protein': 'bg-rose-400',
-                          'vegetables': 'bg-green-500',
-                          'hydration': 'bg-cyan-400',
-                          'timing': 'bg-purple-400',
-                          'quality': 'bg-emerald-400'
-                        };
-                        // Icon color mapping
-                        const iconColorMap: Record<string, string> = {
-                          'meals': 'text-blue-500',
-                          'protein': 'text-rose-500',
-                          'vegetables': 'text-green-600',
-                          'hydration': 'text-cyan-500',
-                          'timing': 'text-purple-500',
-                          'quality': 'text-emerald-500'
-                        };
-                        return (
-                          <div key={habit.id} className="flex items-center gap-3 p-3 bg-background/50 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-default">
-                              <div className="flex-shrink-0">
-                                <HabitIcon iconName={habit.icon} className={`h-5 w-5 ${iconColorMap[habit.category] || 'text-gray-500'}`} />
-                              </div>
-                              <div className="flex-1">
-                                  <p className="font-semibold text-foreground/90">{habit.title}</p>
-                                  <p className="text-sm text-muted-foreground mt-0.5">{habit.description}</p>
-                              </div>
-                          </div>
-                        );
-                      })}
-                  </div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  Your Daily Habits
+                </h3>
+                <div className="space-y-2">
+                  {healthyHabits.map((habit) => (
+                    <div key={habit.id} className="flex items-start gap-3 p-3 bg-background/50 rounded-lg border">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <HabitIcon 
+                          iconName={habit.icon} 
+                          className={`h-4 w-4 ${iconColorMap[habit.category] || 'text-gray-500'}`} 
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{habit.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{habit.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
-              <div className="p-6 bg-muted/50 rounded-lg text-center">
-                <p className="text-muted-foreground">
-                  Your trainer hasn't configured your nutrition habits yet. Check back soon!
+              <div className="p-4 bg-muted/50 rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">
+                  Your trainer will configure your habits soon
                 </p>
               </div>
             )}
-            
-            <div>
-                <h3 className="font-bold mb-2">What Counts as &quot;Whole Foods&quot;?</h3>
-                <ul className="space-y-1 list-disc list-inside font-medium text-muted-foreground">
-                    {wholeFoods.map((food, index) => (
-                        <li key={index}>{food}</li>
-                    ))}
-                </ul>
-            </div>
-            
-            <div className="p-4 bg-green-500/10 rounded-lg text-center">
-                <p className="font-semibold text-green-800 dark:text-green-300">Focus on <span className="font-bold">CONSISTENCY</span> over perfection!</p>
-            </div>
-          </TabsContent>
 
-        </Tabs>
+            <div className="p-3 bg-green-500/10 rounded-lg text-center border border-green-500/20">
+              <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                Focus on <span className="font-bold">CONSISTENCY</span> over perfection!
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Macro Tracking Content */}
+        {assignedApproach === 'macro_tracking' && (
+          <div className="space-y-4">
+            <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                📊 Precision Approach
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                Track your macros to hit specific targets
+              </p>
+            </div>
+
+            {macroTracking ? (
+              <>
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    Daily Targets
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {macroTracking.calories && (
+                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                        <p className="text-xs text-muted-foreground">Calories</p>
+                        <p className="text-xl font-bold text-blue-600">{macroTracking.calories}</p>
+                      </div>
+                    )}
+                    {macroTracking.protein && (
+                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                        <p className="text-xs text-muted-foreground">Protein</p>
+                        <p className="text-xl font-bold text-rose-600">{macroTracking.protein}g</p>
+                        {macroTracking.proteinPercentage && (
+                          <p className="text-xs text-muted-foreground">{macroTracking.proteinPercentage}%</p>
+                        )}
+                      </div>
+                    )}
+                    {macroTracking.carbs && (
+                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                        <p className="text-xs text-muted-foreground">Carbs</p>
+                        <p className="text-xl font-bold text-amber-600">{macroTracking.carbs}g</p>
+                        {macroTracking.carbsPercentage && (
+                          <p className="text-xs text-muted-foreground">{macroTracking.carbsPercentage}%</p>
+                        )}
+                      </div>
+                    )}
+                    {macroTracking.fats && (
+                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                        <p className="text-xs text-muted-foreground">Fats</p>
+                        <p className="text-xl font-bold text-purple-600">{macroTracking.fats}g</p>
+                        {macroTracking.fatsPercentage && (
+                          <p className="text-xs text-muted-foreground">{macroTracking.fatsPercentage}%</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {macroTracking.timing && macroTracking.timing.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-sm">Meal Timing:</h3>
+                    <ul className="space-y-1.5">
+                      {macroTracking.timing.map((item: string, index: number) => (
+                        <li key={index} className="flex items-start gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {macroTracking.guidelines && macroTracking.guidelines.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-sm">Guidelines:</h3>
+                    <ul className="space-y-1.5">
+                      {macroTracking.guidelines.map((item: string, index: number) => (
+                        <li key={index} className="flex items-start gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                          <span className="text-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="p-4 bg-muted/50 rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">
+                  Your trainer will configure your macro targets soon
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Meal Plan Content */}
+        {assignedApproach === 'meal_plan' && (
+          <div className="space-y-4">
+            <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+              <p className="text-sm font-medium text-purple-800 dark:text-purple-300">
+                📋 Structured Approach
+              </p>
+              <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
+                Follow your custom weekly meal plan
+              </p>
+            </div>
+
+            {mealPlan && mealPlan.weeklyPlan && mealPlan.weeklyPlan.length > 0 ? (
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  This Week's Plan Preview
+                </h3>
+                
+                {/* Show first day as example */}
+                <div className="p-4 bg-background/50 rounded-lg border">
+                  <p className="font-medium text-sm mb-3">{mealPlan.weeklyPlan[0].day} Example:</p>
+                  <div className="space-y-2">
+                    {mealPlan.weeklyPlan[0].meals.slice(0, 3).map((meal: any, index: number) => (
+                      <div key={index} className="text-sm">
+                        <span className="font-medium">{meal.name}:</span>{' '}
+                        <span className="text-muted-foreground">
+                          {meal.items.slice(0, 2).join(', ')}
+                          {meal.items.length > 2 && '...'}
+                        </span>
+                      </div>
+                    ))}
+                    {mealPlan.weeklyPlan[0].meals.length > 3 && (
+                      <p className="text-xs text-muted-foreground italic">
+                        + {mealPlan.weeklyPlan[0].meals.length - 3} more meals
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  View full 7-day meal plan in Nutrition Hub
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/50 rounded-lg text-center">
+                <p className="text-sm text-muted-foreground">
+                  Your trainer will create your meal plan soon
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* CTA Button */}
+        <div className="pt-4 border-t">
+          <Link href="/nutrition" className="block">
+            <Button size="lg" className="w-full gap-2">
+              Go to Nutrition Hub
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Track your nutrition and view detailed plans
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
