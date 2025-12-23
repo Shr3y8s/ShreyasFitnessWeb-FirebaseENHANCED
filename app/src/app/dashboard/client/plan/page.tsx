@@ -12,6 +12,7 @@ import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
 import { PlanSummary } from '@/components/plan/plan-summary';
 import { DailyHabits } from '@/components/plan/current-focus';
+import { ClientTrainingProtocol } from '@/components/plan/client-training-protocol';
 import { getClientPlan } from '@/lib/plan-api';
 import { ClientPlan } from '@/types/plan';
 import { Card, CardContent } from '@/components/ui/card';
@@ -145,6 +146,14 @@ export default function PlanPage() {
                           </div>
                         </CardContent>
                       </Card>
+                    )}
+
+                    {/* Training Protocol */}
+                    {user && (
+                      <ClientTrainingProtocol 
+                        clientId={user.uid}
+                        keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
+                      />
                     )}
                   </div>
 

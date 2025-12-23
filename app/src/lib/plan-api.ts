@@ -87,6 +87,10 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
       })),
       lastUpdated: timestampToDate(data.dailyHabits.lastUpdated)
     } : null,
+    trainingProtocol: data.trainingProtocol ? {
+      keyPriorities: data.trainingProtocol.keyPriorities || [],
+      lastUpdated: timestampToDate(data.trainingProtocol.lastUpdated)
+    } : null,
     createdAt: timestampToDate(data.createdAt),
     updatedAt: timestampToDate(data.updatedAt)
   };
@@ -466,6 +470,52 @@ export async function updateDailyHabits(
     return { success: true };
   } catch (error) {
     console.error('Error updating daily habits:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update only the training protocol section of a client's plan
+ * Uses clientId as the document ID
+ */
+export async function updateTrainingProtocol(
+  clientId: string,
+  trainerId: string,
+  trainingProtocolData: { keyPriorities: string[] }
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+    
+    const updateData: any = {
+      trainingProtocol: {
+        keyPriorities: trainingProtocolData.keyPriorities,
+        lastUpdated: serverTimestamp()
+      },
+      updatedAt: serverTimestamp()
+    };
+    
+    if (existingPlan) {
+      await updateDoc(planRef, updateData);
+    } else {
+      // Create new plan with just training protocol, using clientId as document ID
+      await setDoc(planRef, {
+        clientId,
+        trainerId,
+        ...updateData,
+        vision: null,
+        stepGoal: null,
+        lissCardio: null,
+        weeklyFocus: null,
+        dailyHabits: null,
+        trainingProtocol: null,
+        createdAt: serverTimestamp()
+      });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating training protocol:', error);
     return { success: false, error };
   }
 }

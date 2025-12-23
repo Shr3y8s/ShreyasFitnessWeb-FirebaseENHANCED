@@ -52,6 +52,11 @@ export interface DailyHabitsData {
   lastUpdated: Date | null;
 }
 
+export interface TrainingProtocolData {
+  keyPriorities: string[];
+  lastUpdated: Date | null;
+}
+
 export interface ClientPlan {
   id?: string;
   clientId: string;
@@ -62,6 +67,7 @@ export interface ClientPlan {
   lissCardio: LissCardioData | null;
   weeklyFocus: WeeklyFocusHistory | null;
   dailyHabits: DailyHabitsData | null;
+  trainingProtocol: TrainingProtocolData | null;
   
   createdAt: Date | null;
   updatedAt: Date | null;
