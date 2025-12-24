@@ -82,7 +82,7 @@ export default function NutritionPage() {
         break;
       case 'macro_tracking':
         config = {
-          tabs: ['tracking', 'meal-plan', 'resources'],
+          tabs: ['tracking', 'resources'],
           defaultTab: 'tracking'
         };
         break;
