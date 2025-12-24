@@ -682,7 +682,7 @@ export default function ProfilePage() {
         userName={userData?.name}
         userTier={userData?.tier}
         userTierName={userData?.tierName}
-        userProfilePhoto={userData?.profilePhotoSmall}
+        userProfilePhoto={userData?.profilePhotoSmall || undefined}
         onLogout={handleLogout}
       />
       <SidebarInset>
@@ -698,7 +698,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Profile Header Card */}
-            <Card className="border-2 border-primary/20">
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-6">
                   {/* Profile Photo */}
@@ -761,7 +761,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Personal Information Section */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -927,7 +927,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Location Section */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -1076,7 +1076,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Contact Preferences Section */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -1403,7 +1403,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Emergency Contact Section */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -1558,7 +1558,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Security Section */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -1694,7 +1694,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Account & Data Management */}
-            <Card className="border-amber-200">
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-amber-50/50 border-amber-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-amber-700">
                   <AlertTriangle className="h-5 w-5" />
