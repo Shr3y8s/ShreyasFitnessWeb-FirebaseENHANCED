@@ -223,13 +223,21 @@ export default function NutritionPage() {
   useEffect(() => {
     if (!user) return;
 
+    let isMounted = true;
+
     const calculateStreaks = async () => {
       try {
+        // Double check user is still available
+        if (!user) return;
+
         const today = new Date();
         const logs = [];
         
         // Load last 30 days to calculate streaks
         for (let i = 0; i < 30; i++) {
+          // Check if component is still mounted and user still exists
+          if (!isMounted || !user) return;
+
           const date = new Date(today);
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
@@ -243,6 +251,9 @@ export default function NutritionPage() {
             logs.push({ date: dateStr, data: null });
           }
         }
+
+        // Final check before setting state
+        if (!isMounted || !user) return;
 
         // Calculate protein streak
         let proteinStreak = 0;
@@ -288,11 +299,18 @@ export default function NutritionPage() {
 
         setStreaks({ proteinStreak, loggingStreak, waterStreak });
       } catch (error) {
-        console.error('Error calculating streaks:', error);
+        // Only log error if component is still mounted (not during logout)
+        if (isMounted && user) {
+          console.error('Error calculating streaks:', error);
+        }
       }
     };
 
     calculateStreaks();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, dailyGoals]);
 
   // Save daily log to Firebase
