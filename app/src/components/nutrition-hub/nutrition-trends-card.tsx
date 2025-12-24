@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Flame, Droplets, TrendingUp, Target, Calendar, BicepsFlexed, ClipboardEdit, Apple } from "lucide-react";
+import { Flame, Droplets, TrendingUp, Target, Calendar, BicepsFlexed, ClipboardEdit, Apple, Beef, Wheat } from "lucide-react";
 import type { ReactNode } from "react";
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -64,12 +64,12 @@ export function TargetMacrosCard({ calories, protein, carbs, fat }: MacroTargets
       value: `${protein}g`,
     },
     {
-      icon: <Apple className="h-5 w-5 text-green-500" />,
+      icon: <Wheat className="h-5 w-5 text-amber-500" />,
       title: "Carbs",
       value: `${carbs}g`,
     },
     {
-      icon: <Droplets className="h-5 w-5 text-yellow-500" />,
+      icon: <Beef className="h-5 w-5 text-rose-500" />,
       title: "Fat",
       value: `${fat}g`,
     },
@@ -161,14 +161,14 @@ export function ThisWeekCard({ avgCalories, avgProtein, daysLogged, totalDays }:
       value: avgCalories > 0 ? `${Math.round(avgCalories).toLocaleString()}/day` : "No data",
     },
     {
-      icon: <Target className="h-5 w-5 text-muted-foreground" />,
+      icon: <BicepsFlexed className="h-5 w-5 text-muted-foreground" />,
       title: "Avg Protein",
       value: avgProtein > 0 ? `${Math.round(avgProtein)}g/day` : "No data",
     },
   ];
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-green-500/50 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-muted-foreground" />

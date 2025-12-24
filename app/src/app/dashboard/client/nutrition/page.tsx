@@ -11,7 +11,7 @@ import { NutritionResources } from '@/components/nutrition-hub/nutrition-resourc
 import { NutritionCommandCenter } from '@/components/nutrition-hub/nutrition-command-center';
 import { TargetMacrosCard, ActiveStreaksCard, ThisWeekCard, TrendsSummaryCard } from '@/components/nutrition-hub/nutrition-trends-card';
 import { NutritionApproachDisplay } from '@/components/nutrition-hub/nutrition-approach-display';
-import { Utensils, Target, Sparkles, BookOpen, CheckCircle2, UploadCloud } from 'lucide-react';
+import { Utensils, Target, Sparkles, BookOpen, CheckCircle2, UploadCloud, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion } from '@/components/ui/accordion';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -20,8 +20,9 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { signOutUser, db, storage } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 
 const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
@@ -30,6 +31,24 @@ const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'
 const getTodayDate = () => {
   const today = new Date();
   return today.toISOString().split('T')[0];
+};
+
+// Format date for display
+const formatDateDisplay = (dateStr: string) => {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'short', 
+    month: 'short', 
+    day: 'numeric', 
+    year: 'numeric' 
+  });
+};
+
+// Get 30 days ago
+const getThirtyDaysAgo = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 30);
+  return date.toISOString().split('T')[0];
 };
 
 export default function NutritionPage() {
@@ -42,10 +61,12 @@ export default function NutritionPage() {
     Dinner: [],
     Snacks: [],
   });
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [dayComplete, setDayComplete] = useState(false);
   const [waterIntake, setWaterIntake] = useState(0);
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dailyGoals, setDailyGoals] = useState({
     calories: 2500,
@@ -182,15 +203,14 @@ export default function NutritionPage() {
     loadNutritionPlan();
   }, [user]);
 
-  // Load today's nutrition log
+  // Load nutrition log for selected date
   useEffect(() => {
-    if (!user) {
+    if (!user || !selectedDate) {
       setLoading(false);
       return;
     }
 
-    const todayDate = getTodayDate();
-    const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', todayDate);
+    const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', selectedDate);
 
     const unsubscribe = onSnapshot(logRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -203,6 +223,7 @@ export default function NutritionPage() {
         });
         setWaterIntake(data.waterIntake || 0);
         setDayComplete(data.dayComplete || false);
+        setScreenshotUrl(data.screenshotUrl || null);
       } else {
         // Initialize empty log
         setDailyLog({
@@ -213,6 +234,7 @@ export default function NutritionPage() {
         });
         setWaterIntake(0);
         setDayComplete(false);
+        setScreenshotUrl(null);
       }
       setLoading(false);
     });
@@ -224,7 +246,7 @@ export default function NutritionPage() {
       unregisterListener(unsubscribe);
       unsubscribe();
     };
-  }, [user]);
+  }, [user, selectedDate]); // Watch selectedDate changes
 
   // Calculate weekly stats
   useEffect(() => {
@@ -516,20 +538,26 @@ export default function NutritionPage() {
     };
   }, [user, dailyGoals]);
 
-  // Save daily log to Firebase
+  // Save daily log to Firebase with auto-detect completion
   const saveDailyLog = async (meals: Record<MealCategory, FoodItem[]>, water: number) => {
-    if (!user) return;
+    if (!user || !selectedDate) return;
 
     try {
-      const todayDate = getTodayDate();
-      const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', todayDate);
+      const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', selectedDate);
+      
+      // New completion logic: ALL 4 meal categories must have at least one entry
+      const allMealsLogged = mealCategories.every(meal => meals[meal].length > 0);
+      const isComplete = allMealsLogged;
       
       await setDoc(logRef, {
         meals,
         waterIntake: water,
-        dayComplete,
+        dayComplete: isComplete,
         lastUpdated: Timestamp.now(),
       }, { merge: true });
+      
+      // Update local state
+      setDayComplete(isComplete);
     } catch (error) {
       console.error('Error saving daily log:', error);
       toast({
@@ -576,48 +604,70 @@ export default function NutritionPage() {
     }
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
-      toast({
-        title: "File Selected",
-        description: `${file.name} is ready for upload.`,
-      });
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setUploadedImage(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  };
+    if (!file || !user || !selectedDate) return;
 
-  const handleMarkComplete = async () => {
-    if (!user) return;
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    setFileName(file.name);
 
     try {
-      const todayDate = getTodayDate();
-      const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', todayDate);
+      // Upload to Firebase Storage: nutritionScreenshots/{userId}/{date}/{filename}
+      const storageRef = ref(storage, `nutritionScreenshots/${user.uid}/${selectedDate}/${file.name}`);
+      await uploadBytes(storageRef, file);
       
+      // Get download URL
+      const downloadUrl = await getDownloadURL(storageRef);
+      
+      // Save URL to Firestore and mark day complete
+      const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', selectedDate);
       await setDoc(logRef, {
-        dayComplete: true,
+        screenshotUrl: downloadUrl,
+        screenshotUploadedAt: Timestamp.now(),
+        dayComplete: true, // Screenshot upload = day complete
         lastUpdated: Timestamp.now(),
       }, { merge: true });
 
+      setScreenshotUrl(downloadUrl);
       setDayComplete(true);
+      
       toast({
-        title: "Day Complete!",
-        description: "You've marked your nutrition as complete for the day.",
+        title: "Screenshot Uploaded!",
+        description: `Your nutrition screenshot for ${formatDateDisplay(selectedDate)} has been uploaded.`,
       });
     } catch (error) {
-      console.error('Error marking day complete:', error);
+      console.error('Error uploading screenshot:', error);
       toast({
-        title: "Error",
-        description: "Failed to mark day as complete.",
+        title: "Upload Failed",
+        description: "Failed to upload screenshot. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -663,6 +713,109 @@ export default function NutritionPage() {
               </p>
             </div>
             
+            <NutritionApproachDisplay 
+              assignedApproach={nutritionApproach}
+              trainerName={trainerName}
+              assignedDate={approachDate}
+            />
+
+            {/* Global Date Navigation - Always visible */}
+            <div className="border-green-200 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 border-2 rounded-lg p-4 shadow-lg transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+              {/* Date context label - above date picker */}
+              <div className="mb-3 text-center space-y-2">
+                <p className="text-sm font-semibold text-foreground">
+                  Viewing Nutrition Data for:{' '}
+                  <span className="text-primary">{formatDateDisplay(selectedDate)}</span>
+                </p>
+              {(() => {
+                  // Check if ALL 4 meals are logged (matches Firestore completion logic)
+                  const allMealsComplete = mealCategories.every(meal => dailyLog[meal].length > 0);
+                  
+                  if (allMealsComplete) {
+                    // ALL meals logged - show green badge
+                    return (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-full shadow-md animate-scale-in">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-bold text-base">Logging Complete</span>
+                      </div>
+                    );
+                  } else if (screenshotUrl) {
+                    // Only screenshot, no manual entries - show blue badge
+                    return (
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-full shadow-md animate-scale-in">
+                        <UploadCloud className="h-5 w-5" />
+                        <span className="font-bold text-base">Screenshot Uploaded</span>
+                      </div>
+                    );
+                  }
+                  // Nothing logged - no badge
+                  return null;
+                })()}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                {/* Previous Day Arrow */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const date = new Date(selectedDate);
+                    date.setDate(date.getDate() - 1);
+                    const newDate = date.toISOString().split('T')[0];
+                    if (newDate >= getThirtyDaysAgo()) {
+                      setSelectedDate(newDate);
+                    }
+                  }}
+                  disabled={selectedDate <= getThirtyDaysAgo()}
+                  className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                  title="Previous Day"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+
+                {/* Date Picker */}
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  max={getTodayDate()}
+                  min={getThirtyDaysAgo()}
+                  className="px-4 py-2 border-2 border-primary/30 rounded-md bg-background text-foreground text-base font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                />
+
+                {/* Next Day Arrow */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const date = new Date(selectedDate);
+                    date.setDate(date.getDate() + 1);
+                    const newDate = date.toISOString().split('T')[0];
+                    if (newDate <= getTodayDate()) {
+                      setSelectedDate(newDate);
+                    }
+                  }}
+                  disabled={selectedDate >= getTodayDate()}
+                  className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                  title="Next Day"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+
+                {/* Jump to Today Button - only shown when not on today */}
+                {selectedDate !== getTodayDate() && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setSelectedDate(getTodayDate())}
+                    className="font-semibold px-4"
+                  >
+                    Jump to Today
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {/* Only show calorie/macro tracking dashboard for macro_tracking approach */}
             {nutritionApproach === 'macro_tracking' && (
               <NutritionCommandCenter
@@ -680,12 +833,6 @@ export default function NutritionPage() {
                 onRemoveWater={handleRemoveWater}
               />
             )}
-
-            <NutritionApproachDisplay 
-              assignedApproach={nutritionApproach}
-              trainerName={trainerName}
-              assignedDate={approachDate}
-            />
 
             <Tabs key={nutritionApproach} defaultValue={visibleTabs.defaultTab}>
               <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
@@ -720,8 +867,8 @@ export default function NutritionPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                   <div className="lg:col-span-2 space-y-4">
                     <Tabs defaultValue="manual" className="w-full">
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold">Today&apos;s Food Log</h2>
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-2xl font-bold">Food Log</h2>
                         <TabsList className="bg-green-100/50 dark:bg-green-900/20 text-green-800 dark:text-green-300 rounded-lg p-1">
                           <TabsTrigger 
                             value="manual"
@@ -756,32 +903,57 @@ export default function NutritionPage() {
                           <p className="text-sm text-muted-foreground">
                             Using another app like MyFitnessPal? Upload a screenshot of your daily log here for your coach to review.
                           </p>
+                          
+                          {/* Show completion status if already complete */}
+                          {dayComplete && screenshotUrl && (
+                            <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30">
+                              <div className="flex items-center justify-center gap-2 text-green-800 dark:text-green-200 font-semibold mb-2">
+                                <CheckCircle2 className="h-5 w-5" />
+                                <span>Day Complete - Screenshot Uploaded</span>
+                              </div>
+                              <p className="text-xs text-green-700 dark:text-green-300">
+                                Your screenshot has been uploaded and your trainer can review it.
+                              </p>
+                            </div>
+                          )}
+                          
                           <div className="flex flex-col items-center gap-4">
                             <Input 
                               id="screenshot" 
                               type="file" 
                               className="hidden" 
-                              onChange={handleFileUpload} 
+                              onChange={handleScreenshotUpload} 
                               accept="image/*" 
                               ref={fileInputRef}
+                              disabled={uploading}
                             />
                             <Label 
                               htmlFor="screenshot" 
                               className={cn(
-                                "w-full max-w-sm cursor-pointer",
-                                buttonVariants({ variant: "outline" })
+                                "w-full max-w-sm",
+                                uploading ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                                buttonVariants({ variant: dayComplete && screenshotUrl ? "outline" : "default" })
                               )}
                             >
-                              <UploadCloud className="mr-2 h-4 w-4" />
-                              {fileName ? `Selected: ${fileName}` : "Choose Screenshot"}
+                              {uploading ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <UploadCloud className="mr-2 h-4 w-4" />
+                                  {dayComplete && screenshotUrl 
+                                    ? "Upload New Screenshot" 
+                                    : "Upload Screenshot & Mark Complete"}
+                                </>
+                              )}
                             </Label>
-                            <Button 
-                              onClick={handleMarkComplete}
-                              className="w-full max-w-sm"
-                            >
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              Mark Day as Complete
-                            </Button>
+                            <p className="text-xs text-muted-foreground max-w-sm">
+                              {dayComplete && screenshotUrl 
+                                ? "Replace your existing screenshot by uploading a new one." 
+                                : "Uploading will automatically mark your day as complete."}
+                            </p>
                           </div>
                         </div>
                       </TabsContent>

@@ -1,32 +1,39 @@
 import React from 'react';
 
 interface CircularProgressProps {
-  percentage: number;
+  percentage?: number;
+  value?: number; // Support both percentage and value props
   size?: number;
   strokeWidth?: number;
   className?: string;
+  children?: React.ReactNode;
 }
 
 export function CircularProgress({ 
-  percentage, 
+  percentage,
+  value,
   size = 48, 
   strokeWidth = 4,
-  className = "" 
+  className = "",
+  children
 }: CircularProgressProps) {
+  // Use value if provided, otherwise use percentage
+  const progress = value !== undefined ? value : percentage !== undefined ? percentage : 0;
+  
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (percentage / 100) * circumference;
+  const offset = circumference - (progress / 100) * circumference;
 
-  // Color based on percentage
+  // Color based on percentage - only used if no custom className provided
   const getColor = () => {
-    if (percentage === 0) return 'text-gray-300 dark:text-gray-600';
-    if (percentage === 100) return 'text-green-500 dark:text-green-400';
+    if (progress === 0) return 'text-gray-300 dark:text-gray-600';
+    if (progress === 100) return 'text-green-500 dark:text-green-400';
     return 'text-amber-500 dark:text-amber-400';
   };
 
   const getStrokeColor = () => {
-    if (percentage === 0) return 'stroke-gray-300 dark:stroke-gray-600';
-    if (percentage === 100) return 'stroke-green-500 dark:stroke-green-400';
+    if (progress === 0) return 'stroke-gray-300 dark:stroke-gray-600';
+    if (progress === 100) return 'stroke-green-500 dark:stroke-green-400';
     return 'stroke-amber-500 dark:stroke-amber-400';
   };
 
@@ -60,11 +67,13 @@ export function CircularProgress({
           className={`${getStrokeColor()} transition-all duration-300 ease-in-out`}
         />
       </svg>
-      {/* Percentage text */}
+      {/* Content - either children or default percentage */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className={`text-xs font-bold ${getColor()}`}>
-          {percentage}%
-        </span>
+        {children || (
+          <span className={`text-xs font-bold ${getColor()}`}>
+            {Math.round(progress)}%
+          </span>
+        )}
       </div>
     </div>
   );

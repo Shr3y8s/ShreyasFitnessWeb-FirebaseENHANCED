@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, Coffee, Sun, Moon, Apple, Check, X, Edit2 } from 'lucide-react';
+import { PlusCircle, Trash2, Coffee, Sun, Moon, Apple, Check, X, Edit2, MinusCircle } from 'lucide-react';
 
 export interface FoodItem {
   id: string;
@@ -71,6 +71,26 @@ export function MealAccordion({ meal, items, onUpdate }: MealAccordionProps) {
     }
   };
 
+  const handleSkipMeal = () => {
+    const skipEntry: FoodItem = {
+      id: Date.now().toString(),
+      food: 'Meal Skipped',
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+    };
+    onUpdate([...items, skipEntry]);
+  };
+
+  // Check if form is valid for Add button
+  const isFormValid = 
+    newItem.food.trim().length > 0 && 
+    (parseInt(newItem.calories) > 0 || 
+     parseInt(newItem.protein) > 0 || 
+     parseInt(newItem.carbs) > 0 || 
+     parseInt(newItem.fat) > 0);
+
   const handleDelete = (id: string) => {
     onUpdate(items.filter(item => item.id !== id));
   };
@@ -114,13 +134,16 @@ export function MealAccordion({ meal, items, onUpdate }: MealAccordionProps) {
   return (
     <AccordionItem value={meal} className="bg-gradient-to-br from-primary/5 via-background to-primary/5 transition-all duration-300 hover:shadow-lg rounded-lg border border-green-200">
       <div className="relative">
-        <AccordionTrigger className="hover:no-underline rounded-lg px-6 pr-28">
-          <div className="flex items-center justify-between w-full">
+        <AccordionTrigger className="hover:no-underline rounded-lg px-6 pr-36">
+          <div className="grid grid-cols-[auto_1fr] items-center gap-4 w-full">
+            {/* Left: Meal name with icon */}
             <div className="flex items-center gap-3">
               <MealIcon className="h-5 w-5 text-green-600" />
               <span className="font-semibold text-base">{meal}</span>
             </div>
-            <div className="flex items-center gap-2">
+            
+            {/* Center: Macro badges */}
+            <div className="flex items-center justify-center gap-2">
               <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
                 {mealTotals.calories} cal
               </Badge>
@@ -136,19 +159,38 @@ export function MealAccordion({ meal, items, onUpdate }: MealAccordionProps) {
             </div>
           </div>
         </AccordionTrigger>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsAdding(!isAdding);
-          }}
-          className="absolute right-6 top-1/2 -translate-y-1/2 h-7 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 z-10"
-        >
-          <PlusCircle className="h-3 w-3 mr-1" />
-          Add
-        </Button>
+        
+        {/* Action buttons - absolutely positioned OUTSIDE the trigger to avoid nested buttons */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 flex gap-2 z-10">
+          {items.length === 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSkipMeal();
+              }}
+              className="h-7 text-muted-foreground hover:text-foreground border-muted-foreground/30"
+            >
+              <MinusCircle className="h-3 w-3 mr-1" />
+              Skip
+            </Button>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAdding(!isAdding);
+            }}
+            className="h-7 bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+          >
+            <PlusCircle className="h-3 w-3 mr-1" />
+            Add
+          </Button>
+        </div>
       </div>
       <AccordionContent className="px-6">
         <div className="space-y-3 pt-2">
@@ -201,7 +243,7 @@ export function MealAccordion({ meal, items, onUpdate }: MealAccordionProps) {
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
-                <Button type="button" size="sm" onClick={handleAdd} className="flex-1">
+                <Button type="button" size="sm" onClick={handleAdd} disabled={!isFormValid} className="flex-1">
                   <Check className="h-4 w-4 mr-1" />
                   Add
                 </Button>
@@ -222,14 +264,21 @@ export function MealAccordion({ meal, items, onUpdate }: MealAccordionProps) {
             </Card>
           )}
 
-          {items.length === 0 ? (
+          {items.length === 0 && !isAdding && (
             <p className="text-sm text-muted-foreground text-center py-4">
               No items logged yet
             </p>
-          ) : (
+          )}
+
+          {items.length > 0 && (
             <div className="space-y-2">
               {items.map(item => (
-                <Card key={item.id} className="p-3">
+                <Card 
+                  key={item.id} 
+                  className={item.food === 'Meal Skipped' 
+                    ? "p-3 bg-muted/30 border-muted" 
+                    : "p-3"}
+                >
                   {editingId === item.id ? (
                     <div className="space-y-3">
                       <div>
@@ -288,21 +337,25 @@ export function MealAccordion({ meal, items, onUpdate }: MealAccordionProps) {
                   ) : (
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="text-sm font-medium mb-1">{item.food}</div>
+                        <div className={`text-sm font-medium mb-1 ${item.food === 'Meal Skipped' ? 'text-muted-foreground italic' : ''}`}>
+                          {item.food}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {item.calories} cal • {item.protein}g P • {item.carbs}g C • {item.fat}g F
                         </div>
                       </div>
                       <div className="flex gap-1 ml-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditStart(item)}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {item.food !== 'Meal Skipped' && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditStart(item)}
+                            className="h-7 w-7 p-0"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button
                           type="button"
                           size="sm"
