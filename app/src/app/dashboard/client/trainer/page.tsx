@@ -260,7 +260,7 @@ export default function YourTrainerPage() {
             </div>
 
             {/* Hero Section - Trainer Profile Card */}
-            <Card className="border-2 border-primary/20 overflow-hidden p-0">
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50 overflow-hidden p-0">
               <CardContent className="bg-gradient-to-r from-primary/10 via-blue-50 to-primary/5 p-8">
                 <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
                   {/* Profile Photo & Social Links */}
@@ -370,7 +370,7 @@ export default function YourTrainerPage() {
 
             {/* Education & Credentials */}
             {(trainerData.educationDegree || trainerData.fitnessCertifications || trainerData.nutritionCertifications || trainerData.specialtyCertifications) && (
-              <Card>
+              <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Award className="h-5 w-5 text-primary" />
@@ -438,7 +438,7 @@ export default function YourTrainerPage() {
 
             {/* Training Philosophy & Expertise */}
             {(trainerData.trainingPhilosophy || trainerData.areasOfExpertise) && (
-              <Card>
+              <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5 text-primary" />
@@ -467,7 +467,7 @@ export default function YourTrainerPage() {
             )}
 
             {/* Contact Information */}
-            <Card>
+            <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" />
