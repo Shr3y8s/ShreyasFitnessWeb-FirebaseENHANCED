@@ -19,24 +19,7 @@ interface StreakData {
   waterStreak: number;
 }
 
-const thisWeekData = [
-  {
-    icon: <Flame className="h-5 w-5 text-muted-foreground" />,
-    title: "Avg Calories",
-    value: "2,450/day",
-  },
-  {
-    icon: <Target className="h-5 w-5 text-muted-foreground" />,
-    title: "Avg Protein",
-    value: "175g/day",
-  },
-];
 
-const trendsSummaryData = [
-  { title: "Longest Streak", value: "21 days" },
-  { title: "Best Week", value: "Week of Oct 20" },
-  { title: "Days This Month", value: "18/30 goals hit" },
-];
 
 const MacroGridItem = ({ icon, title, value }: { icon: ReactNode; title: string; value: string }) => (
   <div className="flex flex-col items-center justify-center p-4 bg-secondary/50 rounded-lg space-y-2">
@@ -161,7 +144,29 @@ export function ActiveStreaksCard({ proteinStreak = 0, loggingStreak = 0, waterS
   );
 }
 
-export function ThisWeekCard() {
+interface ThisWeekData {
+  avgCalories: number;
+  avgProtein: number;
+  daysLogged: number;
+  totalDays: number;
+}
+
+export function ThisWeekCard({ avgCalories, avgProtein, daysLogged, totalDays }: ThisWeekData) {
+  const consistencyScore = totalDays > 0 ? Math.round((daysLogged / totalDays) * 100) : 0;
+  
+  const thisWeekData = [
+    {
+      icon: <Flame className="h-5 w-5 text-muted-foreground" />,
+      title: "Avg Calories",
+      value: avgCalories > 0 ? `${Math.round(avgCalories).toLocaleString()}/day` : "No data",
+    },
+    {
+      icon: <Target className="h-5 w-5 text-muted-foreground" />,
+      title: "Avg Protein",
+      value: avgProtein > 0 ? `${Math.round(avgProtein)}g/day` : "No data",
+    },
+  ];
+
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <CardHeader>
@@ -169,21 +174,83 @@ export function ThisWeekCard() {
           <Calendar className="h-5 w-5 text-muted-foreground" />
           This Week
         </CardTitle>
+        <CardDescription>
+          {daysLogged} of {totalDays} days logged
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {thisWeekData.map((item) => (
           <ThisWeekItem key={item.title} {...item} />
         ))}
         <div>
-          <ThisWeekItem icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />} title="Consistency Score" value="92%" />
-          <Progress value={92} className="h-2 mt-2" />
+          <ThisWeekItem 
+            icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />} 
+            title="Consistency Score" 
+            value={`${consistencyScore}%`} 
+          />
+          <Progress value={consistencyScore} className="h-2 mt-2" />
         </div>
       </CardContent>
     </Card>
   );
 }
 
-export function TrendsSummaryCard() {
+interface TrendsSummaryData {
+  longestStreak: number;
+  bestWeekDate: string;
+  monthlyGoalsHit: number;
+  monthlyGoalsTotal: number;
+}
+
+export function TrendsSummaryCard({ longestStreak, bestWeekDate, monthlyGoalsHit, monthlyGoalsTotal }: TrendsSummaryData) {
+  const monthlyPercentage = monthlyGoalsTotal > 0 ? Math.round((monthlyGoalsHit / monthlyGoalsTotal) * 100) : 0;
+  
+  const trendsSummaryData = [
+    { 
+      title: "Longest Streak", 
+      value: longestStreak > 0 ? `${longestStreak} ${longestStreak === 1 ? 'day' : 'days'}` : "No streaks yet" 
+    },
+    { 
+      title: "Best Week", 
+      value: bestWeekDate || "No data yet" 
+    },
+    { 
+      title: "Days This Month", 
+      value: `${monthlyGoalsHit}/${monthlyGoalsTotal} goals hit` 
+    },
+  ];
+
+  const getEncouragementMessage = () => {
+    if (monthlyPercentage >= 80) {
+      return {
+        title: "Outstanding! 🌟",
+        message: "You're crushing your nutrition goals!"
+      };
+    } else if (monthlyPercentage >= 60) {
+      return {
+        title: "Keep it up! 💪",
+        message: "You're on track for a great month!"
+      };
+    } else if (monthlyPercentage >= 40) {
+      return {
+        title: "Good progress! 📈",
+        message: "You're building momentum!"
+      };
+    } else if (monthlyGoalsHit > 0) {
+      return {
+        title: "Getting started! 🚀",
+        message: "Every day counts - keep going!"
+      };
+    } else {
+      return {
+        title: "Ready to begin? 💫",
+        message: "Start logging today to build your trends!"
+      };
+    }
+  };
+
+  const encouragement = getEncouragementMessage();
+
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <CardHeader>
@@ -191,6 +258,7 @@ export function TrendsSummaryCard() {
           <TrendingUp className="h-5 w-5 text-primary" />
           Trends Summary
         </CardTitle>
+        <CardDescription>Your nutrition journey at a glance</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -202,8 +270,8 @@ export function TrendsSummaryCard() {
           ))}
         </div>
         <div className="p-4 bg-green-500/10 rounded-lg text-center">
-          <p className="font-bold text-green-800 dark:text-green-200">Keep it up!</p>
-          <p className="text-sm text-green-700 dark:text-green-300">You&apos;re on track for your best month yet. 🎉</p>
+          <p className="font-bold text-green-800 dark:text-green-200">{encouragement.title}</p>
+          <p className="text-sm text-green-700 dark:text-green-300">{encouragement.message}</p>
         </div>
       </CardContent>
     </Card>
