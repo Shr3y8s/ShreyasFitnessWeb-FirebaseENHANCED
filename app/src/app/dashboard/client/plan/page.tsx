@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { signOutUser } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
-import { ClipboardList, Loader2, Calendar, TrendingUp } from 'lucide-react';
+import { ClipboardList, Loader2, Calendar, TrendingUp, Dumbbell, Apple } from 'lucide-react';
 import { YourVision } from '@/components/plan/your-vision';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
@@ -149,26 +149,44 @@ export default function PlanPage() {
                       </Card>
                     )}
 
-                    {/* Training Protocol */}
-                    {user && (
-                      <ClientTrainingProtocol 
-                        clientId={user.uid}
-                        keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
-                      />
-                    )}
+                    {/* Training Section */}
+                    <div className="space-y-4">
+                      {/* Training Section Header */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <Dumbbell className="h-6 w-6 text-primary" />
+                        <h2 className="text-2xl font-bold text-foreground">Training</h2>
+                        <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
+                      </div>
+                      
+                      {user && (
+                        <ClientTrainingProtocol 
+                          clientId={user.uid}
+                          keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
+                        />
+                      )}
+                    </div>
 
-                    {/* Nutrition Protocol */}
-          {plan?.nutritionProtocol && (
-            <ClientNutritionProtocol 
-              assignedApproach={plan.nutritionProtocol.approach}
-              lastUpdated={plan.nutritionProtocol.lastUpdated}
-              nutritionData={{
-                healthyHabits: plan.nutritionProtocol.healthyHabits,
-                macroTracking: plan.nutritionProtocol.macroTracking,
-                mealPlan: plan.nutritionProtocol.mealPlan
-              }}
-            />
-          )}
+                    {/* Nutrition Section */}
+                    {plan?.nutritionProtocol && (
+                      <div className="space-y-4">
+                        {/* Nutrition Section Header */}
+                        <div className="flex items-center gap-3 pt-2">
+                          <Apple className="h-6 w-6 text-primary" />
+                          <h2 className="text-2xl font-bold text-foreground">Nutrition</h2>
+                          <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
+                        </div>
+                        
+                        <ClientNutritionProtocol 
+                          assignedApproach={plan.nutritionProtocol.approach}
+                          lastUpdated={plan.nutritionProtocol.lastUpdated}
+                          nutritionData={{
+                            healthyHabits: plan.nutritionProtocol.healthyHabits,
+                            macroTracking: plan.nutritionProtocol.macroTracking,
+                            mealPlan: plan.nutritionProtocol.mealPlan
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Column: Vision, Daily Habits, Step Goal & Cardio (1/3 width) */}

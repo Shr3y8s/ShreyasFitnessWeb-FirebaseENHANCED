@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { MealAccordion, FoodItem, MealCategory } from '@/components/nutrition-hub/meal-accordion';
@@ -10,8 +11,7 @@ import { NutritionHabitTracker } from '@/components/nutrition-hub/nutrition-habi
 import { NutritionResources } from '@/components/nutrition-hub/nutrition-resources';
 import { NutritionCommandCenter } from '@/components/nutrition-hub/nutrition-command-center';
 import { TargetMacrosCard, ActiveStreaksCard, ThisWeekCard, TrendsSummaryCard } from '@/components/nutrition-hub/nutrition-trends-card';
-import { NutritionApproachDisplay } from '@/components/nutrition-hub/nutrition-approach-display';
-import { Utensils, Target, Sparkles, BookOpen, CheckCircle2, UploadCloud, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Utensils, Target, Sparkles, BookOpen, CheckCircle2, UploadCloud, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion } from '@/components/ui/accordion';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -713,11 +713,32 @@ export default function NutritionPage() {
               </p>
             </div>
             
-            <NutritionApproachDisplay 
-              assignedApproach={nutritionApproach}
-              trainerName={trainerName}
-              assignedDate={approachDate}
-            />
+            {/* Simple Approach Context Banner */}
+            <div className="bg-primary/10 border-2 border-primary/30 rounded-lg p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-muted-foreground">Your Approach:</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {nutritionApproach === 'healthy_habits' && '✨ Healthy Habits'}
+                      {nutritionApproach === 'macro_tracking' && '📊 Macro Tracking'}
+                      {nutritionApproach === 'meal_plan' && '📋 Meal Plan'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {nutritionApproach === 'healthy_habits' && 'Build healthy habits without strict tracking'}
+                    {nutritionApproach === 'macro_tracking' && 'Track your macros to hit specific daily targets'}
+                    {nutritionApproach === 'meal_plan' && 'Follow your custom weekly meal plan'}
+                  </p>
+                </div>
+                <Link href="/dashboard/client/plan" className="flex-shrink-0">
+                  <Button variant="outline" size="sm" className="gap-2">
+                    View Full Protocol
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
 
             {/* Global Date Navigation - Always visible */}
             <div className="border-green-200 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 border-2 rounded-lg p-4 shadow-lg transition-all duration-300 hover:shadow-glow hover:-translate-y-1">

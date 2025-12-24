@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Flame, ArrowRight, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Target, Calendar, Check } from 'lucide-react';
 import { NutritionApproach, HABIT_CATEGORY_INFO, NutritionHabit } from '@/types/plan';
+import { NutritionApproachDisplay } from '@/components/nutrition-hub/nutrition-approach-display';
 
 // Icon mapper for dynamic icon rendering
 const iconMap: Record<string, any> = {
@@ -73,7 +74,16 @@ export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutriti
   };
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
+    <div className="space-y-6">
+      {/* Educational Approach Display */}
+      <NutritionApproachDisplay 
+        assignedApproach={assignedApproach}
+        trainerName="Your Coach"
+        assignedDate={lastUpdated}
+      />
+
+      {/* Protocol Details Card */}
+      <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader className="relative pb-3">
         <CardTitle className="flex items-center gap-3 text-xl">
           <Flame className="w-6 h-6 text-primary" />
@@ -310,5 +320,6 @@ export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutriti
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }

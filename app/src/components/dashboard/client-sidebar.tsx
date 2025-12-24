@@ -211,12 +211,12 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Training Section */}
+        {/* Planning Section */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Training</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Planning</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem key="plan-real">
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/plan">
                     <ClipboardList className="w-4 h-4" />
@@ -224,7 +224,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem key="plan-mock">
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/plan">
                     <ClipboardList className="w-4 h-4" />
@@ -232,7 +232,16 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem key="workouts-real">
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Training Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Training</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/workouts">
                     <Dumbbell className="w-4 h-4" />
@@ -245,7 +254,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem key="workouts-mock">
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/workouts">
                     <Dumbbell className="w-4 h-4" />
