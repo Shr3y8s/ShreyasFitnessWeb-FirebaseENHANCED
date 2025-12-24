@@ -13,23 +13,11 @@ interface MacroTargets {
   fat: number;
 }
 
-const streakData = [
-  {
-    icon: <BicepsFlexed className="h-5 w-5 text-amber-500" />,
-    title: "Protein Goal Streak",
-    value: "7 days",
-  },
-  {
-    icon: <ClipboardEdit className="h-5 w-5 text-blue-500" />,
-    title: "Meal Logging Streak",
-    value: "5 days",
-  },
-  {
-    icon: <Droplets className="h-5 w-5 text-sky-500" />,
-    title: "Water Intake Streak",
-    value: "14 days",
-  },
-];
+interface StreakData {
+  proteinStreak: number;
+  loggingStreak: number;
+  waterStreak: number;
+}
 
 const thisWeekData = [
   {
@@ -129,7 +117,30 @@ export function TargetMacrosCard({ calories, protein, carbs, fat }: MacroTargets
   );
 }
 
-export function ActiveStreaksCard() {
+export function ActiveStreaksCard({ proteinStreak = 0, loggingStreak = 0, waterStreak = 0 }: StreakData) {
+  const streakData = [
+    {
+      icon: <BicepsFlexed className="h-5 w-5 text-amber-500" />,
+      title: "Protein Goal Streak",
+      value: proteinStreak === 0 ? "Start today!" : `${proteinStreak} ${proteinStreak === 1 ? 'day' : 'days'}`,
+      isActive: proteinStreak > 0
+    },
+    {
+      icon: <ClipboardEdit className="h-5 w-5 text-blue-500" />,
+      title: "Meal Logging Streak",
+      value: loggingStreak === 0 ? "Start today!" : `${loggingStreak} ${loggingStreak === 1 ? 'day' : 'days'}`,
+      isActive: loggingStreak > 0
+    },
+    {
+      icon: <Droplets className="h-5 w-5 text-sky-500" />,
+      title: "Water Intake Streak",
+      value: waterStreak === 0 ? "Start today!" : `${waterStreak} ${waterStreak === 1 ? 'day' : 'days'}`,
+      isActive: waterStreak > 0
+    },
+  ];
+
+  const hasAnyStreak = proteinStreak > 0 || loggingStreak > 0 || waterStreak > 0;
+
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <CardHeader>
@@ -137,6 +148,9 @@ export function ActiveStreaksCard() {
           <Flame className="h-5 w-5 text-amber-500" />
           Active Streaks
         </CardTitle>
+        <CardDescription>
+          {hasAnyStreak ? 'Keep the momentum going! 🔥' : 'Start building your streaks today!'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         {streakData.map((item) => (

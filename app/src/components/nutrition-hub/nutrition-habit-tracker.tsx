@@ -267,7 +267,7 @@ export function NutritionHabitTracker() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Today's Habits */}
       <div className="lg:col-span-2">
-        <Card className="border-primary/50 bg-primary/5">
+        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 bg-primary/5">
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
@@ -344,7 +344,7 @@ export function NutritionHabitTracker() {
       {/* Stats Sidebar */}
       <div className="space-y-6">
         {/* Streak Card */}
-        <Card>
+        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Flame className="h-5 w-5 text-orange-500" />
@@ -364,7 +364,7 @@ export function NutritionHabitTracker() {
         </Card>
 
         {/* Weekly Progress */}
-        <Card>
+        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />

@@ -57,6 +57,7 @@ export default function NutritionPage() {
   const [nutritionApproach, setNutritionApproach] = useState<any>(null);
   const [trainerName, setTrainerName] = useState('Your Coach');
   const [approachDate, setApproachDate] = useState<Date | null>(null);
+  const [streaks, setStreaks] = useState({ proteinStreak: 0, loggingStreak: 0, waterStreak: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogout = async () => {
@@ -218,6 +219,82 @@ export default function NutritionPage() {
     };
   }, [user]);
 
+  // Calculate streaks
+  useEffect(() => {
+    if (!user) return;
+
+    const calculateStreaks = async () => {
+      try {
+        const today = new Date();
+        const logs = [];
+        
+        // Load last 30 days to calculate streaks
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', dateStr);
+          const logSnap = await getDoc(logRef);
+          
+          if (logSnap.exists()) {
+            logs.push({ date: dateStr, data: logSnap.data() });
+          } else {
+            logs.push({ date: dateStr, data: null });
+          }
+        }
+
+        // Calculate protein streak
+        let proteinStreak = 0;
+        for (const log of logs) {
+          if (log.data) {
+            const meals = log.data.meals || {};
+            const totalProtein = Object.values(meals).flat().reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
+            if (totalProtein >= dailyGoals.protein * 0.9) { // Within 90% of goal
+              proteinStreak++;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+
+        // Calculate logging streak
+        let loggingStreak = 0;
+        for (const log of logs) {
+          if (log.data && log.data.meals) {
+            const meals = log.data.meals || {};
+            const hasData = Object.values(meals).some((mealItems: any) => mealItems.length > 0);
+            if (hasData) {
+              loggingStreak++;
+            } else {
+              break;
+            }
+          } else {
+            break;
+          }
+        }
+
+        // Calculate water streak
+        let waterStreak = 0;
+        for (const log of logs) {
+          if (log.data && log.data.waterIntake >= dailyGoals.water * 0.8) { // Within 80% of goal
+            waterStreak++;
+          } else {
+            break;
+          }
+        }
+
+        setStreaks({ proteinStreak, loggingStreak, waterStreak });
+      } catch (error) {
+        console.error('Error calculating streaks:', error);
+      }
+    };
+
+    calculateStreaks();
+  }, [user, dailyGoals]);
+
   // Save daily log to Firebase
   const saveDailyLog = async (meals: Record<MealCategory, FoodItem[]>, water: number) => {
     if (!user) return;
@@ -323,7 +400,7 @@ export default function NutritionPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !nutritionApproach) {
     return (
       <SidebarProvider>
         <ClientSidebar
@@ -389,7 +466,7 @@ export default function NutritionPage() {
               assignedDate={approachDate}
             />
 
-            <Tabs defaultValue={visibleTabs.defaultTab}>
+            <Tabs key={nutritionApproach} defaultValue={visibleTabs.defaultTab}>
               <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
                 {visibleTabs.tabs.includes('tracking') && (
                   <TabsTrigger value="tracking">
@@ -496,7 +573,11 @@ export default function NutritionPage() {
                       carbs={dailyGoals.carbs}
                       fat={dailyGoals.fat}
                     />
-                    <ActiveStreaksCard />
+                    <ActiveStreaksCard 
+                      proteinStreak={streaks.proteinStreak}
+                      loggingStreak={streaks.loggingStreak}
+                      waterStreak={streaks.waterStreak}
+                    />
                     <ThisWeekCard />
                     <TrendsSummaryCard />
                   </div>
