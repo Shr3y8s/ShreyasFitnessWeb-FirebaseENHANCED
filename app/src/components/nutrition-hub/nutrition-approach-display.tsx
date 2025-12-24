@@ -160,7 +160,7 @@ export function NutritionApproachDisplay({
   return (
     <>
       {/* Hero Card - Assigned Approach */}
-      <Card className={`p-6 ${assignedApproachData.colorTheme} border-2 border-primary/30`}>
+      <Card className={`p-6 ${assignedApproachData.colorTheme} border-2 border-primary/30 transition-all duration-300 hover:shadow-glow hover:-translate-y-1`}>
         <div className="space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">

@@ -72,29 +72,40 @@ export default function NutritionPage() {
 
   // Helper function to determine visible tabs based on approach
   const getVisibleTabs = (approach: any) => {
+    let config;
     switch(approach) {
       case 'healthy_habits':
-        return {
-          tabs: ['habits', 'resources'],
+        config = {
+          tabs: ['habits', 'meal-plan', 'resources'],
           defaultTab: 'habits'
         };
+        break;
       case 'macro_tracking':
-        return {
-          tabs: ['tracking', 'resources'],
+        config = {
+          tabs: ['tracking', 'meal-plan', 'resources'],
           defaultTab: 'tracking'
         };
+        break;
       case 'meal_plan':
-        return {
+        config = {
           tabs: ['meal-plan', 'resources'],
           defaultTab: 'meal-plan'
         };
+        break;
       default:
-        // Fallback to tracking if no approach set
-        return {
-          tabs: ['tracking', 'resources'],
-          defaultTab: 'tracking'
+        // Fallback - show all tabs with meal-plan as default
+        config = {
+          tabs: ['tracking', 'meal-plan', 'habits', 'resources'],
+          defaultTab: 'meal-plan'
         };
     }
+    
+    // Always prefer meal-plan as default if it's available
+    if (config.tabs.includes('meal-plan')) {
+      config.defaultTab = 'meal-plan';
+    }
+    
+    return config;
   };
 
   const visibleTabs = getVisibleTabs(nutritionApproach);

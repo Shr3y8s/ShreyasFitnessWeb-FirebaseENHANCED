@@ -77,7 +77,7 @@ export function NutritionCommandCenter({
   }, [allGoalsMet, celebrate]);
 
   return (
-    <Card className="border-green-200 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 shadow-lg">
+    <Card className="border-green-200 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 shadow-lg transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
       <CardContent className="p-6">
         <div className="space-y-6">
           {/* Main Metrics Row */}

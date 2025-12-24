@@ -5,11 +5,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Calendar, Send, ChevronDown, Utensils } from "lucide-react";
+import { CheckCircle2, Calendar, Send, Utensils } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Meal {
   name: string;
@@ -65,7 +64,7 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
   const isDayComplete = progress === 100;
 
   return (
-    <Card className={cn("border-primary/50 flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1", isDayComplete && "bg-green-500/10 border-green-500/20")}>
+    <Card className={cn("border-primary/50 flex flex-col transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5", isDayComplete && "bg-green-500/10 border-green-500/20")}>
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
@@ -88,13 +87,21 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-1">
-        <div className="space-y-4">
+        {/* 2x2 Grid Layout for Meals */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {dayPlan.meals.map((meal) => {
             const isMealChecked = !!checkedMeals[meal.name];
-            const hasMoreThanTwoItems = meal.items.length > 2;
             return (
-              <div key={meal.name} className={cn("p-4 rounded-lg transition-all duration-300", isMealChecked ? "bg-background/50 scale-[0.98]" : "bg-secondary/50 hover:bg-secondary")}>
-                <div className="flex items-center gap-3 mb-2">
+              <div 
+                key={meal.name} 
+                className={cn(
+                  "p-4 rounded-lg border transition-all duration-300",
+                  isMealChecked 
+                    ? "bg-background/50 border-muted scale-[0.98] opacity-75" 
+                    : "bg-secondary/50 border-secondary hover:bg-secondary hover:shadow-sm"
+                )}
+              >
+                <div className="flex items-center gap-3 mb-3">
                   <Checkbox
                     id={`today-${meal.name}`}
                     checked={isMealChecked}
@@ -111,36 +118,19 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
                     {meal.name}
                   </label>
                 </div>
-                <div className="pl-7">
-                  <ul className="space-y-1.5">
-                    {meal.items.slice(0, 2).map((item, itemIndex) => (
-                      <li key={itemIndex} className="flex items-start gap-3">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 flex-shrink-0" />
-                        <span className={cn("text-sm text-muted-foreground", isMealChecked && "line-through text-muted-foreground/50")}>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {hasMoreThanTwoItems && (
-                    <Collapsible>
-                      <CollapsibleContent>
-                        <ul className="space-y-1.5 mt-1.5">
-                          {meal.items.slice(2).map((item, itemIndex) => (
-                            <li key={itemIndex} className="flex items-start gap-3">
-                              <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 flex-shrink-0" />
-                              <span className={cn("text-sm text-muted-foreground", isMealChecked && "line-through text-muted-foreground/50")}>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </CollapsibleContent>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="link" className="p-0 h-auto text-xs mt-2 flex items-center gap-1">
-                          Show more
-                          <ChevronDown className="h-3 w-3" />
-                        </Button>
-                      </CollapsibleTrigger>
-                    </Collapsible>
-                  )}
-                </div>
+                <ul className="space-y-1.5 pl-7">
+                  {meal.items.map((item, itemIndex) => (
+                    <li key={itemIndex} className="flex items-start gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 flex-shrink-0" />
+                      <span className={cn(
+                        "text-sm text-muted-foreground leading-tight",
+                        isMealChecked && "line-through text-muted-foreground/50"
+                      )}>
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             );
           })}
