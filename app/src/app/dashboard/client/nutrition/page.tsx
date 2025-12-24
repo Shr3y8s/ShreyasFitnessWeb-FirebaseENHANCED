@@ -365,20 +365,23 @@ export default function NutritionPage() {
               </p>
             </div>
             
-            <NutritionCommandCenter
-              caloriesConsumed={dailyTotals.calories}
-              calorieGoal={dailyGoals.calories}
-              proteinConsumed={dailyTotals.protein}
-              proteinGoal={dailyGoals.protein}
-              carbsConsumed={dailyTotals.carbs}
-              carbsGoal={dailyGoals.carbs}
-              fatsConsumed={dailyTotals.fat}
-              fatsGoal={dailyGoals.fat}
-              waterConsumed={waterIntake}
-              waterGoal={dailyGoals.water}
-              onAddWater={handleAddWater}
-              onRemoveWater={handleRemoveWater}
-            />
+            {/* Only show calorie/macro tracking dashboard for macro_tracking approach */}
+            {nutritionApproach === 'macro_tracking' && (
+              <NutritionCommandCenter
+                caloriesConsumed={dailyTotals.calories}
+                calorieGoal={dailyGoals.calories}
+                proteinConsumed={dailyTotals.protein}
+                proteinGoal={dailyGoals.protein}
+                carbsConsumed={dailyTotals.carbs}
+                carbsGoal={dailyGoals.carbs}
+                fatsConsumed={dailyTotals.fat}
+                fatsGoal={dailyGoals.fat}
+                waterConsumed={waterIntake}
+                waterGoal={dailyGoals.water}
+                onAddWater={handleAddWater}
+                onRemoveWater={handleRemoveWater}
+              />
+            )}
 
             <NutritionApproachDisplay 
               assignedApproach={nutritionApproach}

@@ -9,6 +9,10 @@ import { CheckCircle2, Calendar, Send, Utensils } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/lib/auth-context';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface Meal {
   name: string;
@@ -31,11 +35,62 @@ interface TodayMealPlanProps {
 export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
   const [checkedMeals, setCheckedMeals] = useState<CheckedMeals>({});
   const [currentDay, setCurrentDay] = useState<string>('');
+  const [noteContent, setNoteContent] = useState('');
+  const [sending, setSending] = useState(false);
+  
+  const { user, userData } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     setCurrentDay(day);
   }, []);
+
+  const handleSendNote = async () => {
+    if (!user || !noteContent.trim()) return;
+
+    const trainerId = userData?.assignedTrainerId;
+    if (!trainerId) {
+      toast({
+        title: "No Coach Assigned",
+        description: "You don't have a coach assigned yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const messageText = noteContent.trim();
+    const conversationId = [user.uid, trainerId].sort().join('_');
+
+    setSending(true);
+    try {
+      await addDoc(collection(db, 'client_messages'), {
+        conversationId,
+        senderId: user.uid,
+        senderName: userData?.name || 'Client',
+        recipientId: trainerId,
+        content: messageText,
+        createdAt: serverTimestamp(),
+        read: false
+      });
+
+      toast({
+        title: "Message Sent!",
+        description: "Your coach will receive your note.",
+      });
+      
+      setNoteContent('');
+    } catch (error) {
+      console.error('Error sending note:', error);
+      toast({
+        title: "Failed to Send",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const dayPlan = useMemo(() => {
     return weeklyMealPlan.find(p => p.day === currentDay);
@@ -142,10 +197,19 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
             <Utensils className="h-4 w-4" />
             Notes for your coach
           </h4>
-          <Textarea placeholder="e.g., 'Can I swap the chicken for fish in this meal?'" />
-          <Button className="w-full">
+          <Textarea 
+            placeholder="e.g., 'Can I swap the chicken for fish in this meal?'" 
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
+            disabled={sending}
+          />
+          <Button 
+            className="w-full"
+            onClick={handleSendNote}
+            disabled={!noteContent.trim() || sending}
+          >
             <Send className="mr-2 h-4 w-4" />
-            Send Note to Coach
+            {sending ? 'Sending...' : 'Send Note to Coach'}
           </Button>
         </div>
       </CardFooter>
