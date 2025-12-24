@@ -454,9 +454,25 @@ export async function updateDailyHabits(
     const planRef = doc(db, PLANS_COLLECTION, clientId);
     const existingPlan = await getClientPlan(clientId);
     
+    // Filter out undefined values from each habit object
+    const cleanHabits = dailyHabitsData.habits.map(habit => {
+      const cleanHabit: any = {
+        id: habit.id,
+        title: habit.title,
+        description: habit.description,
+        iconType: habit.iconType,
+        order: habit.order
+      };
+      // Only include customIconUrl if it's defined
+      if (habit.customIconUrl !== undefined) {
+        cleanHabit.customIconUrl = habit.customIconUrl;
+      }
+      return cleanHabit;
+    });
+    
     const updateData: any = {
       dailyHabits: {
-        habits: dailyHabitsData.habits,
+        habits: cleanHabits,
         lastUpdated: serverTimestamp()
       },
       updatedAt: serverTimestamp()
