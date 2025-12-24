@@ -593,6 +593,33 @@ service cloud.firestore {
       }
     }
     
+    // HABIT COMPLETION TRACKING
+    match /habitCompletions/{userId} {
+      // Users can read/write their own habit completions
+      allow read, write: if isOwner(userId);
+      
+      // ADMINS can read all habit completions
+      // TRAINERS can only read their assigned clients' completions
+      allow read: if isAdmin() || isAssignedTrainer(userId);
+      
+      // Daily completions subcollection
+      match /daily/{dateId} {
+        // Users can read/write their own daily completions
+        allow read, write: if isOwner(userId);
+        
+        // ADMINS can read all, TRAINERS only their assigned clients
+        allow read: if isAdmin() || isAssignedTrainer(userId);
+        
+        // Validation - must be a map of habitId: boolean
+        function validateCompletion() {
+          let data = request.resource.data;
+          return data is map;
+        }
+        
+        allow write: if isOwner(userId) && validateCompletion();
+      }
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

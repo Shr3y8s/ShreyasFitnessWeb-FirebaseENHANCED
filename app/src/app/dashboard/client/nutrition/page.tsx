@@ -76,7 +76,7 @@ export default function NutritionPage() {
     switch(approach) {
       case 'healthy_habits':
         config = {
-          tabs: ['habits', 'meal-plan', 'resources'],
+          tabs: ['habits', 'resources'],
           defaultTab: 'habits'
         };
         break;
