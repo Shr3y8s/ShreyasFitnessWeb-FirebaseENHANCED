@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, onSnapshot, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import { useToast } from '@/hooks/use-toast';
 
 interface Meal {
@@ -35,16 +36,50 @@ interface TodayMealPlanProps {
 export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
   const [checkedMeals, setCheckedMeals] = useState<CheckedMeals>({});
   const [currentDay, setCurrentDay] = useState<string>('');
+  const [todayDate, setTodayDate] = useState<string>('');
   const [noteContent, setNoteContent] = useState('');
   const [sending, setSending] = useState(false);
   
   const { user, userData } = useAuth();
   const { toast } = useToast();
 
+  // Set current day and date
   useEffect(() => {
     const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     setCurrentDay(day);
+    setTodayDate(dateStr);
   }, []);
+
+  // Load saved meal plan adherence from Firestore
+  useEffect(() => {
+    if (!user || !todayDate) return;
+
+    const adherenceRef = doc(db, 'nutritionLogs', user.uid, 'mealPlans', todayDate);
+    
+    const unsubscribe = onSnapshot(adherenceRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const completedMeals = data.completedMeals || [];
+        
+        // Convert array to object format for state
+        const checkedState: CheckedMeals = {};
+        completedMeals.forEach((mealName: string) => {
+          checkedState[mealName] = true;
+        });
+        setCheckedMeals(checkedState);
+      } else {
+        setCheckedMeals({});
+      }
+    });
+
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
+  }, [user, todayDate]);
 
   const handleSendNote = async () => {
     if (!user || !noteContent.trim()) return;
@@ -96,8 +131,36 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
     return weeklyMealPlan.find(p => p.day === currentDay);
   }, [currentDay, weeklyMealPlan]);
 
-  const handleCheckedChange = (mealName: string, checked: boolean) => {
-    setCheckedMeals(prev => ({ ...prev, [mealName]: checked }));
+  const handleCheckedChange = async (mealName: string, checked: boolean) => {
+    if (!user || !todayDate) return;
+
+    // Update local state immediately for responsive UI
+    const updatedChecked = { ...checkedMeals, [mealName]: checked };
+    setCheckedMeals(updatedChecked);
+
+    // Get list of completed meals
+    const completedMeals = Object.keys(updatedChecked).filter(key => updatedChecked[key]);
+    
+    // Check if all meals are completed
+    const totalMeals = dayPlan?.meals.length || 0;
+    const dayComplete = completedMeals.length === totalMeals && totalMeals > 0;
+
+    // Save to Firestore
+    try {
+      const adherenceRef = doc(db, 'nutritionLogs', user.uid, 'mealPlans', todayDate);
+      await setDoc(adherenceRef, {
+        completedMeals,
+        dayComplete,
+        lastUpdated: Timestamp.now()
+      }, { merge: true });
+    } catch (error) {
+      console.error('Error saving meal plan adherence:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save meal completion. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!dayPlan) {

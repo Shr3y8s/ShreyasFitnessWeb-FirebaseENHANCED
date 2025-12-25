@@ -592,6 +592,25 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
         allow read: if isAdmin() || isAssignedTrainer(userId);
       }
+      
+      // Meal plan adherence tracking subcollection
+      match /mealPlans/{dateId} {
+        // Users can read/write their own meal plan adherence
+        allow read, write: if isOwner(userId);
+        
+        // ADMINS can read all, TRAINERS only their assigned clients
+        allow read: if isAdmin() || isAssignedTrainer(userId);
+        
+        // Validation for meal plan adherence data
+        function validateMealPlanAdherence() {
+          let data = request.resource.data;
+          return data.keys().hasAll(['completedMeals', 'dayComplete', 'lastUpdated']) &&
+                 data.completedMeals is list &&
+                 data.dayComplete is bool;
+        }
+        
+        allow write: if isOwner(userId) && validateMealPlanAdherence();
+      }
     }
     
     // DAILY ACTIVITY LOGS SYSTEM - New structure with subcollection
