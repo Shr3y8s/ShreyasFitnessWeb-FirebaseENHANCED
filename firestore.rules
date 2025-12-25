@@ -195,6 +195,7 @@ service cloud.firestore {
         // Only backend/Cloud Functions can write (users via functions)
         allow write: if false;
       }
+      
     }
     
     // POLYMORPHIC WORKOUT MANAGEMENT SYSTEM - Phase 1 (Strength + Cardio)
@@ -593,6 +594,44 @@ service cloud.firestore {
       }
     }
     
+    // DAILY ACTIVITY TRACKING SYSTEM
+    // Top-level collection for consistency with nutritionLogs and workoutExecutions
+    // Document ID format: {userId}_{date}
+    match /dailyActivities/{activityId} {
+      // Extract userId from document ID (format: userId_date)
+      function getUserIdFromActivityId() {
+        return activityId.split('_')[0];
+      }
+      
+      // Users can get their own daily activity documents
+      allow get: if isAuthenticated() && 
+                 request.auth.uid == getUserIdFromActivityId();
+      
+      // Users can list/query their own daily activities (for queries with where userId ==)
+      allow list: if isAuthenticated();
+      
+      // ADMINS can read all activities
+      allow read: if isAdmin();
+      
+      // TRAINERS can read their assigned clients' activities
+      allow get: if isTrainer() && isAssignedTrainer(getUserIdFromActivityId());
+      allow list: if isTrainer();
+      
+      // Validation for activity data
+      function validateActivity() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['userId', 'date', 'updatedAt']) &&
+               data.userId is string &&
+               data.date is string &&
+               data.habits is list;
+      }
+      
+      // Users can write their own daily activities
+      allow write: if isAuthenticated() && 
+                   request.auth.uid == getUserIdFromActivityId() &&
+                   validateActivity();
+    }
+    
     // HABIT COMPLETION TRACKING
     match /habitCompletions/{userId} {
       // Users can read/write their own habit completions
@@ -619,6 +658,7 @@ service cloud.firestore {
         allow write: if isOwner(userId) && validateCompletion();
       }
     }
+    
     
     // Default deny all other collections
     match /{document=**} {
