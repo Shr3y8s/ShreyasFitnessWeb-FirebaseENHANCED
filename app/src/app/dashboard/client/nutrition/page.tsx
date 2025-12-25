@@ -210,7 +210,7 @@ export default function NutritionPage() {
       return;
     }
 
-    const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', selectedDate);
+    const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', selectedDate);
 
     const unsubscribe = onSnapshot(logRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -271,7 +271,7 @@ export default function NutritionPage() {
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
 
-          const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', dateStr);
+          const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', dateStr);
           const logSnap = await getDoc(logRef);
 
           if (logSnap.exists()) {
@@ -345,7 +345,7 @@ export default function NutritionPage() {
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
 
-          const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', dateStr);
+          const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', dateStr);
           const logSnap = await getDoc(logRef);
 
           if (logSnap.exists()) {
@@ -467,7 +467,7 @@ export default function NutritionPage() {
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
           
-          const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', dateStr);
+          const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', dateStr);
           const logSnap = await getDoc(logRef);
           
           if (logSnap.exists()) {
@@ -543,7 +543,7 @@ export default function NutritionPage() {
     if (!user || !selectedDate) return;
 
     try {
-      const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', selectedDate);
+      const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', selectedDate);
       
       // New completion logic: ALL 4 meal categories must have at least one entry
       const allMealsLogged = mealCategories.every(meal => meals[meal].length > 0);
@@ -640,7 +640,7 @@ export default function NutritionPage() {
       const downloadUrl = await getDownloadURL(storageRef);
       
       // Save URL to Firestore and mark day complete
-      const logRef = doc(db, 'nutritionLogs', user.uid, 'daily', selectedDate);
+      const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', selectedDate);
       await setDoc(logRef, {
         screenshotUrl: downloadUrl,
         screenshotUploadedAt: Timestamp.now(),

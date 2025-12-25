@@ -567,16 +567,16 @@ service cloud.firestore {
       // TRAINERS can only read their assigned clients' logs
       allow read: if isAdmin() || isAssignedTrainer(userId);
       
-      // Daily logs subcollection
-      match /daily/{dateId} {
-        // Users can read/write their own daily logs
+      // Meal logs subcollection
+      match /meals/{dateId} {
+        // Users can read/write their own meal logs
         allow read, write: if isOwner(userId);
         
         // ADMINS can read all, TRAINERS only their assigned clients
         allow read: if isAdmin() || isAssignedTrainer(userId);
         
-        // Validation for daily log data
-        function validateDailyLog() {
+        // Validation for meal log data
+        function validateMealLog() {
           let data = request.resource.data;
           return data.keys().hasAll(['meals', 'waterIntake', 'lastUpdated']) &&
                  data.meals is map &&
@@ -584,7 +584,7 @@ service cloud.firestore {
                  data.waterIntake >= 0;
         }
         
-        allow write: if isOwner(userId) && validateDailyLog();
+        allow write: if isOwner(userId) && validateMealLog();
       }
       
       // Habits tracking subcollection
