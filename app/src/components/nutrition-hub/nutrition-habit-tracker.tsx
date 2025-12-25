@@ -105,7 +105,7 @@ export function NutritionHabitTracker() {
         const todayDate = getTodayDate();
         
         // Load today's completions
-        const todayRef = doc(db, 'habitCompletions', user.uid, 'daily', todayDate);
+        const todayRef = doc(db, 'nutritionLogs', user.uid, 'habits', todayDate);
         const todaySnap = await getDoc(todayRef);
         
         if (todaySnap.exists()) {
@@ -124,7 +124,7 @@ export function NutritionHabitTracker() {
         for (let i = 6; i >= 0; i--) {
           const date = getDateDaysAgo(i);
           weeklyPromises.push(
-            getDoc(doc(db, 'habitCompletions', user.uid, 'daily', date))
+            getDoc(doc(db, 'nutritionLogs', user.uid, 'habits', date))
           );
         }
 
@@ -178,7 +178,7 @@ export function NutritionHabitTracker() {
 
     try {
       const todayDate = getTodayDate();
-      const todayRef = doc(db, 'habitCompletions', user.uid, 'daily', todayDate);
+      const todayRef = doc(db, 'nutritionLogs', user.uid, 'habits', todayDate);
       await setDoc(todayRef, updatedCompletions);
 
       // Reload weekly data to update streak
@@ -186,7 +186,7 @@ export function NutritionHabitTracker() {
       for (let i = 6; i >= 0; i--) {
         const date = getDateDaysAgo(i);
         weeklyPromises.push(
-          getDoc(doc(db, 'habitCompletions', user.uid, 'daily', date))
+          getDoc(doc(db, 'nutritionLogs', user.uid, 'habits', date))
         );
       }
       const weeklySnaps = await Promise.all(weeklyPromises);
