@@ -24,6 +24,7 @@ import {
   ClipboardList,
   UserCircle,
   Apple,
+  Activity,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -236,6 +237,23 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Daily Activities Section */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Daily Activities</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/activity' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/activity">
+                    <Activity className="w-4 h-4" />
+                    <span className="font-medium">Today's Activity</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         {/* Training Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Training</SidebarGroupLabel>
@@ -317,9 +335,9 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Tracking Section */}
+        {/* Progress Section */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Tracking</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Progress</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>

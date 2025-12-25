@@ -57,6 +57,12 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
       tips: data.stepGoal.tips || [],
       lastUpdated: timestampToDate(data.stepGoal.lastUpdated)
     } : null,
+    waterGoal: data.waterGoal ? {
+      target: data.waterGoal.target || 100,
+      unit: data.waterGoal.unit || 'oz',
+      tips: data.waterGoal.tips || [],
+      lastUpdated: timestampToDate(data.waterGoal.lastUpdated)
+    } : null,
     lissCardio: data.lissCardio ? {
       frequency: data.lissCardio.frequency || '',
       duration: data.lissCardio.duration || '',
@@ -282,6 +288,55 @@ export async function updateStepGoal(
     return { success: true };
   } catch (error) {
     console.error('Error updating step goal:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update only the water goal section of a client's plan
+ * Uses clientId as the document ID
+ */
+export async function updateWaterGoal(
+  clientId: string,
+  trainerId: string,
+  waterGoalData: any
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+    
+    const updateData: any = {
+      waterGoal: {
+        target: waterGoalData.target,
+        unit: waterGoalData.unit,
+        tips: waterGoalData.tips,
+        lastUpdated: serverTimestamp()
+      },
+      updatedAt: serverTimestamp()
+    };
+    
+    if (existingPlan) {
+      await updateDoc(planRef, updateData);
+    } else {
+      // Create new plan with just water goal, using clientId as document ID
+      await setDoc(planRef, {
+        clientId,
+        trainerId,
+        ...updateData,
+        vision: null,
+        stepGoal: null,
+        waterGoal: null,
+        lissCardio: null,
+        weeklyFocus: null,
+        dailyHabits: null,
+        nutritionProtocol: null,
+        createdAt: serverTimestamp()
+      });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating water goal:', error);
     return { success: false, error };
   }
 }

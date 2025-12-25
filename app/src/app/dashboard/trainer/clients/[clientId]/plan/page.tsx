@@ -11,13 +11,14 @@ import { ClipboardList, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VisionEditor } from '@/components/trainer/plan/VisionEditor';
 import { StepGoalEditor } from '@/components/trainer/plan/StepGoalEditor';
+import { WaterGoalEditor } from '@/components/trainer/plan/WaterGoalEditor';
 import { LissCardioEditor } from '@/components/trainer/plan/LissCardioEditor';
 import { WeeklyFocusEditor } from '@/components/trainer/plan/WeeklyFocusEditor';
 import { DailyHabitsEditor } from '@/components/trainer/plan/DailyHabitsEditor';
 import { TrainingProtocolEditor } from '@/components/trainer/plan/TrainingProtocolEditor';
 import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProtocolEditor';
-import { getClientPlan, updateVision, updateStepGoal, updateLissCardio, updateWeeklyFocus, updateDailyHabits } from '@/lib/plan-api';
-import { ClientPlan, VisionData, StepGoalData, LissCardioData, WeeklyFocusData, DailyHabitsData } from '@/types/plan';
+import { getClientPlan, updateVision, updateStepGoal, updateWaterGoal, updateLissCardio, updateWeeklyFocus, updateDailyHabits } from '@/lib/plan-api';
+import { ClientPlan, VisionData, StepGoalData, WaterGoalData, LissCardioData, WeeklyFocusData, DailyHabitsData } from '@/types/plan';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -33,6 +34,7 @@ export default function ClientPlanEditorPage() {
   const [plan, setPlan] = useState<ClientPlan | null>(null);
   const [savingVision, setSavingVision] = useState(false);
   const [savingStepGoal, setSavingStepGoal] = useState(false);
+  const [savingWaterGoal, setSavingWaterGoal] = useState(false);
   const [savingLissCardio, setSavingLissCardio] = useState(false);
   const [savingWeeklyFocus, setSavingWeeklyFocus] = useState(false);
   const [savingDailyHabits, setSavingDailyHabits] = useState(false);
@@ -114,6 +116,28 @@ export default function ClientPlanEditorPage() {
       alert('An error occurred while saving.');
     } finally {
       setSavingStepGoal(false);
+    }
+  };
+
+  const handleSaveWaterGoal = async (waterGoalData: WaterGoalData) => {
+    if (!user) return;
+    
+    setSavingWaterGoal(true);
+    try {
+      const result = await updateWaterGoal(clientId, user.uid, waterGoalData);
+      if (result.success) {
+        // Reload plan data
+        const updatedPlan = await getClientPlan(clientId);
+        setPlan(updatedPlan);
+        alert('Water goal saved successfully!');
+      } else {
+        alert('Failed to save water goal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving water goal:', error);
+      alert('An error occurred while saving.');
+    } finally {
+      setSavingWaterGoal(false);
     }
   };
 
@@ -223,7 +247,7 @@ export default function ClientPlanEditorPage() {
           {/* Tabbed Editor Interface */}
           <div className="bg-white rounded-xl border p-6 shadow-sm">
             <Tabs defaultValue="weeklyfocus" className="w-full">
-              <TabsList className="grid w-full grid-cols-7 mb-6">
+              <TabsList className="grid w-full grid-cols-8 mb-6">
                 <TabsTrigger value="weeklyfocus">
                   Weekly Focus
                 </TabsTrigger>
@@ -241,6 +265,9 @@ export default function ClientPlanEditorPage() {
                 </TabsTrigger>
                 <TabsTrigger value="stepgoal">
                   Step Goal
+                </TabsTrigger>
+                <TabsTrigger value="watergoal">
+                  Water Goal
                 </TabsTrigger>
                 <TabsTrigger value="cardio">
                   LISS Cardio
@@ -276,6 +303,14 @@ export default function ClientPlanEditorPage() {
                   initialData={plan?.stepGoal || null}
                   onSave={handleSaveStepGoal}
                   isSaving={savingStepGoal}
+                />
+              </TabsContent>
+
+              <TabsContent value="watergoal">
+                <WaterGoalEditor
+                  initialData={plan?.waterGoal || null}
+                  onSave={handleSaveWaterGoal}
+                  isSaving={savingWaterGoal}
                 />
               </TabsContent>
 

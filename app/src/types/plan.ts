@@ -15,6 +15,13 @@ export interface StepGoalData {
   lastUpdated: Date | null;
 }
 
+export interface WaterGoalData {
+  target: number;
+  unit: 'oz' | 'liters' | 'cups';
+  tips: string[];
+  lastUpdated: Date | null;
+}
+
 export interface LissCardioData {
   frequency: string;
   duration: string;
@@ -296,6 +303,7 @@ export interface ClientPlan {
   
   vision: VisionData | null;
   stepGoal: StepGoalData | null;
+  waterGoal: WaterGoalData | null;
   lissCardio: LissCardioData | null;
   weeklyFocus: WeeklyFocusHistory | null;
   dailyHabits: DailyHabitsData | null;
@@ -382,6 +390,15 @@ export const DEFAULT_STEP_TIPS = [
   'Break it up throughout the day',
   'Post-meal walks are great for digestion',
   'Try walking meetings or taking the stairs'
+];
+
+// Default tips for water goal
+export const DEFAULT_WATER_TIPS = [
+  'Carry a reusable water bottle with you',
+  'Drink a glass of water before each meal',
+  'Set reminders on your phone throughout the day',
+  'Add lemon or cucumber for flavor',
+  'Start your morning with a glass of water'
 ];
 
 // Options for LISS Cardio frequency
