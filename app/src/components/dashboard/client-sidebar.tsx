@@ -341,15 +341,23 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/progress' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/progress">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/progress' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/progress">
                     <BarChart3 className="w-4 h-4" />
-                    <span className="font-medium">Metrics</span>
+                    <span className="font-medium">Progress</span>
                     {progressUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {progressUpdatesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/progress' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/progress">
+                    <BarChart3 className="w-4 h-4" />
+                    <span className="font-medium">Metrics (Mock)</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
