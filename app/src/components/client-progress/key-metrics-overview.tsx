@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { db } from '@/lib/firebase';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import {
   Card,
   CardContent,
@@ -48,6 +52,35 @@ interface Metric {
     editable: boolean;
     subtext?: string;
     avg?: string;
+}
+
+// Helper functions
+function formatDate(date: Date): string {
+    return date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+}
+
+function calculateAverage(numbers: number[]): number {
+    if (numbers.length === 0) return 0;
+    const sum = numbers.reduce((acc, num) => acc + num, 0);
+    return Math.round(sum / numbers.length);
+}
+
+function calculateHabitScore(logs: any[]): number {
+    if (logs.length === 0) return 0;
+    
+    let totalHabits = 0;
+    let completedHabits = 0;
+    
+    logs.forEach(log => {
+        if (log.habitCheckins) {
+            const habits = Object.values(log.habitCheckins);
+            totalHabits += habits.length;
+            completedHabits += habits.filter(Boolean).length;
+        }
+    });
+    
+    if (totalHabits === 0) return 0;
+    return Math.round((completedHabits / totalHabits) * 100);
 }
 
 const initialMetrics: Metric[] = [
@@ -101,8 +134,7 @@ const initialMetrics: Metric[] = [
     },
 ];
 
-const HabitConsistencyCard = ({ index }: { index?: number }) => {
-    const consistencyScore = 88;
+const HabitConsistencyCard = ({ index, score, loading }: { index?: number, score: number, loading?: boolean }) => {
     return (
         <TooltipProvider>
             <Card className={cn(
@@ -122,7 +154,9 @@ const HabitConsistencyCard = ({ index }: { index?: number }) => {
                     </Tooltip>
                 </div>
                 <p className="text-xs font-medium text-primary mb-0.5">Habit Score</p>
-                <p className="text-2xl font-bold number-emphasis animate-count-up">{consistencyScore}%</p>
+                <p className="text-2xl font-bold number-emphasis animate-count-up">
+                    {loading ? '...' : score}%
+                </p>
                 <p className="text-xs text-primary">Last 7 days</p>
             </Card>
         </TooltipProvider>
@@ -238,10 +272,76 @@ const MetricCard = ({ metric, onEdit, className, index }: { metric: Metric, onEd
 
 export function KeyMetricsOverview() {
     const { toast } = useToast();
+    const { user } = useAuth();
     const [metrics, setMetrics] = useState(initialMetrics);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
     const [editingMetric, setEditingMetric] = useState<Metric | null>(null);
     const [newValue, setNewValue] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [habitScore, setHabitScore] = useState(88); // Default mock value
+    
+    // Load real data from Firestore
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+        
+        // Get last 7 days date range
+        const today = new Date();
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 7);
+        
+        // Query activity logs
+        const logsRef = collection(db, 'dailyActivityLogs', user.uid, 'logs');
+        const q = query(
+            logsRef,
+            where('date', '>=', formatDate(sevenDaysAgo)),
+            orderBy('date', 'desc')
+        );
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const logs = snapshot.docs.map(doc => doc.data());
+            
+            // Calculate steps metrics
+            const todayLog = logs.find(l => l.date === formatDate(today));
+            const todaySteps = todayLog?.steps || 0;
+            const avgSteps = calculateAverage(logs.map(l => l.steps || 0));
+            const change = todaySteps - avgSteps;
+            
+            // Calculate habit score
+            const score = calculateHabitScore(logs);
+            setHabitScore(score);
+            
+            // Update metrics with real data
+            setMetrics(currentMetrics => 
+                currentMetrics.map(m => {
+                    if (m.id === 'steps') {
+                        return {
+                            ...m,
+                            value: todaySteps.toString(),
+                            avg: avgSteps.toString(),
+                            change: change > 0 ? `+${change}` : change.toString(),
+                            changeType: change >= 0 ? 'positive' as const : 'negative' as const,
+                            trend: change >= 0 ? 'up' as const : 'down' as const,
+                        };
+                    }
+                    return m;
+                })
+            );
+            
+            setLoading(false);
+        }, (error) => {
+            console.error('Error loading activity data:', error);
+            setLoading(false);
+        });
+        
+        registerListener(unsubscribe);
+        return () => {
+            unregisterListener(unsubscribe);
+            unsubscribe();
+        };
+    }, [user]);
 
     const handleEdit = (metric: Metric) => {
         setEditingMetric(metric);
@@ -311,7 +411,7 @@ export function KeyMetricsOverview() {
                         {metrics.map((metric, index) => (
                             <MetricCard key={metric.id} metric={metric} onEdit={handleEdit} className="lg:col-span-1" index={index}/>
                         ))}
-                        <HabitConsistencyCard index={metrics.length} />
+                        <HabitConsistencyCard index={metrics.length} score={habitScore} loading={loading} />
                     </div>
                 </CardContent>
             </Card>

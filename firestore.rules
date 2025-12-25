@@ -594,7 +594,44 @@ service cloud.firestore {
       }
     }
     
-    // DAILY ACTIVITY TRACKING SYSTEM
+    // DAILY ACTIVITY LOGS SYSTEM - New structure with subcollection
+    // Collection structure: dailyActivityLogs/{userId}/logs/{date}
+    match /dailyActivityLogs/{userId} {
+      // Users can read their own activity logs parent document
+      allow read: if isOwner(userId);
+      
+      // ADMINS can read all activity logs
+      allow read: if isAdmin();
+      
+      // TRAINERS can read their assigned clients' logs
+      allow read: if isTrainer() && isAssignedTrainer(userId);
+      
+      // Logs subcollection
+      match /logs/{dateId} {
+        // Users can read/write their own daily logs
+        allow read, write: if isOwner(userId);
+        
+        // ADMINS can read all logs
+        allow read: if isAdmin();
+        
+        // TRAINERS can read their assigned clients' logs
+        allow read: if isTrainer() && isAssignedTrainer(userId);
+        
+        // Validation for daily activity log
+        function validateDailyLog() {
+          let data = request.resource.data;
+          return data.keys().hasAll(['date', 'updatedAt']) &&
+                 data.date is string &&
+                 data.steps is number && data.steps >= 0 &&
+                 data.waterIntake is number && data.waterIntake >= 0 &&
+                 data.habitCheckins is map;
+        }
+        
+        allow write: if isOwner(userId) && validateDailyLog();
+      }
+    }
+    
+    // DAILY ACTIVITY TRACKING SYSTEM (LEGACY)
     // Top-level collection for consistency with nutritionLogs and workoutExecutions
     // Document ID format: {userId}_{date}
     match /dailyActivities/{activityId} {
