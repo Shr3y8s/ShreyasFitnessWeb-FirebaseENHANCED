@@ -1,5 +1,5 @@
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { doc, setDoc, getDoc, collection, query, where, getDocs, Timestamp, orderBy, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, Timestamp, orderBy, deleteDoc, limit } from 'firebase/firestore';
 import { db } from './firebase';
 import exifr from 'exifr';
 import type { 
@@ -187,7 +187,8 @@ export async function getUserProgressPhotos(userId: string): Promise<ProgressPho
     const photosQuery = query(
       collection(db, 'progressPhotos'),
       where('userId', '==', userId),
-      orderBy('date', 'desc')
+      orderBy('date', 'desc'),
+      limit(100)
     );
     
     const snapshot = await getDocs(photosQuery);

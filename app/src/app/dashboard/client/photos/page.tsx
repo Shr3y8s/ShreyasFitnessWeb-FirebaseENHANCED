@@ -272,33 +272,33 @@ export default function MonthlyPhotosPage() {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           {photo.photos.front && (
-                            <div className="space-y-2">
+                            <div className="space-y-2 flex flex-col items-center">
                               <img
                                 src={photo.photos.front.thumbnailUrl}
                                 alt="Front view"
-                                className="w-full aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
+                                className="w-full max-w-xs aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
                                 onClick={() => window.open(photo.photos.front?.url, '_blank')}
                               />
                               <p className="text-sm text-center font-medium">Front</p>
                             </div>
                           )}
                           {photo.photos.side && (
-                            <div className="space-y-2">
+                            <div className="space-y-2 flex flex-col items-center">
                               <img
                                 src={photo.photos.side.thumbnailUrl}
                                 alt="Side view"
-                                className="w-full aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
+                                className="w-full max-w-xs aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
                                 onClick={() => window.open(photo.photos.side?.url, '_blank')}
                               />
                               <p className="text-sm text-center font-medium">Side</p>
                             </div>
                           )}
                           {photo.photos.back && (
-                            <div className="space-y-2">
+                            <div className="space-y-2 flex flex-col items-center">
                               <img
                                 src={photo.photos.back.thumbnailUrl}
                                 alt="Back view"
-                                className="w-full aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
+                                className="w-full max-w-xs aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
                                 onClick={() => window.open(photo.photos.back?.url, '_blank')}
                               />
                               <p className="text-sm text-center font-medium">Back</p>
