@@ -7,7 +7,6 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Loader2 } from 'lucide-react';
 import { QualitativeFeedback } from '@/components/client-progress/qualitative-feedback';
-import { QualitativeTrends } from '@/components/client-progress/qualitative-trends';
 
 export default function WeeklySurveyPage() {
   const router = useRouter();
@@ -71,13 +70,8 @@ export default function WeeklySurveyPage() {
             </div>
 
             {/* Survey Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-8 gap-8 items-start">
-              <div className="lg:col-span-5">
-                <QualitativeFeedback />
-              </div>
-              <div className="lg:col-span-3">
-                <QualitativeTrends />
-              </div>
+            <div className="max-w-5xl mx-auto">
+              <QualitativeFeedback />
             </div>
           </div>
         </div>

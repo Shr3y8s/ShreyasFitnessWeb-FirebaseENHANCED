@@ -719,6 +719,53 @@ service cloud.firestore {
                    validateActivity();
     }
     
+    // WEEKLY SURVEYS SYSTEM - Subjective feedback tracking
+    // Collection structure: weeklySurveys/{userId}/responses/{weekStartDate}
+    match /weeklySurveys/{userId} {
+      // Users can read their own surveys parent document
+      allow read: if isOwner(userId);
+      
+      // ADMINS can read all surveys
+      allow read: if isAdmin();
+      
+      // TRAINERS can read their assigned clients' surveys
+      allow read: if isTrainer() && isAssignedTrainer(userId);
+      
+      // Responses subcollection
+      match /responses/{weekStartDate} {
+        // Users can read/write their own weekly surveys
+        allow read, write: if isOwner(userId);
+        
+        // ADMINS can read all surveys
+        allow read: if isAdmin();
+        
+        // TRAINERS can read their assigned clients' surveys
+        allow read: if isTrainer() && isAssignedTrainer(userId);
+        
+        // Validation for weekly survey data
+        function validateWeeklySurvey() {
+          let data = request.resource.data;
+          return data.keys().hasAll(['userId', 'weekStartDate', 'weekEndDate', 'ratings', 'adherence', 'wins', 'challenges', 'submittedAt', 'lastUpdated']) &&
+                 data.userId is string &&
+                 data.weekStartDate is string &&
+                 data.weekEndDate is string &&
+                 data.ratings is map &&
+                 data.ratings.keys().hasAll(['energy', 'sleep', 'mood']) &&
+                 data.ratings.energy is number && data.ratings.energy >= 1 && data.ratings.energy <= 5 &&
+                 data.ratings.sleep is number && data.ratings.sleep >= 1 && data.ratings.sleep <= 5 &&
+                 data.ratings.mood is number && data.ratings.mood >= 1 && data.ratings.mood <= 5 &&
+                 data.adherence is map &&
+                 data.adherence.keys().hasAll(['workouts', 'nutrition']) &&
+                 data.adherence.workouts is number && data.adherence.workouts >= 1 && data.adherence.workouts <= 5 &&
+                 data.adherence.nutrition is number && data.adherence.nutrition >= 1 && data.adherence.nutrition <= 5 &&
+                 data.wins is string &&
+                 data.challenges is string;
+        }
+        
+        allow write: if isOwner(userId) && validateWeeklySurvey();
+      }
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

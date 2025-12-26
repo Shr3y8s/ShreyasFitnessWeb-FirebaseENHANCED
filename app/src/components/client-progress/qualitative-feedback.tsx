@@ -1,13 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from '@/lib/auth-context'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info } from "lucide-react"
+import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info, Loader2, CheckCircle2 } from "lucide-react"
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import Image from "next/image"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { 
+  submitWeeklySurvey, 
+  getCurrentWeekSurvey, 
+  getCurrentWeekRange,
+  formatWeekRange,
+  type WeeklySurveyRatings,
+  type WeeklySurveyAdherence
+} from '@/lib/survey-api'
 
 const ratingCategories = [
     { id: "energy", label: "Energy Levels", icon: <Activity className="h-5 w-5" /> },
@@ -75,6 +84,12 @@ const placeholderImages = {
 }
 
 export function QualitativeFeedback() {
+    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [weekRange, setWeekRange] = useState({ startDate: '', endDate: '' });
+    
     const [ratings, setRatings] = useState<{ [key: string]: number }>({
         energy: 3,
         sleep: 3,
@@ -82,10 +97,79 @@ export function QualitativeFeedback() {
         workouts: 3,
         nutrition: 3,
     })
+    
+    const [wins, setWins] = useState('');
+    const [challenges, setChallenges] = useState('');
+
+    // Load existing survey data for current week
+    useEffect(() => {
+        const loadSurveyData = async () => {
+            if (!user) return;
+            
+            setLoading(true);
+            const range = getCurrentWeekRange();
+            setWeekRange(range);
+            
+            const existingSurvey = await getCurrentWeekSurvey(user.uid);
+            
+            if (existingSurvey) {
+                setRatings({
+                    energy: existingSurvey.ratings.energy,
+                    sleep: existingSurvey.ratings.sleep,
+                    mood: existingSurvey.ratings.mood,
+                    workouts: existingSurvey.adherence.workouts,
+                    nutrition: existingSurvey.adherence.nutrition,
+                });
+                setWins(existingSurvey.wins);
+                setChallenges(existingSurvey.challenges);
+            }
+            
+            setLoading(false);
+        };
+        
+        loadSurveyData();
+    }, [user]);
 
     const handleRatingChange = (id: string, value: number) => {
         setRatings(prev => ({ ...prev, [id]: value }))
+        setSubmitSuccess(false); // Clear success message when editing
     }
+    
+    const handleSubmit = async () => {
+        if (!user) return;
+        
+        setSubmitting(true);
+        setSubmitSuccess(false);
+        
+        const surveyRatings: WeeklySurveyRatings = {
+            energy: ratings.energy,
+            sleep: ratings.sleep,
+            mood: ratings.mood
+        };
+        
+        const surveyAdherence: WeeklySurveyAdherence = {
+            workouts: ratings.workouts,
+            nutrition: ratings.nutrition
+        };
+        
+        const result = await submitWeeklySurvey(
+            user.uid,
+            surveyRatings,
+            surveyAdherence,
+            wins,
+            challenges
+        );
+        
+        setSubmitting(false);
+        
+        if (result.success) {
+            setSubmitSuccess(true);
+            // Auto-hide success message after 5 seconds
+            setTimeout(() => setSubmitSuccess(false), 5000);
+        } else {
+            alert(`Error submitting survey: ${result.error}`);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -135,13 +219,21 @@ export function QualitativeFeedback() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <Card className="card-hover-lift border-primary/50 gradient-accent-green animate-fade-in-up stagger-2">
+                <Card className="card-hover-lift border-primary/50 gradient-accent-green animate-fade-in-up stagger-2">
                     <CardHeader>
                         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Check className="text-green-500 icon-hover-bounce" /> Wins for the week</h3>
                         <CardDescription>What went well? What are you proud of?</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Textarea placeholder="e.g., I hit a new PR on squats, or I stuck to my meal plan every day..." />
+                        <Textarea 
+                            placeholder="e.g., I hit a new PR on squats, or I stuck to my meal plan every day..."
+                            value={wins}
+                            onChange={(e) => {
+                                setWins(e.target.value);
+                                setSubmitSuccess(false);
+                            }}
+                            disabled={loading || submitting}
+                        />
                     </CardContent>
                 </Card>
                  <Card className="card-hover-lift border-primary/50 bg-red-50/50 dark:bg-red-950/10 animate-fade-in-up stagger-3">
@@ -150,15 +242,50 @@ export function QualitativeFeedback() {
                         <CardDescription>What was difficult? Where can we improve?</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Textarea placeholder="e.g., I struggled with late-night snacking, or I was too tired for my Friday workout..." />
+                        <Textarea 
+                            placeholder="e.g., I struggled with late-night snacking, or I was too tired for my Friday workout..."
+                            value={challenges}
+                            onChange={(e) => {
+                                setChallenges(e.target.value);
+                                setSubmitSuccess(false);
+                            }}
+                            disabled={loading || submitting}
+                        />
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="text-center animate-fade-in-up stagger-4">
-                <Button size="lg" className="w-full max-w-xs animate-pulse-badge shadow-lg hover:shadow-xl transition-all">
-                    <Send className="mr-2 h-4 w-4" />
-                    Submit Weekly Check-in
+            <div className="space-y-4 text-center animate-fade-in-up stagger-4">
+                {weekRange.startDate && (
+                    <p className="text-sm text-muted-foreground">
+                        Survey for week: <span className="font-semibold">{formatWeekRange(weekRange.startDate, weekRange.endDate)}</span>
+                    </p>
+                )}
+                
+                {submitSuccess && (
+                    <div className="flex items-center justify-center gap-2 text-green-600 font-semibold animate-fade-in">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span>Survey submitted successfully!</span>
+                    </div>
+                )}
+                
+                <Button 
+                    size="lg" 
+                    className="w-full max-w-xs shadow-lg hover:shadow-xl transition-all"
+                    onClick={handleSubmit}
+                    disabled={loading || submitting || !user}
+                >
+                    {submitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                        </>
+                    ) : (
+                        <>
+                            <Send className="mr-2 h-4 w-4" />
+                            {submitSuccess ? 'Update Weekly Check-in' : 'Submit Weekly Check-in'}
+                        </>
+                    )}
                 </Button>
             </div>
 
