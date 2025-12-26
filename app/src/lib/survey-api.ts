@@ -208,3 +208,89 @@ export function formatWeekRange(startDate: string, endDate: string): string {
   
   return `${startStr} - ${endStr}`;
 }
+
+/**
+ * Get the Monday of the previous week
+ */
+export function getPreviousWeekStart(weekStartDate: string): string {
+  const date = new Date(weekStartDate + 'T00:00:00');
+  date.setDate(date.getDate() - 7);
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Get the Monday of the next week
+ */
+export function getNextWeekStart(weekStartDate: string): string {
+  const date = new Date(weekStartDate + 'T00:00:00');
+  date.setDate(date.getDate() + 7);
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Get the Monday of 2 weeks ago (oldest selectable week)
+ */
+export function getTwoWeeksAgo(): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  
+  const thisMonday = new Date(today);
+  thisMonday.setDate(today.getDate() + daysToMonday);
+  thisMonday.setDate(thisMonday.getDate() - 14); // Go back 2 weeks
+  
+  return thisMonday.toISOString().split('T')[0];
+}
+
+/**
+ * Submit or update weekly survey for a specific week
+ */
+export async function submitWeeklySurveyForWeek(
+  userId: string,
+  weekStartDate: string,
+  ratings: WeeklySurveyRatings,
+  adherence: WeeklySurveyAdherence,
+  wins: string,
+  challenges: string
+): Promise<{ success: boolean; error?: string; weekStartDate?: string }> {
+  try {
+    // Calculate end date from start date
+    const startDate = new Date(weekStartDate + 'T00:00:00');
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    
+    const surveyData: WeeklySurveyData = {
+      userId,
+      weekStartDate,
+      weekEndDate: endDate.toISOString().split('T')[0],
+      ratings,
+      adherence,
+      wins: wins.trim(),
+      challenges: challenges.trim(),
+      submittedAt: new Date(),
+      lastUpdated: new Date()
+    };
+    
+    const docRef = doc(db, 'weeklySurveys', userId, 'responses', weekStartDate);
+    
+    // Check if already exists to preserve submittedAt
+    const existingDoc = await getDoc(docRef);
+    if (existingDoc.exists()) {
+      surveyData.submittedAt = existingDoc.data().submittedAt.toDate();
+    }
+    
+    await setDoc(docRef, {
+      ...surveyData,
+      submittedAt: Timestamp.fromDate(surveyData.submittedAt),
+      lastUpdated: Timestamp.fromDate(surveyData.lastUpdated)
+    });
+    
+    return { success: true, weekStartDate };
+  } catch (error) {
+    console.error('Error submitting weekly survey:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to submit survey'
+    };
+  }
+}

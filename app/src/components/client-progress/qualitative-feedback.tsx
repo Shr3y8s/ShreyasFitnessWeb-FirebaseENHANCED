@@ -4,16 +4,19 @@ import { useState, useEffect } from "react"
 import { useAuth } from '@/lib/auth-context'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info, Loader2, CheckCircle2 } from "lucide-react"
+import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info, Loader2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import Image from "next/image"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { 
-  submitWeeklySurvey, 
-  getCurrentWeekSurvey, 
+  submitWeeklySurveyForWeek,
+  getWeeklySurvey, 
   getCurrentWeekRange,
   formatWeekRange,
+  getPreviousWeekStart,
+  getNextWeekStart,
+  getTwoWeeksAgo,
   type WeeklySurveyRatings,
   type WeeklySurveyAdherence
 } from '@/lib/survey-api'
@@ -88,6 +91,7 @@ export function QualitativeFeedback() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [selectedWeekStart, setSelectedWeekStart] = useState<string>('');
     const [weekRange, setWeekRange] = useState({ startDate: '', endDate: '' });
     
     const [ratings, setRatings] = useState<{ [key: string]: number }>({
@@ -101,16 +105,32 @@ export function QualitativeFeedback() {
     const [wins, setWins] = useState('');
     const [challenges, setChallenges] = useState('');
 
-    // Load existing survey data for current week
+    // Initialize selected week to current week on mount
+    useEffect(() => {
+        if (!user) return;
+        const { startDate } = getCurrentWeekRange();
+        setSelectedWeekStart(startDate);
+    }, [user]);
+
+    // Load survey data when selected week changes
     useEffect(() => {
         const loadSurveyData = async () => {
-            if (!user) return;
+            if (!user || !selectedWeekStart) return;
             
             setLoading(true);
-            const range = getCurrentWeekRange();
-            setWeekRange(range);
+            setSubmitSuccess(false); // Clear success message when changing weeks
             
-            const existingSurvey = await getCurrentWeekSurvey(user.uid);
+            // Calculate end date for selected week
+            const startDate = new Date(selectedWeekStart + 'T00:00:00');
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            
+            setWeekRange({
+                startDate: selectedWeekStart,
+                endDate: endDate.toISOString().split('T')[0]
+            });
+            
+            const existingSurvey = await getWeeklySurvey(user.uid, selectedWeekStart);
             
             if (existingSurvey) {
                 setRatings({
@@ -122,13 +142,24 @@ export function QualitativeFeedback() {
                 });
                 setWins(existingSurvey.wins);
                 setChallenges(existingSurvey.challenges);
+            } else {
+                // Reset to defaults if no survey exists for this week
+                setRatings({
+                    energy: 3,
+                    sleep: 3,
+                    mood: 3,
+                    workouts: 3,
+                    nutrition: 3,
+                });
+                setWins('');
+                setChallenges('');
             }
             
             setLoading(false);
         };
         
         loadSurveyData();
-    }, [user]);
+    }, [user, selectedWeekStart]);
 
     const handleRatingChange = (id: string, value: number) => {
         setRatings(prev => ({ ...prev, [id]: value }))
@@ -136,7 +167,7 @@ export function QualitativeFeedback() {
     }
     
     const handleSubmit = async () => {
-        if (!user) return;
+        if (!user || !selectedWeekStart) return;
         
         setSubmitting(true);
         setSubmitSuccess(false);
@@ -152,8 +183,9 @@ export function QualitativeFeedback() {
             nutrition: ratings.nutrition
         };
         
-        const result = await submitWeeklySurvey(
+        const result = await submitWeeklySurveyForWeek(
             user.uid,
+            selectedWeekStart,
             surveyRatings,
             surveyAdherence,
             wins,
@@ -171,8 +203,97 @@ export function QualitativeFeedback() {
         }
     };
 
+    // Helper functions for week navigation
+    const handlePreviousWeek = () => {
+        const prevWeek = getPreviousWeekStart(selectedWeekStart);
+        const minWeek = getTwoWeeksAgo();
+        if (prevWeek >= minWeek) {
+            setSelectedWeekStart(prevWeek);
+        }
+    };
+
+    const handleNextWeek = () => {
+        const nextWeek = getNextWeekStart(selectedWeekStart);
+        const currentWeek = getCurrentWeekRange().startDate;
+        if (nextWeek <= currentWeek) {
+            setSelectedWeekStart(nextWeek);
+        }
+    };
+
+    const handleJumpToCurrentWeek = () => {
+        const { startDate } = getCurrentWeekRange();
+        setSelectedWeekStart(startDate);
+    };
+
+    // Check if we're viewing the current week
+    const isCurrentWeek = selectedWeekStart === getCurrentWeekRange().startDate;
+    const isOldestWeek = selectedWeekStart === getTwoWeeksAgo();
+
     return (
         <div className="space-y-6">
+            {/* Week Navigation */}
+            {selectedWeekStart && (
+                <div className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 rounded-lg p-4 shadow-lg">
+                    <div className="mb-3 text-center">
+                        <p className="text-sm font-semibold text-foreground">
+                            Survey for week:{' '}
+                            <span className="text-primary">
+                                {formatWeekRange(weekRange.startDate, weekRange.endDate)}
+                            </span>
+                        </p>
+                        {!isCurrentWeek && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                ⚠️ You're viewing a past week's survey
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        {/* Previous Week Arrow */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={handlePreviousWeek}
+                            disabled={isOldestWeek || loading}
+                            className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                            title="Previous Week"
+                        >
+                            <ChevronLeft className="h-5 w-5" />
+                        </Button>
+
+                        {/* Week Display */}
+                        <div className="px-4 py-2 border-2 border-primary/30 rounded-md bg-background text-foreground text-base font-medium min-w-[200px] text-center">
+                            Week of {weekRange.startDate && new Date(weekRange.startDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+
+                        {/* Next Week Arrow */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={handleNextWeek}
+                            disabled={isCurrentWeek || loading}
+                            className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                            title="Next Week"
+                        >
+                            <ChevronRight className="h-5 w-5" />
+                        </Button>
+
+                        {/* Jump to Current Week Button - only shown when not on current week */}
+                        {!isCurrentWeek && (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleJumpToCurrentWeek}
+                                className="font-semibold px-4"
+                                disabled={loading}
+                            >
+                                Jump to Current Week
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
+
             <Card className="card-hover-lift border-primary/50 animate-fade-in-up">
                 <CardHeader>
                     <h3 className="text-xl font-semibold leading-none tracking-tight">Weekly Subjective Feedback</h3>
