@@ -10,8 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PhotoUploader } from '@/components/progress-photos/PhotoUploader';
-import { getUserProgressPhotos } from '@/lib/progress-photo-api';
-import type { ProgressPhotoWithId } from '@/types/progress-photo';
+import { PhotoLightbox } from '@/components/progress-photos/PhotoLightbox';
+import { getUserProgressPhotos, deleteProgressPhotoAngle } from '@/lib/progress-photo-api';
+import type { ProgressPhotoWithId, PhotoAngle } from '@/types/progress-photo';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MonthlyPhotosPage() {
   const router = useRouter();
@@ -19,6 +21,14 @@ export default function MonthlyPhotosPage() {
   const [photos, setPhotos] = useState<ProgressPhotoWithId[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<{
+    url: string;
+    date: string;
+    angle: PhotoAngle;
+    metrics?: any;
+  } | null>(null);
+  const { toast } = useToast();
 
   // Redirect if not authenticated or not a client
   useEffect(() => {
@@ -57,6 +67,44 @@ export default function MonthlyPhotosPage() {
   const handleUploadComplete = () => {
     // Refresh photos after upload
     setRefreshKey(prev => prev + 1);
+  };
+
+  const handlePhotoClick = (url: string, date: string, angle: PhotoAngle, metrics?: any) => {
+    setSelectedPhoto({ url, date, angle, metrics });
+    setLightboxOpen(true);
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!user || !selectedPhoto) return;
+
+    try {
+      const result = await deleteProgressPhotoAngle(
+        user.uid,
+        selectedPhoto.date,
+        selectedPhoto.angle
+      );
+
+      if (result.success) {
+        toast({
+          title: 'Photo deleted',
+          description: 'Progress photo has been permanently deleted.',
+        });
+        // Refresh photos
+        setRefreshKey(prev => prev + 1);
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to delete photo',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete photo. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -277,7 +325,12 @@ export default function MonthlyPhotosPage() {
                                 src={photo.photos.front.thumbnailUrl}
                                 alt="Front view"
                                 className="w-full max-w-xs aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
-                                onClick={() => window.open(photo.photos.front?.url, '_blank')}
+                                onClick={() => handlePhotoClick(
+                                  photo.photos.front!.url,
+                                  photo.date,
+                                  'front',
+                                  photo.associatedMetrics
+                                )}
                               />
                               <p className="text-sm text-center font-medium">Front</p>
                             </div>
@@ -288,7 +341,12 @@ export default function MonthlyPhotosPage() {
                                 src={photo.photos.side.thumbnailUrl}
                                 alt="Side view"
                                 className="w-full max-w-xs aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
-                                onClick={() => window.open(photo.photos.side?.url, '_blank')}
+                                onClick={() => handlePhotoClick(
+                                  photo.photos.side!.url,
+                                  photo.date,
+                                  'side',
+                                  photo.associatedMetrics
+                                )}
                               />
                               <p className="text-sm text-center font-medium">Side</p>
                             </div>
@@ -299,7 +357,12 @@ export default function MonthlyPhotosPage() {
                                 src={photo.photos.back.thumbnailUrl}
                                 alt="Back view"
                                 className="w-full max-w-xs aspect-[3/4] object-cover rounded-lg border hover:opacity-90 transition cursor-pointer"
-                                onClick={() => window.open(photo.photos.back?.url, '_blank')}
+                                onClick={() => handlePhotoClick(
+                                  photo.photos.back!.url,
+                                  photo.date,
+                                  'back',
+                                  photo.associatedMetrics
+                                )}
                               />
                               <p className="text-sm text-center font-medium">Back</p>
                             </div>
@@ -320,6 +383,19 @@ export default function MonthlyPhotosPage() {
           </div>
         </div>
       </SidebarInset>
+
+      {/* Photo Lightbox */}
+      {selectedPhoto && (
+        <PhotoLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          photoUrl={selectedPhoto.url}
+          date={selectedPhoto.date}
+          angle={selectedPhoto.angle}
+          associatedMetrics={selectedPhoto.metrics}
+          onDelete={handleDeletePhoto}
+        />
+      )}
     </SidebarProvider>
   );
 }

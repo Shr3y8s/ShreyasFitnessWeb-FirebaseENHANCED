@@ -61,12 +61,15 @@ service firebase.storage {
       // 2. User is authenticated (allows trainers to view client photos for coaching)
       allow read: if isAuthenticated();
       
-      // Allow write only if:
+      // Allow create/update only if:
       // 1. User is authenticated
       // 2. User owns this directory (userId matches auth.uid)
       // 3. File is an image
       // 4. File size is under 5MB
-      allow write: if isOwner(userId) && isImage() && isValidSize();
+      allow create, update: if isOwner(userId) && isImage() && isValidSize();
+      
+      // Allow delete if user owns the photo (no file validation needed for delete)
+      allow delete: if isOwner(userId);
     }
     
     // Default: deny all other access

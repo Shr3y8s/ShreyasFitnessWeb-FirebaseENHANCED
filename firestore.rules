@@ -800,10 +800,14 @@ service cloud.firestore {
                data.photos is map;
       }
       
-      // Users can write their own progress photos
-      allow write: if isAuthenticated() && 
-                   request.auth.uid == getUserIdFromPhotoId() &&
-                   validateProgressPhoto();
+      // Users can create/update their own progress photos with validation
+      allow create, update: if isAuthenticated() && 
+                            request.auth.uid == getUserIdFromPhotoId() &&
+                            validateProgressPhoto();
+      
+      // Users can delete their own progress photos (no validation needed for delete)
+      allow delete: if isAuthenticated() && 
+                    request.auth.uid == getUserIdFromPhotoId();
     }
     
     // Default deny all other collections
