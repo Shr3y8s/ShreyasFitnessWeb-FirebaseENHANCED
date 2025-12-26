@@ -693,15 +693,16 @@ service cloud.firestore {
       
       // Users can list/query their own daily activities
       // This allows compound queries with userId, date range, and orderBy
+      // Updated to allow queries without userId filter (since we filter by document ID pattern)
       allow list: if isAuthenticated() && 
-                  request.query.limit <= 100;
+                  request.query.limit <= 500;
       
       // ADMINS can read all activities
       allow read: if isAdmin();
       
       // TRAINERS can read their assigned clients' activities
       allow get: if isTrainer() && isAssignedTrainer(getUserIdFromActivityId());
-      allow list: if isTrainer() && request.query.limit <= 100;
+      allow list: if isTrainer() && request.query.limit <= 500;
       
       // Validation for activity data
       function validateActivity() {

@@ -90,6 +90,10 @@ export async function getDailyActivity(
         date: data.weight.date,
         weight: data.weight.weight,
         unit: data.weight.unit,
+        bodyFat: data.weight.bodyFat,
+        height: data.weight.height,
+        heightUnit: data.weight.heightUnit,
+        bmi: data.weight.bmi,
         notes: data.weight.notes,
         timestamp: timestampToDate(data.weight.timestamp)
       } : undefined,
@@ -289,17 +293,25 @@ export async function logWeight(
   date: string,
   weight: number,
   unit: 'lbs' | 'kg',
+  bodyFat?: number,
+  height?: number,
+  heightUnit?: 'in' | 'cm',
+  bmi?: number,
   notes?: string
 ): Promise<{ success: boolean; error?: any }> {
   try {
     const docId = getActivityDocId(userId, date);
     const docRef = doc(db, ACTIVITIES_COLLECTION, docId);
     
-    // Build weight log object, only including notes if it's defined
+    // Build weight log object, only including optional fields if defined
     const weightLog: WeightLog = {
       date,
       weight,
       unit,
+      ...(bodyFat !== undefined && { bodyFat }),
+      ...(height !== undefined && { height }),
+      ...(heightUnit !== undefined && { heightUnit }),
+      ...(bmi !== undefined && { bmi }),
       ...(notes !== undefined && notes !== '' && { notes }),
       timestamp: new Date()
     };
@@ -315,9 +327,11 @@ export async function logWeight(
         unit: weightLog.unit,
         timestamp: serverTimestamp()
       };
-      if (notes !== undefined && notes !== '') {
-        weightUpdate.notes = notes;
-      }
+      if (bodyFat !== undefined) weightUpdate.bodyFat = bodyFat;
+      if (height !== undefined) weightUpdate.height = height;
+      if (heightUnit !== undefined) weightUpdate.heightUnit = heightUnit;
+      if (bmi !== undefined) weightUpdate.bmi = bmi;
+      if (notes !== undefined && notes !== '') weightUpdate.notes = notes;
       
       await updateDoc(docRef, {
         weight: weightUpdate,
@@ -331,9 +345,11 @@ export async function logWeight(
         unit: weightLog.unit,
         timestamp: serverTimestamp()
       };
-      if (notes !== undefined && notes !== '') {
-        weightForFirestore.notes = notes;
-      }
+      if (bodyFat !== undefined) weightForFirestore.bodyFat = bodyFat;
+      if (height !== undefined) weightForFirestore.height = height;
+      if (heightUnit !== undefined) weightForFirestore.heightUnit = heightUnit;
+      if (bmi !== undefined) weightForFirestore.bmi = bmi;
+      if (notes !== undefined && notes !== '') weightForFirestore.notes = notes;
       
       await setDoc(docRef, {
         userId,
@@ -403,6 +419,10 @@ export async function getActivityLogsForDateRange(
           date: data.weight.date,
           weight: data.weight.weight,
           unit: data.weight.unit,
+          bodyFat: data.weight.bodyFat,
+          height: data.weight.height,
+          heightUnit: data.weight.heightUnit,
+          bmi: data.weight.bmi,
           notes: data.weight.notes,
           timestamp: timestampToDate(data.weight.timestamp)
         } : undefined,
@@ -446,6 +466,10 @@ export async function getRecentWeightLogs(
           date: data.weight.date,
           weight: data.weight.weight,
           unit: data.weight.unit,
+          bodyFat: data.weight.bodyFat,
+          height: data.weight.height,
+          heightUnit: data.weight.heightUnit,
+          bmi: data.weight.bmi,
           notes: data.weight.notes,
           timestamp: timestampToDate(data.weight.timestamp)
         });

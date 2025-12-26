@@ -10,13 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileDown, Share2, TrendingUp, ClipboardList, Activity } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { KeyMetricsOverview } from '@/components/client-progress/key-metrics-overview';
 import { ProgressCharts } from '@/components/client-progress/progress-charts';
 import { HabitTracker } from '@/components/client-progress/habit-tracker';
@@ -32,7 +25,6 @@ export default function ProgressPage() {
   const router = useRouter();
   const { userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState('90');
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -95,18 +87,6 @@ export default function ProgressPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Select value={timeRange} onValueChange={setTimeRange}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select a timeframe" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30">Last 30 Days</SelectItem>
-                    <SelectItem value="90">Last 90 Days</SelectItem>
-                    <SelectItem value="180">Last 6 Months</SelectItem>
-                    <SelectItem value="365">Last Year</SelectItem>
-                    <SelectItem value="all">All Time</SelectItem>
-                  </SelectContent>
-                </Select>
                 <Button variant="outline">
                   <Share2 className="mr-2 h-4 w-4" />
                   Share

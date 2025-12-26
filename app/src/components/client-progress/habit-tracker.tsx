@@ -613,7 +613,7 @@ export function HabitTracker() {
     }
 
     return (
-        <Card className="card-hover-lift border-primary/50">
+        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 relative">
             <CardHeader>
                 <h3 className="text-xl font-semibold leading-none tracking-tight">Habit Adherence</h3>
             </CardHeader>

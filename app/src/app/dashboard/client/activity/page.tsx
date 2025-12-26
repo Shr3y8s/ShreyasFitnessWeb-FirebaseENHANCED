@@ -228,8 +228,24 @@ export default function DailyActivityPage() {
     }
   };
 
-  const handleSaveWeight = async (weight: number, unit: 'lbs' | 'kg', notes?: string) => {
+  const handleSaveWeight = async (
+    weight: number,
+    unit: 'lbs' | 'kg',
+    bodyFat?: number,
+    height?: number,
+    heightUnit?: 'in' | 'cm',
+    notes?: string
+  ) => {
     if (!user) return;
+    
+    // Calculate BMI if height is provided
+    let bmi: number | undefined;
+    if (height && height > 0) {
+      // Convert to kg and meters
+      const weightKg = unit === 'lbs' ? weight * 0.453592 : weight;
+      const heightM = heightUnit === 'in' ? height * 0.0254 : height / 100;
+      bmi = weightKg / (heightM * heightM);
+    }
     
     // Optimistic update for current weight
     setActivityData(prev => ({
@@ -239,6 +255,10 @@ export default function DailyActivityPage() {
         date: selectedDate,
         weight,
         unit,
+        bodyFat,
+        height,
+        heightUnit,
+        bmi,
         notes,
         timestamp: new Date()
       },
@@ -251,6 +271,10 @@ export default function DailyActivityPage() {
       date: selectedDate,
       weight,
       unit,
+      bodyFat,
+      height,
+      heightUnit,
+      bmi,
       notes,
       timestamp: new Date()
     };
@@ -261,7 +285,7 @@ export default function DailyActivityPage() {
     });
     
     // API call in background
-    const result = await logWeight(user.uid, selectedDate, weight, unit, notes);
+    const result = await logWeight(user.uid, selectedDate, weight, unit, bodyFat, height, heightUnit, bmi, notes);
     if (!result.success) {
       // Revert on error
       setRefreshKey(prev => prev + 1);

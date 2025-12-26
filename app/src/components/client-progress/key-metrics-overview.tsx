@@ -4,14 +4,15 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { getActivityLogsForDateRange } from '@/lib/activity-api';
+import { getActivityLogsForDateRange, getRecentWeightLogs } from '@/lib/activity-api';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
 } from '@/components/ui/card';
-import { TrendingUp, Scale, ArrowDown, Flame, Info, ArrowUp, Footprints, Pencil, Smartphone, Target, Dumbbell } from 'lucide-react';
+import { TrendingUp, ArrowDown, Flame, Info, ArrowUp, Footprints, Pencil, Smartphone, Target, Dumbbell } from 'lucide-react';
+import { FaWeight } from 'react-icons/fa';
 import {
   Tooltip,
   TooltipContent,
@@ -139,7 +140,7 @@ async function calculateHabitScore(
 const initialMetrics: Metric[] = [
     {
         id: 'weight',
-        icon: <Scale className="h-4 w-4 text-primary" />,
+        icon: <span className="h-4 w-4 text-primary inline-flex items-center justify-center"><FaWeight size={16} /></span>,
         label: 'Weight Journey',
         startWeight: "215.0 lbs",
         value: '202.0',
@@ -239,52 +240,38 @@ const MetricCard = ({ metric, onEdit, className, index }: { metric: Metric, onEd
                 )}>
                     <div className="flex items-center justify-between mb-0.5">
                         <span className="icon-hover-bounce">{metric.icon}</span>
-                        <div className="flex items-center gap-1">
-                            {metric.editable && (
-                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); onEdit(metric); }}>
-                                    <Pencil className="h-3 w-3" />
-                                </Button>
-                            )}
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Info className="h-4 w-4 text-muted-foreground/50" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="max-w-xs">{metric.tooltip}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </div>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-muted-foreground/50" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="max-w-xs">{metric.tooltip}</p>
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
                     <p className="text-xs font-medium text-primary mb-0.5">{metric.label}</p>
                     {isWeightCard ? (
                         <>
-                            <div className="flex items-baseline justify-center gap-1">
-                                <p className="text-xs font-semibold text-muted-foreground line-through">{metric.startWeight}</p>
-                                <ArrowDown className="h-3 w-3 text-muted-foreground" />
-                                <p className="text-2xl font-bold">{metric.value}</p>
-                                <span className="text-muted-foreground text-xs">lbs</span>
+                            <div className="flex flex-col items-center justify-center">
+                                <div className="flex items-baseline gap-1">
+                                    <p className="text-2xl font-bold">{metric.value}</p>
+                                    <span className="text-muted-foreground text-xs">lbs</span>
+                                </div>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                    <p className="text-xs font-semibold text-muted-foreground line-through">{metric.startWeight}</p>
+                                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                </div>
                             </div>
-                            <div className="mt-0.5 flex items-center justify-center gap-1">
-                                        <Badge
-                                            className={cn(
-                                                "text-xs font-semibold gap-1",
-                                                metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
-                                            )}
-                                        >
-                                            <TrendIcon className="h-3 w-3" />
-                                            {metric.change}
-                                        </Badge>
-                                        {metric.bf_change && (
-                                            <Badge
-                                            className={cn(
-                                                "text-xs font-semibold gap-1",
-                                                "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300"
-                                            )}
-                                        >
-                                            <ArrowDown className="h-3 w-3" />
-                                            {metric.bf_change}
-                                        </Badge>
+                            <div className="mt-0.5 flex items-center justify-center">
+                                <Badge
+                                    className={cn(
+                                        "text-xs font-semibold gap-1",
+                                        metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
                                     )}
+                                >
+                                    <TrendIcon className="h-3 w-3" />
+                                    {metric.change} ({metric.bf_change})
+                                </Badge>
                             </div>
                             <p className="text-xs text-primary mt-0.5">{metric.subtext}</p>
                         </>
@@ -336,8 +323,77 @@ export function KeyMetricsOverview() {
     const [newValue, setNewValue] = useState('');
     const [loading, setLoading] = useState(true);
     const [habitScore, setHabitScore] = useState(88); // Default mock value
+    const [weightLoading, setWeightLoading] = useState(true);
     
-    // Load real data from Firestore
+    // Load weight data
+    useEffect(() => {
+        if (!user) {
+            setWeightLoading(false);
+            return;
+        }
+
+        const loadWeightData = async () => {
+            try {
+                const weights = await getRecentWeightLogs(user.uid, 100);
+                
+                if (weights.length === 0) {
+                    setWeightLoading(false);
+                    return;
+                }
+
+                // Sort by date (oldest first)
+                const sorted = [...weights].sort((a, b) => a.date.localeCompare(b.date));
+                
+                const firstWeight = sorted[0];
+                const currentWeight = sorted[sorted.length - 1];
+                
+                // Convert to same unit for calculation (use current weight's unit)
+                let firstValue = firstWeight.weight;
+                let currentValue = currentWeight.weight;
+                const unit = currentWeight.unit;
+                
+                if (firstWeight.unit !== currentWeight.unit) {
+                    // Convert first weight to match current unit
+                    if (unit === 'lbs' && firstWeight.unit === 'kg') {
+                        firstValue = firstWeight.weight * 2.20462;
+                    } else if (unit === 'kg' && firstWeight.unit === 'lbs') {
+                        firstValue = firstWeight.weight / 2.20462;
+                    }
+                }
+                
+                const change = currentValue - firstValue;
+                const percentChange = ((change / firstValue) * 100);
+                
+                // Update weight metric
+                setMetrics(currentMetrics => 
+                    currentMetrics.map(m => {
+                        if (m.id === 'weight') {
+                            return {
+                                ...m,
+                                startWeight: `${firstValue.toFixed(1)} ${unit}`,
+                                value: currentValue.toFixed(1),
+                                unit: unit,
+                                change: `${change > 0 ? '+' : ''}${change.toFixed(1)} ${unit}`,
+                                bf_change: `${percentChange > 0 ? '+' : ''}${percentChange.toFixed(1)}%`,
+                                changeType: change <= 0 ? 'positive' as const : 'negative' as const,
+                                trend: change <= 0 ? 'down' as const : 'up' as const,
+                            };
+                        }
+                        return m;
+                    })
+                );
+                
+                setWeightLoading(false);
+            } catch (error) {
+                console.error('Error loading weight data:', error);
+                setWeightLoading(false);
+            }
+        };
+
+        loadWeightData();
+    }, [user]);
+    
+    // Load activity data for steps
     useEffect(() => {
         if (!user) {
             setLoading(false);
@@ -476,7 +532,7 @@ export function KeyMetricsOverview() {
                         <Info className="h-4 w-4" />
                         <AlertTitle>Manual Updates Required (For Now!)</AlertTitle>
                         <AlertDescription>
-                            The wearable sync feature is coming soon! Until then, please manually update your metrics by clicking the <Pencil className="inline-block h-3 w-3" /> icon on a card. We recommend updating your <b>weight</b> and optional <b>body fat %</b> after each weigh-in, and your <b>steps/streak</b> daily.
+                            The wearable sync feature is coming soon! Until then, please log your metrics in <b>Today&apos;s Activity</b> under <b>Daily Activities</b>. We recommend logging your <b>weight</b> and optional <b>body fat %</b> after each weigh-in, and your <b>steps</b> daily.
                         </AlertDescription>
                     </Alert>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">

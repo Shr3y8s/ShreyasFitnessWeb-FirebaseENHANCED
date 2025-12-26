@@ -26,6 +26,10 @@ export interface WeightLog {
   date: string; // YYYY-MM-DD format
   weight: number;
   unit: 'lbs' | 'kg';
+  bodyFat?: number; // Body fat percentage (0-100)
+  height?: number; // Height value
+  heightUnit?: 'in' | 'cm'; // Height unit
+  bmi?: number; // Calculated BMI
   notes?: string;
   timestamp: Date;
 }
