@@ -5,8 +5,9 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTodayDateString } from '@/types/activity';
+import { Button } from '@/components/ui/button';
 import { 
   getDailyActivity, 
   logSteps, 
@@ -23,6 +24,30 @@ import { WeightLogger } from '@/components/activity/WeightLogger';
 import type { DailyActivityData, WeightLog } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+// Format date for display
+const formatDateDisplay = (dateStr: string) => {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric',
+    year: 'numeric' 
+  });
+};
+
+// Get 30 days ago
+const getThirtyDaysAgo = () => {
+  const date = new Date();
+  date.setDate(date.getDate() - 30);
+  return date.toISOString().split('T')[0];
+};
+
 export default function DailyActivityPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
@@ -32,8 +57,7 @@ export default function DailyActivityPage() {
   const [recentWeights, setRecentWeights] = useState<WeightLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  const today = getTodayDateString();
+  const [selectedDate, setSelectedDate] = useState(getTodayDate());
 
   // Redirect if not authenticated or not a client
   useEffect(() => {
@@ -67,8 +91,8 @@ export default function DailyActivityPage() {
         const plan = await getClientPlan(user.uid);
         setPlanData(plan);
         
-        // Load today's activity data
-        const activity = await getDailyActivity(user.uid, today);
+        // Load activity data for selected date
+        const activity = await getDailyActivity(user.uid, selectedDate);
         setActivityData(activity);
         
         // Load recent weight logs
@@ -82,7 +106,7 @@ export default function DailyActivityPage() {
     };
 
     loadData();
-  }, [user, today, refreshKey]);
+  }, [user, selectedDate, refreshKey]);
 
   const handleLogout = async () => {
     const { signOutUser } = await import('@/lib/firebase');
@@ -105,9 +129,9 @@ export default function DailyActivityPage() {
     // Optimistic update
     setActivityData(prev => ({
       ...prev,
-      date: today,
+      date: selectedDate,
       steps: {
-        date: today,
+        date: selectedDate,
         steps,
         goal: stepGoal.target,
         timestamp: new Date()
@@ -117,7 +141,7 @@ export default function DailyActivityPage() {
     }));
     
     // API call in background
-    const result = await logSteps(user.uid, today, steps, stepGoal.target);
+    const result = await logSteps(user.uid, selectedDate, steps, stepGoal.target);
     if (!result.success) {
       // Revert on error
       setRefreshKey(prev => prev + 1);
@@ -132,9 +156,9 @@ export default function DailyActivityPage() {
     // Optimistic update
     setActivityData(prev => ({
       ...prev,
-      date: today,
+      date: selectedDate,
       water: {
-        date: today,
+        date: selectedDate,
         amount,
         unit: waterGoal.unit,
         goal: waterGoal.target,
@@ -147,7 +171,7 @@ export default function DailyActivityPage() {
     // API call in background
     const result = await logWater(
       user.uid, 
-      today, 
+      selectedDate, 
       amount, 
       waterGoal.unit, 
       waterGoal.target
@@ -182,7 +206,7 @@ export default function DailyActivityPage() {
         updatedHabits = [
           ...existingHabits,
           {
-            date: today,
+            date: selectedDate,
             habitId,
             completed,
             timestamp: new Date()
@@ -197,7 +221,7 @@ export default function DailyActivityPage() {
     });
     
     // Make API call in background
-    const result = await toggleHabit(user.uid, today, habitId, completed);
+    const result = await toggleHabit(user.uid, selectedDate, habitId, completed);
     if (!result.success) {
       // Revert on error
       setRefreshKey(prev => prev + 1);
@@ -210,9 +234,9 @@ export default function DailyActivityPage() {
     // Optimistic update for current weight
     setActivityData(prev => ({
       ...prev,
-      date: today,
+      date: selectedDate,
       weight: {
-        date: today,
+        date: selectedDate,
         weight,
         unit,
         notes,
@@ -224,20 +248,20 @@ export default function DailyActivityPage() {
     
     // Optimistic update for recent weights list
     const newWeightLog = {
-      date: today,
+      date: selectedDate,
       weight,
       unit,
       notes,
       timestamp: new Date()
     };
     setRecentWeights(prev => {
-      // Remove existing entry for today if exists, then add new one at start
-      const filtered = prev.filter(w => w.date !== today);
+      // Remove existing entry for selected date if exists, then add new one at start
+      const filtered = prev.filter(w => w.date !== selectedDate);
       return [newWeightLog, ...filtered].slice(0, 10);
     });
     
     // API call in background
-    const result = await logWeight(user.uid, today, weight, unit, notes);
+    const result = await logWeight(user.uid, selectedDate, weight, unit, notes);
     if (!result.success) {
       // Revert on error
       setRefreshKey(prev => prev + 1);
@@ -251,14 +275,6 @@ export default function DailyActivityPage() {
       </div>
     );
   }
-
-  // Format today's date for display
-  const todayDisplay = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
 
   return (
     <SidebarProvider>
@@ -274,7 +290,79 @@ export default function DailyActivityPage() {
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Daily Activities</h1>
-              <p className="text-muted-foreground mt-1">{todayDisplay}</p>
+              <p className="text-muted-foreground mt-1">Track your daily progress</p>
+            </div>
+
+            {/* Date Navigation */}
+            <div className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 rounded-lg p-4 shadow-lg">
+              <div className="mb-3 text-center">
+                <p className="text-sm font-semibold text-foreground">
+                  Logging activity data for:{' '}
+                  <span className="text-primary">{formatDateDisplay(selectedDate)}</span>
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                {/* Previous Day Arrow */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const date = new Date(selectedDate);
+                    date.setDate(date.getDate() - 1);
+                    const newDate = date.toISOString().split('T')[0];
+                    if (newDate >= getThirtyDaysAgo()) {
+                      setSelectedDate(newDate);
+                    }
+                  }}
+                  disabled={selectedDate <= getThirtyDaysAgo()}
+                  className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                  title="Previous Day"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+
+                {/* Date Picker */}
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  max={getTodayDate()}
+                  min={getThirtyDaysAgo()}
+                  className="px-4 py-2 border-2 border-primary/30 rounded-md bg-background text-foreground text-base font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                />
+
+                {/* Next Day Arrow */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const date = new Date(selectedDate);
+                    date.setDate(date.getDate() + 1);
+                    const newDate = date.toISOString().split('T')[0];
+                    if (newDate <= getTodayDate()) {
+                      setSelectedDate(newDate);
+                    }
+                  }}
+                  disabled={selectedDate >= getTodayDate()}
+                  className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                  title="Next Day"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+
+                {/* Jump to Today Button - only shown when not on today */}
+                {selectedDate !== getTodayDate() && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setSelectedDate(getTodayDate())}
+                    className="font-semibold px-4"
+                  >
+                    Jump to Today
+                  </Button>
+                )}
+              </div>
             </div>
 
             {loading ? (

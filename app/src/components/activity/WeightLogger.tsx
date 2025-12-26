@@ -102,7 +102,7 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
   const trend = getTrend();
 
   return (
-    <Card>
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Scale className="h-5 w-5 text-primary" />
@@ -140,38 +140,38 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
           </div>
         )}
 
-        {/* Unit Selector */}
+        {/* Unit Selector - Compact Segmented Control */}
         <div className="space-y-2">
           <label className="text-sm font-medium">Unit</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="inline-flex rounded-lg border border-border p-1 bg-muted/50">
             <button
               type="button"
               onClick={() => handleUnitChange('lbs')}
-              className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
                 unit === 'lbs'
-                  ? 'bg-primary text-white border-primary'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               disabled={saving}
             >
-              Pounds (lbs)
+              lbs
             </button>
             <button
               type="button"
               onClick={() => handleUnitChange('kg')}
-              className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
                 unit === 'kg'
-                  ? 'bg-primary text-white border-primary'
-                  : 'hover:bg-gray-50'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
               disabled={saving}
             >
-              Kilograms (kg)
+              kg
             </button>
           </div>
         </div>
 
-        {/* Weight Input */}
+        {/* Weight Input with Inline Button */}
         <div className="space-y-2">
           <label className="text-sm font-medium">
             Today's Weight *
@@ -189,6 +189,23 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
             <span className="flex items-center px-3 py-2 border rounded-lg bg-gray-50 text-muted-foreground font-medium">
               {unit}
             </span>
+            <Button
+              onClick={handleSave}
+              disabled={saving || !weight || parseFloat(weight) <= 0}
+              size="default"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {currentLog ? 'Update' : 'Log'}
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -206,26 +223,6 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
             disabled={saving}
           />
         </div>
-
-        {/* Save Button */}
-        <Button
-          onClick={handleSave}
-          disabled={saving || !weight || parseFloat(weight) <= 0}
-          className="w-full"
-          size="lg"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              {currentLog ? 'Update Weight' : 'Log Weight'}
-            </>
-          )}
-        </Button>
 
         {/* Recent History */}
         {recentLogs.length > 0 && (

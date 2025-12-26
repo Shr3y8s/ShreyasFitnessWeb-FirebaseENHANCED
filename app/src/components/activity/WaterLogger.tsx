@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Droplets, Save, Loader2, Plus, Minus } from 'lucide-react';
+import { Droplets, Save, Loader2, Plus, Minus, Check } from 'lucide-react';
+import { CircularProgress } from '@/components/ui/circular-progress';
 import { DailyWaterLog } from '@/types/activity';
 
 interface WaterLoggerProps {
@@ -60,6 +61,20 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
     }
   };
 
+  const handleCompleteGoal = async () => {
+    setSaving(true);
+    try {
+      setAmount(goal.toString());
+      await onSave(goal);
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Error completing goal:', error);
+      alert('Failed to complete goal. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const currentAmount = parseFloat(amount) || 0;
   const percentage = goal > 0 ? Math.min((currentAmount / goal) * 100, 100) : 0;
 
@@ -71,7 +86,7 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
     : [1, 2, 3]; // Cups
 
   return (
-    <Card>
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Droplets className="h-5 w-5 text-blue-500" />
@@ -79,30 +94,46 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">
-              {currentAmount} / {goal} {unit}
-            </span>
+        {/* Progress Ring with Stats and Complete Button */}
+        <div className="flex items-center gap-4">
+          {/* Circular Progress Ring */}
+          <CircularProgress 
+            percentage={percentage} 
+            size={80}
+            strokeWidth={8}
+          />
+          
+          {/* Stats */}
+          <div className="flex-1">
+            <p className="text-2xl font-bold text-foreground">
+              {currentAmount}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              of {goal} {unit}
+            </p>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                percentage >= 100 ? 'bg-green-500' : 'bg-blue-500'
-              }`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground text-right">
-            {percentage.toFixed(0)}% of goal
-          </p>
+
+          {/* Complete Goal Button */}
+          <Button
+            onClick={handleCompleteGoal}
+            disabled={saving}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-1" />
+                Complete
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Quick Add Buttons */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Quick Add</label>
+        <div className="space-y-2 pt-2 border-t">
+          <label className="text-sm font-medium text-muted-foreground">Quick Add</label>
           <div className="grid grid-cols-3 gap-2">
             {quickAddAmounts.map((addAmount) => (
               <Button
@@ -122,8 +153,8 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
 
         {/* Manual Input */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Total Today ({unit})
+          <label className="text-sm font-medium text-muted-foreground">
+            Or Enter Custom Amount
           </label>
           <div className="flex gap-2">
             <div className="flex items-center flex-1 border rounded-lg">
@@ -158,7 +189,7 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
             <Button
               onClick={handleSave}
               disabled={!hasChanges || saving}
-              size="lg"
+              size="default"
             >
               {saving ? (
                 <>

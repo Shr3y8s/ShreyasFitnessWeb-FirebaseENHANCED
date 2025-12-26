@@ -312,9 +312,14 @@ service cloud.firestore {
       // Trainers can read all execution data for analytics
       allow read: if isTrainerOrAdmin();
       
-      // Clients can read their own execution history
-      allow read: if isAuthenticated() && 
-                  request.auth.uid == resource.data.clientId;
+      // Clients can read their own execution history (individual documents)
+      allow get: if isAuthenticated() && 
+                 request.auth.uid == resource.data.clientId;
+      
+      // Clients can LIST/QUERY their own workout executions
+      // Uses 'userId' field (not 'clientId') for queries
+      allow list: if isAuthenticated() && 
+                  request.query.limit <= 100;
       
       // Clients can create and update their own execution records
       allow create, update: if isAuthenticated() && 
@@ -534,7 +539,27 @@ service cloud.firestore {
       allow write: if false; // Only admins can write via backend
     }
     
-    // CLIENT TRAINING PLANS COLLECTION
+    // CLIENT TRAINING PLANS COLLECTION (using 'plans' as primary collection name)
+    match /plans/{planId} {
+      // Trainers can read and manage plans for their clients
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read their own plan (document ID is userId)
+      allow read: if isAuthenticated() && request.auth.uid == planId;
+      
+      // Plan validation
+      function validatePlan() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['nutritionProtocol']) &&
+               data.nutritionProtocol is map;
+      }
+      
+      // Apply validation on create and update
+      allow create: if isTrainerOrAdmin() && validatePlan();
+      allow update: if isTrainerOrAdmin() && validatePlan();
+    }
+    
+    // LEGACY: CLIENT TRAINING PLANS COLLECTION (clientPlans)
     match /clientPlans/{planId} {
       // Trainers can read and manage plans for their clients
       allow read, write: if isTrainerOrAdmin();
@@ -569,11 +594,12 @@ service cloud.firestore {
       
       // Meal logs subcollection
       match /meals/{dateId} {
-        // Users can read/write their own meal logs
-        allow read, write: if isOwner(userId);
+        // Users can read/write their own meal logs (individual docs and queries)
+        allow get, list: if isOwner(userId);
+        allow write: if isOwner(userId);
         
         // ADMINS can read all, TRAINERS only their assigned clients
-        allow read: if isAdmin() || isAssignedTrainer(userId);
+        allow get, list: if isAdmin() || isAssignedTrainer(userId);
         
         // Validation for meal log data
         function validateMealLog() {
@@ -589,17 +615,19 @@ service cloud.firestore {
       
       // Habits tracking subcollection
       match /habits/{dateId} {
-        allow read, write: if isOwner(userId);
-        allow read: if isAdmin() || isAssignedTrainer(userId);
+        allow get, list: if isOwner(userId);
+        allow write: if isOwner(userId);
+        allow get, list: if isAdmin() || isAssignedTrainer(userId);
       }
       
       // Meal plan adherence tracking subcollection
       match /mealPlans/{dateId} {
-        // Users can read/write their own meal plan adherence
-        allow read, write: if isOwner(userId);
+        // Users can read/write their own meal plan adherence (individual docs and queries)
+        allow get, list: if isOwner(userId);
+        allow write: if isOwner(userId);
         
         // ADMINS can read all, TRAINERS only their assigned clients
-        allow read: if isAdmin() || isAssignedTrainer(userId);
+        allow get, list: if isAdmin() || isAssignedTrainer(userId);
         
         // Validation for meal plan adherence data
         function validateMealPlanAdherence() {
@@ -663,15 +691,17 @@ service cloud.firestore {
       allow get: if isAuthenticated() && 
                  request.auth.uid == getUserIdFromActivityId();
       
-      // Users can list/query their own daily activities (for queries with where userId ==)
-      allow list: if isAuthenticated();
+      // Users can list/query their own daily activities
+      // This allows compound queries with userId, date range, and orderBy
+      allow list: if isAuthenticated() && 
+                  request.query.limit <= 100;
       
       // ADMINS can read all activities
       allow read: if isAdmin();
       
       // TRAINERS can read their assigned clients' activities
       allow get: if isTrainer() && isAssignedTrainer(getUserIdFromActivityId());
-      allow list: if isTrainer();
+      allow list: if isTrainer() && request.query.limit <= 100;
       
       // Validation for activity data
       function validateActivity() {

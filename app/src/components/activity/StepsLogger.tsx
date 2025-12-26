@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Activity, Save, Loader2 } from 'lucide-react';
+import { Footprints, Save, Loader2, Check } from 'lucide-react';
+import { CircularProgress } from '@/components/ui/circular-progress';
 import { DailyStepsLog } from '@/types/activity';
 
 interface StepsLoggerProps {
@@ -50,43 +51,73 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
     }
   };
 
+  const handleCompleteGoal = async () => {
+    setSaving(true);
+    try {
+      setSteps(goal.toString());
+      await onSave(goal);
+      setHasChanges(false);
+    } catch (error) {
+      console.error('Error completing goal:', error);
+      alert('Failed to complete goal. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const currentSteps = parseInt(steps) || 0;
   const percentage = goal > 0 ? Math.min((currentSteps / goal) * 100, 100) : 0;
 
   return (
-    <Card>
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Activity className="h-5 w-5 text-primary" />
+          <Footprints className="h-5 w-5 text-primary" />
           Daily Steps
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">
-              {currentSteps.toLocaleString()} / {goal.toLocaleString()} steps
-            </span>
+        {/* Progress Ring with Stats and Complete Button */}
+        <div className="flex items-center gap-4">
+          {/* Circular Progress Ring */}
+          <CircularProgress 
+            percentage={percentage} 
+            size={80}
+            strokeWidth={8}
+          />
+          
+          {/* Stats */}
+          <div className="flex-1">
+            <p className="text-2xl font-bold text-foreground">
+              {currentSteps.toLocaleString()}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              of {goal.toLocaleString()} steps
+            </p>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
-                percentage >= 100 ? 'bg-green-500' : 'bg-primary'
-              }`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground text-right">
-            {percentage.toFixed(0)}% of goal
-          </p>
+
+          {/* Complete Goal Button */}
+          <Button
+            onClick={handleCompleteGoal}
+            disabled={saving}
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-1" />
+                Complete
+              </>
+            )}
+          </Button>
         </div>
 
-        {/* Input */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">
-            Log Today's Steps
+        {/* Input Section */}
+        <div className="space-y-2 pt-2 border-t">
+          <label className="text-sm font-medium text-muted-foreground">
+            Or Enter Custom Amount
           </label>
           <div className="flex gap-2">
             <input
@@ -95,13 +126,13 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
               value={steps}
               onChange={(e) => handleStepsChange(e.target.value)}
               placeholder="Enter steps"
-              className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-lg font-semibold"
+              className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={saving}
             />
             <Button
               onClick={handleSave}
               disabled={!hasChanges || saving || !steps}
-              size="lg"
+              size="default"
             >
               {saving ? (
                 <>

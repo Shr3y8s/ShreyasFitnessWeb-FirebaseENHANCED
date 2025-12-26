@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { registerListener, unregisterListener } from '@/lib/listener-registry';
+import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { getActivityLogsForDateRange } from '@/lib/activity-api';
 import {
   Card,
   CardContent,
@@ -65,22 +65,75 @@ function calculateAverage(numbers: number[]): number {
     return Math.round(sum / numbers.length);
 }
 
-function calculateHabitScore(logs: any[]): number {
-    if (logs.length === 0) return 0;
-    
-    let totalHabits = 0;
-    let completedHabits = 0;
-    
-    logs.forEach(log => {
-        if (log.habitCheckins) {
-            const habits = Object.values(log.habitCheckins);
-            totalHabits += habits.length;
-            completedHabits += habits.filter(Boolean).length;
+// Calculate habit score based on 4 core habits (nutrition, workouts, steps, water)
+async function calculateHabitScore(
+    userId: string,
+    sevenDaysAgoStr: string,
+    todayStr: string,
+    weeklyActivities: any[]
+): Promise<number> {
+    try {
+        // Get nutrition approach
+        const planSnap = await getDoc(doc(db, 'clientPlans', userId));
+        const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macros';
+        const nutritionSubcollection = nutritionApproach === 'macros' ? 'meals' :
+                                      nutritionApproach === 'meal-plan' ? 'mealPlans' :
+                                      'habits';
+
+        // Get nutrition and workout data for the week
+        const [nutritionSnap, workoutSnap] = await Promise.all([
+            getDocs(query(
+                collection(db, 'nutritionLogs', userId, nutritionSubcollection),
+                where('__name__', '>=', sevenDaysAgoStr),
+                where('__name__', '<=', todayStr),
+                limit(10)
+            )),
+            getDocs(query(
+                collection(db, 'workoutExecutions'),
+                where('clientId', '==', userId),
+                where('completionStatus', '==', 'completed'),
+                limit(50)
+            ))
+        ]);
+
+        // Count completed habits for each of 7 days
+        let totalPossibleHabits = 7 * 4; // 7 days × 4 habits
+        let completedHabits = 0;
+
+        // For each day, check all 4 habits
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+
+            // 1. Nutrition (dayComplete)
+            const nutritionDay = nutritionSnap.docs.find(doc => doc.id === dateStr);
+            if (nutritionDay?.data().dayComplete) completedHabits++;
+
+            // 2. Workout (any completed workout)
+            const workoutDay = workoutSnap.docs.some(doc => {
+                const completedDate = doc.data().completedDate?.toDate();
+                return completedDate && completedDate.toISOString().split('T')[0] === dateStr;
+            });
+            if (workoutDay) completedHabits++;
+
+            // 3. Steps (met goal)
+            const activity = weeklyActivities.find(a => a.date === dateStr);
+            if (activity?.steps && activity.steps.steps >= activity.steps.goal) {
+                completedHabits++;
+            }
+
+            // 4. Water (met goal)
+            if (activity?.water && activity.water.amount >= activity.water.goal) {
+                completedHabits++;
+            }
         }
-    });
-    
-    if (totalHabits === 0) return 0;
-    return Math.round((completedHabits / totalHabits) * 100);
+
+        return Math.round((completedHabits / totalPossibleHabits) * 100);
+    } catch (error) {
+        console.error('Error calculating habit score:', error);
+        return 0;
+    }
 }
 
 const initialMetrics: Metric[] = [
@@ -149,7 +202,11 @@ const HabitConsistencyCard = ({ index, score, loading }: { index?: number, score
                             <Info className="h-4 w-4 text-muted-foreground/50" />
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p className="max-w-xs">Your adherence to core habits. Aim for 80% or more!</p>
+                            <p className="max-w-xs">
+                                Your consistency score for the last 7 days across 4 core habits (Nutrition, Workouts, Steps, Water). 
+                                Each day you complete a habit counts toward your score (max 28 completions per week). 
+                                New users will see lower scores initially - keep logging daily to build your consistency!
+                            </p>
                         </TooltipContent>
                     </Tooltip>
                 </div>
@@ -287,60 +344,75 @@ export function KeyMetricsOverview() {
             return;
         }
         
-        // Get last 7 days date range
-        const today = new Date();
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(today.getDate() - 7);
-        
-        // Query activity logs
-        const logsRef = collection(db, 'dailyActivityLogs', user.uid, 'logs');
-        const q = query(
-            logsRef,
-            where('date', '>=', formatDate(sevenDaysAgo)),
-            orderBy('date', 'desc')
-        );
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const logs = snapshot.docs.map(doc => doc.data());
-            
-            // Calculate steps metrics
-            const todayLog = logs.find(l => l.date === formatDate(today));
-            const todaySteps = todayLog?.steps || 0;
-            const avgSteps = calculateAverage(logs.map(l => l.steps || 0));
-            const change = todaySteps - avgSteps;
-            
-            // Calculate habit score
-            const score = calculateHabitScore(logs);
-            setHabitScore(score);
-            
-            // Update metrics with real data
-            setMetrics(currentMetrics => 
-                currentMetrics.map(m => {
-                    if (m.id === 'steps') {
-                        return {
-                            ...m,
-                            value: todaySteps.toString(),
-                            avg: avgSteps.toString(),
-                            change: change > 0 ? `+${change}` : change.toString(),
-                            changeType: change >= 0 ? 'positive' as const : 'negative' as const,
-                            trend: change >= 0 ? 'up' as const : 'down' as const,
-                        };
-                    }
-                    return m;
-                })
-            );
-            
-            setLoading(false);
-        }, (error) => {
-            console.error('Error loading activity data:', error);
-            setLoading(false);
-        });
-        
-        registerListener(unsubscribe);
-        return () => {
-            unregisterListener(unsubscribe);
-            unsubscribe();
+        const loadActivityData = async () => {
+            try {
+                setLoading(true);
+                
+                // Get date strings
+                const today = new Date();
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(today.getDate() - 6); // Last 7 days including today
+                
+                const todayStr = formatDate(today);
+                const sevenDaysAgoStr = formatDate(sevenDaysAgo);
+                
+                // Get today's activity and last 7 days
+                const [todayActivity, weeklyActivities] = await Promise.all([
+                    getDoc(doc(db, 'dailyActivities', `${user.uid}_${todayStr}`)),
+                    getActivityLogsForDateRange(user.uid, sevenDaysAgoStr, todayStr)
+                ]);
+                
+                // Extract steps data from nested structure
+                const getTodaySteps = () => {
+                    if (!todayActivity.exists()) return 0;
+                    const data = todayActivity.data();
+                    return data?.steps?.steps || 0;
+                };
+                
+                const todaySteps = getTodaySteps();
+                
+                // Calculate average from weekly activities (nested structure)
+                const weeklyStepsValues = weeklyActivities.map(activity => {
+                    return activity?.steps?.steps || 0;
+                });
+                const avgSteps = calculateAverage(weeklyStepsValues);
+                
+                const change = todaySteps - avgSteps;
+                
+                // Calculate habit score from real data (4 habits × 7 days)
+                const score = await calculateHabitScore(
+                    user.uid,
+                    sevenDaysAgoStr,
+                    todayStr,
+                    weeklyActivities
+                );
+                setHabitScore(score);
+                
+                // Update metrics with real data
+                setMetrics(currentMetrics => 
+                    currentMetrics.map(m => {
+                        if (m.id === 'steps') {
+                            return {
+                                ...m,
+                                value: todaySteps.toString(),
+                                avg: avgSteps.toString(),
+                                change: change > 0 ? `+${change}` : change.toString(),
+                                changeType: change >= 0 ? 'positive' as const : 'negative' as const,
+                                trend: change >= 0 ? 'up' as const : 'down' as const,
+                            };
+                        }
+                        return m;
+                    })
+                );
+                
+                setLoading(false);
+            } catch (error) {
+                console.error('Error loading activity data:', error);
+                setLoading(false);
+            }
         };
+        
+        loadActivityData();
     }, [user]);
 
     const handleEdit = (metric: Metric) => {

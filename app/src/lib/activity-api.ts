@@ -352,6 +352,73 @@ export async function logWeight(
 }
 
 /**
+ * Get activity logs for a date range
+ * Returns activity data for multiple dates
+ */
+export async function getActivityLogsForDateRange(
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<DailyActivityData[]> {
+  try {
+    const activitiesRef = collection(db, ACTIVITIES_COLLECTION);
+    // Simplified query without orderBy to avoid permissions issues
+    // We'll sort the results in JavaScript instead
+    // Must include limit to match Firestore rules requirement (limit <= 100)
+    const q = query(
+      activitiesRef,
+      where('userId', '==', userId),
+      where('date', '>=', startDate),
+      where('date', '<=', endDate),
+      limit(100)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const activities: DailyActivityData[] = [];
+    
+    querySnapshot.docs.forEach(docSnap => {
+      const data = docSnap.data();
+      activities.push({
+        date: data.date,
+        steps: data.steps ? {
+          date: data.steps.date,
+          steps: data.steps.steps,
+          goal: data.steps.goal,
+          timestamp: timestampToDate(data.steps.timestamp)
+        } : undefined,
+        water: data.water ? {
+          date: data.water.date,
+          amount: data.water.amount,
+          unit: data.water.unit,
+          goal: data.water.goal,
+          timestamp: timestampToDate(data.water.timestamp)
+        } : undefined,
+        habits: (data.habits || []).map((habit: any) => ({
+          date: habit.date,
+          habitId: habit.habitId,
+          completed: habit.completed,
+          timestamp: timestampToDate(habit.timestamp)
+        })),
+        weight: data.weight ? {
+          date: data.weight.date,
+          weight: data.weight.weight,
+          unit: data.weight.unit,
+          notes: data.weight.notes,
+          timestamp: timestampToDate(data.weight.timestamp)
+        } : undefined,
+        updatedAt: timestampToDate(data.updatedAt)
+      });
+    });
+    
+    // Sort by date descending in JavaScript
+    return activities.sort((a, b) => b.date.localeCompare(a.date));
+  } catch (error) {
+    console.error('Error getting activity logs for date range:', error);
+    return [];
+  }
+}
+
+/**
  * Get recent weight logs for progress tracking
  * Returns the last N weight entries
  */
