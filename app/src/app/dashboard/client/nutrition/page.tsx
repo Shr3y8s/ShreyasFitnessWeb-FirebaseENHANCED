@@ -63,7 +63,6 @@ export default function NutritionPage() {
   });
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
   const [dayComplete, setDayComplete] = useState(false);
-  const [waterIntake, setWaterIntake] = useState(0);
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -72,8 +71,7 @@ export default function NutritionPage() {
     calories: 2500,
     protein: 180,
     carbs: 250,
-    fat: 70,
-    water: 128 // 1 gallon in oz
+    fat: 70
   });
   const [nutritionApproach, setNutritionApproach] = useState<any>(null);
   const [trainerName, setTrainerName] = useState('Your Coach');
@@ -165,8 +163,7 @@ export default function NutritionPage() {
               calories: Number(targets.calories) || 2500,
               protein: Number(targets.protein) || 180,
               carbs: Number(targets.carbs) || 250,
-              fat: Number(targets.fats) || 70,
-              water: 128
+              fat: Number(targets.fats) || 70
             });
           }
           
@@ -221,7 +218,6 @@ export default function NutritionPage() {
           Dinner: [],
           Snacks: [],
         });
-        setWaterIntake(data.waterIntake || 0);
         setDayComplete(data.dayComplete || false);
         setScreenshotUrl(data.screenshotUrl || null);
       } else {
@@ -232,7 +228,6 @@ export default function NutritionPage() {
           Dinner: [],
           Snacks: [],
         });
-        setWaterIntake(0);
         setDayComplete(false);
         setScreenshotUrl(null);
       }
@@ -512,17 +507,8 @@ export default function NutritionPage() {
           }
         }
 
-        // Calculate water streak
-        let waterStreak = 0;
-        for (const log of logs) {
-          if (log.data && log.data.waterIntake >= dailyGoals.water * 0.8) { // Within 80% of goal
-            waterStreak++;
-          } else {
-            break;
-          }
-        }
-
-        setStreaks({ proteinStreak, loggingStreak, waterStreak });
+        // Water streak is no longer calculated here (water tracked in Daily Activities)
+        setStreaks({ proteinStreak, loggingStreak, waterStreak: 0 });
       } catch (error) {
         // Only log error if component is still mounted (not during logout)
         if (isMounted && user) {
@@ -539,7 +525,7 @@ export default function NutritionPage() {
   }, [user, dailyGoals]);
 
   // Save daily log to Firebase with auto-detect completion
-  const saveDailyLog = async (meals: Record<MealCategory, FoodItem[]>, water: number) => {
+  const saveDailyLog = async (meals: Record<MealCategory, FoodItem[]>) => {
     if (!user || !selectedDate) return;
 
     try {
@@ -551,7 +537,6 @@ export default function NutritionPage() {
       
       await setDoc(logRef, {
         meals,
-        waterIntake: water,
         dayComplete: isComplete,
         lastUpdated: Timestamp.now(),
       }, { merge: true });
@@ -585,23 +570,7 @@ export default function NutritionPage() {
       [meal]: updatedItems
     };
     setDailyLog(updatedLog);
-    saveDailyLog(updatedLog, waterIntake);
-  };
-
-  const handleAddWater = () => {
-    if (waterIntake < dailyGoals.water) {
-      const newWater = waterIntake + 16;
-      setWaterIntake(newWater);
-      saveDailyLog(dailyLog, newWater);
-    }
-  };
-
-  const handleRemoveWater = () => {
-    if (waterIntake > 0) {
-      const newWater = Math.max(0, waterIntake - 16);
-      setWaterIntake(newWater);
-      saveDailyLog(dailyLog, newWater);
-    }
+    saveDailyLog(updatedLog);
   };
 
   const handleScreenshotUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -848,10 +817,6 @@ export default function NutritionPage() {
                 carbsGoal={dailyGoals.carbs}
                 fatsConsumed={dailyTotals.fat}
                 fatsGoal={dailyGoals.fat}
-                waterConsumed={waterIntake}
-                waterGoal={dailyGoals.water}
-                onAddWater={handleAddWater}
-                onRemoveWater={handleRemoveWater}
               />
             )}
 

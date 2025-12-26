@@ -24,8 +24,8 @@ export interface WeeklySurveyAdherence {
 
 export interface WeeklySurveyData {
   userId: string;
-  weekStartDate: string;  // "2024-01-15" (Monday)
-  weekEndDate: string;    // "2024-01-21" (Sunday)
+  weekStartDate: string;  // "2024-01-14" (Sunday)
+  weekEndDate: string;    // "2024-01-20" (Saturday)
   ratings: WeeklySurveyRatings;
   adherence: WeeklySurveyAdherence;
   wins: string;
@@ -35,48 +35,48 @@ export interface WeeklySurveyData {
 }
 
 /**
- * Get the current week's date range (Monday to Sunday)
- * Returns { startDate: "2024-01-15", endDate: "2024-01-21" }
+ * Get the current week's date range (Sunday to Saturday)
+ * Returns { startDate: "2024-01-14", endDate: "2024-01-20" }
  */
 export function getCurrentWeekRange(): { startDate: string; endDate: string } {
   const today = new Date();
-  const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+  const dayOfWeek = today.getUTCDay(); // 0 (Sunday) to 6 (Saturday)
   
-  // Calculate days to Monday (start of week)
-  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  // Calculate days to Sunday (start of week)
+  const daysToSunday = -dayOfWeek;
   
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + daysToMonday);
-  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(today);
+  sunday.setUTCDate(today.getUTCDate() + daysToSunday);
+  sunday.setUTCHours(0, 0, 0, 0);
   
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
+  const saturday = new Date(sunday);
+  saturday.setUTCDate(sunday.getUTCDate() + 6);
+  saturday.setUTCHours(23, 59, 59, 999);
   
   return {
-    startDate: monday.toISOString().split('T')[0],
-    endDate: sunday.toISOString().split('T')[0]
+    startDate: sunday.toISOString().split('T')[0],
+    endDate: saturday.toISOString().split('T')[0]
   };
 }
 
 /**
- * Get week range for a specific date
+ * Get week range for a specific date (Sunday to Saturday)
  */
 export function getWeekRangeForDate(date: Date): { startDate: string; endDate: string } {
-  const dayOfWeek = date.getDay();
-  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const dayOfWeek = date.getUTCDay();
+  const daysToSunday = -dayOfWeek;
   
-  const monday = new Date(date);
-  monday.setDate(date.getDate() + daysToMonday);
-  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(date);
+  sunday.setUTCDate(date.getUTCDate() + daysToSunday);
+  sunday.setUTCHours(0, 0, 0, 0);
   
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23, 59, 59, 999);
+  const saturday = new Date(sunday);
+  saturday.setUTCDate(sunday.getUTCDate() + 6);
+  saturday.setUTCHours(23, 59, 59, 999);
   
   return {
-    startDate: monday.toISOString().split('T')[0],
-    endDate: sunday.toISOString().split('T')[0]
+    startDate: sunday.toISOString().split('T')[0],
+    endDate: saturday.toISOString().split('T')[0]
   };
 }
 
@@ -199,8 +199,8 @@ export async function getRecentSurveys(
  * e.g., "Jan 15 - Jan 21, 2024"
  */
 export function formatWeekRange(startDate: string, endDate: string): string {
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
+  const start = new Date(startDate + 'T00:00:00Z');
+  const end = new Date(endDate + 'T00:00:00Z');
   
   const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const startStr = start.toLocaleDateString('en-US', options);
@@ -210,36 +210,50 @@ export function formatWeekRange(startDate: string, endDate: string): string {
 }
 
 /**
- * Get the Monday of the previous week
+ * Get the Sunday of the previous week
+ * Always normalizes to Sunday even if input is not a Sunday
  */
 export function getPreviousWeekStart(weekStartDate: string): string {
-  const date = new Date(weekStartDate + 'T00:00:00');
-  date.setDate(date.getDate() - 7);
+  const date = new Date(weekStartDate + 'T00:00:00Z');
+  date.setUTCDate(date.getUTCDate() - 7);
+  
+  // Normalize to Sunday of that week
+  const dayOfWeek = date.getUTCDay();
+  const daysToSunday = -dayOfWeek;
+  date.setUTCDate(date.getUTCDate() + daysToSunday);
+  
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Get the Monday of the next week
+ * Get the Sunday of the next week
+ * Always normalizes to Sunday even if input is not a Sunday
  */
 export function getNextWeekStart(weekStartDate: string): string {
-  const date = new Date(weekStartDate + 'T00:00:00');
-  date.setDate(date.getDate() + 7);
+  const date = new Date(weekStartDate + 'T00:00:00Z');
+  date.setUTCDate(date.getUTCDate() + 7);
+  
+  // Normalize to Sunday of that week
+  const dayOfWeek = date.getUTCDay();
+  const daysToSunday = -dayOfWeek;
+  date.setUTCDate(date.getUTCDate() + daysToSunday);
+  
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Get the Monday of 2 weeks ago (oldest selectable week)
+ * Get the Sunday of 4 weeks ago (oldest selectable week)
  */
-export function getTwoWeeksAgo(): string {
+export function getFourWeeksAgo(): string {
   const today = new Date();
-  const dayOfWeek = today.getDay();
-  const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const dayOfWeek = today.getUTCDay();
+  const daysToSunday = -dayOfWeek;
   
-  const thisMonday = new Date(today);
-  thisMonday.setDate(today.getDate() + daysToMonday);
-  thisMonday.setDate(thisMonday.getDate() - 14); // Go back 2 weeks
+  const thisSunday = new Date(today);
+  thisSunday.setUTCDate(today.getUTCDate() + daysToSunday);
+  thisSunday.setUTCDate(thisSunday.getUTCDate() - 28); // Go back 4 weeks
   
-  return thisMonday.toISOString().split('T')[0];
+  return thisSunday.toISOString().split('T')[0];
 }
 
 /**
@@ -255,9 +269,9 @@ export async function submitWeeklySurveyForWeek(
 ): Promise<{ success: boolean; error?: string; weekStartDate?: string }> {
   try {
     // Calculate end date from start date
-    const startDate = new Date(weekStartDate + 'T00:00:00');
+    const startDate = new Date(weekStartDate + 'T00:00:00Z');
     const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
+    endDate.setUTCDate(startDate.getUTCDate() + 6);
     
     const surveyData: WeeklySurveyData = {
       userId,

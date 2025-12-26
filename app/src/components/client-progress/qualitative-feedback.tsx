@@ -16,7 +16,7 @@ import {
   formatWeekRange,
   getPreviousWeekStart,
   getNextWeekStart,
-  getTwoWeeksAgo,
+  getFourWeeksAgo,
   type WeeklySurveyRatings,
   type WeeklySurveyAdherence
 } from '@/lib/survey-api'
@@ -206,7 +206,7 @@ export function QualitativeFeedback() {
     // Helper functions for week navigation
     const handlePreviousWeek = () => {
         const prevWeek = getPreviousWeekStart(selectedWeekStart);
-        const minWeek = getTwoWeeksAgo();
+        const minWeek = getFourWeeksAgo();
         if (prevWeek >= minWeek) {
             setSelectedWeekStart(prevWeek);
         }
@@ -227,7 +227,7 @@ export function QualitativeFeedback() {
 
     // Check if we're viewing the current week
     const isCurrentWeek = selectedWeekStart === getCurrentWeekRange().startDate;
-    const isOldestWeek = selectedWeekStart === getTwoWeeksAgo();
+    const isOldestWeek = selectedWeekStart === getFourWeeksAgo();
 
     return (
         <div className="space-y-6">

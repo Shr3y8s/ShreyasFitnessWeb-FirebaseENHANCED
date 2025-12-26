@@ -18,10 +18,6 @@ interface NutritionCommandCenterProps {
   carbsGoal: number;
   fatsConsumed: number;
   fatsGoal: number;
-  waterConsumed: number;
-  waterGoal: number;
-  onAddWater: () => void;
-  onRemoveWater: () => void;
 }
 
 export function NutritionCommandCenter({
@@ -33,17 +29,12 @@ export function NutritionCommandCenter({
   carbsGoal,
   fatsConsumed,
   fatsGoal,
-  waterConsumed,
-  waterGoal,
-  onAddWater,
-  onRemoveWater,
 }: NutritionCommandCenterProps) {
   // Calculate progress percentages
   const calorieProgress = (caloriesConsumed / calorieGoal) * 100;
   const proteinProgress = (proteinConsumed / proteinGoal) * 100;
   const carbsProgress = (carbsConsumed / carbsGoal) * 100;
   const fatsProgress = (fatsConsumed / fatsGoal) * 100;
-  const waterProgress = (waterConsumed / waterGoal) * 100;
 
   // Calorie status
   const calorieDifference = Math.abs(calorieGoal - caloriesConsumed);
@@ -59,8 +50,7 @@ export function NutritionCommandCenter({
     calorieState === 'met' &&
     proteinConsumed >= proteinGoal &&
     carbsConsumed >= carbsGoal &&
-    fatsConsumed >= fatsGoal &&
-    waterConsumed >= waterGoal;
+    fatsConsumed >= fatsGoal;
 
   const { celebrate } = useConfetti();
   const hasTriggeredConfetti = useRef(false);
@@ -82,7 +72,7 @@ export function NutritionCommandCenter({
       <CardContent className="p-6">
         <div className="space-y-6">
           {/* Main Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Calories */}
             <div className="flex flex-col items-center space-y-2">
               <p className="text-sm font-bold text-foreground">Calories</p>
@@ -210,58 +200,6 @@ export function NutritionCommandCenter({
                       {fatsGoal - fatsConsumed}g left
                     </p>
                   )}
-                </div>
-              </div>
-            </div>
-
-            {/* Water */}
-            <div className="flex flex-col items-center space-y-2">
-              <p className="text-sm font-bold text-foreground">Water</p>
-              <div className="flex flex-col items-center gap-2">
-                <CircularProgress 
-                  value={waterProgress} 
-                  size={70}
-                  strokeWidth={7}
-                  className="text-blue-500"
-                >
-                  <Droplets className="w-5 h-5 text-blue-500" />
-                </CircularProgress>
-                <div className="text-center space-y-0.5">
-                  <p className="text-lg">
-                    <span className="font-bold">{waterConsumed}oz</span>
-                    <span className="text-muted-foreground"> / </span>
-                    <span className="font-bold text-muted-foreground">{waterGoal}oz</span>
-                  </p>
-                  {waterConsumed >= waterGoal ? (
-                    <div className="flex items-center justify-center gap-1 text-green-500">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Goal Met!</span>
-                    </div>
-                  ) : (
-                    <p className="text-sm font-semibold text-green-600">
-                      {waterGoal - waterConsumed}oz left
-                    </p>
-                  )}
-                  <div className="flex items-center justify-center gap-1">
-                    <Button
-                      onClick={onRemoveWater}
-                      disabled={waterConsumed === 0}
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 hover:bg-blue-500/10"
-                    >
-                      <Minus className="h-3 w-3 text-blue-500" />
-                    </Button>
-                    <Button
-                      onClick={onAddWater}
-                      disabled={waterConsumed >= waterGoal}
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 hover:bg-blue-500/10"
-                    >
-                      <Plus className="h-3 w-3 text-blue-500" />
-                    </Button>
-                  </div>
                 </div>
               </div>
             </div>
