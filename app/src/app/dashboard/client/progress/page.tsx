@@ -15,8 +15,6 @@ import { ProgressCharts } from '@/components/client-progress/progress-charts';
 import { HabitTracker } from '@/components/client-progress/habit-tracker';
 import { Achievements } from '@/components/client-progress/achievements';
 import { StrengthTrends } from '@/components/client-progress/strength-trends';
-import { QualitativeFeedback } from '@/components/client-progress/qualitative-feedback';
-import { QualitativeTrends } from '@/components/client-progress/qualitative-trends';
 import { ActivityWellnessTab } from '@/components/client-progress/activity-wellness-tab';
 
 export type TimeRange = '7D' | '30D' | '3M' | '6M' | '1Y' | 'ALL';
@@ -105,13 +103,9 @@ export default function ProgressPage() {
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Journey Overview
                 </TabsTrigger>
-                <TabsTrigger value="qualitative">
-                  <ClipboardList className="mr-2 h-4 w-4" />
-                  Weekly Survey
-                </TabsTrigger>
                 <TabsTrigger value="activity" className="relative">
                   <Activity className="mr-2 h-4 w-4" />
-                  Activity
+                  Activity & Wellness
                   <Badge variant="outline" className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs border-primary/50 text-primary bg-background">
                     Coming Soon
                   </Badge>
@@ -128,17 +122,6 @@ export default function ProgressPage() {
                   <div className="lg:col-span-1 space-y-6">
                     <HabitTracker />
                     <Achievements />
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="qualitative">
-                <div className="grid grid-cols-1 lg:grid-cols-8 gap-8 items-start">
-                  <div className="lg:col-span-5">
-                    <QualitativeFeedback />
-                  </div>
-                  <div className="lg:col-span-3">
-                    <QualitativeTrends />
                   </div>
                 </div>
               </TabsContent>

@@ -196,21 +196,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Dashboard - Standalone */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/' || pathname === '/dashboard' || pathname === '/dashboard/client' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/dashboard/client">
-                    <House className="w-4 h-4" />
-                    <span className="font-medium">Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
         {/* Planning Section */}
         <SidebarGroup>
@@ -237,16 +222,24 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Daily Activities Section */}
+        {/* Logging Section */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Daily Activities</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Logging</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/activity' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/activity">
                     <Activity className="w-4 h-4" />
-                    <span className="font-medium">Today's Activity</span>
+                    <span className="font-medium">Log Daily Activities</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/survey' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/survey">
+                    <ClipboardList className="w-4 h-4" />
+                    <span className="font-medium">Weekly Survey</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
