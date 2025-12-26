@@ -25,6 +25,7 @@ import {
   UserCircle,
   Apple,
   Activity,
+  Camera,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -240,6 +241,14 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                   <Link href="/dashboard/client/survey">
                     <ClipboardList className="w-4 h-4" />
                     <span className="font-medium">Weekly Survey</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/photos' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/photos">
+                    <Camera className="w-4 h-4" />
+                    <span className="font-medium">Monthly Photos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

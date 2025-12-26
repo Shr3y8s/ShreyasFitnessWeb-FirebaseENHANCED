@@ -766,6 +766,46 @@ service cloud.firestore {
       }
     }
     
+    // PROGRESS PHOTOS SYSTEM - Visual transformation tracking
+    // Collection structure: progressPhotos/{userId}_{date}
+    match /progressPhotos/{photoDocId} {
+      // Extract userId from document ID (format: userId_date)
+      function getUserIdFromPhotoId() {
+        return photoDocId.split('_')[0];
+      }
+      
+      // Users can read their own progress photos (individual documents)
+      allow get: if isAuthenticated() && 
+                 request.auth.uid == getUserIdFromPhotoId();
+      
+      // Users can list/query their own progress photos
+      allow list: if isAuthenticated() && 
+                  request.query.limit <= 100;
+      
+      // ADMINS can read all progress photos
+      allow read: if isAdmin();
+      
+      // TRAINERS can read their assigned clients' photos (individual documents)
+      allow get: if isTrainer() && isAssignedTrainer(getUserIdFromPhotoId());
+      
+      // TRAINERS can list progress photos (for their dashboard)
+      allow list: if isTrainer() && request.query.limit <= 100;
+      
+      // Validation for progress photo data
+      function validateProgressPhoto() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['userId', 'date', 'photos', 'createdAt', 'updatedAt']) &&
+               data.userId is string &&
+               data.date is string &&
+               data.photos is map;
+      }
+      
+      // Users can write their own progress photos
+      allow write: if isAuthenticated() && 
+                   request.auth.uid == getUserIdFromPhotoId() &&
+                   validateProgressPhoto();
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

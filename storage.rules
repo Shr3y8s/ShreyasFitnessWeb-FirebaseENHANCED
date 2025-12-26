@@ -53,6 +53,22 @@ service firebase.storage {
       allow write: if isOwner(userId) && isImage() && isValidSize();
     }
     
+    // Progress photos - allow clients to upload monthly transformation photos
+    // Path: progressPhotos/{userId}/{date}/{filename}
+    match /progressPhotos/{userId}/{date}/{filename} {
+      // Allow read if:
+      // 1. User owns the photo (client viewing their own), OR
+      // 2. User is authenticated (allows trainers to view client photos for coaching)
+      allow read: if isAuthenticated();
+      
+      // Allow write only if:
+      // 1. User is authenticated
+      // 2. User owns this directory (userId matches auth.uid)
+      // 3. File is an image
+      // 4. File size is under 5MB
+      allow write: if isOwner(userId) && isImage() && isValidSize();
+    }
+    
     // Default: deny all other access
     match /{allPaths=**} {
       allow read, write: if false;
