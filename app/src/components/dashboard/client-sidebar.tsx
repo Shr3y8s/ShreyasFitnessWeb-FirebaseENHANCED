@@ -232,7 +232,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/activity' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/activity">
                     <Activity className="w-4 h-4" />
-                    <span className="font-medium">Log Daily Activities</span>
+                    <span className="font-medium">Daily Activities</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -248,7 +248,7 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/photos' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/photos">
                     <Camera className="w-4 h-4" />
-                    <span className="font-medium">Monthly Photos</span>
+                    <span className="font-medium">Progress Photos</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
