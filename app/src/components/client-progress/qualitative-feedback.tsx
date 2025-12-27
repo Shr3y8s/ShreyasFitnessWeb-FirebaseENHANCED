@@ -4,12 +4,10 @@ import { useState, useEffect } from "react"
 import { useAuth } from '@/lib/auth-context'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, UploadCloud, Info, Loader2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, Loader2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import Image from "next/image"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { 
+import {
   submitWeeklySurveyForWeek,
   getWeeklySurvey, 
   getCurrentWeekRange,
@@ -74,17 +72,6 @@ const RatingScale = ({ value, onValueChange }: { value: number; onValueChange: (
         </div>
     );
 };
-
-const placeholderImages = {
-    before: {
-        src: "https://picsum.photos/seed/progress1/600/800",
-        alt: "Before progress photo"
-    },
-    after: {
-        src: "https://picsum.photos/seed/progress2/600/800",
-        alt: "After progress photo"
-    }
-}
 
 export function QualitativeFeedback() {
     const { user } = useAuth();
@@ -410,44 +397,6 @@ export function QualitativeFeedback() {
                 </Button>
             </div>
 
-            <Card className="card-hover-lift border-primary/50 mt-8 animate-fade-in-up stagger-5">
-            <CardHeader className="relative">
-                <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
-                    Progress Photos (Optional)
-                     <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p className="max-w-xs">Visual progress is one of the best motivators! We recommend taking photos monthly in consistent lighting.</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </h3>
-                <CardDescription>Seeing is believing. Track your transformation visually.</CardDescription>
-                <Button variant="outline" size="sm" className="absolute top-4 right-4 hover:scale-105 transition-transform">
-                    <UploadCloud className="mr-2 h-4 w-4 icon-hover-bounce" />
-                    Upload New Photo
-                </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <div className="aspect-[4/3] relative rounded-lg overflow-hidden border hover:scale-105 transition-transform duration-300 cursor-pointer">
-                             <Image src={placeholderImages.before.src} alt={placeholderImages.before.alt} fill={true} style={{ objectFit: 'cover' }} />
-                        </div>
-                        <p className="text-center text-sm font-medium text-muted-foreground">July 15, 2024</p>
-                    </div>
-                     <div className="space-y-2">
-                        <div className="aspect-[4/3] relative rounded-lg overflow-hidden border hover:scale-105 transition-transform duration-300 cursor-pointer">
-                           <Image src={placeholderImages.after.src} alt={placeholderImages.after.alt} fill={true} style={{ objectFit: 'cover' }} />
-                        </div>
-                        <p className="text-center text-sm font-medium text-muted-foreground">August 15, 2024</p>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
         </div>
     )
 }
