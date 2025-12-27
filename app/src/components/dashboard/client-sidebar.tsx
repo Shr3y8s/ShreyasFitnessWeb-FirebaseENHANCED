@@ -26,6 +26,8 @@ import {
   Apple,
   Activity,
   Camera,
+  Star,
+  Receipt,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -442,9 +444,17 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/membership' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/membership">
+                    <Star className="w-4 h-4" />
+                    <span className="font-medium">Membership</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/billing' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/billing">
-                    <CreditCard className="w-4 h-4" />
+                    <Receipt className="w-4 h-4" />
                     <span className="font-medium">Billing</span>
                     {billingUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">

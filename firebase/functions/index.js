@@ -364,6 +364,381 @@ exports.createPaymentMethodPortalSession = onCall({
  */
 
 /**
+ * SUBSCRIPTION MANAGEMENT FUNCTIONS
+ * Custom functions for cancel, pause, and resume subscription
+ * These provide better UX and retention opportunities than Stripe Customer Portal
+ */
+
+/**
+ * Cancel a subscription at period end
+ * User keeps access until current billing period ends
+ * @param {Object} request - The callable function request
+ * @param {string} request.data.reason - Optional cancellation reason
+ * @return {Object} Success response with access end date
+ */
+exports.cancelSubscription = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const userId = request.auth.uid;
+    const reason = request.data?.reason || "User requested cancellation";
+
+    logger.info("Cancel subscription request", {
+      userId,
+      reason,
+    });
+
+    // Get user document
+    const userRef = admin.firestore().collection("users").doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const subscriptionId = userData.subscriptionId;
+
+    if (!subscriptionId) {
+      throw new Error("No active subscription found");
+    }
+
+    // Initialize Stripe
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Cancel subscription at period end
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true,
+    });
+
+    logger.info("Subscription canceled in Stripe", {
+      userId,
+      subscriptionId,
+      currentPeriodEnd: subscription.current_period_end,
+    });
+
+    // Update Firestore
+    await userRef.update({
+      cancelAtPeriodEnd: true,
+      canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+      currentPeriodEnd: admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info("Subscription cancellation synced to Firestore", {
+      userId,
+      subscriptionId,
+    });
+
+    // Return success with access end date
+    const accessUntil = new Date(subscription.current_period_end * 1000);
+
+    return {
+      success: true,
+      message: "Subscription canceled successfully",
+      accessUntil: accessUntil.toISOString(),
+      currentPeriodEnd: subscription.current_period_end,
+    };
+  } catch (error) {
+    logger.error("Error canceling subscription", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Subscription cancellation failed: ${error.message}`);
+  }
+});
+
+/**
+ * Pause a subscription for 1, 2, or 3 months
+ * Access blocked immediately, billing pauses, auto-resumes on scheduled date
+ * @param {Object} request - The callable function request
+ * @param {number} request.data.duration - Months to pause (1, 2, or 3)
+ * @param {string} request.data.reason - Optional pause reason
+ * @return {Object} Success response with resume date
+ */
+exports.pauseSubscription = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const userId = request.auth.uid;
+    const duration = request.data?.duration;
+    const reason = request.data?.reason || "User requested pause";
+
+    // Validate duration
+    if (![1, 2, 3].includes(duration)) {
+      throw new Error("Duration must be 1, 2, or 3 months");
+    }
+
+    logger.info("Pause subscription request", {
+      userId,
+      duration,
+      reason,
+    });
+
+    // Get user document
+    const userRef = admin.firestore().collection("users").doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const subscriptionId = userData.subscriptionId;
+
+    if (!subscriptionId) {
+      throw new Error("No active subscription found");
+    }
+
+    // Initialize Stripe
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Calculate resume date (add full months from now)
+    const now = new Date();
+    const resumeDate = new Date(now);
+    resumeDate.setMonth(resumeDate.getMonth() + duration);
+    // Keep the same day of month, but set to start of day
+    resumeDate.setHours(0, 0, 0, 0);
+    const resumeTimestamp = Math.floor(resumeDate.getTime() / 1000);
+
+    // Pause subscription in Stripe using pause_collection
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      pause_collection: {
+        behavior: "mark_uncollectible",
+        resumes_at: resumeTimestamp,
+      },
+    });
+
+    logger.info("Subscription paused in Stripe", {
+      userId,
+      subscriptionId,
+      resumesAt: resumeTimestamp,
+      resumeDate: resumeDate.toISOString(),
+    });
+
+    // Update Firestore
+    await userRef.update({
+      subscriptionPaused: true,
+      pausedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pauseResumesAt: admin.firestore.Timestamp.fromDate(resumeDate),
+      pauseDuration: duration,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info("Subscription pause synced to Firestore", {
+      userId,
+      subscriptionId,
+    });
+
+    return {
+      success: true,
+      message: `Subscription paused for ${duration} month(s)`,
+      resumeDate: resumeDate.toISOString(),
+      resumeTimestamp: resumeTimestamp,
+    };
+  } catch (error) {
+    logger.error("Error pausing subscription", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Subscription pause failed: ${error.message}`);
+  }
+});
+
+/**
+ * Resume a paused subscription early
+ * Billing restarts immediately, full access restored
+ * @param {Object} request - The callable function request
+ * @return {Object} Success response
+ */
+exports.resumeSubscription = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const userId = request.auth.uid;
+
+    logger.info("Resume subscription request", {
+      userId,
+    });
+
+    // Get user document
+    const userRef = admin.firestore().collection("users").doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const subscriptionId = userData.subscriptionId;
+
+    if (!subscriptionId) {
+      throw new Error("No subscription found");
+    }
+
+    if (!userData.subscriptionPaused) {
+      throw new Error("Subscription is not paused");
+    }
+
+    // Initialize Stripe
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Resume subscription in Stripe by removing pause_collection
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      pause_collection: "",
+    });
+
+    logger.info("Subscription resumed in Stripe", {
+      userId,
+      subscriptionId,
+    });
+
+    // Update Firestore
+    await userRef.update({
+      subscriptionPaused: false,
+      resumedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pauseResumesAt: admin.firestore.FieldValue.delete(),
+      pauseDuration: admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info("Subscription resume synced to Firestore", {
+      userId,
+      subscriptionId,
+    });
+
+    return {
+      success: true,
+      message: "Subscription resumed successfully",
+    };
+  } catch (error) {
+    logger.error("Error resuming subscription", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Subscription resume failed: ${error.message}`);
+  }
+});
+
+/**
+ * Reactivate a canceled subscription (undo cancellation before period ends)
+ * Removes the cancel_at_period_end flag, billing continues normally
+ * @param {Object} request - The callable function request
+ * @return {Object} Success response
+ */
+exports.reactivateSubscription = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const userId = request.auth.uid;
+
+    logger.info("Reactivate subscription request", {
+      userId,
+    });
+
+    // Get user document
+    const userRef = admin.firestore().collection("users").doc(userId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const subscriptionId = userData.subscriptionId;
+
+    if (!subscriptionId) {
+      throw new Error("No subscription found");
+    }
+
+    if (!userData.cancelAtPeriodEnd) {
+      throw new Error("Subscription is not canceled");
+    }
+
+    // Initialize Stripe
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Reactivate subscription in Stripe by removing cancel_at_period_end
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false,
+    });
+
+    logger.info("Subscription reactivated in Stripe", {
+      userId,
+      subscriptionId,
+    });
+
+    // Update Firestore
+    await userRef.update({
+      cancelAtPeriodEnd: false,
+      reactivatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Keep canceledAt as permanent audit trail
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info("Subscription reactivation synced to Firestore", {
+      userId,
+      subscriptionId,
+    });
+
+    return {
+      success: true,
+      message: "Subscription reactivated successfully",
+    };
+  } catch (error) {
+    logger.error("Error reactivating subscription", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Subscription reactivation failed: ${error.message}`);
+  }
+});
+
+/**
  * Firestore trigger to sync ONE-TIME payment status from stripe_customers to users
  * This handles one-time payments like 4-pack sessions or single training sessions
  * Triggered whenever a payment document is created or updated in the payments subcollection
