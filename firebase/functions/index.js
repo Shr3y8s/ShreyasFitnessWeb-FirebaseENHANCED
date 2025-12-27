@@ -1281,6 +1281,452 @@ exports.cleanupPendingAccounts = onSchedule({
 });
 
 /**
+ * ACCOUNT DELETION FUNCTION
+ * Admin-initiated account deletion with proper data handling
+ * Preserves financial records while removing all PII
+ */
+exports.deleteAccount = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify admin authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const adminId = request.auth.uid;
+    const targetUserId = request.data?.targetUserId;
+    const adminOverride = request.data?.adminOverride || false;
+    const reason = request.data?.reason || "Admin-initiated deletion";
+
+    if (!targetUserId) {
+      throw new Error("targetUserId is required");
+    }
+
+    logger.info("Account deletion initiated", {
+      adminId,
+      targetUserId,
+      adminOverride,
+      reason,
+    });
+
+    // Verify admin role
+    const adminDoc = await admin.firestore().collection("admins").doc(adminId).get();
+    if (!adminDoc.exists) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    // Get target user data
+    const userRef = admin.firestore().collection("users").doc(targetUserId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const stripeCustomerId = userData.stripeCustomerId;
+
+    // STEP 1: VALIDATE - No upcoming sessions
+    logger.info("Validating no upcoming sessions", {targetUserId});
+    const now = new Date();
+    const sessionsSnapshot = await admin.firestore()
+        .collection("sessions")
+        .where("userId", "==", targetUserId)
+        .where("status", "==", "scheduled")
+        .where("scheduledAt", ">", now)
+        .get();
+
+    if (!sessionsSnapshot.empty) {
+      throw new Error(
+          `Cannot delete account: User has ${sessionsSnapshot.size} upcoming sessions. Cancel all sessions first.`,
+      );
+    }
+
+    // STEP 2: VALIDATE - Subscription status
+    logger.info("Validating subscription status", {targetUserId});
+    if (userData.subscriptionId && userData.subscriptionStatus === "active" && !userData.cancelAtPeriodEnd) {
+      if (!adminOverride) {
+        throw new Error(
+            "Cannot delete account: User has active subscription. Cancel subscription first or use admin override.",
+        );
+      }
+
+      // Admin override: Auto-cancel subscription
+      logger.info("Admin override: Auto-canceling subscription", {
+        targetUserId,
+        subscriptionId: userData.subscriptionId,
+      });
+
+      const stripe = require("stripe")(stripeKey.value(), {
+        apiVersion: "2024-09-30.acacia",
+      });
+
+      await stripe.subscriptions.update(userData.subscriptionId, {
+        cancel_at_period_end: true,
+      });
+    }
+
+    // STEP 3: CREATE AUDIT RECORD
+    logger.info("Creating deleted_accounts audit record", {targetUserId});
+    const randomId = Math.random().toString(36).substring(2, 15);
+    const anonymizedEmail = `deleted-user-${randomId}@privacy.local`;
+
+    // Calculate email hash for potential lookups
+    const crypto = require("crypto");
+    const emailHash = crypto
+        .createHash("sha256")
+        .update(userData.email || "")
+        .digest("hex");
+
+    // Count completed sessions
+    const completedSessionsSnapshot = await admin.firestore()
+        .collection("sessions")
+        .where("userId", "==", targetUserId)
+        .where("status", "==", "completed")
+        .get();
+
+    const deletionRecord = {
+      deletedUserId: targetUserId,
+      anonymizedEmail: anonymizedEmail,
+      originalEmailHash: emailHash,
+      stripeCustomerId: stripeCustomerId || null,
+      deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      deletedBy: "admin",
+      deletedByAdminId: adminId,
+      reason: reason,
+      accountCreatedAt: userData.createdAt || null,
+      lastPaymentDate: userData.lastPaymentDate || null,
+      totalPayments: userData.sessionBalance?.purchased || 0,
+      hadActiveSubscription: !!userData.subscriptionId,
+      hadUpcomingSessions: false,
+      sessionsCompleted: completedSessionsSnapshot.size,
+    };
+
+    await admin.firestore()
+        .collection("deleted_accounts")
+        .doc(targetUserId)
+        .set(deletionRecord);
+
+    logger.info("Audit record created", {targetUserId});
+
+    // STEP 4: ANONYMIZE STRIPE CUSTOMER
+    if (stripeCustomerId) {
+      logger.info("Anonymizing Stripe customer", {stripeCustomerId});
+      try {
+        const stripe = require("stripe")(stripeKey.value(), {
+          apiVersion: "2024-09-30.acacia",
+        });
+
+        await stripe.customers.update(stripeCustomerId, {
+          name: "Deleted User",
+          email: anonymizedEmail,
+          phone: null,
+          description: `Account deleted on ${new Date().toISOString().split("T")[0]}`,
+          metadata: {
+            userId: "deleted",
+            deletedAt: new Date().toISOString(),
+            originalUserIdHash: emailHash,
+          },
+        });
+
+        logger.info("Stripe customer anonymized", {stripeCustomerId});
+      } catch (error) {
+        logger.error("Failed to anonymize Stripe customer", {
+          error: error.message,
+          stripeCustomerId,
+        });
+        // Continue - don't block deletion on Stripe errors
+      }
+    }
+
+    // Track deletion counts
+    const deletionCounts = {
+      photos: 0,
+      activities: 0,
+      workouts: 0,
+      surveys: 0,
+      messages: 0,
+      plans: 0,
+    };
+
+    // STEP 5: DELETE PROGRESS PHOTOS (Firebase Storage)
+    logger.info("Deleting progress photos", {targetUserId});
+    try {
+      const bucket = admin.storage().bucket();
+      const [files] = await bucket.getFiles({
+        prefix: `progress-photos/${targetUserId}/`,
+      });
+
+      for (const file of files) {
+        await file.delete();
+        deletionCounts.photos++;
+      }
+
+      logger.info("Progress photos deleted", {
+        targetUserId,
+        count: deletionCounts.photos,
+      });
+    } catch (error) {
+      logger.error("Failed to delete progress photos", {
+        error: error.message,
+        targetUserId,
+      });
+    }
+
+    // STEP 6: DELETE ACTIVITY LOGS
+    logger.info("Deleting activity logs", {targetUserId});
+    try {
+      const activitiesSnapshot = await admin.firestore()
+          .collection("users")
+          .doc(targetUserId)
+          .collection("activities")
+          .get();
+
+      const batch = admin.firestore().batch();
+      activitiesSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        deletionCounts.activities++;
+      });
+
+      if (!batch._writes.length === 0) {
+        await batch.commit();
+      }
+
+      logger.info("Activity logs deleted", {
+        targetUserId,
+        count: deletionCounts.activities,
+      });
+    } catch (error) {
+      logger.error("Failed to delete activity logs", {
+        error: error.message,
+        targetUserId,
+      });
+    }
+
+    // STEP 7: DELETE WORKOUT EXECUTIONS
+    logger.info("Deleting workout executions", {targetUserId});
+    try {
+      const workoutsSnapshot = await admin.firestore()
+          .collection("workoutExecutions")
+          .where("userId", "==", targetUserId)
+          .get();
+
+      const batch = admin.firestore().batch();
+      workoutsSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        deletionCounts.workouts++;
+      });
+
+      if (batch._writes.length > 0) {
+        await batch.commit();
+      }
+
+      logger.info("Workout executions deleted", {
+        targetUserId,
+        count: deletionCounts.workouts,
+      });
+    } catch (error) {
+      logger.error("Failed to delete workout executions", {
+        error: error.message,
+        targetUserId,
+      });
+    }
+
+    // STEP 8: DELETE SURVEY RESPONSES
+    logger.info("Deleting survey responses", {targetUserId});
+    try {
+      const surveysSnapshot = await admin.firestore()
+          .collection("users")
+          .doc(targetUserId)
+          .collection("surveys")
+          .get();
+
+      const batch = admin.firestore().batch();
+      surveysSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        deletionCounts.surveys++;
+      });
+
+      if (batch._writes.length > 0) {
+        await batch.commit();
+      }
+
+      logger.info("Survey responses deleted", {
+        targetUserId,
+        count: deletionCounts.surveys,
+      });
+    } catch (error) {
+      logger.error("Failed to delete survey responses", {
+        error: error.message,
+        targetUserId,
+      });
+    }
+
+    // STEP 9: DELETE MESSAGES
+    logger.info("Deleting messages", {targetUserId});
+    try {
+      const messagesSnapshot = await admin.firestore()
+          .collection("messages")
+          .where("userId", "==", targetUserId)
+          .get();
+
+      const batch = admin.firestore().batch();
+      messagesSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        deletionCounts.messages++;
+      });
+
+      if (batch._writes.length > 0) {
+        await batch.commit();
+      }
+
+      logger.info("Messages deleted", {
+        targetUserId,
+        count: deletionCounts.messages,
+      });
+    } catch (error) {
+      logger.error("Failed to delete messages", {
+        error: error.message,
+        targetUserId,
+      });
+    }
+
+    // STEP 10: DELETE PLAN DATA
+    logger.info("Deleting plan data", {targetUserId});
+    try {
+      const plansSnapshot = await admin.firestore()
+          .collection("users")
+          .doc(targetUserId)
+          .collection("plans")
+          .get();
+
+      const batch = admin.firestore().batch();
+      plansSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+        deletionCounts.plans++;
+      });
+
+      if (batch._writes.length > 0) {
+        await batch.commit();
+      }
+
+      logger.info("Plan data deleted", {
+        targetUserId,
+        count: deletionCounts.plans,
+      });
+    } catch (error) {
+      logger.error("Failed to delete plan data", {
+        error: error.message,
+        targetUserId,
+      });
+    }
+
+    // STEP 11: REMOVE FROM TRAINER'S CLIENT LIST
+    if (userData.assignedTrainerId) {
+      logger.info("Removing from trainer's client list", {
+        targetUserId,
+        trainerId: userData.assignedTrainerId,
+      });
+
+      try {
+        const trainerCollection = userData.assignedTrainerCollection || "admins";
+        const trainerRef = admin.firestore()
+            .collection(trainerCollection)
+            .doc(userData.assignedTrainerId);
+
+        await trainerRef.update({
+          clients: admin.firestore.FieldValue.arrayRemove(targetUserId),
+        });
+
+        logger.info("Removed from trainer's client list", {
+          targetUserId,
+          trainerId: userData.assignedTrainerId,
+        });
+      } catch (error) {
+        logger.error("Failed to remove from trainer's client list", {
+          error: error.message,
+          targetUserId,
+        });
+      }
+    }
+
+    // STEP 12: DELETE FIRESTORE USER DOCUMENT
+    logger.info("Deleting Firestore user document", {targetUserId});
+    await userRef.delete();
+
+    // STEP 13: DELETE FIREBASE AUTH
+    logger.info("Deleting Firebase Auth account", {targetUserId});
+    try {
+      await admin.auth().deleteUser(targetUserId);
+      logger.info("Firebase Auth account deleted", {targetUserId});
+    } catch (error) {
+      logger.error("Failed to delete Firebase Auth account", {
+        error: error.message,
+        targetUserId,
+      });
+      // This is critical - but don't fail if account doesn't exist
+      if (error.code !== "auth/user-not-found") {
+        throw error;
+      }
+    }
+
+    // STEP 14: LOG AUDIT
+    await admin.firestore().collection("audit_logs").add({
+      action: "account_deletion",
+      targetUserId: targetUserId,
+      performedBy: adminId,
+      performedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reason: reason,
+      success: true,
+      deletionCounts: deletionCounts,
+    });
+
+    logger.info("Account deletion completed successfully", {
+      targetUserId,
+      adminId,
+      deletionCounts,
+    });
+
+    return {
+      success: true,
+      message: "Account deleted successfully",
+      deletedUserId: targetUserId,
+      stripeCustomerId: stripeCustomerId,
+      itemsDeleted: deletionCounts,
+    };
+  } catch (error) {
+    logger.error("Account deletion failed", {
+      error: error.message,
+      stack: error.stack,
+      adminId: request.auth?.uid,
+      targetUserId: request.data?.targetUserId,
+    });
+
+    // Log failed attempt
+    if (request.auth && request.data?.targetUserId) {
+      try {
+        await admin.firestore().collection("audit_logs").add({
+          action: "account_deletion",
+          targetUserId: request.data.targetUserId,
+          performedBy: request.auth.uid,
+          performedAt: admin.firestore.FieldValue.serverTimestamp(),
+          reason: request.data?.reason || "Unknown",
+          success: false,
+          error: error.message,
+        });
+      } catch (logError) {
+        logger.error("Failed to log deletion failure", {error: logError.message});
+      }
+    }
+
+    throw new Error(`Account deletion failed: ${error.message}`);
+  }
+});
+
+/**
  * MIGRATION FUNCTIONS
  * One-time or administrative functions for data migrations
  */

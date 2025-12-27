@@ -164,6 +164,17 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
+                  className={pathname === '/dashboard/admin/client-management' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/admin/client-management">
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">Client Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
                   className={pathname === '/dashboard/admin/client-assignment' ? 'bg-primary text-white hover:bg-primary/90' : ''}
                 >
                   <Link href="/dashboard/admin/client-assignment">
