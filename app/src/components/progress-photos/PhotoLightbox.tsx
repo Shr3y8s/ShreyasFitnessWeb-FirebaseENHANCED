@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +51,24 @@ export function PhotoLightbox({
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
+  // Handle keyboard events via window listener instead of on the backdrop
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      } else if (e.key === 'ArrowLeft' && hasPrevious && onPrevious) {
+        onPrevious();
+      } else if (e.key === 'ArrowRight' && hasNext && onNext) {
+        onNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, onPrevious, onNext, hasPrevious, hasNext]);
+
   const handleDelete = async () => {
     if (!onDelete) return;
     
@@ -65,16 +84,6 @@ export function PhotoLightbox({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    } else if (e.key === 'ArrowLeft' && hasPrevious && onPrevious) {
-      onPrevious();
-    } else if (e.key === 'ArrowRight' && hasNext && onNext) {
-      onNext();
-    }
-  };
-
   if (!isOpen) return null;
 
   const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -86,20 +95,22 @@ export function PhotoLightbox({
 
   const angleLabel = angle.charAt(0).toUpperCase() + angle.slice(1);
 
-  return (
+  // Render lightbox using Portal to escape Card's stacking context
+  const lightboxContent = (
     <>
       <div
         className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
         onClick={onClose}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
       >
         {/* Close Button */}
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-4 right-4 text-white hover:bg-white/20"
-          onClick={onClose}
+          className="absolute top-4 right-4 text-white hover:bg-white/20 z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
         >
           <X className="h-6 w-6" />
         </Button>
@@ -109,7 +120,7 @@ export function PhotoLightbox({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-16 text-white hover:bg-red-500/20"
+            className="absolute top-4 right-16 text-white hover:bg-red-500/20 z-10"
             onClick={(e) => {
               e.stopPropagation();
               setShowDeleteDialog(true);
@@ -124,7 +135,7 @@ export function PhotoLightbox({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-4 text-white hover:bg-white/20"
+            className="absolute left-4 text-white hover:bg-white/20 z-10"
             onClick={(e) => {
               e.stopPropagation();
               onPrevious();
@@ -139,7 +150,7 @@ export function PhotoLightbox({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 text-white hover:bg-white/20"
+            className="absolute right-4 text-white hover:bg-white/20 z-10"
             onClick={(e) => {
               e.stopPropagation();
               onNext();
@@ -220,4 +231,7 @@ export function PhotoLightbox({
       </AlertDialog>
     </>
   );
+
+  // Use portal to render at document body level (fixes black chart area issue)
+  return typeof document !== 'undefined' ? createPortal(lightboxContent, document.body) : null;
 }

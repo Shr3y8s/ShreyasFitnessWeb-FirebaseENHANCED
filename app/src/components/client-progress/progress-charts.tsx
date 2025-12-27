@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getRecentWeightLogs } from '@/lib/activity-api';
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
+import { getUserProgressPhotos } from '@/lib/progress-photo-api';
+import { Area, AreaChart, Brush, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   Card,
   CardContent,
@@ -13,7 +14,15 @@ import {
 import {
   ChartContainer,
 } from '@/components/ui/chart';
-import { Activity, Loader2 } from 'lucide-react';
+import { Activity, Loader2, Camera, Maximize2, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { PhotoLightbox } from '@/components/progress-photos/PhotoLightbox';
+import type { ProgressPhotoWithId, PhotoAngle } from '@/types/progress-photo';
 
 interface ChartDataPoint {
   dateKey: string;  // YYYY-MM-DD format for unique X-axis
@@ -22,6 +31,8 @@ interface ChartDataPoint {
   date: string;  // Formatted for tooltip display
   weight: number;
   bodyFat: number | null;
+  hasPhoto: boolean;  // NEW: Indicates if photo exists for this date
+  photoData: ProgressPhotoWithId | null;  // NEW: Photo data if available
 }
 
 const chartConfig = {
@@ -69,6 +80,14 @@ export function ProgressCharts() {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [monthlyAvg, setMonthlyAvg] = useState<number | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<{
+    url: string;
+    date: string;
+    angle: PhotoAngle;
+    metrics?: any;
+  } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -77,8 +96,11 @@ export function ProgressCharts() {
       try {
         setLoading(true);
         
-        // Fetch weight logs (last 100 entries should cover most use cases)
-        const weights = await getRecentWeightLogs(user.uid, 100);
+        // Fetch weight logs and progress photos
+        const [weights, photos] = await Promise.all([
+          getRecentWeightLogs(user.uid, 100),
+          getUserProgressPhotos(user.uid)
+        ]);
         
         if (weights.length === 0) {
           setChartData([]);
@@ -86,6 +108,11 @@ export function ProgressCharts() {
           setLoading(false);
           return;
         }
+
+        // Create a map for quick photo lookup by date
+        const photosByDate = new Map<string, ProgressPhotoWithId>(
+          photos.map(photo => [photo.date, photo])
+        );
 
         // Sort by date (oldest first)
         const sorted = [...weights].sort((a, b) => a.date.localeCompare(b.date));
@@ -106,13 +133,17 @@ export function ProgressCharts() {
             weightInLbs = log.weight * 2.20462;
           }
 
+          const photoData = photosByDate.get(log.date) || null;
+
           return {
             dateKey: log.date,  // YYYY-MM-DD - unique and sortable
             month: monthShort[month - 1],
             year: year.toString(),
             date: `${monthNames[month - 1]} ${day}, ${year}`,
             weight: Math.round(weightInLbs * 10) / 10, // Round to 1 decimal
-            bodyFat: null // Can be added later if needed
+            bodyFat: null, // Can be added later if needed
+            hasPhoto: !!photoData,  // NEW: Boolean flag
+            photoData: photoData  // NEW: Photo data reference
           };
         });
 
@@ -162,6 +193,23 @@ export function ProgressCharts() {
 
     loadWeightData();
   }, [user]);
+
+  const handlePhotoClick = (photoData: ProgressPhotoWithId, date: string) => {
+    // Get the first available photo angle (prefer front, then side, then back)
+    const angle: PhotoAngle = photoData.photos.front ? 'front' : 
+                              photoData.photos.side ? 'side' : 'back';
+    const photoUrl = photoData.photos[angle]?.url || '';
+
+    if (photoUrl) {
+      setSelectedPhoto({
+        url: photoUrl,
+        date: date,
+        angle: angle,
+        metrics: photoData.associatedMetrics
+      });
+      setLightboxOpen(true);
+    }
+  };
 
   if (loading) {
     return (
@@ -214,6 +262,15 @@ export function ProgressCharts() {
           <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             Progress Overview
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFullscreenOpen(true)}
+              className="ml-2 h-8 w-8 p-0"
+              title="View Fullscreen"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
           </h3>
           <CardDescription>
             Your body composition changes over {chartData.length > 30 ? 'the last several months' : 'time'}.
@@ -244,6 +301,11 @@ export function ProgressCharts() {
               <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.5} />
                 <stop offset="95%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="brushGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.25} />
+                <stop offset="50%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.25} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -285,22 +347,411 @@ export function ProgressCharts() {
               stroke="oklch(65% 0.16 151)"
               strokeWidth={2.5}
               name="Weight"
-              dot={{
-                r: 5,
-                strokeWidth: 2,
-                fill: 'oklch(1 0 0)',
-                stroke: 'oklch(65% 0.16 151)',
+              dot={(props: any) => {
+                const { cx, cy, payload } = props;
+                
+                if (payload.hasPhoto) {
+                  // Render BOTH: data point on line AND camera icon above
+                  const iconY = cy - 20; // Lift icon 20px above the data point
+                  return (
+                    <g>
+                      {/* Data point dot on the line */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={4}
+                        fill="oklch(65% 0.16 151)"
+                        stroke="oklch(1 0 0)"
+                        strokeWidth={2}
+                      />
+                      {/* Connector line from dot to camera */}
+                      <line
+                        x1={cx}
+                        y1={cy}
+                        x2={cx}
+                        y2={iconY + 12}
+                        stroke="oklch(65% 0.16 151)"
+                        strokeWidth={1.5}
+                        strokeDasharray="2,2"
+                      />
+                      {/* Camera icon above - clickable */}
+                      <g
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePhotoClick(payload.photoData, payload.dateKey);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <circle
+                          cx={cx}
+                          cy={iconY}
+                          r={12}
+                          fill="oklch(65% 0.16 151)"
+                          stroke="oklch(1 0 0)"
+                          strokeWidth={2.5}
+                          style={{ 
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                            transition: 'all 0.2s ease'
+                          }}
+                        />
+                        <Camera
+                          x={cx - 9}
+                          y={iconY - 9}
+                          width={18}
+                          height={18}
+                          style={{ fill: 'white', pointerEvents: 'none' }}
+                        />
+                      </g>
+                    </g>
+                  );
+                }
+                
+                // Default dot for points without photos
+                return (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={5}
+                    fill="oklch(1 0 0)"
+                    stroke="oklch(65% 0.16 151)"
+                    strokeWidth={2}
+                  />
+                );
               }}
-              activeDot={{
-                r: 7,
-                strokeWidth: 2,
-                fill: 'oklch(65% 0.16 151)',
-                stroke: 'oklch(1 0 0)'
+              activeDot={(props: any) => {
+                const { cx, cy, payload } = props;
+                
+                if (payload.hasPhoto) {
+                  // Hover state - even larger camera, enhanced data point
+                  const iconY = cy - 20;
+                  return (
+                    <g>
+                      {/* Enhanced data point dot on hover */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill="oklch(65% 0.16 151)"
+                        stroke="oklch(1 0 0)"
+                        strokeWidth={2.5}
+                      />
+                      {/* Connector line */}
+                      <line
+                        x1={cx}
+                        y1={cy}
+                        x2={cx}
+                        y2={iconY + 14}
+                        stroke="oklch(65% 0.16 151)"
+                        strokeWidth={2}
+                        strokeDasharray="2,2"
+                      />
+                      {/* Larger camera on hover */}
+                      <g
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePhotoClick(payload.photoData, payload.dateKey);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <circle
+                          cx={cx}
+                          cy={iconY}
+                          r={14}
+                          fill="oklch(65% 0.16 151)"
+                          stroke="oklch(1 0 0)"
+                          strokeWidth={3}
+                          style={{ 
+                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+                            transition: 'all 0.2s ease'
+                          }}
+                        />
+                        <Camera
+                          x={cx - 10}
+                          y={iconY - 10}
+                          width={20}
+                          height={20}
+                          style={{ fill: 'white', pointerEvents: 'none' }}
+                        />
+                      </g>
+                    </g>
+                  );
+                }
+                
+                return (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={7}
+                    fill="oklch(65% 0.16 151)"
+                    stroke="oklch(1 0 0)"
+                    strokeWidth={2}
+                  />
+                );
               }}
             />
+            {/* Brush for zooming into date ranges */}
+            {chartData.length > 7 && (
+              <Brush
+                dataKey="dateKey"
+                height={40}
+                stroke="oklch(65% 0.16 151)"
+                fill="url(#brushGradient)"
+                travellerWidth={10}
+                tickFormatter={(value) => {
+                  const [year, month, day] = value.split('-');
+                  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}`;
+                }}
+              />
+            )}
           </AreaChart>
         </ChartContainer>
       </CardContent>
+
+      {/* Photo Lightbox */}
+      {selectedPhoto && (
+        <PhotoLightbox
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          photoUrl={selectedPhoto.url}
+          date={selectedPhoto.date}
+          angle={selectedPhoto.angle}
+          associatedMetrics={selectedPhoto.metrics}
+        />
+      )}
+
+      {/* Fullscreen Chart Dialog */}
+      <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-6">
+          <div className="flex items-center justify-between mb-4">
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
+              <Activity className="h-6 w-6 text-primary" />
+              Progress Overview
+            </DialogTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFullscreenOpen(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <ChartContainer config={chartConfig}>
+              <AreaChart
+                accessibilityLayer
+                data={chartData}
+                margin={{
+                  left: 10,
+                  right: 10,
+                  bottom: 5
+                }}
+                height={600}
+              >
+                <defs>
+                  <linearGradient id="colorWeightFS" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.5} />
+                    <stop offset="95%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="brushGradientFS" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.25} />
+                    <stop offset="50%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="oklch(65% 0.16 151)" stopOpacity={0.25} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="dateKey"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  tickFormatter={(value) => {
+                    const [year, month, day] = value.split('-');
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}`;
+                  }}
+                  tick={{ fontSize: 12, fontWeight: 600 }}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickCount={5}
+                  domain={[yMin, yMax]}
+                  tickFormatter={(value) => `${value} lbs`}
+                  stroke="oklch(65% 0.16 151)"
+                  tick={{ fontSize: 12, fontWeight: 600 }}
+                />
+                <Tooltip
+                  cursor={false}
+                  content={<CustomTooltip />}
+                />
+                <Area
+                  yAxisId="left"
+                  dataKey="weight"
+                  type="natural"
+                  fill="url(#colorWeightFS)"
+                  fillOpacity={0.6}
+                  stroke="oklch(65% 0.16 151)"
+                  strokeWidth={2.5}
+                  name="Weight"
+                  dot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    
+                    if (payload.hasPhoto) {
+                      const iconY = cy - 20;
+                      return (
+                        <g>
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={4}
+                            fill="oklch(65% 0.16 151)"
+                            stroke="oklch(1 0 0)"
+                            strokeWidth={2}
+                          />
+                          <line
+                            x1={cx}
+                            y1={cy}
+                            x2={cx}
+                            y2={iconY + 12}
+                            stroke="oklch(65% 0.16 151)"
+                            strokeWidth={1.5}
+                            strokeDasharray="2,2"
+                          />
+                          <g
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePhotoClick(payload.photoData, payload.dateKey);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <circle
+                              cx={cx}
+                              cy={iconY}
+                              r={12}
+                              fill="oklch(65% 0.16 151)"
+                              stroke="oklch(1 0 0)"
+                              strokeWidth={2.5}
+                              style={{ 
+                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                                transition: 'all 0.2s ease'
+                              }}
+                            />
+                            <Camera
+                              x={cx - 9}
+                              y={iconY - 9}
+                              width={18}
+                              height={18}
+                              style={{ fill: 'white', pointerEvents: 'none' }}
+                            />
+                          </g>
+                        </g>
+                      );
+                    }
+                    
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill="oklch(1 0 0)"
+                        stroke="oklch(65% 0.16 151)"
+                        strokeWidth={2}
+                      />
+                    );
+                  }}
+                  activeDot={(props: any) => {
+                    const { cx, cy, payload } = props;
+                    
+                    if (payload.hasPhoto) {
+                      const iconY = cy - 20;
+                      return (
+                        <g>
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={5}
+                            fill="oklch(65% 0.16 151)"
+                            stroke="oklch(1 0 0)"
+                            strokeWidth={2.5}
+                          />
+                          <line
+                            x1={cx}
+                            y1={cy}
+                            x2={cx}
+                            y2={iconY + 14}
+                            stroke="oklch(65% 0.16 151)"
+                            strokeWidth={2}
+                            strokeDasharray="2,2"
+                          />
+                          <g
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePhotoClick(payload.photoData, payload.dateKey);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <circle
+                              cx={cx}
+                              cy={iconY}
+                              r={14}
+                              fill="oklch(65% 0.16 151)"
+                              stroke="oklch(1 0 0)"
+                              strokeWidth={3}
+                              style={{ 
+                                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+                                transition: 'all 0.2s ease'
+                              }}
+                            />
+                            <Camera
+                              x={cx - 10}
+                              y={iconY - 10}
+                              width={20}
+                              height={20}
+                              style={{ fill: 'white', pointerEvents: 'none' }}
+                            />
+                          </g>
+                        </g>
+                      );
+                    }
+                    
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={7}
+                        fill="oklch(65% 0.16 151)"
+                        stroke="oklch(1 0 0)"
+                        strokeWidth={2}
+                      />
+                    );
+                  }}
+                />
+                {chartData.length > 7 && (
+                  <Brush
+                    dataKey="dateKey"
+                    height={40}
+                    stroke="oklch(65% 0.16 151)"
+                    fill="url(#brushGradientFS)"
+                    travellerWidth={10}
+                    tickFormatter={(value) => {
+                      const [year, month, day] = value.split('-');
+                      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}`;
+                    }}
+                  />
+                )}
+              </AreaChart>
+            </ChartContainer>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
