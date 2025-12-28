@@ -13,20 +13,26 @@ import {
 import { CheckinSession } from '@/types/session';
 
 /**
- * Calculate ISO week identifier from a date
- * Format: "YYYY-Www" (e.g., "2025-W01")
+ * Calculate week identifier from a date using Sunday as week start
+ * Format: "YYYY-MM-DD" (the Sunday that starts the week)
+ * Example: Any date in the week Dec 28 - Jan 3 returns "2025-12-28"
  */
 export function getWeekIdentifier(date: Date): string {
-  // Get the year
-  const year = date.getFullYear();
+  // Clone to avoid mutating original
+  const d = new Date(date);
   
-  // Calculate week number (ISO 8601)
-  // Week starts on Sunday
-  const firstDayOfYear = new Date(year, 0, 1);
-  const daysSinceFirstDay = Math.floor((date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000));
-  const weekNumber = Math.ceil((daysSinceFirstDay + firstDayOfYear.getDay() + 1) / 7);
+  // Get day of week (0 = Sunday, 6 = Saturday)
+  const dayOfWeek = d.getDay();
   
-  return `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+  // Subtract days to get to the most recent Sunday (or current day if Sunday)
+  d.setDate(d.getDate() - dayOfWeek);
+  
+  // Return Sunday's date as YYYY-MM-DD
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -38,21 +44,17 @@ export function getCurrentWeekIdentifier(): string {
 
 /**
  * Get start and end dates for a week identifier
+ * Week identifier is the Sunday's date in YYYY-MM-DD format
  */
 export function getWeekBounds(weekIdentifier: string): { start: Date; end: Date } {
-  const [yearStr, weekStr] = weekIdentifier.split('-W');
-  const year = parseInt(yearStr);
-  const week = parseInt(weekStr);
+  // Parse the Sunday date from YYYY-MM-DD format
+  const [year, month, day] = weekIdentifier.split('-').map(Number);
   
-  // Calculate first day of year
-  const firstDayOfYear = new Date(year, 0, 1);
-  
-  // Calculate start of the specified week (Sunday)
-  const daysToWeekStart = (week - 1) * 7 - firstDayOfYear.getDay();
-  const weekStart = new Date(year, 0, 1 + daysToWeekStart);
+  // Create start date (Sunday) at midnight
+  const weekStart = new Date(year, month - 1, day);
   weekStart.setHours(0, 0, 0, 0);
   
-  // Calculate end of week (Saturday)
+  // Calculate end of week (Saturday) at end of day
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);

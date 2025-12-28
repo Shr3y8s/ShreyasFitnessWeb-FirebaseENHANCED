@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
 import { doc, setDoc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
-import { TrainingSession } from '@/types/session';
+import { Session, TrainingSession } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
@@ -45,7 +45,7 @@ export default function ClientDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [nextSession, setNextSession] = useState<TrainingSession | null>(null);
+  const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
   const [loadingNextSession, setLoadingNextSession] = useState(true);
 
@@ -113,9 +113,12 @@ export default function ClientDashboardPage() {
 
       setNextSession(session);
 
-      // Fetch location based on locationType
+      // Fetch location based on sessionType and locationType
       try {
-        if (session.locationType === 'private') {
+        // Check-ins are virtual calls, no physical location
+        if (session.sessionType === 'checkin') {
+          setNextSessionLocation('Virtual check-in call');
+        } else if (session.locationType === 'private') {
           const clientDoc = await getDoc(doc(db, 'users', session.clientId));
           if (clientDoc.exists()) {
             const clientData = clientDoc.data();

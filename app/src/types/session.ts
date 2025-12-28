@@ -59,6 +59,8 @@ interface BaseSession {
   trainerId: string;
   calendlyEventId: string;
   calendlyEventUri: string;
+  cancelUrl?: string; // Calendly cancel URL from webhook
+  rescheduleUrl?: string; // Calendly reschedule URL from webhook
   scheduledDate: Timestamp;
   duration: number;
   status: SessionStatus;

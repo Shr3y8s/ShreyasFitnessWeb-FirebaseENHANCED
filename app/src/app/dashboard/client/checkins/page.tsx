@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PhoneCall, Calendar, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { PhoneCall, Calendar, CheckCircle, XCircle, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import {
   getCurrentWeekIdentifier,
   subscribeToCurrentWeekCheckin,
@@ -340,13 +340,42 @@ export default function WeeklyCheckinsPage() {
               </div>
 
               {currentWeekCheckin.status === 'scheduled' && (
-                <Alert>
-                  <Clock className="h-4 w-4" />
-                  <AlertDescription>
-                    You already have a check-in scheduled for this week. To reschedule, please cancel
-                    this one first via your Calendly confirmation email.
-                  </AlertDescription>
-                </Alert>
+                <>
+                  {(currentWeekCheckin.cancelUrl || currentWeekCheckin.rescheduleUrl) && (
+                    <div className="flex gap-2">
+                      {currentWeekCheckin.rescheduleUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(currentWeekCheckin.rescheduleUrl, '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Reschedule
+                        </Button>
+                      )}
+                      {currentWeekCheckin.cancelUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(currentWeekCheckin.cancelUrl, '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Cancel
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {!currentWeekCheckin.cancelUrl && !currentWeekCheckin.rescheduleUrl && (
+                    <Alert>
+                      <Clock className="h-4 w-4" />
+                      <AlertDescription>
+                        To cancel or reschedule, use the link in your Calendly confirmation email.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
               )}
             </div>
           ) : (

@@ -185,6 +185,79 @@ async function resolveLocation(locationString, userId) {
 }
 
 /**
+ * Handle Calendly Cancellation
+ * Called when invitee.canceled webhook is received
+ * This happens when user reschedules (cancel + new booking) or manually cancels
+ */
+async function handleCalendlyCancellation(calendlyEventId) {
+  console.log(`Looking for session with Calendly event ID: ${calendlyEventId}`);
+  
+  // Find the session
+  const sessionsSnapshot = await db.collection("sessions")
+    .where("calendlyEventId", "==", calendlyEventId)
+    .where("status", "==", "scheduled")
+    .limit(1)
+    .get();
+  
+  if (sessionsSnapshot.empty) {
+    console.log(`No scheduled session found for Calendly event: ${calendlyEventId}`);
+    return;
+  }
+  
+  const sessionDoc = sessionsSnapshot.docs[0];
+  const sessionData = sessionDoc.data();
+  const sessionRef = db.collection("sessions").doc(sessionDoc.id);
+  
+  console.log(`Found session ${sessionDoc.id} for user ${sessionData.clientId}`);
+  
+  // Mark as canceled (this is from Calendly, so return credit automatically)
+  const now = admin.firestore.Timestamp.now();
+  
+  await db.runTransaction(async (transaction) => {
+    // For training sessions, return credit
+    if (sessionData.sessionType === "training" && sessionData.packageId) {
+      const clientRef = db.collection("users").doc(sessionData.clientId);
+      const clientDoc = await transaction.get(clientRef);
+      const clientData = clientDoc.data();
+      
+      const packages = clientData.sessionPackages || [];
+      const packageIndex = packages.findIndex(pkg => pkg.id === sessionData.packageId);
+      
+      if (packageIndex >= 0) {
+        packages[packageIndex].remaining += 1;
+        
+        const balance = clientData.sessionBalance || {};
+        const updatedBalance = {
+          ...balance,
+          available: balance.available + 1,
+          used: balance.used - 1,
+          lastUpdated: now,
+        };
+        
+        transaction.update(clientRef, {
+          sessionPackages: packages,
+          sessionBalance: updatedBalance,
+        });
+        
+        console.log(`Returned credit for canceled training session`);
+      }
+    }
+    
+    // Update session status
+    transaction.update(sessionRef, {
+      status: "canceled",
+      canceledBy: "client",
+      canceledAt: now,
+      cancelReason: "Rescheduled or canceled via Calendly",
+      creditReturned: sessionData.sessionType === "training", // Check-ins have no credit
+      updatedAt: now,
+    });
+  });
+  
+  console.log(`Session ${sessionDoc.id} marked as canceled`);
+}
+
+/**
  * Schedule Session (Calendly Webhook Handler)
  * Deducts session from balance when booking is confirmed
  */
@@ -220,7 +293,13 @@ exports.calendlyWebhook = onRequest({
         (new Date(scheduledEvent.end_time) - new Date(scheduledEvent.start_time)) / (1000 * 60)
       );
 
+      // Extract cancel and reschedule URLs (optional, may not always be present)
+      const cancelUrl = payload.cancel_url || null;
+      const rescheduleUrl = payload.reschedule_url || null;
+
       console.log(`Processing booking for ${inviteeEmail} (${inviteeName})`);
+      if (cancelUrl) console.log(`Cancel URL: ${cancelUrl}`);
+      if (rescheduleUrl) console.log(`Reschedule URL: ${rescheduleUrl}`);
 
       // Find user by email
       const usersSnapshot = await db.collection("users")
@@ -257,6 +336,10 @@ exports.calendlyWebhook = onRequest({
             duration,
             eventUri: scheduledEvent.uri,
           },
+          calendlyUrls: {
+            cancelUrl,
+            rescheduleUrl,
+          },
           userData,
         });
         console.log(`Successfully scheduled check-in for user ${userId}`);
@@ -280,6 +363,10 @@ exports.calendlyWebhook = onRequest({
             duration,
             eventUri: scheduledEvent.uri,
           },
+          calendlyUrls: {
+            cancelUrl,
+            rescheduleUrl,
+          },
           locationInfo,
           userData,
         });
@@ -288,8 +375,21 @@ exports.calendlyWebhook = onRequest({
 
       res.json({ success: true });
     } else if (webhookEvent.event === "invitee.canceled") {
-      // Handle cancellation
-      console.log("Invitee canceled:", webhookEvent.payload);
+      // Handle cancellation (triggered by reschedule or manual cancel)
+      const payload = webhookEvent.payload;
+      const scheduledEvent = payload.scheduled_event;
+      
+      if (!scheduledEvent) {
+        console.error("Missing scheduled_event in cancel payload");
+        return res.status(400).json({ error: "Invalid webhook payload" });
+      }
+
+      const calendlyEventId = scheduledEvent.uri.split('/').pop();
+      console.log(`Processing cancellation for Calendly event: ${calendlyEventId}`);
+
+      // Find and cancel the session
+      await handleCalendlyCancellation(calendlyEventId);
+      
       res.json({ received: true });
     } else {
       console.log("Unhandled event type:", webhookEvent.event);
@@ -305,7 +405,7 @@ exports.calendlyWebhook = onRequest({
  * Schedule Session Internal Function
  * Deducts session from oldest unexpired package
  */
-async function scheduleSession({ userId, calendlyEventId, eventDetails, locationInfo, userData }) {
+async function scheduleSession({ userId, calendlyEventId, eventDetails, calendlyUrls, locationInfo, userData }) {
   const userRef = db.collection("users").doc(userId);
   
   await db.runTransaction(async (transaction) => {
@@ -361,11 +461,14 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, location
       packageId: packageToUse.id,
       calendlyEventId: calendlyEventId,
       calendlyEventUri: eventDetails.eventUri,
+      cancelUrl: calendlyUrls?.cancelUrl || null,
+      rescheduleUrl: calendlyUrls?.rescheduleUrl || null,
       scheduledDate: eventDetails.scheduledDate,
       duration: eventDetails.duration,
       locationId: locationInfo.locationId, // "private" or training_locations doc ID
       locationType: locationInfo.locationType, // "public" or "private"
       status: "scheduled",
+      sessionType: "training",
       creditReturned: false,
       createdAt: admin.firestore.Timestamp.now(),
       updatedAt: admin.firestore.Timestamp.now(),
@@ -453,16 +556,25 @@ exports.expireSessionPackages = onSchedule({
 /**
  * Calculate week identifier (Sunday-start weeks)
  * Matches frontend checkin-api.ts logic exactly
- * Format: "YYYY-Www" (e.g., "2025-W01")
+ * Format: "YYYY-MM-DD" (the Sunday that starts the week)
+ * Example: Any date in the week Dec 28 - Jan 3 returns "2025-12-28"
  */
 function getWeekIdentifier(date) {
-  const year = date.getFullYear();
-  const firstDayOfYear = new Date(year, 0, 1);
-  const daysSinceFirstDay = Math.floor(
-    (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)
-  );
-  const weekNumber = Math.ceil((daysSinceFirstDay + firstDayOfYear.getDay() + 1) / 7);
-  return `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+  // Clone to avoid mutating original
+  const d = new Date(date);
+  
+  // Get day of week (0 = Sunday, 6 = Saturday)
+  const dayOfWeek = d.getDay();
+  
+  // Subtract days to get to the most recent Sunday (or current day if Sunday)
+  d.setDate(d.getDate() - dayOfWeek);
+  
+  // Return Sunday's date as YYYY-MM-DD
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 }
 
 /**
@@ -488,7 +600,7 @@ async function validateOnePerWeek(userId, scheduledDate) {
  * Schedule Check-in Session
  * Creates a check-in session (no credit deduction, subscription-based access)
  */
-async function scheduleCheckin({ userId, calendlyEventId, eventDetails, userData }) {
+async function scheduleCheckin({ userId, calendlyEventId, eventDetails, calendlyUrls, userData }) {
   // Validate eligibility using Stripe product IDs
   const isEligible = isEligibleForCheckins(userData.tier);
   
@@ -508,6 +620,8 @@ async function scheduleCheckin({ userId, calendlyEventId, eventDetails, userData
     trainerId: process.env.TRAINER_ID || "admin",
     calendlyEventId,
     calendlyEventUri: eventDetails.eventUri,
+    cancelUrl: calendlyUrls?.cancelUrl || null,
+    rescheduleUrl: calendlyUrls?.rescheduleUrl || null,
     scheduledDate: eventDetails.scheduledDate,
     duration: eventDetails.duration,
     status: "scheduled",
