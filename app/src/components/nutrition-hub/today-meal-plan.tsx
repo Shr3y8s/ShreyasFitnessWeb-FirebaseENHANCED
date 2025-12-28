@@ -239,7 +239,7 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
                 <ul className="space-y-1.5 pl-7">
                   {meal.items.map((item, itemIndex) => (
                     <li key={itemIndex} className="flex items-start gap-2">
-                      <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 flex-shrink-0" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 shrink-0" />
                       <span className={cn(
                         "text-sm text-muted-foreground leading-tight",
                         isMealChecked && "line-through text-muted-foreground/50"

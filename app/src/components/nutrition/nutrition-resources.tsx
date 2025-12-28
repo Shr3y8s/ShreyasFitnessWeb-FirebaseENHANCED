@@ -153,7 +153,7 @@ export function NutritionResources() {
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
@@ -173,7 +173,7 @@ export function NutritionResources() {
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                 <ChefHat className="h-6 w-6 text-primary" />
               </div>
               <div>

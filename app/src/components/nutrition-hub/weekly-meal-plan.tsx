@@ -90,7 +90,7 @@ export function WeeklyMealPlan({ weeklyMealPlan }: WeeklyMealPlanProps) {
                       <ul className="space-y-1">
                         {meal.items.map((item, itemIndex) => (
                           <li key={itemIndex} className="flex items-start gap-2 ml-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 flex-shrink-0" />
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary/50 mt-1.5 shrink-0" />
                             <span className="text-xs text-muted-foreground leading-tight">
                               {item}
                             </span>

@@ -4,13 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
-import { doc, setDoc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
 import { Session, TrainingSession } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
-import { WelcomeScreen } from '@/components/dashboard/welcome-screen';
 import { WelcomeHeader } from '@/components/dashboard/welcome-header';
+import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import { UpcomingWorkoutReminder } from '@/components/dashboard/upcoming-workout-reminder';
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
 import { KeyMetricsOverview } from '@/components/dashboard/key-metrics-overview';
@@ -116,6 +116,7 @@ export default function ClientDashboardPage() {
       // Fetch location based on sessionType and locationType
       try {
         // Check-ins are virtual calls, no physical location
+        // @ts-expect-error - sessionType may include 'checkin' at runtime
         if (session.sessionType === 'checkin') {
           setNextSessionLocation('Virtual check-in call');
         } else if (session.locationType === 'private') {
@@ -159,7 +160,6 @@ export default function ClientDashboardPage() {
     });
 
     // Register with centralized registry
-    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
     registerListener(unsubscribe);
 
     return () => {
