@@ -104,12 +104,17 @@ export default function ScheduleSessionsPage() {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const sessions = snapshot.docs.map(doc => ({
+      // Filter out check-in sessions (they don't have location data)
+      const allSessions = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as TrainingSession[];
+      })) as any[];
       
-      // Fetch locations for all sessions
+      const sessions = allSessions.filter(session => 
+        session.sessionType !== 'checkin'
+      ) as TrainingSession[];
+      
+      // Fetch locations for all training sessions
       const locationMap = new Map<string, string>();
       
       for (const session of sessions) {
