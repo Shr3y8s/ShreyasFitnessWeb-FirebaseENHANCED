@@ -15,6 +15,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const sharedConfig = require("./firebase-config.json");
+const { isEligibleForCheckins } = require("./product-config");
 
 const db = admin.firestore();
 
@@ -236,27 +237,55 @@ exports.calendlyWebhook = onRequest({
       const userId = userDoc.id;
       const userData = userDoc.data();
 
-      // Extract location from Calendly event
-      // Calendly sends location as an object: { location: "address string", type: "physical" }
-      const locationString = scheduledEvent.location?.location || "";
-      
-      // Resolve location (public trainer location or private client address)
-      const locationInfo = await resolveLocation(locationString, userId);
+      // SMART ROUTING: Detect event type from URL and name
+      const eventUri = scheduledEvent.uri || "";
+      const eventTypeUri = payload.event_type?.uri || "";
+      const eventName = (scheduledEvent.name || "").toLowerCase();
+      const isCheckin = eventUri.includes('weekly-checkin') || 
+                        eventTypeUri.includes('weekly-checkin') ||
+                        eventName.includes('check-in') ||
+                        eventName.includes('checkin');
 
-      // Schedule the session
-      await scheduleSession({
-        userId,
-        calendlyEventId,
-        eventDetails: {
-          scheduledDate,
-          duration,
-          eventUri: scheduledEvent.uri,
-        },
-        locationInfo,
-        userData,
-      });
+      if (isCheckin) {
+        // Handle as CHECK-IN (subscription-based, no credit deduction)
+        console.log(`Routing to check-in handler for user ${userId}`);
+        await scheduleCheckin({
+          userId,
+          calendlyEventId,
+          eventDetails: {
+            scheduledDate,
+            duration,
+            eventUri: scheduledEvent.uri,
+          },
+          userData,
+        });
+        console.log(`Successfully scheduled check-in for user ${userId}`);
+      } else {
+        // Handle as TRAINING SESSION (deducts credit from package)
+        console.log(`Routing to training session handler for user ${userId}`);
+        
+        // Extract location from Calendly event
+        // Calendly sends location as an object: { location: "address string", type: "physical" }
+        const locationString = scheduledEvent.location?.location || "";
+        
+        // Resolve location (public trainer location or private client address)
+        const locationInfo = await resolveLocation(locationString, userId);
 
-      console.log(`Successfully scheduled session for user ${userId}`);
+        // Schedule the session
+        await scheduleSession({
+          userId,
+          calendlyEventId,
+          eventDetails: {
+            scheduledDate,
+            duration,
+            eventUri: scheduledEvent.uri,
+          },
+          locationInfo,
+          userData,
+        });
+        console.log(`Successfully scheduled training session for user ${userId}`);
+      }
+
       res.json({ success: true });
     } else if (webhookEvent.event === "invitee.canceled") {
       // Handle cancellation
@@ -420,6 +449,80 @@ exports.expireSessionPackages = onSchedule({
     console.error("Error in expiration job:", error);
   }
 });
+
+/**
+ * Calculate week identifier (Sunday-start weeks)
+ * Matches frontend checkin-api.ts logic exactly
+ * Format: "YYYY-Www" (e.g., "2025-W01")
+ */
+function getWeekIdentifier(date) {
+  const year = date.getFullYear();
+  const firstDayOfYear = new Date(year, 0, 1);
+  const daysSinceFirstDay = Math.floor(
+    (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000)
+  );
+  const weekNumber = Math.ceil((daysSinceFirstDay + firstDayOfYear.getDay() + 1) / 7);
+  return `${year}-W${weekNumber.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Validate one check-in per week
+ * Enforces "one check-in per calendar week (Sunday-Saturday)" rule
+ */
+async function validateOnePerWeek(userId, scheduledDate) {
+  const weekIdentifier = getWeekIdentifier(scheduledDate);
+  
+  const existing = await db.collection('sessions')
+    .where('clientId', '==', userId)
+    .where('sessionType', '==', 'checkin')
+    .where('weekIdentifier', '==', weekIdentifier)
+    .where('status', 'in', ['scheduled', 'completed'])
+    .get();
+  
+  if (!existing.empty) {
+    throw new Error('Check-in already scheduled for this week');
+  }
+}
+
+/**
+ * Schedule Check-in Session
+ * Creates a check-in session (no credit deduction, subscription-based access)
+ */
+async function scheduleCheckin({ userId, calendlyEventId, eventDetails, userData }) {
+  // Validate eligibility using Stripe product IDs
+  const isEligible = isEligibleForCheckins(userData.tier);
+  
+  if (!isEligible) {
+    throw new Error('User not eligible for check-ins');
+  }
+  
+  // Validate one per week
+  await validateOnePerWeek(userId, eventDetails.scheduledDate.toDate());
+  
+  // Create check-in session
+  const sessionData = {
+    // Shared base fields
+    clientId: userId,
+    clientName: userData.name || "",
+    clientEmail: userData.email || "",
+    trainerId: process.env.TRAINER_ID || "admin",
+    calendlyEventId,
+    calendlyEventUri: eventDetails.eventUri,
+    scheduledDate: eventDetails.scheduledDate,
+    duration: eventDetails.duration,
+    status: "scheduled",
+    createdAt: admin.firestore.Timestamp.now(),
+    updatedAt: admin.firestore.Timestamp.now(),
+    
+    // Check-in specific
+    sessionType: "checkin",
+    weekIdentifier: getWeekIdentifier(eventDetails.scheduledDate.toDate()),
+  };
+  
+  await db.collection("sessions").doc().set(sessionData);
+  console.log(`Check-in scheduled: ${userId}, week: ${sessionData.weekIdentifier}`);
+}
+
 
 /**
  * Cancel Session

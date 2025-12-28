@@ -970,6 +970,7 @@ const sessionFunctions = require("./sessions");
 
 // Export session management functions (excluding purchaseSessionPackage and stripeSessionWebhook)
 // Those are now handled by Stripe Extension's built-in checkout and syncPaymentToUser trigger
+// Note: calendlyWebhook now handles BOTH training sessions AND check-ins via smart routing
 exports.getSessionBalance = sessionFunctions.getSessionBalance;
 exports.calendlyWebhook = sessionFunctions.calendlyWebhook;
 exports.expireSessionPackages = sessionFunctions.expireSessionPackages;

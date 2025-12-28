@@ -28,6 +28,7 @@ import {
   Camera,
   Star,
   Receipt,
+  PhoneCall,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -405,6 +406,14 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
                         {unreadMessagesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/checkins' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/checkins">
+                    <PhoneCall className="w-4 h-4" />
+                    <span className="font-medium">Weekly Check-ins</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

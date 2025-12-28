@@ -331,4 +331,53 @@ setLongestStreak(streak.longestStreak);
 4. **Reassess** Cloud Function priority based on data
 5. **Implement Phase 2** only when thresholds are met
 
-**Last Updated**: December 26, 2025
+**Last Updated**: December 28, 2025
+
+---
+
+## 📦 Code Quality Optimizations
+
+### Centralize Calendly URLs (Priority: Low)
+**Status:** Partially Complete  
+**Date Completed:** December 28, 2025
+
+**Problem:**
+- Calendly URLs were hardcoded across 5 different files
+- Difficult to update when URLs change
+- Risk of typos and inconsistencies
+- No single source of truth
+
+**Solution Implemented:**
+1. Created `app/src/lib/constants.ts` with centralized `CALENDLY_URLS` object
+2. Updated `app/src/app/dashboard/client/checkins/page.tsx` to use constant
+
+**Current State:**
+```typescript
+// app/src/lib/constants.ts
+export const CALENDLY_URLS = {
+  BASE: 'https://calendly.com/shreyas-annapureddy',
+  INTRO_CALL: 'https://calendly.com/shreyas-annapureddy/30min',
+  TRAINING_SESSION: 'https://calendly.com/shreyas-annapureddy/1-1-training-session',
+  WEEKLY_CHECKIN: 'https://calendly.com/shreyas-annapureddy/weekly-checkin',
+} as const;
+```
+
+**Remaining Files to Refactor** (4 files):
+1. `app/src/components/dashboard/onboarding-checklist.tsx` → Uses `/30min`
+2. `app/src/components/dashboard/weekly-checkin.tsx` → Uses `/30min`
+3. `app/src/app/dashboard/client/sessions/schedule/page.tsx` → Uses `/1-1-training-session`
+4. `app/src/app/(marketing)/connect/page.tsx` → Uses `/30min`
+
+**Benefits:**
+- ✅ Single source of truth for all Calendly URLs
+- ✅ Type-safe with TypeScript `as const`
+- ✅ Easy to update URLs in one location
+- ✅ IDE autocomplete support
+- ✅ Prevents typos and inconsistencies
+
+**Future Work:**
+- Refactor remaining 4 files to use `CALENDLY_URLS` from constants
+- Consider adding helper function for building URLs with query parameters
+- Estimated effort: 30 minutes
+
+**Note:** This is a code maintainability optimization, not a performance optimization, but tracked here for visibility.

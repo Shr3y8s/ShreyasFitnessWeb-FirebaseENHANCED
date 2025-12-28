@@ -37,23 +37,26 @@ export interface SessionBalance {
 }
 
 /**
- * Training Session Status
+ * Session Type
+ */
+export type SessionType = 'training' | 'checkin';
+
+/**
+ * Session Status
  */
 export type SessionStatus = 'scheduled' | 'completed' | 'canceled' | 'no-show';
 export type CanceledBy = 'client' | 'trainer';
 
 /**
- * Training Session
+ * Base Session Interface
+ * Contains all fields shared between training sessions and check-ins
  */
-export interface TrainingSession {
+interface BaseSession {
   id: string;
   clientId: string;
   clientName: string;
   clientEmail: string;
   trainerId: string;
-  locationId: string; // For public: training_locations doc ID, For private: "private"
-  locationType: 'public' | 'private'; // Determines where to lookup address
-  packageId: string;
   calendlyEventId: string;
   calendlyEventUri: string;
   scheduledDate: Timestamp;
@@ -62,11 +65,48 @@ export interface TrainingSession {
   canceledBy?: CanceledBy;
   canceledAt?: Timestamp;
   cancelReason?: string;
-  creditReturned: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   completedAt?: Timestamp;
   notes?: string;
+}
+
+/**
+ * Training Session
+ * Extends BaseSession with training-specific fields
+ */
+export interface TrainingSession extends BaseSession {
+  sessionType: 'training';
+  locationId: string; // For public: training_locations doc ID, For private: "private"
+  locationType: 'public' | 'private'; // Determines where to lookup address
+  packageId: string;
+  creditReturned: boolean;
+}
+
+/**
+ * Check-in Session
+ * Extends BaseSession with check-in-specific fields
+ */
+export interface CheckinSession extends BaseSession {
+  sessionType: 'checkin';
+  weekIdentifier: string; // ISO week format: "2025-W01"
+}
+
+/**
+ * Unified Session Type
+ * Discriminated union of TrainingSession and CheckinSession
+ */
+export type Session = TrainingSession | CheckinSession;
+
+/**
+ * Type Guards
+ */
+export function isTrainingSession(session: Session): session is TrainingSession {
+  return session.sessionType === 'training';
+}
+
+export function isCheckinSession(session: Session): session is CheckinSession {
+  return session.sessionType === 'checkin';
 }
 
 /**

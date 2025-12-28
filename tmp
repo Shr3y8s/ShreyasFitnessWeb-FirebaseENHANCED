@@ -1,0 +1,384 @@
+2025-12-28T10:51:18.698027Z ? calendlywebhook: Resolving location: "" for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T10:51:18.698104Z ? calendlywebhook: Using default location
+
+2025-12-28T10:51:19.087667Z ? calendlywebhook: Error processing Calendly webhook: Error: No sessions available
+    at /workspace/sessions.js:315:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Transaction.runTransactionOnce (/workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:440:28)
+    at async /workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:412:28
+    at async scheduleSession (/workspace/sessions.js:306:3)
+    at async /workspace/sessions.js:270:9
+    at async /workspace/node_modules/firebase-functions/lib/common/providers/https.js:566:4
+
+2025-12-28T10:52:06.139363Z E calendlywebhook: 
+2025-12-28T10:52:06.148434Z ? calendlywebhook: Received Calendly webhook: {
+  "created_at": "2025-12-28T10:09:34.000000Z",
+  "created_by": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+  "event": "invitee.created",
+  "payload": {
+    "cancel_url": "https://calendly.com/cancellations/63aa5141-84cb-4a64-a09d-642e4efd1bac",
+    "created_at": "2025-12-28T10:09:34.166640Z",
+    "email": "acc.satish@gmail.com",
+    "event": "https://api.calendly.com/scheduled_events/3f56dd2f-7ad7-4c27-ae6b-0393459981ca",
+    "first_name": null,
+    "invitee_scheduled_by": null,
+    "last_name": null,
+    "name": "Tester2 Man",
+    "new_invitee": null,
+    "no_show": null,
+    "old_invitee": null,
+    "payment": null,
+    "questions_and_answers": [
+      {
+        "answer": "testing 2",
+        "position": 0,
+        "question": "Please share anything that will help prepare for our meeting."
+      }
+    ],
+    "reconfirmation": null,
+    "reschedule_url": "https://calendly.com/reschedulings/63aa5141-84cb-4a64-a09d-642e4efd1bac",
+    "rescheduled": false,
+    "routing_form_submission": null,
+    "scheduled_event": {
+      "created_at": "2025-12-28T10:09:34.150803Z",
+      "end_time": "2025-12-30T03:45:00.000000Z",
+      "event_guests": [],
+      "event_memberships": [
+        {
+          "user": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+          "user_email": "shreyas.annapureddy@gmail.com",
+          "user_name": "Shreyas"
+        }
+      ],
+      "event_type": "https://api.calendly.com/event_types/23fe4d4a-32a6-478f-b395-d79f33941b34",
+      "invitees_counter": {
+        "total": 1,
+        "active": 1,
+        "limit": 1
+      },
+      "location": {
+        "join_url": "https://calendly.com/events/3f56dd2f-7ad7-4c27-ae6b-0393459981ca/google_meet",
+        "status": "processing",
+        "type": "google_conference"
+      },
+      "meeting_notes_html": null,
+      "meeting_notes_plain": null,
+      "name": "Weekly Check-in",
+      "start_time": "2025-12-30T03:30:00.000000Z",
+      "status": "active",
+      "updated_at": "2025-12-28T10:09:34.150803Z",
+      "uri": "https://api.calendly.com/scheduled_events/3f56dd2f-7ad7-4c27-ae6b-0393459981ca"
+    },
+    "scheduling_method": null,
+    "status": "active",
+    "text_reminder_number": null,
+    "timezone": "Asia/Calcutta",
+    "tracking": {
+      "utm_campaign": null,
+      "utm_source": null,
+      "utm_medium": null,
+      "utm_content": null,
+      "utm_term": null,
+      "salesforce_uuid": null
+    },
+    "updated_at": "2025-12-28T10:09:34.166640Z",
+    "uri": "https://api.calendly.com/scheduled_events/3f56dd2f-7ad7-4c27-ae6b-0393459981ca/invitees/63aa5141-84cb-4a64-a09d-642e4efd1bac"
+  }
+}
+
+2025-12-28T10:52:06.148619Z ? calendlywebhook: Processing booking for acc.satish@gmail.com (Tester2 Man)
+
+2025-12-28T10:52:06.435370Z ? calendlywebhook: Routing to training session handler for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T10:52:06.435386Z ? calendlywebhook: Resolving location: "" for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T10:52:06.435394Z ? calendlywebhook: Using default location
+
+2025-12-28T10:52:06.690129Z ? calendlywebhook: Error processing Calendly webhook: Error: No sessions available
+    at /workspace/sessions.js:315:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Transaction.runTransactionOnce (/workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:440:28)
+    at async /workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:412:28
+    at async scheduleSession (/workspace/sessions.js:306:3)
+    at async /workspace/sessions.js:270:9
+    at async /workspace/node_modules/firebase-functions/lib/common/providers/https.js:566:4
+
+2025-12-28T11:14:16.103115Z E calendlywebhook: 
+2025-12-28T11:14:16.112554Z I calendlywebhook: Starting new instance. Reason: AUTOSCALING - Instance started due to configured scaling factors (e.g. CPU utilization, request throughput, etc.) or no existing capacity for current traffic.
+2025-12-28T11:14:17.408751Z I calendlywebhook: Default STARTUP TCP probe succeeded after 1 attempt for container "worker" on port 8080.
+2025-12-28T11:14:17.448707Z ? calendlywebhook: Received Calendly webhook: {
+  "created_at": "2025-12-28T10:32:03.000000Z",
+  "created_by": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+  "event": "invitee.created",
+  "payload": {
+    "cancel_url": "https://calendly.com/cancellations/5f47d367-eb32-4caa-91dd-2645f70bfe51",
+    "created_at": "2025-12-28T10:32:03.400779Z",
+    "email": "acc.satish@gmail.com",
+    "event": "https://api.calendly.com/scheduled_events/6df9bed1-debc-456d-9331-365de99f34da",
+    "first_name": null,
+    "invitee_scheduled_by": null,
+    "last_name": null,
+    "name": "Tester2 Man",
+    "new_invitee": null,
+    "no_show": null,
+    "old_invitee": null,
+    "payment": null,
+    "questions_and_answers": [
+      {
+        "answer": "testing 3",
+        "position": 0,
+        "question": "Please share anything that will help prepare for our meeting."
+      }
+    ],
+    "reconfirmation": null,
+    "reschedule_url": "https://calendly.com/reschedulings/5f47d367-eb32-4caa-91dd-2645f70bfe51",
+    "rescheduled": false,
+    "routing_form_submission": null,
+    "scheduled_event": {
+      "created_at": "2025-12-28T10:32:03.380017Z",
+      "end_time": "2025-12-31T17:15:00.000000Z",
+      "event_guests": [],
+      "event_memberships": [
+        {
+          "user": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+          "user_email": "shreyas.annapureddy@gmail.com",
+          "user_name": "Shreyas"
+        }
+      ],
+      "event_type": "https://api.calendly.com/event_types/23fe4d4a-32a6-478f-b395-d79f33941b34",
+      "invitees_counter": {
+        "total": 1,
+        "active": 1,
+        "limit": 1
+      },
+      "location": {
+        "join_url": "https://calendly.com/events/6df9bed1-debc-456d-9331-365de99f34da/google_meet",
+        "status": "processing",
+        "type": "google_conference"
+      },
+      "meeting_notes_html": null,
+      "meeting_notes_plain": null,
+      "name": "Weekly Check-in",
+      "start_time": "2025-12-31T17:00:00.000000Z",
+      "status": "active",
+      "updated_at": "2025-12-28T10:32:03.380017Z",
+      "uri": "https://api.calendly.com/scheduled_events/6df9bed1-debc-456d-9331-365de99f34da"
+    },
+    "scheduling_method": null,
+    "status": "active",
+    "text_reminder_number": null,
+    "timezone": "Asia/Calcutta",
+    "tracking": {
+      "utm_campaign": null,
+      "utm_source": null,
+      "utm_medium": null,
+      "utm_content": null,
+      "utm_term": null,
+      "salesforce_uuid": null
+    },
+    "updated_at": "2025-12-28T10:32:03.400779Z",
+    "uri": "https://api.calendly.com/scheduled_events/6df9bed1-debc-456d-9331-365de99f34da/invitees/5f47d367-eb32-4caa-91dd-2645f70bfe51"
+  }
+}
+
+2025-12-28T11:14:17.449130Z ? calendlywebhook: Processing booking for acc.satish@gmail.com (Tester2 Man)
+
+2025-12-28T11:14:18.348255Z ? calendlywebhook: Routing to training session handler for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T11:14:18.348570Z ? calendlywebhook: Resolving location: "" for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T11:14:18.348699Z ? calendlywebhook: Using default location
+
+2025-12-28T11:14:18.652432Z ? calendlywebhook: Error processing Calendly webhook: Error: No sessions available
+    at /workspace/sessions.js:315:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Transaction.runTransactionOnce (/workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:440:28)
+    at async /workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:412:28
+    at async scheduleSession (/workspace/sessions.js:306:3)
+    at async /workspace/sessions.js:270:9
+    at async /workspace/node_modules/firebase-functions/lib/common/providers/https.js:566:4
+
+2025-12-28T11:18:28.947643209Z N calendlyWebhook: {"@type":"type.googleapis.com/google.cloud.audit.AuditLog","authenticationInfo":{"principalEmail":"satish.annapureddy@gmail.com","principalSubject":"user:satish.annapureddy@gmail.com","oauthInfo":{"oauthClientId":"563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com"}},"requestMetadata":{"callerIp":"2406:7400:45:2a5f:44e:3789:f426:57f5","callerSuppliedUserAgent":"FirebaseCLI/14.19.1,gzip(gfe),gzip(gfe)","requestAttributes":{"time":"2025-12-28T11:18:28.129707042Z","auth":{}},"destinationAttributes":{}},"serviceName":"cloudfunctions.googleapis.com","methodName":"google.cloud.functions.v2.FunctionService.UpdateFunction","authorizationInfo":[{"resource":"projects/shreyfitweb/locations/us-west1/functions/calendlyWebhook","permission":"cloudfunctions.functions.update","granted":true,"resourceAttributes":{"service":"cloudfunctions.googleapis.com","name":"projects/shreyfitweb/locations/us-west1/functions/calendlyWebhook","type":"cloudfunctions.googleapis.com/Function"},"permissionType":"ADMIN_WRITE"}],"resourceName":"projects/shreyfitweb/locations/us-west1/functions/calendlyWebhook","request":{"function":{"labels":{"firebase-functions-hash":"080c4e953c4c6f7322c8a1ba27cd2c068e8af270","deployment-tool":"cli-firebase"},"build_config":{"source":{},"entry_point":"calendlyWebhook","runtime":"nodejs22"},"name":"projects/shreyfitweb/locations/us-west1/functions/calendlyWebhook","service_config":{"max_instance_request_concurrency":80,"available_memory":"256Mi","available_cpu":"1"}},"@type":"type.googleapis.com/google.cloud.functions.v2.UpdateFunctionRequest","update_mask":{"paths":["name","build_config.runtime","build_config.entry_point","build_config.source.storage_source.bucket","build_config.source.storage_source.object","build_config.environment_variables","build_config.source_token","service_config.environment_variables","service_config.ingress_settings","service_config.timeout_seconds","service_config.service_account_email","service_config.available_memory","service_config.min_instance_count","service_config.max_instance_count","service_config.max_instance_request_concurrency","service_config.available_cpu","service_config.vpc_connector","service_config.vpc_connector_egress_settings","labels"]}},"response":{"@type":"type.googleapis.com/google.longrunning.Operation"},"resourceLocation":{"currentLocations":["us-west1"]}}
+2025-12-28T11:19:26.056096Z E calendlywebhook: 
+2025-12-28T11:19:26.066280Z ? calendlywebhook: Received Calendly webhook: {
+  "created_at": "2025-12-28T11:19:25.000000Z",
+  "created_by": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+  "event": "invitee.created",
+  "payload": {
+    "cancel_url": "https://calendly.com/cancellations/bd2e95bb-b867-4cfa-9058-43abccb5a492",
+    "created_at": "2025-12-28T11:19:25.153595Z",
+    "email": "acc.satish@gmail.com",
+    "event": "https://api.calendly.com/scheduled_events/79c42e5b-1931-4941-a31c-78022e39fed5",
+    "first_name": null,
+    "invitee_scheduled_by": null,
+    "last_name": null,
+    "name": "Tester2 Man",
+    "new_invitee": null,
+    "no_show": null,
+    "old_invitee": null,
+    "payment": null,
+    "questions_and_answers": [
+      {
+        "answer": "testing 4",
+        "position": 0,
+        "question": "Please share anything that will help prepare for our meeting."
+      }
+    ],
+    "reconfirmation": null,
+    "reschedule_url": "https://calendly.com/reschedulings/bd2e95bb-b867-4cfa-9058-43abccb5a492",
+    "rescheduled": false,
+    "routing_form_submission": null,
+    "scheduled_event": {
+      "created_at": "2025-12-28T11:19:25.138385Z",
+      "end_time": "2025-12-31T16:15:00.000000Z",
+      "event_guests": [],
+      "event_memberships": [
+        {
+          "user": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+          "user_email": "shreyas.annapureddy@gmail.com",
+          "user_name": "Shreyas"
+        }
+      ],
+      "event_type": "https://api.calendly.com/event_types/23fe4d4a-32a6-478f-b395-d79f33941b34",
+      "invitees_counter": {
+        "total": 1,
+        "active": 1,
+        "limit": 1
+      },
+      "location": {
+        "join_url": "https://calendly.com/events/79c42e5b-1931-4941-a31c-78022e39fed5/google_meet",
+        "status": "processing",
+        "type": "google_conference"
+      },
+      "meeting_notes_html": null,
+      "meeting_notes_plain": null,
+      "name": "Weekly Check-in",
+      "start_time": "2025-12-31T16:00:00.000000Z",
+      "status": "active",
+      "updated_at": "2025-12-28T11:19:25.138385Z",
+      "uri": "https://api.calendly.com/scheduled_events/79c42e5b-1931-4941-a31c-78022e39fed5"
+    },
+    "scheduling_method": null,
+    "status": "active",
+    "text_reminder_number": null,
+    "timezone": "Asia/Calcutta",
+    "tracking": {
+      "utm_campaign": null,
+      "utm_source": null,
+      "utm_medium": null,
+      "utm_content": null,
+      "utm_term": null,
+      "salesforce_uuid": null
+    },
+    "updated_at": "2025-12-28T11:19:25.153595Z",
+    "uri": "https://api.calendly.com/scheduled_events/79c42e5b-1931-4941-a31c-78022e39fed5/invitees/bd2e95bb-b867-4cfa-9058-43abccb5a492"
+  }
+}
+
+2025-12-28T11:19:26.066835Z ? calendlywebhook: Processing booking for acc.satish@gmail.com (Tester2 Man)
+
+2025-12-28T11:19:26.355943Z ? calendlywebhook: Routing to training session handler for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T11:19:26.356180Z ? calendlywebhook: Resolving location: "" for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T11:19:26.356444Z ? calendlywebhook: Using default location
+
+2025-12-28T11:19:26.617363Z ? calendlywebhook: Error processing Calendly webhook: Error: No sessions available
+    at /workspace/sessions.js:315:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Transaction.runTransactionOnce (/workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:440:28)
+    at async /workspace/node_modules/@google-cloud/firestore/build/src/transaction.js:412:28
+    at async scheduleSession (/workspace/sessions.js:306:3)
+    at async /workspace/sessions.js:270:9
+    at async /workspace/node_modules/firebase-functions/lib/common/providers/https.js:566:4
+
+2025-12-28T11:19:29.480511Z I calendlywebhook: Starting new instance. Reason: DEPLOYMENT_ROLLOUT - Instance started due to traffic shifting between revisions due to deployment, traffic split adjustment, or deployment health check.
+2025-12-28T11:19:31.408524Z I calendlywebhook: Default STARTUP TCP probe succeeded after 1 attempt for container "worker" on port 8080.
+2025-12-28T11:19:33.219706593Z N calendlyWebhook: {"@type":"type.googleapis.com/google.cloud.audit.AuditLog","status":{},"authenticationInfo":{"principalEmail":"satish.annapureddy@gmail.com","principalSubject":"user:satish.annapureddy@gmail.com","oauthInfo":{"oauthClientId":"563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com"}},"requestMetadata":{"requestAttributes":{},"destinationAttributes":{}},"serviceName":"cloudfunctions.googleapis.com","methodName":"google.cloud.functions.v2.FunctionService.UpdateFunction","resourceName":"projects/shreyfitweb/locations/us-west1/functions/calendlyWebhook","response":{"satisfiesPzi":true,"state":"ACTIVE","labels":{"deployment-tool":"cli-firebase","firebase-functions-hash":"080c4e953c4c6f7322c8a1ba27cd2c068e8af270"},"buildConfig":{"runtime":"nodejs22","dockerRepository":"projects/shreyfitweb/locations/us-west1/repositories/gcf-artifacts","serviceAccount":"projects/shreyfitweb/serviceAccounts/1076359633281-compute@developer.gserviceaccount.com","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"entryPoint":"calendlyWebhook","source":{}},"@type":"type.googleapis.com/google.cloud.functions.v2.Function","url":"https://us-west1-shreyfitweb.cloudfunctions.net/calendlyWebhook","name":"projects/shreyfitweb/locations/us-west1/functions/calendlyWebhook","serviceConfig":{"timeoutSeconds":60,"maxInstanceCount":20,"revision":"calendlywebhook-00028-qog","ingressSettings":"ALLOW_ALL","availableCpu":"1","serviceAccountEmail":"1076359633281-compute@developer.gserviceaccount.com","availableMemory":"256Mi","maxInstanceRequestConcurrency":80,"allTrafficOnLatestRevision":true,"uri":"https://calendlywebhook-rjtv3oailq-uw.a.run.app"},"updateTime":"2025-12-28T11:18:28.938209312Z","environment":"GEN_2","createTime":"2025-11-06T22:26:39.208474118Z"},"resourceLocation":{"currentLocations":["us-west1"]}}
+2025-12-28T11:19:43.932183Z E calendlywebhook: 
+2025-12-28T11:19:43.972209Z ? calendlywebhook: Received Calendly webhook: {
+  "created_at": "2025-12-28T11:19:25.000000Z",
+  "created_by": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+  "event": "invitee.created",
+  "payload": {
+    "cancel_url": "https://calendly.com/cancellations/bd2e95bb-b867-4cfa-9058-43abccb5a492",
+    "created_at": "2025-12-28T11:19:25.153595Z",
+    "email": "acc.satish@gmail.com",
+    "event": "https://api.calendly.com/scheduled_events/79c42e5b-1931-4941-a31c-78022e39fed5",
+    "first_name": null,
+    "invitee_scheduled_by": null,
+    "last_name": null,
+    "name": "Tester2 Man",
+    "new_invitee": null,
+    "no_show": null,
+    "old_invitee": null,
+    "payment": null,
+    "questions_and_answers": [
+      {
+        "answer": "testing 4",
+        "position": 0,
+        "question": "Please share anything that will help prepare for our meeting."
+      }
+    ],
+    "reconfirmation": null,
+    "reschedule_url": "https://calendly.com/reschedulings/bd2e95bb-b867-4cfa-9058-43abccb5a492",
+    "rescheduled": false,
+    "routing_form_submission": null,
+    "scheduled_event": {
+      "created_at": "2025-12-28T11:19:25.138385Z",
+      "end_time": "2025-12-31T16:15:00.000000Z",
+      "event_guests": [],
+      "event_memberships": [
+        {
+          "user": "https://api.calendly.com/users/84bf3334-6f41-411f-9d86-9f38fce340f5",
+          "user_email": "shreyas.annapureddy@gmail.com",
+          "user_name": "Shreyas"
+        }
+      ],
+      "event_type": "https://api.calendly.com/event_types/23fe4d4a-32a6-478f-b395-d79f33941b34",
+      "invitees_counter": {
+        "total": 1,
+        "active": 1,
+        "limit": 1
+      },
+      "location": {
+        "join_url": "https://calendly.com/events/79c42e5b-1931-4941-a31c-78022e39fed5/google_meet",
+        "status": "processing",
+        "type": "google_conference"
+      },
+      "meeting_notes_html": null,
+      "meeting_notes_plain": null,
+      "name": "Weekly Check-in",
+      "start_time": "2025-12-31T16:00:00.000000Z",
+      "status": "active",
+      "updated_at": "2025-12-28T11:19:25.138385Z",
+      "uri": "https://api.calendly.com/scheduled_events/79c42e5b-1931-4941-a31c-78022e39fed5"
+    },
+    "scheduling_method": null,
+    "status": "active",
+    "text_reminder_number": null,
+    "timezone": "Asia/Calcutta",
+    "tracking": {
+      "utm_campaign": null,
+      "utm_source": null,
+      "utm_medium": null,
+      "utm_content": null,
+      "utm_term": null,
+      "salesforce_uuid": null
+    },
+    "updated_at": "2025-12-28T11:19:25.153595Z",
+    "uri": "https://api.calendly.com/scheduled_events/79c42e5b-1931-4941-a31c-78022e39fed5/invitees/bd2e95bb-b867-4cfa-9058-43abccb5a492"
+  }
+}
+
+2025-12-28T11:19:43.972886Z ? calendlywebhook: Processing booking for acc.satish@gmail.com (Tester2 Man)
+
+2025-12-28T11:19:45.177754Z ? calendlywebhook: Routing to check-in handler for user gJMoyYB3HUSU8oiRSB8o02QvBie2
+
+2025-12-28T11:19:45.178486Z ? calendlywebhook: Error processing Calendly webhook: Error: User not eligible for check-ins
+    at scheduleCheckin (/workspace/sessions.js:496:11)
+    at /workspace/sessions.js:251:15
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /workspace/node_modules/firebase-functions/lib/common/providers/https.js:566:4
+
