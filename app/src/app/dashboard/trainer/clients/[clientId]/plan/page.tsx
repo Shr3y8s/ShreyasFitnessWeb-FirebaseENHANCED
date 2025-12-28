@@ -17,7 +17,7 @@ import { WeeklyFocusEditor } from '@/components/trainer/plan/WeeklyFocusEditor';
 import { DailyHabitsEditor } from '@/components/trainer/plan/DailyHabitsEditor';
 import { TrainingProtocolEditor } from '@/components/trainer/plan/TrainingProtocolEditor';
 import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProtocolEditor';
-import { getClientPlan, updateVision, updateStepGoal, updateWaterGoal, updateLissCardio, updateWeeklyFocus, updateDailyHabits } from '@/lib/plan-api';
+import { getClientPlan, updateVision, updateStepGoal, updateWaterGoal, updateLissCardio, updateWeeklyFocus, updateDailyHabits, removeLissCardio } from '@/lib/plan-api';
 import { ClientPlan, VisionData, StepGoalData, WaterGoalData, LissCardioData, WeeklyFocusData, DailyHabitsData } from '@/types/plan';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -158,6 +158,26 @@ export default function ClientPlanEditorPage() {
     } catch (error) {
       console.error('Error saving LISS cardio:', error);
       alert('An error occurred while saving.');
+    } finally {
+      setSavingLissCardio(false);
+    }
+  };
+
+  const handleRemoveLissCardio = async () => {
+    setSavingLissCardio(true);
+    try {
+      const result = await removeLissCardio(clientId);
+      if (result.success) {
+        // Reload plan data
+        const updatedPlan = await getClientPlan(clientId);
+        setPlan(updatedPlan);
+        alert('LISS Cardio removed successfully!');
+      } else {
+        alert('Failed to remove LISS cardio. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error removing LISS cardio:', error);
+      alert('An error occurred while removing.');
     } finally {
       setSavingLissCardio(false);
     }
@@ -351,6 +371,7 @@ export default function ClientPlanEditorPage() {
                 <LissCardioEditor
                   initialData={plan?.lissCardio || null}
                   onSave={handleSaveLissCardio}
+                  onRemove={handleRemoveLissCardio}
                   isSaving={savingLissCardio}
                 />
               </TabsContent>

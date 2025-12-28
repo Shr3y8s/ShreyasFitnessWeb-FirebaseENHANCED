@@ -3,21 +3,23 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { HeartPulse, Save, Loader2 } from 'lucide-react';
+import { HeartPulse, Save, Loader2, Trash2, Info } from 'lucide-react';
 import { CARDIO_FREQUENCY_OPTIONS, CARDIO_TIMING_OPTIONS, LissCardioData } from '@/types/plan';
 
 interface LissCardioEditorProps {
   initialData: LissCardioData | null;
   onSave: (data: LissCardioData) => Promise<void>;
+  onRemove?: () => Promise<void>;
   isSaving: boolean;
 }
 
-export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEditorProps) {
+export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: LissCardioEditorProps) {
   const [frequency, setFrequency] = useState<string>('3x per week');
   const [duration, setDuration] = useState<string>('20-30 min');
   const [targetHeartRate, setTargetHeartRate] = useState<string>('120-130 BPM');
   const [timing, setTiming] = useState<string>('Post-workout');
   const [hasChanges, setHasChanges] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   // Initialize from existing data
   useEffect(() => {
@@ -100,15 +102,90 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Assignment Status Banner - Only show if already configured */}
+        {initialData && onRemove && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900 mb-3">
+                  LISS Cardio is currently assigned to this client
+                </p>
+                {showRemoveConfirm ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold text-amber-900">
+                      Are you sure you want to remove this assignment? This action cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={async () => {
+                          await onRemove();
+                          setShowRemoveConfirm(false);
+                        }}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Removing...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Yes, Remove
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowRemoveConfirm(false)}
+                        disabled={isSaving}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRemoveConfirm(true)}
+                    disabled={isSaving}
+                    className="border-amber-300 text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Remove Assignment
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* What is LISS Cardio Info Box */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm">
+          <p className="text-sm text-blue-900 font-semibold mb-2">
+            💡 What is LISS Cardio?
+          </p>
+          <p className="text-sm text-blue-800 leading-relaxed">
+            Low Intensity Steady State cardio is performed at a consistent, moderate pace 
+            for an extended period. Examples: brisk walking, light cycling, swimming. 
+            It's great for fat burning, recovery, and building aerobic base.
+          </p>
+        </div>
+
         {/* Frequency */}
         <div>
-          <label className="text-sm font-medium mb-2 block">
+          <label className="text-sm font-medium mb-2 block text-gray-700">
             Frequency *
           </label>
           <select
             value={frequency}
             onChange={(e) => handleFrequencyChange(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-gray-400 hover:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
             disabled={isSaving}
           >
             {CARDIO_FREQUENCY_OPTIONS.map(option => (
@@ -117,14 +194,14 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
               </option>
             ))}
           </select>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1.5">
             How many cardio sessions per week
           </p>
         </div>
 
         {/* Duration */}
         <div>
-          <label className="text-sm font-medium mb-2 block">
+          <label className="text-sm font-medium mb-2 block text-gray-700">
             Duration *
           </label>
           <input
@@ -132,10 +209,10 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
             value={duration}
             onChange={(e) => handleDurationChange(e.target.value)}
             placeholder="e.g., 20-30 min, 30 min, 45 min"
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-gray-400 hover:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed placeholder:text-gray-400"
             disabled={isSaving}
           />
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1.5">
             Length of each cardio session
           </p>
         </div>
@@ -145,7 +222,7 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
           <button
             type="button"
             onClick={() => { setDuration('15-20 min'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
             15-20 min
@@ -153,7 +230,7 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
           <button
             type="button"
             onClick={() => { setDuration('20-30 min'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
             20-30 min
@@ -161,7 +238,7 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
           <button
             type="button"
             onClick={() => { setDuration('30-40 min'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
             30-40 min
@@ -169,7 +246,7 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
           <button
             type="button"
             onClick={() => { setDuration('45 min'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
             45 min
@@ -178,7 +255,7 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
 
         {/* Target Heart Rate */}
         <div>
-          <label className="text-sm font-medium mb-2 block">
+          <label className="text-sm font-medium mb-2 block text-gray-700">
             Target Heart Rate *
           </label>
           <input
@@ -186,10 +263,10 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
             value={targetHeartRate}
             onChange={(e) => handleTargetHRChange(e.target.value)}
             placeholder="e.g., 120-130 BPM, 130 BPM, Zone 2"
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-gray-400 hover:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed placeholder:text-gray-400"
             disabled={isSaving}
           />
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1.5">
             Target heart rate or zone (LISS typically 50-65% of max HR)
           </p>
         </div>
@@ -199,44 +276,41 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
           <button
             type="button"
             onClick={() => { setTargetHeartRate('110-120 BPM'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
-            110-120 BPM
-            <br />
-            <span className="text-xs text-gray-600">Light</span>
+            <div>110-120 BPM</div>
+            <div className="text-xs text-gray-600 mt-0.5">Light</div>
           </button>
           <button
             type="button"
             onClick={() => { setTargetHeartRate('120-130 BPM'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
-            120-130 BPM
-            <br />
-            <span className="text-xs text-gray-600">Moderate</span>
+            <div>120-130 BPM</div>
+            <div className="text-xs text-gray-600 mt-0.5">Moderate</div>
           </button>
           <button
             type="button"
             onClick={() => { setTargetHeartRate('Zone 2'); setHasChanges(true); }}
-            className="px-3 py-2 text-sm border rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-3 py-2.5 text-sm border border-gray-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             disabled={isSaving}
           >
-            Zone 2
-            <br />
-            <span className="text-xs text-gray-600">Standard</span>
+            <div>Zone 2</div>
+            <div className="text-xs text-gray-600 mt-0.5">Standard</div>
           </button>
         </div>
 
         {/* Timing */}
         <div>
-          <label className="text-sm font-medium mb-2 block">
+          <label className="text-sm font-medium mb-2 block text-gray-700">
             Timing *
           </label>
           <select
             value={timing}
             onChange={(e) => handleTimingChange(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-gray-400 hover:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
             disabled={isSaving}
           >
             {CARDIO_TIMING_OPTIONS.map(option => (
@@ -245,29 +319,17 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
               </option>
             ))}
           </select>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1.5">
             When should the client perform cardio
           </p>
         </div>
 
-        {/* Helper Text */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800 mb-2">
-            <strong>💡 What is LISS Cardio?</strong>
-          </p>
-          <p className="text-sm text-blue-800">
-            Low Intensity Steady State cardio is performed at a consistent, moderate pace 
-            for an extended period. Examples: brisk walking, light cycling, swimming. 
-            It's great for fat burning, recovery, and building aerobic base.
-          </p>
-        </div>
-
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex gap-3 pt-4 border-t border-gray-200">
           <Button
             onClick={handleSave}
             disabled={!hasChanges || isSaving}
-            className="flex-1"
+            className="flex-1 transition-all duration-200 hover:shadow-md"
           >
             {isSaving ? (
               <>
@@ -285,6 +347,7 @@ export function LissCardioEditor({ initialData, onSave, isSaving }: LissCardioEd
             variant="outline"
             onClick={handleCancel}
             disabled={!hasChanges || isSaving}
+            className="transition-all duration-200 hover:shadow-md"
           >
             Cancel
           </Button>

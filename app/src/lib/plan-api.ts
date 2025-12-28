@@ -390,6 +390,37 @@ export async function updateLissCardio(
 }
 
 /**
+ * Remove LISS cardio assignment from a client's plan
+ * Sets lissCardio to null in Firestore
+ * Uses clientId as the document ID
+ */
+export async function removeLissCardio(
+  clientId: string
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+    
+    if (!existingPlan) {
+      // No plan exists, nothing to remove
+      return { success: true };
+    }
+    
+    const updateData: any = {
+      lissCardio: null,
+      updatedAt: serverTimestamp()
+    };
+    
+    await updateDoc(planRef, updateData);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error removing LISS cardio:', error);
+    return { success: false, error };
+  }
+}
+
+/**
  * Update or add a week to the weekly focus history
  * Maintains a sliding window of up to 4 weeks
  * Uses clientId as the document ID
