@@ -200,6 +200,21 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Dashboard */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client">
+                    <House className="w-4 h-4" />
+                    <span className="font-medium">Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
         {/* Planning Section */}
         <SidebarGroup>
