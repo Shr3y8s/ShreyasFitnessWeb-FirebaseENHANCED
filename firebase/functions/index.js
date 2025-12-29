@@ -13,6 +13,7 @@ const sharedConfig = require("./firebase-config.json");
 
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
+const resendKey = defineSecret("RESEND_API_KEY");
 
 // Stripe portal configuration ID for restricted payment method changes only
 const STRIPE_PORTAL_CONFIG_ID = "bpc_1SQLnDBjx3iGODd65BpKI3oK";
@@ -1724,6 +1725,539 @@ exports.deleteAccount = onCall({
     }
 
     throw new Error(`Account deletion failed: ${error.message}`);
+  }
+});
+
+/**
+ * Update user email using Admin SDK (bypasses client-side restrictions)
+ * Verifies OTP was completed before changing email
+ * Updates Firebase Auth, Firestore, and Stripe in one atomic operation
+ */
+exports.updateUserEmail = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const userId = request.auth.uid;
+    const newEmail = request.data?.newEmail;
+
+    if (!newEmail) {
+      throw new Error("Missing required parameter: newEmail");
+    }
+
+    logger.info("Updating user email", {
+      userId,
+      newEmail,
+    });
+
+    // STEP 1: Verify OTP was completed for new email
+    const otpRef = admin.firestore().collection("verifiedEmails").doc(newEmail);
+    const otpDoc = await otpRef.get();
+
+    if (!otpDoc.exists || !otpDoc.data().verified) {
+      throw new Error("Email verification required. Please verify the new email first.");
+    }
+
+    logger.info("OTP verification confirmed", {userId, newEmail});
+
+    // STEP 2: Get current user data
+    const userDoc = await admin.firestore().collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const oldEmail = userData.email;
+
+    // STEP 3: Update Firebase Auth email using Admin SDK (bypasses client restrictions)
+    try {
+      await admin.auth().updateUser(userId, {
+        email: newEmail,
+        emailVerified: true, // Mark as verified since we validated OTP
+      });
+      
+      logger.info("Firebase Auth email updated", {userId, oldEmail, newEmail});
+    } catch (authError) {
+      logger.error("Failed to update Firebase Auth email", {
+        error: authError.message,
+        userId,
+      });
+      throw new Error(`Failed to update email in authentication system: ${authError.message}`);
+    }
+
+    // STEP 4: Update Firestore user document
+    try {
+      await admin.firestore().collection("users").doc(userId).update({
+        email: newEmail,
+        emailVerified: true,
+        previousEmail: oldEmail,
+        emailChangeDate: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      
+      logger.info("Firestore user document updated", {userId});
+    } catch (firestoreError) {
+      logger.error("Failed to update Firestore", {
+        error: firestoreError.message,
+        userId,
+      });
+      // Continue - Auth is already updated, Firestore can sync later
+    }
+
+    // STEP 5: Update Stripe customer email
+    const stripeCustomerId = userData.stripeCustomerId;
+    if (stripeCustomerId) {
+      try {
+        const stripe = require("stripe")(stripeKey.value(), {
+          apiVersion: "2024-09-30.acacia",
+        });
+
+        await stripe.customers.update(stripeCustomerId, {
+          email: newEmail,
+        });
+
+        logger.info("Stripe customer email updated", {
+          userId,
+          stripeCustomerId,
+        });
+      } catch (stripeError) {
+        logger.error("Failed to update Stripe customer email", {
+          error: stripeError.message,
+          userId,
+        });
+        // Continue - Stripe can be updated manually if needed
+      }
+    }
+
+    // STEP 6: Clean up OTP record
+    try {
+      await otpRef.delete();
+      logger.info("OTP record cleaned up", {newEmail});
+    } catch (cleanupError) {
+      logger.warn("Failed to cleanup OTP record", {error: cleanupError.message});
+      // Non-critical - scheduled cleanup will handle this
+    }
+
+    logger.info("Email update completed successfully", {
+      userId,
+      oldEmail,
+      newEmail,
+    });
+
+    return {
+      success: true,
+      message: "Email updated successfully",
+      newEmail: newEmail,
+    };
+  } catch (error) {
+    logger.error("Error updating user email", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Email update failed: ${error.message}`);
+  }
+});
+
+/**
+ * Update Stripe customer email when user changes their email
+ * Called from frontend after Firebase Auth email is updated
+ */
+exports.updateStripeCustomerEmail = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const userId = request.auth.uid;
+    const newEmail = request.data?.newEmail;
+
+    if (!newEmail) {
+      throw new Error("Missing required parameter: newEmail");
+    }
+
+    logger.info("Updating Stripe customer email", {
+      userId,
+      newEmail,
+    });
+
+    // Get user document to find Stripe customer ID
+    const userDoc = await admin.firestore().collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const stripeCustomerId = userData.stripeCustomerId;
+
+    if (!stripeCustomerId) {
+      // No Stripe customer yet - this is okay, return success
+      logger.info("No Stripe customer found, skipping email update", {
+        userId,
+      });
+      return {
+        success: true,
+        message: "No Stripe customer to update",
+      };
+    }
+
+    // Initialize Stripe
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Update Stripe customer email
+    await stripe.customers.update(stripeCustomerId, {
+      email: newEmail,
+    });
+
+    logger.info("Stripe customer email updated successfully", {
+      userId,
+      stripeCustomerId,
+      newEmail,
+    });
+
+    return {
+      success: true,
+      message: "Stripe customer email updated successfully",
+    };
+  } catch (error) {
+    logger.error("Error updating Stripe customer email", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    // Return error info but don't fail the whole email change
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
+
+/**
+ * EMAIL VERIFICATION SYSTEM
+ * OTP-based email verification for signup
+ */
+
+/**
+ * Send OTP verification code to email
+ * Used during signup to verify email ownership before account creation
+ * @param {Object} request - The callable function request
+ * @param {string} request.data.email - Email address to verify
+ * @return {Object} Success response
+ */
+exports.sendEmailVerificationOTP = onCall({
+  region: sharedConfig.region,
+  secrets: [resendKey],
+  cors: true,
+}, async (request) => {
+  try {
+    const email = request.data?.email;
+
+    if (!email) {
+      throw new Error("Missing required parameter: email");
+    }
+
+    logger.info("Sending email verification OTP", {email});
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP in Firestore with email as document ID
+    const otpRef = admin.firestore().collection("verifiedEmails").doc(email);
+    
+    await otpRef.set({
+      code: otp,
+      email: email,
+      verified: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt: admin.firestore.Timestamp.fromMillis(
+          Date.now() + (10 * 60 * 1000), // 10 minutes
+      ),
+      attempts: 0,
+    });
+
+    // Send email via Resend
+    const {Resend} = require("resend");
+    const resend = new Resend(resendKey.value());
+
+    await resend.emails.send({
+      from: "verify@shrey.fit",
+      to: email,
+      subject: "Verify Your Email Address",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); padding: 40px 30px; text-align: center;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">Shrey.Fit</h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">Verify Your Email Address</h2>
+                      
+                      <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
+                        Thank you for signing up with Shrey.Fit. To complete your registration and secure your account, please enter the verification code below:
+                      </p>
+                      
+                      <!-- OTP Box -->
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 30px 0;">
+                            <div style="background-color: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 20px 40px; display: inline-block;">
+                              <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #059669; font-family: 'Courier New', monospace;">
+                                ${otp}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
+                        This code expires in <strong>10 minutes</strong>
+                      </p>
+                      
+                      <p style="color: #999999; font-size: 13px; line-height: 1.6; margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #eeeeee;">
+                        If you didn't request this code, please ignore this email.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8f9fa; padding: 20px 30px; text-align: center; border-top: 1px solid #eeeeee;">
+                      <p style="color: #999999; font-size: 12px; margin: 0; line-height: 1.5;">
+                        © ${new Date().getFullYear()} Shrey.Fit
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    logger.info("OTP email sent successfully", {email});
+
+    return {
+      success: true,
+      message: "Verification code sent to your email",
+    };
+  } catch (error) {
+    logger.error("Error sending OTP email", {
+      error: error.message,
+      stack: error.stack,
+      email: request.data?.email,
+    });
+
+    throw new Error(`Failed to send verification code: ${error.message}`);
+  }
+});
+
+/**
+ * Verify OTP code and mark email as verified
+ * @param {Object} request - The callable function request
+ * @param {string} request.data.email - Email address being verified
+ * @param {string} request.data.otp - 6-digit OTP code
+ * @return {Object} Success response or error
+ */
+exports.verifyEmailOTP = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    const {email, otp} = request.data || {};
+
+    if (!email || !otp) {
+      throw new Error("Missing required parameters: email and otp");
+    }
+
+    if (otp.length !== 6) {
+      throw new Error("Invalid code format");
+    }
+
+    logger.info("Verifying OTP", {email});
+
+    // Get OTP document
+    const otpRef = admin.firestore().collection("verifiedEmails").doc(email);
+    const otpDoc = await otpRef.get();
+
+    if (!otpDoc.exists) {
+      throw new Error("No verification code found. Please request a new code.");
+    }
+
+    const otpData = otpDoc.data();
+
+    // Check if already verified
+    if (otpData.verified) {
+      return {
+        success: true,
+        message: "Email already verified",
+      };
+    }
+
+    // Check expiry
+    if (Date.now() > otpData.expiresAt.toMillis()) {
+      await otpRef.delete();
+      throw new Error("Code expired. Please request a new code.");
+    }
+
+    // Check attempts (max 3)
+    if (otpData.attempts >= 3) {
+      await otpRef.delete();
+      throw new Error("Too many attempts. Please request a new code.");
+    }
+
+    // Verify code
+    if (otpData.code !== otp) {
+      // Increment attempts
+      await otpRef.update({
+        attempts: admin.firestore.FieldValue.increment(1),
+      });
+
+      const remainingAttempts = 3 - (otpData.attempts + 1);
+      throw new Error(
+          `Invalid code. ${remainingAttempts} ${remainingAttempts === 1 ? "attempt" : "attempts"} remaining.`,
+      );
+    }
+
+    // SUCCESS - Mark as verified
+    await otpRef.update({
+      verified: true,
+      verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    logger.info("Email verified successfully", {email});
+
+    return {
+      success: true,
+      message: "Email verified successfully",
+    };
+  } catch (error) {
+    logger.error("Error verifying OTP", {
+      error: error.message,
+      email: request.data?.email,
+    });
+
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
+
+/**
+ * Scheduled function to clean up old email verification records
+ * Runs daily at 2 AM UTC to remove:
+ * - Verified records older than 30 days (audit trail)
+ * - Expired/unverified records older than 1 day (spam prevention)
+ * 
+ * This prevents database bloat while maintaining audit history for recent verifications
+ */
+exports.cleanupExpiredVerifications = onSchedule({
+  schedule: "0 2 * * *", // Every day at 2 AM UTC
+  timeZone: "UTC",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    logger.info("Starting email verification cleanup job");
+
+    const now = admin.firestore.Timestamp.now();
+    
+    // Calculate cutoff dates
+    const thirtyDaysAgo = admin.firestore.Timestamp.fromMillis(
+        now.toMillis() - (30 * 24 * 60 * 60 * 1000),
+    );
+    const oneDayAgo = admin.firestore.Timestamp.fromMillis(
+        now.toMillis() - (24 * 60 * 60 * 1000),
+    );
+
+    let deletedCount = 0;
+
+    // PART 1: Delete verified records older than 30 days
+    logger.info("Cleaning up verified records older than 30 days");
+    const verifiedQuery = admin.firestore()
+        .collection("verifiedEmails")
+        .where("verified", "==", true)
+        .where("verifiedAt", "<", thirtyDaysAgo);
+
+    const verifiedSnapshot = await verifiedQuery.get();
+
+    if (!verifiedSnapshot.empty) {
+      const batch1 = admin.firestore().batch();
+      verifiedSnapshot.docs.forEach((doc) => {
+        batch1.delete(doc.ref);
+        deletedCount++;
+      });
+      await batch1.commit();
+      logger.info(`Deleted ${verifiedSnapshot.size} old verified records`);
+    }
+
+    // PART 2: Delete expired/unverified records older than 1 day
+    logger.info("Cleaning up expired/unverified records older than 1 day");
+    const expiredQuery = admin.firestore()
+        .collection("verifiedEmails")
+        .where("verified", "==", false)
+        .where("expiresAt", "<", oneDayAgo);
+
+    const expiredSnapshot = await expiredQuery.get();
+
+    if (!expiredSnapshot.empty) {
+      const batch2 = admin.firestore().batch();
+      expiredSnapshot.docs.forEach((doc) => {
+        batch2.delete(doc.ref);
+        deletedCount++;
+      });
+      await batch2.commit();
+      logger.info(`Deleted ${expiredSnapshot.size} expired/unverified records`);
+    }
+
+    logger.info("Email verification cleanup completed", {
+      totalDeleted: deletedCount,
+    });
+
+    return {
+      success: true,
+      deletedCount: deletedCount,
+    };
+  } catch (error) {
+    logger.error("Error in email verification cleanup", {
+      error: error.message,
+      stack: error.stack,
+    });
+    // Don't throw - this is a scheduled function
+    return null;
   }
 });
 

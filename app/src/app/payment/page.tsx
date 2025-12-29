@@ -30,6 +30,7 @@ interface PendingSignupData {
   password: string;
   tier: string;
   tierName: string;
+  emailVerified?: boolean;
 }
 
 export default function PaymentPage() {
@@ -51,6 +52,15 @@ export default function PaymentPage() {
         // New signup - not yet created account
         console.log("Loading pending signup data");
         const signup = JSON.parse(pendingData) as PendingSignupData;
+        
+        // Check if email was verified
+        if (!signup.emailVerified) {
+          console.log("Email not verified, redirecting to signup");
+          setError('Please complete email verification first');
+          setTimeout(() => router.push('/signup'), 2000);
+          return;
+        }
+        
         setPendingSignup(signup);
         
         // Load price for the selected tier
@@ -250,6 +260,7 @@ export default function PaymentPage() {
           phone: pendingSignup.phone,
           tier: pendingSignup.tier,
           tierName: pendingSignup.tierName,
+          emailVerified: pendingSignup.emailVerified || false, // Save email verification status from signup
           accountActivated: false, // Will be set to true on first payment
           role: 'client',
           recaptchaToken: recaptchaToken || null,

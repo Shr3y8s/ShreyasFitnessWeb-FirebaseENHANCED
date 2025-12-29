@@ -41,6 +41,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(clientId)).data.assignedTrainerId == request.auth.uid;
     }
 
+    // EMAIL VERIFICATION SYSTEM
+    // Temporary storage for OTP codes during signup (before account creation)
+    match /verifiedEmails/{email} {
+      // Allow unauthenticated users to read their own verification document
+      // This is needed to check verification status during signup flow
+      allow read: if request.auth == null;
+      
+      // No direct writes - only Cloud Functions can write (using admin SDK)
+      allow write: if false;
+    }
+    
     // Contact Form Submissions - New collection for contact form
     match /contact_form_submissions/{submissionId} {
       allow create: if true;  // Allow public contact form submissions

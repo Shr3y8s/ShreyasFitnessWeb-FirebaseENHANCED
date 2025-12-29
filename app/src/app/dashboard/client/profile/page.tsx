@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, MapPin, Bell, Phone, Shield, AlertTriangle, Camera, Loader2 } from 'lucide-react';
 import { ImageCropModal } from '@/components/profile/ImageCropModal';
 import { AddressAutocomplete } from '@/components/profile/AddressAutocomplete';
+import { ChangeEmailDialog } from '@/components/profile/ChangeEmailDialog';
 import { processAndUploadProfilePhoto } from '@/lib/imageUtils';
 import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils';
 
@@ -106,6 +107,11 @@ export default function ProfilePage() {
   const [savingSecurity, setSavingSecurity] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
+  // Change Email state
+  const [showChangeEmailDialog, setShowChangeEmailDialog] = useState(false);
+  const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
+  const [pendingNewEmail, setPendingNewEmail] = useState('');
+
   // Account & Data Management state
   const [downloadingData, setDownloadingData] = useState(false);
 
@@ -138,8 +144,26 @@ export default function ProfilePage() {
       return;
     }
 
+    // Check if email verification is pending
+    if (user && !user.emailVerified && userData.emailChangeDate) {
+      setPendingEmailVerification(true);
+      setPendingNewEmail(userData.email || '');
+    } else {
+      setPendingEmailVerification(false);
+      setPendingNewEmail('');
+    }
+
     setLoading(false);
-  }, [userData, authLoading, router]);
+  }, [userData, authLoading, router, user]);
+
+  const handleChangeEmailSuccess = (newEmail: string) => {
+    // Show success message
+    alert(`Verification email sent to ${newEmail}. Please check your inbox and click the link to verify your new email.`);
+    
+    // Update pending verification state
+    setPendingEmailVerification(true);
+    setPendingNewEmail(newEmail);
+  };
 
   const handleLogout = async () => {
     try {
@@ -1557,6 +1581,25 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
+            {/* Pending Email Verification Banner */}
+            {pendingEmailVerification && (
+              <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-900 mb-1">
+                    Email Verification Pending
+                  </h3>
+                  <p className="text-sm text-amber-800">
+                    We've sent a verification email to <strong>{pendingNewEmail}</strong>. 
+                    Please check your inbox and click the link to complete your email change.
+                  </p>
+                  <p className="text-xs text-amber-700 mt-2">
+                    Can't find it? Check your spam folder or contact support.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Security Section */}
             <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
@@ -1654,6 +1697,31 @@ export default function ProfilePage() {
                   <>
                     {/* View Mode */}
                     <div className="space-y-6">
+                      {/* Email Section */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-foreground">Email Address</h3>
+                          <button
+                            onClick={() => setShowChangeEmailDialog(true)}
+                            className="text-sm text-primary hover:text-primary/80 font-medium"
+                          >
+                            Change Email
+                          </button>
+                        </div>
+                        <p className="text-base font-medium mb-1">{userData?.email}</p>
+                        <div className="flex items-center gap-2">
+                          {userData?.emailVerified ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                              ✓ Verified
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              ⚠ Unverified
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Password Section */}
                       <div>
                         <h3 className="font-semibold text-foreground mb-2">Password</h3>
@@ -1705,6 +1773,14 @@ export default function ProfilePage() {
           onCancel={handleCancelCrop}
         />
       )}
+
+      {/* Change Email Dialog */}
+      <ChangeEmailDialog
+        open={showChangeEmailDialog}
+        onOpenChange={setShowChangeEmailDialog}
+        currentEmail={userData?.email || ''}
+        onSuccess={handleChangeEmailSuccess}
+      />
     </SidebarProvider>
   );
 }

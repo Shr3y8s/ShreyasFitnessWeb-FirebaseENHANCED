@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createUserWithTier, auth } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Check, UserPlus, Crown, Star, Target, Clock } from 'lucide-react';
-import AccountInfoStep from './components/AccountInfoStep';
+import { Check, UserPlus, Crown, Star, Target, Clock, Mail, User } from 'lucide-react';
+import EmailStep from './components/EmailStep';
+import OTPVerificationStep from './components/OTPVerificationStep';
+import DetailsStep from './components/DetailsStep';
 import ServiceTierStep from './components/ServiceTierStep';
 import { Footer } from '@/components/Footer';
 import { AuthHeader } from '@/components/AuthHeader';
@@ -48,7 +50,8 @@ export default function SignupPage() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [emailVerified, setEmailVerified] = useState(false);
   const router = useRouter();
 
   // Check URL parameters and load data (from sessionStorage or existing user)
@@ -196,7 +199,8 @@ export default function SignupPage() {
         phone: formData.phone,
         password: formData.password,
         tier: formData.tier.id,
-        tierName: formData.tier.name
+        tierName: formData.tier.name,
+        emailVerified: emailVerified
       }));
       
       console.log("Redirecting to payment page");
@@ -211,19 +215,39 @@ export default function SignupPage() {
     }
   };
 
-  // Render the current step (only 2 steps now: Account Info → Tier Selection)
+  // Render the current step (4 steps: Email → OTP → Details → Tier Selection)
   const renderStep = () => {
     switch(currentStep) {
       case 1:
         return (
-          <AccountInfoStep 
-            formData={formData} 
-            updateFormData={updateFormData} 
-            nextStep={nextStep}
-            error={error}
+          <EmailStep
+            email={formData.email}
+            onEmailUpdate={(email) => updateFormData({ email })}
+            onCodeSent={nextStep}
           />
         );
       case 2:
+        return (
+          <OTPVerificationStep
+            email={formData.email}
+            onVerified={() => {
+              setEmailVerified(true);
+              nextStep();
+            }}
+            prevStep={prevStep}
+          />
+        );
+      case 3:
+        return (
+          <DetailsStep
+            formData={formData}
+            updateFormData={updateFormData}
+            nextStep={nextStep}
+            prevStep={prevStep}
+            error={error}
+          />
+        );
+      case 4:
         return (
           <ServiceTierStep 
             formData={formData} 
@@ -236,18 +260,17 @@ export default function SignupPage() {
         );
       default:
         return (
-          <AccountInfoStep 
-            formData={formData} 
-            updateFormData={updateFormData} 
-            nextStep={nextStep}
-            error={error}
+          <EmailStep
+            email={formData.email}
+            onEmailUpdate={(email) => updateFormData({ email })}
+            onCodeSent={nextStep}
           />
         );
     }
   };
 
-  const stepIcons = [UserPlus, Crown];
-  const stepTitles = ['Account Info', 'Select Plan'];
+  const stepIcons = [UserPlus, Mail, User, Crown];
+  const stepTitles = ['Email', 'Verify', 'Details', 'Plan'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -325,8 +348,8 @@ export default function SignupPage() {
                 <CardHeader className="pb-6">
                   {/* Progress indicator */}
                   <div className="mb-6">
-                    <div className="flex items-center justify-center gap-8">
-                      {[1, 2].map((step, index) => {
+                    <div className="flex items-center justify-center gap-4">
+                      {[1, 2, 3, 4].map((step, index) => {
                         const StepIcon = stepIcons[index];
                         return (
                           <div key={step} className="flex items-center">
@@ -348,9 +371,9 @@ export default function SignupPage() {
                                 {stepTitles[index]}
                               </div>
                             </div>
-                            {step < 2 && (
+                            {step < 4 && (
                               <div className={`
-                                w-24 h-0.5 transition-all duration-200
+                                w-16 h-0.5 transition-all duration-200
                                 ${currentStep > step 
                                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
                                   : 'bg-gray-200'
