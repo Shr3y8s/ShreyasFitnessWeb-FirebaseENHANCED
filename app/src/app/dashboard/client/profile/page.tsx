@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db, auth } from '@/lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -176,6 +176,21 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const formatPasswordLastChanged = () => {
+    const lastChanged = userData?.security?.passwordLastChanged;
+    
+    if (!lastChanged) {
+      return 'Never';
+    }
+    
+    const date = lastChanged.toDate();
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
 
@@ -1603,20 +1618,10 @@ export default function ProfilePage() {
             {/* Security Section */}
             <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
-                    Security
-                  </CardTitle>
-                  {!isEditingSecurity && (
-                    <button
-                      onClick={handleEditSecurity}
-                      className="text-sm text-primary hover:text-primary/80 font-medium"
-                    >
-                      Change Password
-                    </button>
-                  )}
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Security
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {isEditingSecurity ? (
@@ -1724,12 +1729,17 @@ export default function ProfilePage() {
 
                       {/* Password Section */}
                       <div>
-                        <h3 className="font-semibold text-foreground mb-2">Password</h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-foreground">Password</h3>
+                          <button
+                            onClick={handleEditSecurity}
+                            className="text-sm text-primary hover:text-primary/80 font-medium"
+                          >
+                            Change Password
+                          </button>
+                        </div>
                         <p className="text-sm text-muted-foreground">
-                          Last changed: Never (or recently if you just changed it)
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Click "Change Password" above to update your password
+                          Last changed: {formatPasswordLastChanged()}
                         </p>
                       </div>
 
