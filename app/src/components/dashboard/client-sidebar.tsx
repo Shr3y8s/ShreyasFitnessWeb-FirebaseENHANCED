@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -8,12 +9,10 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import {
-  House,
   User,
   Dumbbell,
   BarChart3,
   Calendar,
-  HeartPulse,
   Goal,
   MessageSquare,
   BookOpen,
@@ -44,6 +43,7 @@ import {
   SidebarMenuBadge,
 } from '@/components/ui/sidebar';
 import { useCoachUpdates } from '@/context/CoachUpdatesContext';
+import { registerListener, unregisterListener } from '@/lib/listener-registry';
 
 interface ServiceTier {
   id: string;
@@ -61,7 +61,7 @@ interface ClientSidebarProps {
   onShowWelcome?: () => void;
 }
 
-export function ClientSidebar({ userName, userTier, userTierName, userProfilePhoto, onLogout, onShowWelcome }: ClientSidebarProps) {
+export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogout, onShowWelcome }: ClientSidebarProps) {
   
   const pathname = usePathname();
   const { coachUpdates } = useCoachUpdates();
@@ -90,7 +90,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
     });
 
     // Register with centralized registry
-    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
     registerListener(unsubscribe);
 
     return () => {
@@ -139,7 +138,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
 
         // Register with centralized registry
         if (unsubscribe) {
-          const { registerListener } = require('@/lib/listener-registry');
           registerListener(unsubscribe);
         }
       } catch (error) {
@@ -152,7 +150,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
     // Cleanup function to unsubscribe when component unmounts or dependencies change
     return () => {
       if (unsubscribe) {
-        const { unregisterListener } = require('@/lib/listener-registry');
         unregisterListener(unsubscribe);
         unsubscribe();
       }
@@ -165,9 +162,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
   ).length;
   const progressUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'progress'
-  ).length;
-  const sessionsUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'sessions'
   ).length;
   const nutritionUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'nutrition'
@@ -183,9 +177,6 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
   ).length;
   const billingUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'billing'
-  ).length;
-  const settingsUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'settings'
   ).length;
   
   return (
@@ -532,13 +523,15 @@ export function ClientSidebar({ userName, userTier, userTierName, userProfilePho
           {/* User Info */}
           <div className="flex items-center gap-3 mb-3">
             {userProfilePhoto ? (
-              <img
+              <Image
                 src={userProfilePhoto}
                 alt={userName || 'User'}
-                className="w-10 h-10 min-w-10 rounded-full object-cover flex-shrink-0"
+                width={40}
+                height={40}
+                className="min-w-10 rounded-full object-cover shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+              <div className="w-10 h-10 min-w-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold shrink-0">
                 {userName ? userName.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
