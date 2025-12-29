@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import {
+  Home,
   User,
   Dumbbell,
   BarChart3,
@@ -198,7 +199,7 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client">
-                    <House className="w-4 h-4" />
+                    <Home className="w-4 h-4" />
                     <span className="font-medium">Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
