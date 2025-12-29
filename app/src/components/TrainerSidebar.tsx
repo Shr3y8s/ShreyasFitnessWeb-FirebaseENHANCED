@@ -102,7 +102,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
   return (
     <Sidebar variant="floating">
       <SidebarHeader>
-        <div className="flex items-center gap-3 px-3 py-2">
+        <Link href="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
             SF
           </div>
@@ -110,7 +110,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
             <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
             <span className="text-xs text-muted-foreground">Trainer Portal</span>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
