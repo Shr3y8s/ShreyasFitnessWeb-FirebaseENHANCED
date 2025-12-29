@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth-context';
 import {
   Home,
   User,
+  Shield,
   Dumbbell,
   BarChart3,
   Calendar,
@@ -456,6 +457,14 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                         {profileUpdatesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/security' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/security">
+                    <Shield className="w-4 h-4" />
+                    <span className="font-medium">Security</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

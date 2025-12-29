@@ -2262,6 +2262,83 @@ exports.cleanupExpiredVerifications = onSchedule({
 });
 
 /**
+ * LOGIN HISTORY TRACKING
+ * Track user login attempts for security monitoring
+ * Records device info, location, and success/failure status
+ */
+exports.trackLogin = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const userId = request.auth.uid;
+    const { device, location, success, failureReason } = request.data || {};
+
+    logger.info("Tracking login attempt", {
+      userId,
+      success: success !== false, // Default to true if not specified
+      deviceType: device?.type,
+    });
+
+    // Create login history record
+    const loginRecord = {
+      userId: userId,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      success: success !== false, // Default to true (successful login)
+      
+      device: {
+        type: device?.type || 'unknown',
+        browser: device?.browser || 'Unknown',
+        os: device?.os || 'Unknown',
+        userAgent: device?.userAgent || null,
+      },
+      
+      location: {
+        ip: location?.ip || 'Unknown',
+        city: location?.city || 'Unknown',
+        state: location?.state || 'Unknown',
+        country: location?.country || 'Unknown',
+        countryCode: location?.countryCode || 'XX',
+      },
+      
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // Add failure info if login failed
+    if (success === false && failureReason) {
+      loginRecord.failureReason = failureReason;
+    }
+
+    // Save to Firestore
+    await admin.firestore().collection('login_history').add(loginRecord);
+
+    logger.info("Login tracked successfully", { userId });
+
+    return {
+      success: true,
+      message: "Login tracked successfully",
+    };
+  } catch (error) {
+    logger.error("Error tracking login", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    // Don't throw - login tracking shouldn't block the login process
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
+
+/**
  * MIGRATION FUNCTIONS
  * One-time or administrative functions for data migrations
  */

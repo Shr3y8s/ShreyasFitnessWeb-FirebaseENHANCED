@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { trackSuccessfulLogin } from './login-tracking-api';
 
 // Type definitions
 interface UserData {
@@ -155,11 +156,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // Track if this is a new login session (not a page refresh)
+    const sessionKey = `login_tracked_${user?.uid}`;
+    
     // Listen for auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      const wasLoggedOut = !user;
       setUser(user);
       
       if (user) {
+        // Track login if this is a new session
+        // Use sessionStorage to prevent tracking on page refreshes
+        const hasTrackedThisSession = sessionStorage.getItem(sessionKey);
+        
+        if (!hasTrackedThisSession) {
+          // Track the login asynchronously (don't block auth flow)
+          trackSuccessfulLogin().catch(error => {
+            console.error('Login tracking failed:', error);
+          });
+          
+          // Mark as tracked for this session
+          sessionStorage.setItem(sessionKey, 'true');
+        }
         try {
           // Multi-collection waterfall lookup: admin → trainer → client
           
@@ -215,6 +233,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserData(null);
         }
       } else {
+        // Clear tracking flag when user logs out
+        if (sessionKey) {
+          sessionStorage.removeItem(sessionKey);
+        }
         setUserData(null);
       }
       

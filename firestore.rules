@@ -105,6 +105,16 @@ service cloud.firestore {
       allow create, delete: if false;
     }
     
+    // LOGIN HISTORY TRACKING - Security and engagement monitoring
+    match /login_history/{logId} {
+      // Users can only read their own login history
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      
+      // Only backend functions can write login history
+      allow write: if false;
+    }
+    
     // Enhanced user profile rules for dashboard
     match /users/{userId} {
       // Allow users to read their own profile
