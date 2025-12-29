@@ -18,7 +18,9 @@ import {
   Play,
   Trash2,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { useState, useEffect } from 'react';
@@ -40,6 +42,7 @@ export default function MembershipPage() {
   const [pausing, setPausing] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  const [downloadingData, setDownloadingData] = useState(false);
 
   // REAL-TIME FIRESTORE LISTENER: Watch for subscription changes
   // This is the KEY fix - auth context only fetches once, so we need a local listener
@@ -261,6 +264,62 @@ export default function MembershipPage() {
     }
   };
 
+  // Handle download user data
+  const handleDownloadData = async () => {
+    if (!user || !userData) return;
+
+    setDownloadingData(true);
+    try {
+      // Compile all user data
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        profile: {
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          dateOfBirth: userData.dateOfBirth,
+          gender: userData.gender,
+          tier: userData.tier,
+          createdAt: userData.createdAt,
+        },
+        address: userData.address || {},
+        emergencyContact: userData.emergencyContact || {},
+        notificationPreferences: userData.notificationPreferences || {},
+        subscription: {
+          tier: userData.tier,
+          accountActivated: userData.accountActivated,
+        },
+      };
+
+      // Create JSON blob
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+      // Create download link
+      const url = window.URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `my-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Data Downloaded",
+        description: "Your data has been downloaded successfully!",
+      });
+    } catch (error) {
+      console.error('Error downloading data:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingData(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -600,6 +659,41 @@ export default function MembershipPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Data Management */}
+            <Card className="mb-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
+              <CardHeader>
+                <CardTitle>Data Management</CardTitle>
+                <CardDescription>Export your personal data</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:border-primary/50 transition-colors">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground mb-1">Download My Data</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Export all your personal data in JSON format (GDPR compliant)
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleDownloadData}
+                    disabled={downloadingData}
+                    className="ml-4 flex items-center gap-2"
+                  >
+                    {downloadingData ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Download
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Danger Zone - Account Deletion */}
             <Card className="border-red-200 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
