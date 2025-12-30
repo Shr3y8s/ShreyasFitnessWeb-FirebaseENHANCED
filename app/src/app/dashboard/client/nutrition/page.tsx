@@ -535,8 +535,37 @@ export default function NutritionPage() {
       const allMealsLogged = mealCategories.every(meal => meals[meal].length > 0);
       const isComplete = allMealsLogged;
       
+      // Calculate daily totals
+      const totals = Object.values(meals).flat().reduce(
+        (acc, item) => {
+          acc.calories += item.calories;
+          acc.protein += item.protein;
+          acc.carbs += item.carbs;
+          acc.fat += item.fat;
+          return acc;
+        },
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      );
+      
+      // Calculate adherence percentage (average of all nutrients vs goals)
+      const calorieAdherence = dailyGoals.calories > 0 ? (totals.calories / dailyGoals.calories) * 100 : 0;
+      const proteinAdherence = dailyGoals.protein > 0 ? (totals.protein / dailyGoals.protein) * 100 : 0;
+      const carbsAdherence = dailyGoals.carbs > 0 ? (totals.carbs / dailyGoals.carbs) * 100 : 0;
+      const fatAdherence = dailyGoals.fat > 0 ? (totals.fat / dailyGoals.fat) * 100 : 0;
+      const overallAdherence = (calorieAdherence + proteinAdherence + carbsAdherence + fatAdherence) / 4;
+      
+      // Count meals with at least one entry
+      const mealsCompleted = mealCategories.filter(meal => meals[meal].length > 0).length;
+      
       await setDoc(logRef, {
+        date: selectedDate,
         meals,
+        totalCalories: totals.calories,
+        totalProtein: totals.protein,
+        totalCarbs: totals.carbs,
+        totalFat: totals.fat,
+        adherencePercentage: Math.round(overallAdherence),
+        mealsCompleted,
         dayComplete: isComplete,
         lastUpdated: Timestamp.now(),
       }, { merge: true });
@@ -976,13 +1005,13 @@ export default function NutritionPage() {
 
               {visibleTabs.tabs.includes('meal-plan') && (
                 <TabsContent value="meal-plan" className="mt-6">
-                  <MealPlanView />
+                  <MealPlanView selectedDate={selectedDate} />
                 </TabsContent>
               )}
 
               {visibleTabs.tabs.includes('habits') && (
                 <TabsContent value="habits" className="mt-6">
-                  <NutritionHabitTracker />
+                  <NutritionHabitTracker selectedDate={selectedDate} />
                 </TabsContent>
               )}
 

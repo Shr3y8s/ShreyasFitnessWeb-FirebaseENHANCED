@@ -53,7 +53,11 @@ const iconColorMap: Record<string, string> = {
   'quality': 'text-emerald-500'
 };
 
-export function NutritionHabitTracker() {
+interface NutritionHabitTrackerProps {
+  selectedDate: string; // YYYY-MM-DD format
+}
+
+export function NutritionHabitTracker({ selectedDate }: NutritionHabitTrackerProps) {
   const [habits, setHabits] = useState<NutritionHabit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<HabitCompletions>({});
   const [weeklyData, setWeeklyData] = useState<DailyCompletion[]>([]);
@@ -96,20 +100,18 @@ export function NutritionHabitTracker() {
     loadHabits();
   }, [user]);
 
-  // Load today's completions and weekly data
+  // Load completions for selected date and weekly data
   useEffect(() => {
     const loadCompletions = async () => {
       if (!user || habits.length === 0) return;
 
       try {
-        const todayDate = getTodayDate();
+        // Load completions for selected date
+        const selectedDateRef = doc(db, 'nutritionLogs', user.uid, 'habits', selectedDate);
+        const selectedDateSnap = await getDoc(selectedDateRef);
         
-        // Load today's completions
-        const todayRef = doc(db, 'nutritionLogs', user.uid, 'habits', todayDate);
-        const todaySnap = await getDoc(todayRef);
-        
-        if (todaySnap.exists()) {
-          setTodayCompletions(todaySnap.data() as HabitCompletions);
+        if (selectedDateSnap.exists()) {
+          setTodayCompletions(selectedDateSnap.data() as HabitCompletions);
         } else {
           // Initialize with all habits unchecked
           const initialCompletions: HabitCompletions = {};
@@ -144,7 +146,7 @@ export function NutritionHabitTracker() {
     };
 
     loadCompletions();
-  }, [user, habits]);
+  }, [user, habits, selectedDate]);
 
   const calculateStreak = (weekData: DailyCompletion[]) => {
     if (habits.length === 0) return;
@@ -177,9 +179,8 @@ export function NutritionHabitTracker() {
     setTodayCompletions(updatedCompletions);
 
     try {
-      const todayDate = getTodayDate();
-      const todayRef = doc(db, 'nutritionLogs', user.uid, 'habits', todayDate);
-      await setDoc(todayRef, updatedCompletions);
+      const selectedDateRef = doc(db, 'nutritionLogs', user.uid, 'habits', selectedDate);
+      await setDoc(selectedDateRef, updatedCompletions);
 
       // Reload weekly data to update streak
       const weeklyPromises = [];
@@ -259,6 +260,7 @@ export function NutritionHabitTracker() {
   }
 
   const todayDate = getTodayDate();
+  const isToday = selectedDate === todayDate;
   const completedToday = habits.filter(h => todayCompletions[h.id] === true).length;
   const progressPercent = habits.length > 0 ? (completedToday / habits.length) * 100 : 0;
   const weeklyProgress = getWeeklyProgress();
@@ -273,10 +275,10 @@ export function NutritionHabitTracker() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-6 w-6 text-primary" />
-                  Today's Habits
+                  {isToday ? "Today's Habits" : "Daily Habits"}
                 </CardTitle>
                 <CardDescription>
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </CardDescription>
               </div>
               {completedToday === habits.length && (
@@ -396,7 +398,7 @@ export function NutritionHabitTracker() {
                       <div
                         className={cn(
                           "h-10 rounded flex items-center justify-center text-xs font-medium",
-                          isToday && "ring-2 ring-primary",
+                          day.date === selectedDate && "ring-2 ring-primary ring-offset-1",
                           allCompleted
                             ? "bg-green-500 text-white"
                             : "bg-muted text-muted-foreground"

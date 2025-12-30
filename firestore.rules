@@ -415,18 +415,18 @@ service cloud.firestore {
     
     // CollectionGroup rules for Stripe subcollections (for business dashboard analytics)
     match /{path=**}/subscriptions/{subscriptionId} {
-      // Allow trainers/admins to read all subscriptions for MRR calculations
-      allow read: if isTrainerOrAdmin();
+      // ONLY ADMINS can read all subscriptions for MRR calculations (not regular trainers)
+      allow read: if isAdmin();
     }
     
     match /{path=**}/payments/{paymentId} {
-      // Allow trainers/admins to read all payments for revenue tracking
-      allow read: if isTrainerOrAdmin();
+      // ONLY ADMINS can read all payments for revenue tracking (not regular trainers)
+      allow read: if isAdmin();
     }
     
     match /{path=**}/invoices/{invoiceId} {
-      // Allow trainers/admins to read all invoices for failed payment monitoring
-      allow read: if isTrainerOrAdmin();
+      // ONLY ADMINS can read all invoices for failed payment monitoring (not regular trainers)
+      allow read: if isAdmin();
     }
     
     // Stripe Customers - User-specific access with Extension support
@@ -435,8 +435,8 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.auth.uid == userId;
       
       // Users can read their own customer data
-      // Trainers/admins can read all customer data for business analytics
-      allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
+      // ONLY ADMINS can read all customer data (not regular trainers)
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
       
       // Only Extension/Admin can update (Extension uses admin SDK so bypasses rules)
       allow update, delete: if false;
@@ -444,15 +444,15 @@ service cloud.firestore {
       // Subscriptions subcollection - managed by Extension
       match /subscriptions/{subscriptionId} {
         // Users can read their own subscriptions
-        // Trainers/admins can read all subscriptions for business dashboard (MRR, etc.)
-        allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
+        // ONLY ADMINS can read all subscriptions (not regular trainers)
+        allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
         allow write: if false; // Only Extension can write
         
         // Invoices nested under subscriptions
         match /invoices/{invoiceId} {
           // Users can read their own subscription invoices
-          // Trainers/admins can read all invoices for business dashboard
-          allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
+          // ONLY ADMINS can read all invoices (not regular trainers)
+          allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
           allow write: if false; // Only Extension can write
         }
       }
@@ -460,8 +460,8 @@ service cloud.firestore {
       // Payments subcollection - managed by Extension
       match /payments/{paymentId} {
         // Users can read their own payments
-        // Trainers/admins can read all payments for business dashboard (revenue tracking)
-        allow read: if (isAuthenticated() && request.auth.uid == userId) || isTrainerOrAdmin();
+        // ONLY ADMINS can read all payments (not regular trainers)
+        allow read: if (isAuthenticated() && request.auth.uid == userId) || isAdmin();
         allow write: if false; // Only Extension can write
       }
       
@@ -613,25 +613,14 @@ service cloud.firestore {
       // TRAINERS can only read their assigned clients' logs
       allow read: if isAdmin() || isAssignedTrainer(userId);
       
-      // Meal logs subcollection
+      // Daily macro logs subcollection
       match /meals/{dateId} {
-        // Users can read/write their own meal logs (individual docs and queries)
+        // Users can read/write their own daily logs (individual docs and queries)
         allow get, list: if isOwner(userId);
         allow write: if isOwner(userId);
         
         // ADMINS can read all, TRAINERS only their assigned clients
         allow get, list: if isAdmin() || isAssignedTrainer(userId);
-        
-        // Validation for meal log data
-        function validateMealLog() {
-          let data = request.resource.data;
-          return data.keys().hasAll(['meals', 'waterIntake', 'lastUpdated']) &&
-                 data.meals is map &&
-                 data.waterIntake is number &&
-                 data.waterIntake >= 0;
-        }
-        
-        allow write: if isOwner(userId) && validateMealLog();
       }
       
       // Habits tracking subcollection

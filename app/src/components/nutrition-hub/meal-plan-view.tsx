@@ -19,7 +19,11 @@ interface DayMealPlan {
   meals: MealItem[];
 }
 
-export function MealPlanView() {
+interface MealPlanViewProps {
+  selectedDate: string;
+}
+
+export function MealPlanView({ selectedDate }: MealPlanViewProps) {
   const [weeklyMealPlan, setWeeklyMealPlan] = useState<DayMealPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +118,7 @@ export function MealPlanView() {
 
   return (
     <div className="space-y-6">
-      <TodayMealPlan weeklyMealPlan={weeklyMealPlan} />
+      <TodayMealPlan weeklyMealPlan={weeklyMealPlan} selectedDate={selectedDate} />
       <WeeklyMealPlan weeklyMealPlan={weeklyMealPlan} />
     </div>
   );

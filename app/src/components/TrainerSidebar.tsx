@@ -17,6 +17,7 @@ import {
   User,
   LogOut,
   Shield,
+  UserCircle,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -153,6 +154,20 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                         {clientCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname.startsWith('/dashboard/trainer/client-hub') || currentPage === 'client-hub' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/client-hub">
+                    <UserCircle className="w-4 h-4" />
+                    <span className="font-medium">Client Hub</span>
+                    <span className="ml-auto border border-primary/50 text-primary text-xs px-2 py-0.5 rounded-full">
+                      New
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

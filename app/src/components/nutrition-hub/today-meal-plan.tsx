@@ -31,9 +31,10 @@ interface CheckedMeals {
 
 interface TodayMealPlanProps {
   weeklyMealPlan: DayMealPlan[];
+  selectedDate: string;
 }
 
-export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
+export function TodayMealPlan({ weeklyMealPlan, selectedDate }: TodayMealPlanProps) {
   const [checkedMeals, setCheckedMeals] = useState<CheckedMeals>({});
   const [currentDay, setCurrentDay] = useState<string>('');
   const [todayDate, setTodayDate] = useState<string>('');
@@ -43,15 +44,15 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
   const { user, userData } = useAuth();
   const { toast } = useToast();
 
-  // Set current day and date
+  // Set current day and date based on selectedDate prop
   useEffect(() => {
-    const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-    const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const date = new Date(selectedDate + 'T00:00:00');
+    const day = date.toLocaleDateString('en-US', { weekday: 'long' });
     setCurrentDay(day);
-    setTodayDate(dateStr);
-  }, []);
+    setTodayDate(selectedDate);
+  }, [selectedDate]);
 
-  // Load saved meal plan adherence from Firestore
+  // Load saved meal plan adherence from Firestore for selected date
   useEffect(() => {
     if (!user || !todayDate) return;
 
