@@ -77,6 +77,7 @@ export default function NutritionPage() {
   const [trainerName, setTrainerName] = useState('Your Coach');
   const [approachDate, setApproachDate] = useState<Date | null>(null);
   const [streaks, setStreaks] = useState({ proteinStreak: 0, loggingStreak: 0, waterStreak: 0 });
+  const [streaksLoading, setStreaksLoading] = useState(true);
   const [weeklyStats, setWeeklyStats] = useState({ avgCalories: 0, avgProtein: 0, daysLogged: 0, totalDays: 7 });
   const [trendsSummary, setTrendsSummary] = useState({ 
     longestStreak: 0, 
@@ -243,87 +244,13 @@ export default function NutritionPage() {
     };
   }, [user, selectedDate]); // Watch selectedDate changes
 
-  // Calculate weekly stats
+  // OPTIMIZED: Calculate all nutrition metrics (streaks, weekly stats, trends) in one pass
   useEffect(() => {
     if (!user) return;
 
     let isMounted = true;
 
-    const calculateWeeklyStats = async () => {
-      try {
-        if (!user) return;
-
-        const today = new Date();
-        let totalCalories = 0;
-        let totalProtein = 0;
-        let daysWithData = 0;
-
-        // Load last 7 days
-        for (let i = 0; i < 7; i++) {
-          if (!isMounted || !user) return;
-
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
-
-          const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', dateStr);
-          const logSnap = await getDoc(logRef);
-
-          if (logSnap.exists()) {
-            const data = logSnap.data();
-            const meals = data.meals || {};
-            
-            // Calculate daily totals
-            let dayCalories = 0;
-            let dayProtein = 0;
-            
-            Object.values(meals).forEach((mealItems: any) => {
-              mealItems.forEach((item: any) => {
-                dayCalories += item.calories || 0;
-                dayProtein += item.protein || 0;
-              });
-            });
-
-            if (dayCalories > 0 || dayProtein > 0) {
-              totalCalories += dayCalories;
-              totalProtein += dayProtein;
-              daysWithData++;
-            }
-          }
-        }
-
-        if (!isMounted || !user) return;
-
-        const avgCalories = daysWithData > 0 ? totalCalories / daysWithData : 0;
-        const avgProtein = daysWithData > 0 ? totalProtein / daysWithData : 0;
-
-        setWeeklyStats({
-          avgCalories,
-          avgProtein,
-          daysLogged: daysWithData,
-          totalDays: 7
-        });
-      } catch (error) {
-        if (isMounted && user) {
-          console.error('Error calculating weekly stats:', error);
-        }
-      }
-    };
-
-    calculateWeeklyStats();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user]);
-
-  // Calculate trends summary (longest streak, best week, monthly goals)
-  useEffect(() => {
-    if (!user) return;
-
-    let isMounted = true;
-
-    const calculateTrends = async () => {
+    const calculateAllMetrics = async () => {
       try {
         if (!user) return;
 
@@ -331,157 +258,37 @@ export default function NutritionPage() {
         const currentMonth = today.getMonth();
         const currentYear = today.getFullYear();
         
-        // Load last 90 days for comprehensive trend analysis
-        const allLogs = [];
+        // Fetch all 90 days in parallel (for trends calculation)
+        const datePromises = [];
         for (let i = 0; i < 90; i++) {
-          if (!isMounted || !user) return;
-
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          const dateStr = date.toISOString().split('T')[0];
-
-          const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', dateStr);
-          const logSnap = await getDoc(logRef);
-
-          if (logSnap.exists()) {
-            allLogs.push({ date: dateStr, data: logSnap.data() });
-          } else {
-            allLogs.push({ date: dateStr, data: null });
-          }
-        }
-
-        if (!isMounted || !user) return;
-
-        // Calculate longest logging streak
-        let longestStreak = 0;
-        let currentStreak = 0;
-        
-        for (const log of allLogs) {
-          if (log.data && log.data.meals) {
-            const meals = log.data.meals || {};
-            const hasData = Object.values(meals).some((mealItems: any) => mealItems.length > 0);
-            if (hasData) {
-              currentStreak++;
-              longestStreak = Math.max(longestStreak, currentStreak);
-            } else {
-              currentStreak = 0;
-            }
-          } else {
-            currentStreak = 0;
-          }
-        }
-
-        // Find best week (most days logged in 7-day period)
-        let bestWeekScore = 0;
-        let bestWeekDate = '';
-        
-        for (let i = 0; i <= allLogs.length - 7; i++) {
-          const weekLogs = allLogs.slice(i, i + 7);
-          const weekScore = weekLogs.filter(log => {
-            if (!log.data) return false;
-            const meals = log.data.meals || {};
-            return Object.values(meals).some((mealItems: any) => mealItems.length > 0);
-          }).length;
-
-          if (weekScore > bestWeekScore) {
-            bestWeekScore = weekScore;
-            // Format the start date of this week
-            const startDate = new Date(weekLogs[0].date);
-            bestWeekDate = `Week of ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-          }
-        }
-
-        // Calculate monthly goals hit (days this month with protein goal met)
-        let monthlyGoalsHit = 0;
-        let monthlyGoalsTotal = 0;
-
-        const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-        const daysInMonth = lastDayOfMonth.getDate();
-        
-        // Only count days up to today
-        const daysToCount = Math.min(today.getDate(), daysInMonth);
-        monthlyGoalsTotal = daysToCount;
-
-        for (let day = 1; day <= daysToCount; day++) {
-          const date = new Date(currentYear, currentMonth, day);
-          const dateStr = date.toISOString().split('T')[0];
-          
-          const log = allLogs.find(l => l.date === dateStr);
-          if (log && log.data) {
-            const meals = log.data.meals || {};
-            const totalProtein = Object.values(meals).flat().reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
-            if (totalProtein >= dailyGoals.protein * 0.9) {
-              monthlyGoalsHit++;
-            }
-          }
-        }
-
-        if (!isMounted || !user) return;
-
-        setTrendsSummary({
-          longestStreak,
-          bestWeekDate,
-          monthlyGoalsHit,
-          monthlyGoalsTotal
-        });
-      } catch (error) {
-        if (isMounted && user) {
-          console.error('Error calculating trends:', error);
-        }
-      }
-    };
-
-    calculateTrends();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user, dailyGoals]);
-
-  // Calculate streaks
-  useEffect(() => {
-    if (!user) return;
-
-    let isMounted = true;
-
-    const calculateStreaks = async () => {
-      try {
-        // Double check user is still available
-        if (!user) return;
-
-        const today = new Date();
-        const logs = [];
-        
-        // Load last 30 days to calculate streaks
-        for (let i = 0; i < 30; i++) {
-          // Check if component is still mounted and user still exists
-          if (!isMounted || !user) return;
-
           const date = new Date(today);
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
           
           const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', dateStr);
-          const logSnap = await getDoc(logRef);
-          
-          if (logSnap.exists()) {
-            logs.push({ date: dateStr, data: logSnap.data() });
-          } else {
-            logs.push({ date: dateStr, data: null });
-          }
+          datePromises.push(
+            getDoc(logRef).then(snap => ({ 
+              date: dateStr, 
+              data: snap.exists() ? snap.data() : null 
+            }))
+          );
         }
 
-        // Final check before setting state
+        // Fetch all days in parallel
+        const allLogs = await Promise.all(datePromises);
+        
         if (!isMounted || !user) return;
 
-        // Calculate protein streak
+        // === CALCULATE STREAKS (last 30 days) ===
+        const last30Days = allLogs.slice(0, 30);
+        
+        // Protein streak
         let proteinStreak = 0;
-        for (const log of logs) {
+        for (const log of last30Days) {
           if (log.data) {
             const meals = log.data.meals || {};
             const totalProtein = Object.values(meals).flat().reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
-            if (totalProtein >= dailyGoals.protein * 0.9) { // Within 90% of goal
+            if (totalProtein >= dailyGoals.protein * 0.9) {
               proteinStreak++;
             } else {
               break;
@@ -491,9 +298,9 @@ export default function NutritionPage() {
           }
         }
 
-        // Calculate logging streak
+        // Logging streak
         let loggingStreak = 0;
-        for (const log of logs) {
+        for (const log of last30Days) {
           if (log.data && log.data.meals) {
             const meals = log.data.meals || {};
             const hasData = Object.values(meals).some((mealItems: any) => mealItems.length > 0);
@@ -507,22 +314,202 @@ export default function NutritionPage() {
           }
         }
 
-        // Water streak is no longer calculated here (water tracked in Daily Activities)
-        setStreaks({ proteinStreak, loggingStreak, waterStreak: 0 });
+        // === CALCULATE WEEKLY STATS (last 7 days) ===
+        const last7Days = allLogs.slice(0, 7);
+        let totalCalories = 0;
+        let totalProtein = 0;
+        let daysWithData = 0;
+
+        for (const log of last7Days) {
+          if (log.data) {
+            // Use pre-calculated totals from Firestore (faster than summing meals)
+            const dayCalories = log.data.totalCalories || 0;
+            const dayProtein = log.data.totalProtein || 0;
+
+            if (dayCalories > 0 || dayProtein > 0) {
+              totalCalories += dayCalories;
+              totalProtein += dayProtein;
+              daysWithData++;
+            }
+          }
+        }
+
+        const avgCalories = daysWithData > 0 ? totalCalories / daysWithData : 0;
+        const avgProtein = daysWithData > 0 ? totalProtein / daysWithData : 0;
+
+        // === CALCULATE TRENDS (all 90 days) ===
+        // Longest logging streak
+        let longestStreak = 0;
+        let currentStreakCount = 0;
+        
+        for (const log of allLogs) {
+          if (log.data && log.data.meals) {
+            const meals = log.data.meals || {};
+            const hasData = Object.values(meals).some((mealItems: any) => mealItems.length > 0);
+            if (hasData) {
+              currentStreakCount++;
+              longestStreak = Math.max(longestStreak, currentStreakCount);
+            } else {
+              currentStreakCount = 0;
+            }
+          } else {
+            currentStreakCount = 0;
+          }
+        }
+
+        // Best week (most days logged in 7-day period)
+        let bestWeekScore = 0;
+        let bestWeekDate = '';
+        
+        for (let i = 0; i <= allLogs.length - 7; i++) {
+          const weekLogs = allLogs.slice(i, i + 7);
+          const weekScore = weekLogs.filter(log => {
+            if (!log.data) return false;
+            const meals = log.data.meals || {};
+            return Object.values(meals).some((mealItems: any) => mealItems.length > 0);
+          }).length;
+
+          if (weekScore > bestWeekScore) {
+            bestWeekScore = weekScore;
+            const startDate = new Date(weekLogs[0].date);
+            bestWeekDate = `Week of ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+          }
+        }
+
+        // Monthly goals (days this month with protein goal met)
+        let monthlyGoalsHit = 0;
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const daysToCount = Math.min(today.getDate(), daysInMonth);
+
+        for (let day = 1; day <= daysToCount; day++) {
+          const date = new Date(currentYear, currentMonth, day);
+          const dateStr = date.toISOString().split('T')[0];
+          
+          const log = allLogs.find(l => l.date === dateStr);
+          if (log && log.data) {
+            const meals = log.data.meals || {};
+            const totalProteinForDay = Object.values(meals).flat().reduce((sum: number, item: any) => sum + (item.protein || 0), 0);
+            if (totalProteinForDay >= dailyGoals.protein * 0.9) {
+              monthlyGoalsHit++;
+            }
+          }
+        }
+
+        if (!isMounted || !user) return;
+
+        // Update all state at once
+        setStreaks(prev => ({ ...prev, proteinStreak, loggingStreak }));
+        setWeeklyStats({
+          avgCalories,
+          avgProtein,
+          daysLogged: daysWithData,
+          totalDays: 7
+        });
+        setTrendsSummary({
+          longestStreak,
+          bestWeekDate,
+          monthlyGoalsHit,
+          monthlyGoalsTotal: daysToCount
+        });
+        setStreaksLoading(false);
       } catch (error) {
-        // Only log error if component is still mounted (not during logout)
         if (isMounted && user) {
-          console.error('Error calculating streaks:', error);
+          console.error('Error calculating metrics:', error);
+          setStreaksLoading(false);
         }
       }
     };
 
-    calculateStreaks();
+    calculateAllMetrics();
 
     return () => {
       isMounted = false;
     };
   }, [user, dailyGoals]);
+
+  // Calculate water streak from Daily Activities
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+
+    const calculateWaterStreak = async () => {
+      try {
+        if (!user) return;
+
+        const today = new Date();
+        let waterStreak = 0;
+        let foundAnyWaterData = false;
+
+        console.log('[Water Streak] Starting calculation for user:', user.uid);
+
+        // Check last 30 days for water goal completion
+        // Data structure: dailyActivities/{userId}_{date} -> water.amount, water.goal
+        for (let i = 0; i < 30; i++) {
+          if (!isMounted || !user) return;
+
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          const docId = `${user.uid}_${dateStr}`;
+
+          console.log(`[Water Streak] Checking day ${i}: ${dateStr}, docId: ${docId}`);
+
+          // Fetch individual day's activities document
+          const activitiesRef = doc(db, 'dailyActivities', docId);
+          const activitiesSnap = await getDoc(activitiesRef);
+
+          if (activitiesSnap.exists()) {
+            const dayData = activitiesSnap.data();
+            console.log(`[Water Streak] Found data for ${dateStr}:`, dayData);
+            
+            // Check if water data exists with nested structure
+            if (dayData.water && dayData.water.amount !== undefined && dayData.water.goal !== undefined) {
+              foundAnyWaterData = true;
+              const waterConsumed = dayData.water.amount;
+              const waterGoal = dayData.water.goal;
+              const percentage = (waterConsumed / waterGoal) * 100;
+              
+              console.log(`[Water Streak] ${dateStr}: ${waterConsumed}/${waterGoal} oz (${percentage.toFixed(1)}%)`);
+              
+              // Check if water goal met (within 90%)
+              // Both amount and goal are in the same unit (oz)
+              if (waterConsumed >= waterGoal * 0.9) {
+                waterStreak++;
+                console.log(`[Water Streak] ✓ Goal met! Current streak: ${waterStreak}`);
+              } else {
+                console.log(`[Water Streak] ✗ Goal not met. Breaking streak.`);
+                break;
+              }
+            } else {
+              console.log(`[Water Streak] No water data for ${dateStr}. Water object:`, dayData.water);
+              break;
+            }
+          } else {
+            console.log(`[Water Streak] No document found for ${dateStr}`);
+            break;
+          }
+        }
+
+        if (!isMounted || !user) return;
+
+        console.log(`[Water Streak] Final result: ${waterStreak} days. Found any data: ${foundAnyWaterData}`);
+        setStreaks(prev => ({ ...prev, waterStreak }));
+        setStreaksLoading(false);
+      } catch (error) {
+        if (isMounted && user) {
+          console.error('[Water Streak] Error calculating water streak:', error);
+        }
+        setStreaksLoading(false);
+      }
+    };
+
+    calculateWaterStreak();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // Save daily log to Firebase with auto-detect completion
   const saveDailyLog = async (meals: Record<MealCategory, FoodItem[]>) => {
@@ -985,6 +972,8 @@ export default function NutritionPage() {
                       proteinStreak={streaks.proteinStreak}
                       loggingStreak={streaks.loggingStreak}
                       waterStreak={streaks.waterStreak}
+                      isLoading={streaksLoading}
+                      nutritionApproach={nutritionApproach}
                     />
                     <ThisWeekCard 
                       avgCalories={weeklyStats.avgCalories}

@@ -17,6 +17,8 @@ interface StreakData {
   proteinStreak: number;
   loggingStreak: number;
   waterStreak: number;
+  isLoading?: boolean;
+  nutritionApproach?: string;
 }
 
 
@@ -100,14 +102,17 @@ export function TargetMacrosCard({ calories, protein, carbs, fat }: MacroTargets
   );
 }
 
-export function ActiveStreaksCard({ proteinStreak = 0, loggingStreak = 0, waterStreak = 0 }: StreakData) {
+export function ActiveStreaksCard({ proteinStreak = 0, loggingStreak = 0, waterStreak = 0, isLoading = false, nutritionApproach }: StreakData) {
+  // Only show protein streak for macro_tracking approach
+  const showProteinStreak = nutritionApproach === 'macro_tracking';
+  
   const streakData = [
-    {
+    ...(showProteinStreak ? [{
       icon: <BicepsFlexed className="h-5 w-5 text-amber-500" />,
       title: "Protein Goal Streak",
       value: proteinStreak === 0 ? "Start today!" : `${proteinStreak} ${proteinStreak === 1 ? 'day' : 'days'}`,
       isActive: proteinStreak > 0
-    },
+    }] : []),
     {
       icon: <ClipboardEdit className="h-5 w-5 text-blue-500" />,
       title: "Meal Logging Streak",
@@ -136,9 +141,15 @@ export function ActiveStreaksCard({ proteinStreak = 0, loggingStreak = 0, waterS
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        {streakData.map((item) => (
-          <StreakItem key={item.title} {...item} />
-        ))}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          streakData.map((item) => (
+            <StreakItem key={item.title} {...item} />
+          ))
+        )}
       </CardContent>
     </Card>
   );

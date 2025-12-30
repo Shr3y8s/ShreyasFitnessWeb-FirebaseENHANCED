@@ -690,7 +690,7 @@ service cloud.firestore {
     
     // DAILY ACTIVITY TRACKING SYSTEM (LEGACY)
     // Top-level collection for consistency with nutritionLogs and workoutExecutions
-    // Document ID format: {userId}_{date}
+    // Document ID format: {userId}_{date} (using underscore separator)
     match /dailyActivities/{activityId} {
       // Extract userId from document ID (format: userId_date)
       function getUserIdFromActivityId() {
