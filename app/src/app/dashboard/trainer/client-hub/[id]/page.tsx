@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -27,7 +27,10 @@ import {
   XCircle,
   Loader2,
   AlertCircle,
-  Download
+  Download,
+  ChevronDown,
+  ChevronRight,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { LoginHistoryCard } from '@/components/security/LoginHistoryCard';
@@ -49,9 +52,13 @@ import {
   type BillingData 
 } from '@/lib/billing-utils';
 import {
-  subscribeToSessionBalance
+  subscribeToSessionBalance,
+  subscribeToUpcomingSessions,
+  getSessionLocation,
+  formatSessionDate,
+  formatSessionTimeRange
 } from '@/lib/session-utils';
-import { SessionPackage } from '@/types/session';
+import { SessionPackage, TrainingSession } from '@/types/session';
 import { 
   getClientPlan, 
   updateVision, 
@@ -105,6 +112,20 @@ export default function ClientDetailPage() {
   const [latestWeight, setLatestWeight] = useState<any>(null);
   const [progressPhotosCount, setProgressPhotosCount] = useState(0);
   const [progressLoading, setProgressLoading] = useState(false);
+
+  // Training state for Training tab
+  const [workoutAssignments, setWorkoutAssignments] = useState<any[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
+  const [completedSessions, setCompletedSessions] = useState<TrainingSession[]>([]);
+  const [sessionLocations, setSessionLocations] = useState<Map<string, string>>(new Map());
+  const [trainingLoading, setTrainingLoading] = useState(false);
+  
+  // Collapsible section state for Training tab
+  const [isThisWeekExpanded, setIsThisWeekExpanded] = useState(true);
+  const [isRecentlyCompletedExpanded, setIsRecentlyCompletedExpanded] = useState(false);
+  const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
+  const [isSessionsExpanded, setIsSessionsExpanded] = useState(false);
+  const [isRecentSessionsExpanded, setIsRecentSessionsExpanded] = useState(false);
 
   // Plan state for Plan tab
   const [plan, setPlan] = useState<ClientPlan | null>(null);
@@ -347,6 +368,94 @@ export default function ClientDetailPage() {
     loadPlanData();
   }, [activeTab, clientId]);
 
+  // Fetch workout assignments and subscribe to sessions when on Training tab
+  useEffect(() => {
+    if (!user || !clientId || activeTab !== 'training') {
+      setUpcomingSessions([]);
+      return;
+    }
+
+    const fetchTrainingData = async () => {
+      setTrainingLoading(true);
+      
+      try {
+        // Fetch workout assignments for this client
+        const assignmentsQuery = query(
+          collection(db, 'workoutAssignments'),
+          where('clientId', '==', clientId),
+          where('trainerId', '==', user.uid),
+          orderBy('dueDate', 'desc')
+        );
+        
+        const assignmentsSnapshot = await getDocs(assignmentsQuery);
+        const assignments = assignmentsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name || 'Unnamed Workout',
+            clientId: data.clientId,
+            templateId: data.workoutTemplateId,
+            trainerId: data.trainerId,
+            assignedDate: data.assignedAt?.toDate() || new Date(),
+            dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : data.dueDate?.toDate() || new Date(),
+            status: data.status || 'assigned',
+            progress: data.progress,
+            notes: data.notes
+          };
+        });
+        
+        setWorkoutAssignments(assignments);
+      } catch (error) {
+        console.error('Error fetching training data:', error);
+        setWorkoutAssignments([]);
+      } finally {
+        setTrainingLoading(false);
+      }
+    };
+
+    fetchTrainingData();
+
+    // Subscribe to upcoming sessions
+    const unsubscribeSessions = subscribeToUpcomingSessions(
+      clientId,
+      (sessions) => {
+        setUpcomingSessions(sessions);
+      }
+    );
+
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribeSessions);
+
+    return () => {
+      unregisterListener(unsubscribeSessions);
+      unsubscribeSessions();
+    };
+  }, [activeTab, clientId, user]);
+
+  // Fetch locations for upcoming sessions (separate effect to keep snapshot callback synchronous)
+  useEffect(() => {
+    if (upcomingSessions.length === 0) {
+      setSessionLocations(new Map());
+      return;
+    }
+
+    const fetchLocations = async () => {
+      const locationMap = new Map<string, string>();
+      for (const session of upcomingSessions) {
+        try {
+          const location = await getSessionLocation(session);
+          locationMap.set(session.id, location);
+        } catch (error) {
+          console.error(`Error fetching location for session ${session.id}:`, error);
+          locationMap.set(session.id, 'Location unavailable');
+        }
+      }
+      setSessionLocations(locationMap);
+    };
+
+    fetchLocations();
+  }, [upcomingSessions]);
+
   // Save handlers for Plan tab
   const handleSaveVision = async (visionData: VisionData) => {
     if (!user) return;
@@ -508,6 +617,49 @@ export default function ClientDetailPage() {
     }
   };
 
+  // Calculate workout statistics
+  const getWorkoutStats = () => {
+    const total = workoutAssignments.length;
+    const completed = workoutAssignments.filter(w => w.status === 'completed').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    return { total, completed, completionRate };
+  };
+
+  // Categorize workouts
+  const categorizeWorkouts = () => {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start of this week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+    const thisWeek = workoutAssignments.filter(w => {
+      const dueDate = new Date(w.dueDate);
+      return dueDate >= startOfWeek && dueDate < endOfWeek;
+    });
+
+    const recentlyCompleted = workoutAssignments
+      .filter(w => w.status === 'completed')
+      .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())
+      .slice(0, 5);
+
+    const upcoming = workoutAssignments
+      .filter(w => {
+        const dueDate = new Date(w.dueDate);
+        return dueDate >= endOfWeek && w.status !== 'completed';
+      })
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .slice(0, 5);
+
+    return { thisWeek, recentlyCompleted, upcoming };
+  };
+
+  const workoutStats = getWorkoutStats();
+  const { thisWeek, recentlyCompleted, upcoming } = categorizeWorkouts();
+
   // Loading state
   if (loading) {
     return (
@@ -541,22 +693,13 @@ export default function ClientDetailPage() {
       <SidebarInset>
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
           {/* Breadcrumb */}
-          <div className="mb-2">
+          <div className="mb-6">
             <Breadcrumb items={[
               { label: 'Client Management' },
               { label: 'Client Hub', href: '/dashboard/trainer/client-hub' },
               { label: clientData.name }
             ]} />
           </div>
-          
-          {/* Back Button */}
-          <Link 
-            href="/dashboard/trainer/client-hub"
-            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 mb-4 font-medium"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Client Hub
-          </Link>
 
           {/* Client Header */}
           <div className="bg-white rounded-xl border shadow-sm p-6 mb-6">
@@ -921,74 +1064,328 @@ export default function ClientDetailPage() {
 
             {activeTab === 'training' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-1">💪 Training</h2>
-                    <p className="text-gray-600">Workout assignments and in-person sessions</p>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/dashboard/trainer/assignments/create?clientId=${clientData.id}`)}
-                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors"
-                  >
-                    Assign Workout
-                  </button>
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">💪 Training</h2>
+                  <p className="text-gray-600">Workout assignments and in-person sessions</p>
                 </div>
 
                 {/* Training Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xl">📝</span>
-                      <h4 className="font-semibold">Total Assigned</h4>
-                    </div>
-                    <p className="text-3xl font-bold text-foreground">-</p>
-                    <p className="text-sm text-muted-foreground">workouts assigned</p>
+                {trainingLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                    <p className="text-sm text-muted-foreground mt-2">Loading workout data...</p>
                   </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">📋</span>
+                        <h4 className="font-semibold">Total Assigned</h4>
+                      </div>
+                      <p className="text-3xl font-bold text-foreground">{workoutStats.total}</p>
+                      <p className="text-sm text-muted-foreground">workouts assigned</p>
+                    </div>
+                    
+                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">✅</span>
+                        <h4 className="font-semibold">Completed</h4>
+                      </div>
+                      <p className="text-3xl font-bold text-foreground">{workoutStats.completed}</p>
+                      <p className="text-sm text-muted-foreground">workouts completed</p>
+                    </div>
+                    
+                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">📊</span>
+                        <h4 className="font-semibold">Completion Rate</h4>
+                      </div>
+                      <p className="text-3xl font-bold text-foreground">{workoutStats.completionRate}%</p>
+                      <p className="text-sm text-muted-foreground">success rate</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* SECTION 1: WORKOUT ASSIGNMENTS */}
+                <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                        <Dumbbell className="h-5 w-5 text-primary" />
+                        Workout Assignments
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">Independent training workouts</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/trainer/assignments?client=${clientData.id}`}
+                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        View All Assignments
+                      </Link>
+                      <button
+                        onClick={() => router.push(`/dashboard/trainer/assignments/create?clientId=${clientData.id}`)}
+                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        Assign Workout
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* This Week's Workouts - Collapsible */}
+                <div>
+                  <button
+                    onClick={() => setIsThisWeekExpanded(!isThisWeekExpanded)}
+                    className="flex items-center justify-between w-full text-left mb-3 group"
+                  >
+                    <h3 className="text-lg font-semibold">
+                      This Week's Workouts {!isThisWeekExpanded && `(${thisWeek.length})`}
+                    </h3>
+                    {isThisWeekExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                    )}
+                  </button>
                   
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xl">✅</span>
-                      <h4 className="font-semibold">Completed</h4>
-                    </div>
-                    <p className="text-3xl font-bold text-foreground">-</p>
-                    <p className="text-sm text-muted-foreground">workouts completed</p>
-                  </div>
-                  
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xl">📊</span>
-                      <h4 className="font-semibold">Completion Rate</h4>
-                    </div>
-                    <p className="text-3xl font-bold text-foreground">-%</p>
-                    <p className="text-sm text-muted-foreground">success rate</p>
-                  </div>
+                  {isThisWeekExpanded && (
+                    <>
+                      {thisWeek.length > 0 ? (
+                        <div className="space-y-2">
+                          {thisWeek.map((workout) => {
+                            const isOverdue = new Date(workout.dueDate) < new Date() && workout.status !== 'completed';
+                            return (
+                              <div key={workout.id} className="bg-primary/5 border border-primary/50 rounded-lg p-4 hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold text-foreground">{workout.name}</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      Due: {new Date(workout.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    </p>
+                                  </div>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                    workout.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                    isOverdue ? 'bg-red-100 text-red-700' :
+                                    workout.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {workout.status === 'completed' ? '✓ Completed' :
+                                     isOverdue ? '⚠ Overdue' :
+                                     workout.status === 'in_progress' ? 'In Progress' :
+                                     'Assigned'}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center">
+                          <span className="text-4xl mb-2 block">💪</span>
+                          <p className="font-semibold text-foreground mb-2">No workouts due this week</p>
+                          <p className="text-sm text-muted-foreground">Assign workouts to appear here</p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
-                {/* Upcoming Sessions */}
+                  {/* Recently Completed - Collapsible */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Upcoming 1-on-1 Sessions</h3>
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center transition-all duration-300 hover:shadow-glow">
-                    <span className="text-4xl mb-2 block">🗓️</span>
-                    <p className="font-semibold text-foreground mb-2">No upcoming sessions scheduled</p>
-                    <p className="text-sm text-muted-foreground">Sessions scheduled by the client will appear here</p>
-                  </div>
+                  <button
+                    onClick={() => setIsRecentlyCompletedExpanded(!isRecentlyCompletedExpanded)}
+                    className="flex items-center justify-between w-full text-left mb-3 group"
+                  >
+                    <h3 className="text-lg font-semibold">
+                      Recently Completed Workouts {!isRecentlyCompletedExpanded && `(${recentlyCompleted.length})`}
+                    </h3>
+                    {isRecentlyCompletedExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                    )}
+                  </button>
+                  
+                  {isRecentlyCompletedExpanded && (
+                    <>
+                      {recentlyCompleted.length > 0 ? (
+                        <div className="space-y-2">
+                          {recentlyCompleted.map((workout) => (
+                            <div key={workout.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-gray-900">{workout.name}</h4>
+                                  <p className="text-sm text-gray-600">
+                                    Completed: {new Date(workout.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </p>
+                                </div>
+                                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center">
+                          <span className="text-4xl mb-2 block">✅</span>
+                          <p className="font-semibold text-foreground mb-2">No completed workouts yet</p>
+                          <p className="text-sm text-muted-foreground">Completed workouts will appear here</p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
-                {/* Workout Assignments */}
+                  {/* Upcoming Workouts - Collapsible */}
                 <div>
-                  <h3 className="text-lg font-semibold mb-3">Workout Assignments</h3>
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center transition-all duration-300 hover:shadow-glow">
-                    <span className="text-4xl mb-2 block">💪</span>
-                    <p className="font-semibold text-foreground mb-2">No workouts assigned yet</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Assigned workouts will appear here with completion status
-                    </p>
-                    <button
-                      onClick={() => router.push(`/dashboard/trainer/assignments/create?clientId=${clientData.id}`)}
-                      className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      Assign First Workout
-                    </button>
+                  <button
+                    onClick={() => setIsUpcomingExpanded(!isUpcomingExpanded)}
+                    className="flex items-center justify-between w-full text-left mb-3 group"
+                  >
+                    <h3 className="text-lg font-semibold">
+                      Upcoming Workouts (Beyond This Week) {!isUpcomingExpanded && `(${upcoming.length})`}
+                    </h3>
+                    {isUpcomingExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                    )}
+                  </button>
+                  
+                  {isUpcomingExpanded && (
+                    <>
+                      {upcoming.length > 0 ? (
+                        <div className="space-y-2">
+                          {upcoming.map((workout) => (
+                            <div key={workout.id} className="bg-primary/5 border border-primary/50 rounded-lg p-4 hover:shadow-md transition-all">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-foreground">{workout.name}</h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    Due: {new Date(workout.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                  </p>
+                                </div>
+                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                  Scheduled
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center">
+                          <span className="text-4xl mb-2 block">📅</span>
+                          <p className="font-semibold text-foreground mb-2">No upcoming workouts scheduled</p>
+                          <p className="text-sm text-muted-foreground">Future workouts will appear here</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                </div>
+
+                {/* SECTION 2: IN-PERSON TRAINING SESSIONS */}
+                <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        In-Person Training Sessions
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">Scheduled appointments with trainer</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/dashboard/trainer/training-sessions?clientId=${clientId}&dateRange=month`}
+                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        View In-person Sessions
+                      </Link>
+                      <Link
+                        href={`/dashboard/trainer/weekly-checkins?clientId=${clientId}&dateRange=month`}
+                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        View Check-ins
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Session Balance & Upcoming Sessions */}
+                  <div className="space-y-4">
+                    {/* Session Balance Summary */}
+                    {sessionBalance && sessionBalance.available !== undefined && (
+                    <div className="p-4 bg-primary/5 rounded-lg">
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Total Purchased</p>
+                          <p className="text-2xl font-bold text-blue-600">{sessionBalance.purchased || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Used</p>
+                          <p className="text-2xl font-bold text-gray-600">{sessionBalance.used || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Available</p>
+                          <p className="text-2xl font-bold text-green-600">{sessionBalance.available || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                    )}
+
+                    {/* Upcoming Sessions - Collapsible */}
+                    <div>
+                      <button
+                        onClick={() => setIsSessionsExpanded(!isSessionsExpanded)}
+                        className="flex items-center justify-between w-full text-left mb-3 group"
+                      >
+                        <h4 className="font-semibold">
+                          Upcoming Sessions {!isSessionsExpanded && `(${upcomingSessions.length})`}
+                        </h4>
+                        {isSessionsExpanded ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                        )}
+                      </button>
+                      
+                      {isSessionsExpanded && (
+                        <>
+                          {upcomingSessions.length > 0 ? (
+                            <div className="space-y-2">
+                              {upcomingSessions.slice(0, 5).map((session) => (
+                              <div key={session.id} className="p-3 bg-gray-50 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:-translate-y-0.5">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium">
+                                      {formatSessionDate(session.scheduledDate)}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {formatSessionTimeRange(session.scheduledDate, session.duration)}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      📍 {sessionLocations.get(session.id) || 'Loading location...'}
+                                    </p>
+                                  </div>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                    session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {session.status}
+                                  </span>
+                                </div>
+                              </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 bg-gray-50 rounded-lg">
+                              <span className="text-4xl mb-2 block">🗓️</span>
+                              <p className="text-sm text-gray-600">No upcoming sessions scheduled</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 

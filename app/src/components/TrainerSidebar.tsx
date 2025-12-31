@@ -18,6 +18,7 @@ import {
   LogOut,
   Shield,
   UserCircle,
+  Calendar,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -193,6 +194,28 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/training-sessions' || currentPage === 'training-sessions' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/training-sessions">
+                    <Calendar className="w-4 h-4" />
+                    <span className="font-medium">In-person Sessions</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/weekly-checkins' || currentPage === 'weekly-checkins' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/weekly-checkins">
+                    <ListChecks className="w-4 h-4" />
+                    <span className="font-medium">Weekly Check-ins</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild 
