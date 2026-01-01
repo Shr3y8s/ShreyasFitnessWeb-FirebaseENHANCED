@@ -41,8 +41,14 @@ export default function TrainingSessionsPage() {
   const [filters, setFilters] = useState<SessionFilters>(() => {
     const clientId = searchParams.get('clientId');
     
+    // Default to 1 month ago to optimize performance and reduce Firestore reads
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    oneMonthAgo.setHours(0, 0, 0, 0); // Start of day
+    
     return {
       sessionType: 'training', // Only show training sessions
+      dateFrom: oneMonthAgo,
       ...(clientId && { clientId })
     };
   });

@@ -201,7 +201,9 @@ async function handleCalendlyCancellation(calendlyEventId) {
   
   if (sessionsSnapshot.empty) {
     console.log(`No scheduled session found for Calendly event: ${calendlyEventId}`);
-    return;
+    // Throw error to trigger Calendly webhook retry
+    // This prevents race condition where cancellation arrives before creation
+    throw new Error(`Session not found for Calendly event ${calendlyEventId}. Will retry.`);
   }
   
   const sessionDoc = sessionsSnapshot.docs[0];
