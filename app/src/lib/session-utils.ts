@@ -127,6 +127,11 @@ export async function getSessionLocation(
       }
       return 'Private location (address not set)';
     } else {
+      // Check if locationId exists before trying to fetch
+      if (!session.locationId) {
+        return 'Location TBD';
+      }
+      
       const locationDoc = await getDoc(doc(db, 'training_locations', session.locationId));
       if (locationDoc.exists()) {
         const locationData = locationDoc.data() as TrainingLocation;
@@ -168,11 +173,15 @@ function formatAddress(address: string | any): string {
 
 /**
  * Format a session date with timezone
- * @param timestamp - Firestore timestamp
+ * @param timestamp - Firestore timestamp or Date object
  * @returns Formatted date string
  */
-export function formatSessionDate(timestamp: Timestamp): string {
-  const date = new Date(timestamp.toMillis());
+export function formatSessionDate(timestamp: Timestamp | Date): string {
+  // Handle both Timestamp and Date types
+  const date = timestamp instanceof Date 
+    ? timestamp 
+    : new Date(timestamp.toMillis());
+    
   const tzAbbr = new Date().toLocaleTimeString('en-US', { 
     timeZoneName: 'short' 
   }).split(' ').pop();
@@ -189,12 +198,16 @@ export function formatSessionDate(timestamp: Timestamp): string {
 
 /**
  * Format a session time range with duration
- * @param timestamp - Firestore timestamp for start time
+ * @param timestamp - Firestore timestamp or Date object for start time
  * @param duration - Duration in minutes
  * @returns Formatted time range string
  */
-export function formatSessionTimeRange(timestamp: Timestamp, duration: number): string {
-  const startDate = new Date(timestamp.toMillis());
+export function formatSessionTimeRange(timestamp: Timestamp | Date, duration: number): string {
+  // Handle both Timestamp and Date types
+  const startDate = timestamp instanceof Date 
+    ? timestamp 
+    : new Date(timestamp.toMillis());
+    
   const endDate = new Date(startDate.getTime() + duration * 60000);
   
   const tzAbbr = new Date().toLocaleTimeString('en-US', { 

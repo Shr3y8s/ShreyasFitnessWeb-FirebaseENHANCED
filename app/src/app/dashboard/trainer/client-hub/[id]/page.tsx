@@ -116,8 +116,10 @@ export default function ClientDetailPage() {
   // Training state for Training tab
   const [workoutAssignments, setWorkoutAssignments] = useState<any[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
+  const [upcomingCheckins, setUpcomingCheckins] = useState<TrainingSession[]>([]);
   const [completedSessions, setCompletedSessions] = useState<TrainingSession[]>([]);
   const [sessionLocations, setSessionLocations] = useState<Map<string, string>>(new Map());
+  const [checkinLocations, setCheckinLocations] = useState<Map<string, string>>(new Map());
   const [trainingLoading, setTrainingLoading] = useState(false);
   
   // Collapsible section state for Training tab
@@ -125,6 +127,7 @@ export default function ClientDetailPage() {
   const [isRecentlyCompletedExpanded, setIsRecentlyCompletedExpanded] = useState(false);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
   const [isSessionsExpanded, setIsSessionsExpanded] = useState(false);
+  const [isCheckinsExpanded, setIsCheckinsExpanded] = useState(false);
   const [isRecentSessionsExpanded, setIsRecentSessionsExpanded] = useState(false);
 
   // Plan state for Plan tab
@@ -415,20 +418,57 @@ export default function ClientDetailPage() {
 
     fetchTrainingData();
 
-    // Subscribe to upcoming sessions
-    const unsubscribeSessions = subscribeToUpcomingSessions(
-      clientId,
-      (sessions) => {
-        setUpcomingSessions(sessions);
-      }
+    // Subscribe to upcoming training sessions (training type only)
+    const sessionsQuery = query(
+      collection(db, 'sessions'),
+      where('clientId', '==', clientId),
+      where('sessionType', '==', 'training'),
+      where('status', '==', 'scheduled'),
+      orderBy('scheduledDate', 'asc')
     );
+
+    const unsubscribeSessions = onSnapshot(sessionsQuery, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        scheduledDate: doc.data().scheduledDate?.toDate() || new Date()
+      })) as TrainingSession[];
+      setUpcomingSessions(sessions);
+    }, (error) => {
+      console.error('Error fetching training sessions:', error);
+      setUpcomingSessions([]);
+    });
+
+    // Subscribe to upcoming check-in sessions (checkin type only)
+    const checkinsQuery = query(
+      collection(db, 'sessions'),
+      where('clientId', '==', clientId),
+      where('sessionType', '==', 'checkin'),
+      where('status', '==', 'scheduled'),
+      orderBy('scheduledDate', 'asc')
+    );
+
+    const unsubscribeCheckins = onSnapshot(checkinsQuery, (snapshot) => {
+      const checkins = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        scheduledDate: doc.data().scheduledDate?.toDate() || new Date()
+      })) as TrainingSession[];
+      setUpcomingCheckins(checkins);
+    }, (error) => {
+      console.error('Error fetching check-ins:', error);
+      setUpcomingCheckins([]);
+    });
 
     const { registerListener, unregisterListener } = require('@/lib/listener-registry');
     registerListener(unsubscribeSessions);
+    registerListener(unsubscribeCheckins);
 
     return () => {
       unregisterListener(unsubscribeSessions);
       unsubscribeSessions();
+      unregisterListener(unsubscribeCheckins);
+      unsubscribeCheckins();
     };
   }, [activeTab, clientId, user]);
 
@@ -455,6 +495,30 @@ export default function ClientDetailPage() {
 
     fetchLocations();
   }, [upcomingSessions]);
+
+  // Fetch locations for upcoming check-ins
+  useEffect(() => {
+    if (upcomingCheckins.length === 0) {
+      setCheckinLocations(new Map());
+      return;
+    }
+
+    const fetchLocations = async () => {
+      const locationMap = new Map<string, string>();
+      for (const checkin of upcomingCheckins) {
+        try {
+          const location = await getSessionLocation(checkin);
+          locationMap.set(checkin.id, location);
+        } catch (error) {
+          console.error(`Error fetching location for check-in ${checkin.id}:`, error);
+          locationMap.set(checkin.id, 'Location unavailable');
+        }
+      }
+      setCheckinLocations(locationMap);
+    };
+
+    fetchLocations();
+  }, [upcomingCheckins]);
 
   // Save handlers for Plan tab
   const handleSaveVision = async (visionData: VisionData) => {
@@ -1064,9 +1128,18 @@ export default function ClientDetailPage() {
 
             {activeTab === 'training' && (
               <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold mb-1">💪 Training</h2>
-                  <p className="text-gray-600">Workout assignments and in-person sessions</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-1">💪 Training</h2>
+                    <p className="text-gray-600">Workout assignments and in-person sessions</p>
+                  </div>
+                  <Link
+                    href={`/dashboard/trainer/client-hub/${clientId}/training`}
+                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Training Performance Dashboard
+                  </Link>
                 </div>
 
                 {/* Training Summary Cards */}
@@ -1294,20 +1367,12 @@ export default function ClientDetailPage() {
                       </h3>
                       <p className="text-sm text-gray-600 mt-1">Scheduled appointments with trainer</p>
                     </div>
-                    <div className="flex gap-2">
-                      <Link
-                        href={`/dashboard/trainer/training-sessions?clientId=${clientId}&dateRange=month`}
-                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        View In-person Sessions
-                      </Link>
-                      <Link
-                        href={`/dashboard/trainer/weekly-checkins?clientId=${clientId}&dateRange=month`}
-                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        View Check-ins
-                      </Link>
-                    </div>
+                    <Link
+                      href={`/dashboard/trainer/training-sessions?clientId=${clientId}&dateRange=month`}
+                      className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      View In-person Sessions
+                    </Link>
                   </div>
 
                   {/* Session Balance & Upcoming Sessions */}
@@ -1352,30 +1417,40 @@ export default function ClientDetailPage() {
                         <>
                           {upcomingSessions.length > 0 ? (
                             <div className="space-y-2">
-                              {upcomingSessions.slice(0, 5).map((session) => (
-                              <div key={session.id} className="p-3 bg-gray-50 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:-translate-y-0.5">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="font-medium">
-                                      {formatSessionDate(session.scheduledDate)}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      {formatSessionTimeRange(session.scheduledDate, session.duration)}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      📍 {sessionLocations.get(session.id) || 'Loading location...'}
-                                    </p>
+                              {upcomingSessions.slice(0, 5).map((session) => {
+                                const location = sessionLocations.get(session.id);
+                                const hasValidLocation = location && 
+                                  !location.includes('TBD') && 
+                                  !location.includes('unavailable') && 
+                                  !location.includes('Loading');
+                                
+                                return (
+                                  <div key={session.id} className="p-3 bg-gray-50 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:-translate-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="font-medium">
+                                          {formatSessionDate(session.scheduledDate)}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                          {formatSessionTimeRange(session.scheduledDate, session.duration)}
+                                        </p>
+                                        {hasValidLocation && (
+                                          <p className="text-sm text-gray-600">
+                                            📍 {location}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span className={`px-2 py-1 rounded-full text-xs ${
+                                        session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                        session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {session.status}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    session.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                                    session.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                    {session.status}
-                                  </span>
-                                </div>
-                              </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : (
                             <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -1389,10 +1464,94 @@ export default function ClientDetailPage() {
                   </div>
                 </div>
 
+                {/* SECTION 3: WEEKLY CHECK-INS */}
+                <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold flex items-center gap-2">
+                        <ClipboardList className="h-5 w-5 text-primary" />
+                        Weekly Check-ins
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">Scheduled check-in appointments</p>
+                    </div>
+                    <Link
+                      href={`/dashboard/trainer/weekly-checkins?clientId=${clientId}&dateRange=month`}
+                      className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      View Check-ins
+                    </Link>
+                  </div>
+
+                  {/* Upcoming Check-ins - Collapsible */}
+                  <div>
+                    <button
+                      onClick={() => setIsCheckinsExpanded(!isCheckinsExpanded)}
+                      className="flex items-center justify-between w-full text-left mb-3 group"
+                    >
+                      <h4 className="font-semibold">
+                        Upcoming Check-ins {!isCheckinsExpanded && `(${upcomingCheckins.length})`}
+                      </h4>
+                      {isCheckinsExpanded ? (
+                        <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      )}
+                    </button>
+                    
+                    {isCheckinsExpanded && (
+                      <>
+                        {upcomingCheckins.length > 0 ? (
+                          <div className="space-y-2">
+                            {upcomingCheckins.slice(0, 5).map((checkin) => {
+                              const location = checkinLocations.get(checkin.id);
+                              const hasValidLocation = location && 
+                                !location.includes('TBD') && 
+                                !location.includes('unavailable') && 
+                                !location.includes('Loading');
+                              
+                              return (
+                                <div key={checkin.id} className="p-3 bg-gray-50 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:-translate-y-0.5">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="font-medium">
+                                        {formatSessionDate(checkin.scheduledDate)}
+                                      </p>
+                                      <p className="text-sm text-gray-600">
+                                        {formatSessionTimeRange(checkin.scheduledDate, checkin.duration)}
+                                      </p>
+                                      {hasValidLocation && (
+                                        <p className="text-sm text-gray-600">
+                                          📍 {location}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${
+                                      checkin.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                                      checkin.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {checkin.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 bg-gray-50 rounded-lg">
+                            <span className="text-4xl mb-2 block">📝</span>
+                            <p className="text-sm text-gray-600">No upcoming check-ins scheduled</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 {/* Quick Tip */}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <p className="text-sm text-amber-800">
-                    💡 <strong>Tip:</strong> Track workout assignments and in-person sessions in one place. Sessions are scheduled by clients through their dashboard.
+                    💡 <strong>Tip:</strong> Track workout assignments, in-person sessions, and check-ins in one place. Sessions and check-ins are scheduled by clients through their dashboard.
                   </p>
                 </div>
               </div>
