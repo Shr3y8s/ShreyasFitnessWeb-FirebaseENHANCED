@@ -224,7 +224,7 @@ export function SessionCard({
                 {session.rescheduleUrl && (
                   <button
                     onClick={() => window.open(session.rescheduleUrl, '_blank')}
-                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2"
+                    className="px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2"
                   >
                     <ExternalLink className="h-4 w-4" />
                     Reschedule
