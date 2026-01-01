@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getTrainerSessions, calculateSessionStats } from '@/lib/session-management-api';
+import { subscribeToTrainerSessions, calculateSessionStats } from '@/lib/session-management-api';
 import type { Session, SessionFilters, SessionStats } from '@/lib/session-management-api';
 
 interface UseTrainerSessionsResult {
@@ -7,11 +7,11 @@ interface UseTrainerSessionsResult {
   stats: SessionStats | null;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 /**
- * Custom hook to fetch and manage trainer sessions
+ * Custom hook to fetch and manage trainer sessions with REAL-TIME updates
  * 
  * @param trainerId - The trainer's user ID
  * @param filters - Optional filters for sessions
@@ -27,39 +27,48 @@ export function useTrainerSessions(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch ALL sessions and calculate stats (only when trainerId or base filters change, NOT date filters)
+  // Set up real-time listener for sessions (without date filters)
   useEffect(() => {
-    const fetchAllSessions = async () => {
-      if (!trainerId) {
-        setLoading(false);
-        return;
-      }
+    if (!trainerId) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        setError(null);
+    setLoading(true);
+    setError(null);
 
-        // Fetch ALL sessions without date filters
-        const { dateRange, dateFrom, dateTo, ...filtersWithoutDate } = filters;
-        const fetchedSessions = await getTrainerSessions(trainerId, filtersWithoutDate);
-        
-        // Calculate stats from ALL sessions (never changes with date filters)
-        const calculatedStats = calculateSessionStats(fetchedSessions);
-
+    // Subscribe without date filters (we apply them in memory)
+    const { dateRange, dateFrom, dateTo, ...filtersWithoutDate } = filters;
+    
+    console.log('[useTrainerSessions] Setting up real-time listener');
+    
+    const unsubscribe = subscribeToTrainerSessions(
+      trainerId,
+      filtersWithoutDate,
+      (fetchedSessions) => {
+        // Update all sessions
         setAllSessions(fetchedSessions);
+        
+        // Calculate stats from ALL sessions
+        const calculatedStats = calculateSessionStats(fetchedSessions);
         setStats(calculatedStats);
-      } catch (err) {
-        console.error('Error fetching trainer sessions:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
-        setAllSessions([]);
-        setStats(null);
-      } finally {
+        
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('[useTrainerSessions] Real-time listener error:', err);
+        setError(err.message);
         setLoading(false);
       }
-    };
+    );
 
-    fetchAllSessions();
-  }, [trainerId, filters.sessionType, filters.clientId, filters.status]); // Only refetch on base filters, NOT date filters
+    // Cleanup listener on unmount or dependency change
+    return () => {
+      console.log('[useTrainerSessions] Cleaning up real-time listener');
+      unsubscribe();
+    };
+  }, [trainerId, filters.sessionType, filters.clientId, filters.status]);
 
   // Apply date filters in memory (runs when filters or allSessions change)
   useEffect(() => {
@@ -89,21 +98,11 @@ export function useTrainerSessions(
     setSessions(displaySessions);
   }, [allSessions, filters.dateRange, filters.dateFrom, filters.dateTo]);
 
-  const refetch = async () => {
-    // Force refetch of all data
-    const { dateRange, dateFrom, dateTo, ...filtersWithoutDate } = filters;
-    try {
-      setLoading(true);
-      const fetchedSessions = await getTrainerSessions(trainerId!, filtersWithoutDate);
-      const calculatedStats = calculateSessionStats(fetchedSessions);
-      setAllSessions(fetchedSessions);
-      setStats(calculatedStats);
-    } catch (err) {
-      console.error('Error refetching sessions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
-    } finally {
-      setLoading(false);
-    }
+  // Refetch function (now just triggers a re-mount of the listener)
+  const refetch = () => {
+    // With real-time listeners, we don't need manual refetch
+    // Data updates automatically. This is kept for API compatibility.
+    console.log('[useTrainerSessions] Refetch called (real-time listener will auto-update)');
   };
 
   return {

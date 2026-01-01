@@ -9,7 +9,9 @@ import {
   updateDoc, 
   increment,
   Timestamp,
-  QueryConstraint
+  QueryConstraint,
+  onSnapshot,
+  Unsubscribe
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Session, TrainingSession, CheckinSession, SessionStatus } from '@/types/session';
@@ -166,6 +168,123 @@ export async function getTrainerSessions(
     console.error('[getTrainerSessions] Error:', error);
     throw new Error('Failed to fetch sessions');
   }
+}
+
+/**
+ * Subscribe to real-time trainer session updates
+ * Returns an unsubscribe function to clean up the listener
+ */
+export function subscribeToTrainerSessions(
+  trainerId: string,
+  filters: SessionFilters = {},
+  onUpdate: (sessions: Session[]) => void,
+  onError: (error: Error) => void
+): Unsubscribe {
+  console.log('[subscribeToTrainerSessions] Setting up real-time listener');
+  console.log('[subscribeToTrainerSessions] Filters:', filters);
+
+  // Store sessions from both queries
+  let query1Sessions: Session[] = [];
+  let query2Sessions: Session[] = [];
+  
+  // Function to merge and process sessions from both queries
+  const mergeSessions = () => {
+    // Combine and deduplicate
+    const sessionsMap = new Map<string, Session>();
+    [...query1Sessions, ...query2Sessions].forEach(session => {
+      sessionsMap.set(session.id, session);
+    });
+    
+    let sessions = Array.from(sessionsMap.values());
+    
+    // Apply date filters in memory
+    if (filters.dateRange) {
+      const { start, end } = filters.dateRange;
+      sessions = sessions.filter(session => {
+        const sessionDate = session.scheduledDate.toDate();
+        return sessionDate >= start && sessionDate <= end;
+      });
+    }
+    
+    if (filters.dateFrom || filters.dateTo) {
+      sessions = sessions.filter(session => {
+        const sessionDate = session.scheduledDate.toDate();
+        if (filters.dateFrom && sessionDate < filters.dateFrom) return false;
+        if (filters.dateTo && sessionDate > filters.dateTo) return false;
+        return true;
+      });
+    }
+    
+    // Sort by scheduled date
+    sessions.sort((a, b) => b.scheduledDate.toMillis() - a.scheduledDate.toMillis());
+    
+    onUpdate(sessions);
+  };
+
+  // Query 1: Sessions with trainerId matching the user's ID
+  const query1Constraints: QueryConstraint[] = [where('trainerId', '==', trainerId)];
+  if (filters.sessionType) {
+    query1Constraints.push(where('sessionType', '==', filters.sessionType));
+  }
+  if (filters.clientId) {
+    query1Constraints.push(where('clientId', '==', filters.clientId));
+  }
+  if (filters.status && filters.status !== 'all') {
+    query1Constraints.push(where('status', '==', filters.status));
+  }
+  query1Constraints.push(orderBy('scheduledDate', 'desc'));
+  
+  const q1 = query(collection(db, 'sessions'), ...query1Constraints);
+  const unsubscribe1 = onSnapshot(
+    q1,
+    (snapshot) => {
+      query1Sessions = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as Session[];
+      mergeSessions();
+    },
+    (error) => {
+      console.error('[subscribeToTrainerSessions] Query 1 error:', error);
+      onError(error as Error);
+    }
+  );
+
+  // Query 2: Sessions with trainerId = "admin"
+  const query2Constraints: QueryConstraint[] = [where('trainerId', '==', 'admin')];
+  if (filters.sessionType) {
+    query2Constraints.push(where('sessionType', '==', filters.sessionType));
+  }
+  if (filters.clientId) {
+    query2Constraints.push(where('clientId', '==', filters.clientId));
+  }
+  if (filters.status && filters.status !== 'all') {
+    query2Constraints.push(where('status', '==', filters.status));
+  }
+  query2Constraints.push(orderBy('scheduledDate', 'desc'));
+  
+  const q2 = query(collection(db, 'sessions'), ...query2Constraints);
+  const unsubscribe2 = onSnapshot(
+    q2,
+    (snapshot) => {
+      query2Sessions = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      })) as Session[];
+      mergeSessions();
+    },
+    (error) => {
+      console.error('[subscribeToTrainerSessions] Query 2 error:', error);
+      onError(error as Error);
+    }
+  );
+
+  // Return combined unsubscribe function
+  return () => {
+    console.log('[subscribeToTrainerSessions] Cleaning up listeners');
+    unsubscribe1();
+    unsubscribe2();
+  };
 }
 
 // ============================================================================
