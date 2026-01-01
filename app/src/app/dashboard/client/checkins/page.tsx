@@ -112,8 +112,20 @@ export default function WeeklyCheckinsPage() {
 
   // Initialize Calendly widget - simplified single-state approach
   useEffect(() => {
+    // Calculate if widget should be shown based on active sessions count
+    const now = new Date();
+    const activeSessions = [currentWeekCheckin, ...upcomingCheckins]
+      .filter(session => session !== null)
+      .filter(session => {
+        const sessionStart = session.scheduledDate.toDate();
+        const sessionEnd = new Date(sessionStart.getTime() + (session.duration * 60 * 1000));
+        return sessionEnd > now;
+      });
+    
+    const shouldShowWidget = activeSessions.length < 2;
+    
     // Only init if widget should be shown
-    if (!showWidget) return;
+    if (!shouldShowWidget) return;
 
     let mounted = true;
     
@@ -147,7 +159,7 @@ export default function WeeklyCheckinsPage() {
         widgetEl.innerHTML = '';
       }
     };
-  }, [showWidget]);
+  }, [currentWeekCheckin, upcomingCheckins]);
 
   const formatDateTime = (timestamp: any): string => {
     if (!timestamp) return '';
@@ -339,9 +351,15 @@ export default function WeeklyCheckinsPage() {
                 {getStatusBadge(currentWeekCheckin.status)}
               </div>
 
-              {currentWeekCheckin.status === 'scheduled' && (
-                <>
-                  {(currentWeekCheckin.cancelUrl || currentWeekCheckin.rescheduleUrl) && (
+            {currentWeekCheckin.status === 'scheduled' && (() => {
+              // Calculate grace period (1/4 duration, rounded UP to nearest minute)
+              const sessionDate = currentWeekCheckin.scheduledDate.toDate();
+              const gracePeriodMinutes = Math.ceil(currentWeekCheckin.duration / 4);
+              const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+              const cancelCutoffTime = new Date(sessionDate.getTime() + gracePeriodMs);
+              const canStillModify = new Date() < cancelCutoffTime;
+              
+              return canStillModify && (currentWeekCheckin.cancelUrl || currentWeekCheckin.rescheduleUrl) && (
                     <div className="flex gap-2">
                       {currentWeekCheckin.rescheduleUrl && (
                         <Button
@@ -366,17 +384,16 @@ export default function WeeklyCheckinsPage() {
                         </Button>
                       )}
                     </div>
-                  )}
-                  {!currentWeekCheckin.cancelUrl && !currentWeekCheckin.rescheduleUrl && (
+              );
+            })()}
+            {currentWeekCheckin.status === 'scheduled' && !currentWeekCheckin.cancelUrl && !currentWeekCheckin.rescheduleUrl && (
                     <Alert>
                       <Clock className="h-4 w-4" />
                       <AlertDescription>
                         To cancel or reschedule, use the link in your Calendly confirmation email.
                       </AlertDescription>
                     </Alert>
-                  )}
-                </>
-              )}
+            )}
             </div>
           ) : (
             <div className="flex items-center gap-3 text-muted-foreground">
@@ -387,26 +404,38 @@ export default function WeeklyCheckinsPage() {
         </CardContent>
       </Card>
 
-      {/* Calendly Widget */}
-      {!currentWeekCheckin && (
+      {/* Calendly Widget - Show if less than 2 active sessions */}
+      {(() => {
+        // Calculate number of active sessions (those that haven't ended yet)
+        const now = new Date();
+        const activeSessions = [currentWeekCheckin, ...upcomingCheckins]
+          .filter(session => session !== null)
+          .filter(session => {
+            const sessionStart = session.scheduledDate.toDate();
+            const sessionEnd = new Date(sessionStart.getTime() + (session.duration * 60 * 1000));
+            return sessionEnd > now;
+          });
+        
+        const activeCount = activeSessions.length;
+        
+        return activeCount < 2 && (
         <Card className="relative transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border border-primary/50">
             <CardHeader>
               <CardTitle>Schedule Your Check-in</CardTitle>
               <CardDescription>
-                Choose a time that works best for you. Remember, you can only schedule one check-in per week.
+                You can schedule up to 2 check-ins in advance. The scheduling widget will become available again once the next upcoming session ends.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="calendly-container">
-                <div 
-                  className="calendly-inline-widget"
-                  data-url={`${CHECKIN_CALENDLY_URL}?hide_gdpr_banner=1${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${user?.email ? `&email=${encodeURIComponent(user.email)}` : ''}`}
-                  style={{ minWidth: '320px', height: '700px' }}
-                ></div>
-              </div>
+              <div 
+                className="calendly-inline-widget"
+                data-url={`${CHECKIN_CALENDLY_URL}?hide_gdpr_banner=1${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${user?.email ? `&email=${encodeURIComponent(user.email)}` : ''}`}
+                style={{ width: '100%', height: '800px' }}
+              ></div>
             </CardContent>
           </Card>
-      )}
+        );
+      })()}
 
       {/* Upcoming Check-ins */}
       {upcomingCheckins.length > 0 && (

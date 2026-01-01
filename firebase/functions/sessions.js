@@ -578,23 +578,13 @@ function getWeekIdentifier(date) {
 }
 
 /**
- * Validate one check-in per week
- * Enforces "one check-in per calendar week (Sunday-Saturday)" rule
+ * REMOVED: validateOnePerWeek function
+ * 
+ * The "one check-in per week" restriction has been removed in favor of
+ * a counter-based approach (max 2 active check-ins at a time).
+ * 
+ * The frontend widget handles this limit by checking active session count.
  */
-async function validateOnePerWeek(userId, scheduledDate) {
-  const weekIdentifier = getWeekIdentifier(scheduledDate);
-  
-  const existing = await db.collection('sessions')
-    .where('clientId', '==', userId)
-    .where('sessionType', '==', 'checkin')
-    .where('weekIdentifier', '==', weekIdentifier)
-    .where('status', 'in', ['scheduled', 'completed'])
-    .get();
-  
-  if (!existing.empty) {
-    throw new Error('Check-in already scheduled for this week');
-  }
-}
 
 /**
  * Schedule Check-in Session
@@ -608,8 +598,8 @@ async function scheduleCheckin({ userId, calendlyEventId, eventDetails, calendly
     throw new Error('User not eligible for check-ins');
   }
   
-  // Validate one per week
-  await validateOnePerWeek(userId, eventDetails.scheduledDate.toDate());
+  // Counter-based validation handled by frontend (max 2 active check-ins)
+  // No server-side "one per week" restriction
   
   // Create check-in session
   const sessionData = {

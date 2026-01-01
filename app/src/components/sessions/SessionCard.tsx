@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, Package, Check } from 'lucide-react';
+import { Calendar, Clock, MapPin, Package, Check, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/types/session';
@@ -34,6 +34,12 @@ export function SessionCard({
   const isPast = sessionDate < new Date();
   const isToday = format(sessionDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
   const isCompleted = session.status === 'completed';
+
+  // Calculate grace period for cancel/reschedule (1/4 duration, rounded UP to nearest minute)
+  const gracePeriodMinutes = Math.ceil(session.duration / 4);
+  const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+  const cancelCutoffTime = new Date(sessionDate.getTime() + gracePeriodMs);
+  const canStillModify = new Date() < cancelCutoffTime;
 
   // Get package expiration if available (only for training sessions)
   const packageExpiration = session.sessionType === 'training' && 'packageId' in session
@@ -209,8 +215,37 @@ export function SessionCard({
               </div>
             )}
 
-            {/* Cancel Button - Only for future scheduled sessions */}
-            {session.status === 'scheduled' && !isPast && (
+            {/* Cancel/Reschedule Buttons - Only for CHECK-INS within grace period with Calendly URLs */}
+            {session.status === 'scheduled' && 
+             canStillModify && 
+             session.sessionType === 'checkin' && 
+             (session.cancelUrl || session.rescheduleUrl) && (
+              <div className="flex gap-2">
+                {session.rescheduleUrl && (
+                  <button
+                    onClick={() => window.open(session.rescheduleUrl, '_blank')}
+                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Reschedule
+                  </button>
+                )}
+                {session.cancelUrl && (
+                  <button
+                    onClick={() => window.open(session.cancelUrl, '_blank')}
+                    className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Cancel
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Cancel Button - Only for future scheduled TRAINING sessions (old behavior) */}
+            {session.status === 'scheduled' && 
+             !isPast && 
+             session.sessionType === 'training' && (
               <button
                 onClick={() => onCancel?.(session.id)}
                 className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
