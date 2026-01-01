@@ -664,8 +664,37 @@ exports.cancelSession = onCall({
     const sessionData = sessionDoc.data();
     
     // Verify user can cancel (client or trainer)
-    const userDoc = await db.collection("users").doc(userId).get();
-    const userData = userDoc.data();
+    // Check all possible collections (users, trainers, admins)
+    let userData = null;
+    let userDoc;
+    
+    // Try users collection first (most common - clients)
+    userDoc = await db.collection("users").doc(userId).get();
+    if (userDoc.exists) {
+      userData = userDoc.data();
+    }
+    
+    // Try trainers collection if not found
+    if (!userData) {
+      userDoc = await db.collection("trainers").doc(userId).get();
+      if (userDoc.exists) {
+        userData = userDoc.data();
+      }
+    }
+    
+    // Try admins collection if still not found
+    if (!userData) {
+      userDoc = await db.collection("admins").doc(userId).get();
+      if (userDoc.exists) {
+        userData = userDoc.data();
+      }
+    }
+    
+    // If still not found, throw error
+    if (!userData) {
+      throw new HttpsError("not-found", "User not found in any collection");
+    }
+    
     const isTrainer = userData.role === "trainer" || userData.role === "admin";
     const isClient = userId === sessionData.clientId;
     
@@ -682,7 +711,10 @@ exports.cancelSession = onCall({
     const now = admin.firestore.Timestamp.now();
     const hoursUntilSession = (sessionData.scheduledDate.toMillis() - now.toMillis()) / (1000 * 60 * 60);
     
-    const creditReturned = hoursUntilSession > 24 || isTrainer;
+    // Check-ins never return credit (they're subscription-based, not credit-based)
+    const creditReturned = sessionData.sessionType === 'checkin' 
+      ? false 
+      : (hoursUntilSession > 24 || isTrainer);
     const canceledBy = isTrainer ? "trainer" : "client";
 
     // 1. Cancel in Calendly (sends email notifications to both parties)

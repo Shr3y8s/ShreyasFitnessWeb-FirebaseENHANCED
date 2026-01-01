@@ -255,7 +255,7 @@ export default function WeeklyCheckinsPage() {
                       if (!reason) return;
                       
                       try {
-                        await cancelSession(sessionId, reason, false);
+                        await cancelSession(sessionId, reason);
                         setSuccessMessage('Check-in cancelled successfully.');
                         setTimeout(() => setSuccessMessage(null), 3000);
                         // Refetch to update UI immediately

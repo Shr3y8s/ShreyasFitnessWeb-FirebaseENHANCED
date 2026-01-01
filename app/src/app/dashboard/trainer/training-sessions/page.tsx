@@ -335,7 +335,7 @@ export default function TrainingSessionsPage() {
                       if (!reason) return;
                       
                       try {
-                        await cancelSession(sessionId, reason, false);
+                        await cancelSession(sessionId, reason);
                         setSuccessMessage('Session cancelled successfully. Credit has been returned to client.');
                         setTimeout(() => setSuccessMessage(null), 3000);
                         // Refetch to update UI immediately

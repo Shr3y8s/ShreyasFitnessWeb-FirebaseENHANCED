@@ -13,7 +13,8 @@ import {
   onSnapshot,
   Unsubscribe
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from './firebase';
 import type { Session, TrainingSession, CheckinSession, SessionStatus } from '@/types/session';
 
 // ============================================================================
@@ -390,56 +391,23 @@ export async function markSessionNoShow(
 }
 
 /**
- * Cancel a session (trainer-initiated) - automatically returns credit
+ * Cancel a session (trainer-initiated)
+ * Uses Cloud Function to properly handle Calendly cancellation and credit return
  */
 export async function cancelSession(
   sessionId: string,
-  cancelReason: string,
-  notifyClient: boolean = false
-): Promise<{ success: boolean }> {
+  cancelReason: string
+): Promise<{ success: boolean; creditReturned: boolean }> {
   try {
-    const sessionRef = doc(db, 'sessions', sessionId);
-    const sessionSnap = await getDoc(sessionRef);
-    
-    if (!sessionSnap.exists()) {
-      throw new Error('Session not found');
-    }
-
-    const sessionData = sessionSnap.data() as Session;
-
-    // Update session status
-    await updateDoc(sessionRef, {
-      status: 'canceled',
-      canceledBy: 'trainer',
-      canceledAt: Timestamp.now(),
-      cancelReason,
-      creditReturned: sessionData.sessionType === 'training',
-      updatedAt: Timestamp.now()
+    const cancelSessionFn = httpsCallable(functions, 'cancelSession');
+    const result = await cancelSessionFn({ 
+      sessionId,
+      reason: cancelReason 
     });
-
-    // If training session, return credit
-    if (sessionData.sessionType === 'training') {
-      const trainingSession = sessionData as TrainingSession;
-      const packageRef = doc(
-        db, 
-        'users', 
-        sessionData.clientId, 
-        'sessionPackages', 
-        trainingSession.packageId
-      );
-
-      await updateDoc(packageRef, {
-        remaining: increment(1),
-        updatedAt: Timestamp.now()
-      });
-    }
-
-    // TODO: Implement email notification if notifyClient is true
-
-    return { success: true };
+    return result.data as { success: boolean; creditReturned: boolean };
   } catch (error) {
-    console.error('Error canceling session:', error);
-    throw new Error('Failed to cancel session');
+    console.error('error canceling session:', error);
+    throw error;
   }
 }
 
