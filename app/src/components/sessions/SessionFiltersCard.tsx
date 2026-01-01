@@ -156,7 +156,7 @@ export function SessionFiltersCard({ currentFilters, onFiltersChange, trainerId 
     currentFilters.dateTo;
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-white border border-primary/50">
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border border-primary/50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Filters</CardTitle>

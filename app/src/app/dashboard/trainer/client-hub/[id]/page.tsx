@@ -118,17 +118,12 @@ export default function ClientDetailPage() {
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
   const [upcomingCheckins, setUpcomingCheckins] = useState<TrainingSession[]>([]);
   const [completedSessions, setCompletedSessions] = useState<TrainingSession[]>([]);
+  const [completedCheckins, setCompletedCheckins] = useState<TrainingSession[]>([]);
   const [sessionLocations, setSessionLocations] = useState<Map<string, string>>(new Map());
   const [checkinLocations, setCheckinLocations] = useState<Map<string, string>>(new Map());
+  const [completedSessionLocations, setCompletedSessionLocations] = useState<Map<string, string>>(new Map());
+  const [completedCheckinLocations, setCompletedCheckinLocations] = useState<Map<string, string>>(new Map());
   const [trainingLoading, setTrainingLoading] = useState(false);
-  
-  // Collapsible section state for Training tab
-  const [isThisWeekExpanded, setIsThisWeekExpanded] = useState(true);
-  const [isRecentlyCompletedExpanded, setIsRecentlyCompletedExpanded] = useState(false);
-  const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
-  const [isSessionsExpanded, setIsSessionsExpanded] = useState(false);
-  const [isCheckinsExpanded, setIsCheckinsExpanded] = useState(false);
-  const [isRecentSessionsExpanded, setIsRecentSessionsExpanded] = useState(false);
 
   // Plan state for Plan tab
   const [plan, setPlan] = useState<ClientPlan | null>(null);
@@ -460,15 +455,65 @@ export default function ClientDetailPage() {
       setUpcomingCheckins([]);
     });
 
+    // Subscribe to completed training sessions (last 2)
+    const completedSessionsQuery = query(
+      collection(db, 'sessions'),
+      where('clientId', '==', clientId),
+      where('sessionType', '==', 'training'),
+      where('status', '==', 'completed'),
+      orderBy('scheduledDate', 'desc'),
+      limit(2)
+    );
+
+    const unsubscribeCompletedSessions = onSnapshot(completedSessionsQuery, (snapshot) => {
+      const sessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        scheduledDate: doc.data().scheduledDate?.toDate() || new Date()
+      })) as TrainingSession[];
+      setCompletedSessions(sessions);
+    }, (error) => {
+      console.error('Error fetching completed training sessions:', error);
+      setCompletedSessions([]);
+    });
+
+    // Subscribe to completed check-in sessions (last 2)
+    const completedCheckinsQuery = query(
+      collection(db, 'sessions'),
+      where('clientId', '==', clientId),
+      where('sessionType', '==', 'checkin'),
+      where('status', '==', 'completed'),
+      orderBy('scheduledDate', 'desc'),
+      limit(2)
+    );
+
+    const unsubscribeCompletedCheckins = onSnapshot(completedCheckinsQuery, (snapshot) => {
+      const checkins = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        scheduledDate: doc.data().scheduledDate?.toDate() || new Date()
+      })) as TrainingSession[];
+      setCompletedCheckins(checkins);
+    }, (error) => {
+      console.error('Error fetching completed check-ins:', error);
+      setCompletedCheckins([]);
+    });
+
     const { registerListener, unregisterListener } = require('@/lib/listener-registry');
     registerListener(unsubscribeSessions);
     registerListener(unsubscribeCheckins);
+    registerListener(unsubscribeCompletedSessions);
+    registerListener(unsubscribeCompletedCheckins);
 
     return () => {
       unregisterListener(unsubscribeSessions);
       unsubscribeSessions();
       unregisterListener(unsubscribeCheckins);
       unsubscribeCheckins();
+      unregisterListener(unsubscribeCompletedSessions);
+      unsubscribeCompletedSessions();
+      unregisterListener(unsubscribeCompletedCheckins);
+      unsubscribeCompletedCheckins();
     };
   }, [activeTab, clientId, user]);
 
@@ -519,6 +564,54 @@ export default function ClientDetailPage() {
 
     fetchLocations();
   }, [upcomingCheckins]);
+
+  // Fetch locations for completed sessions
+  useEffect(() => {
+    if (completedSessions.length === 0) {
+      setCompletedSessionLocations(new Map());
+      return;
+    }
+
+    const fetchLocations = async () => {
+      const locationMap = new Map<string, string>();
+      for (const session of completedSessions) {
+        try {
+          const location = await getSessionLocation(session);
+          locationMap.set(session.id, location);
+        } catch (error) {
+          console.error(`Error fetching location for completed session ${session.id}:`, error);
+          locationMap.set(session.id, 'Location unavailable');
+        }
+      }
+      setCompletedSessionLocations(locationMap);
+    };
+
+    fetchLocations();
+  }, [completedSessions]);
+
+  // Fetch locations for completed check-ins
+  useEffect(() => {
+    if (completedCheckins.length === 0) {
+      setCompletedCheckinLocations(new Map());
+      return;
+    }
+
+    const fetchLocations = async () => {
+      const locationMap = new Map<string, string>();
+      for (const checkin of completedCheckins) {
+        try {
+          const location = await getSessionLocation(checkin);
+          locationMap.set(checkin.id, location);
+        } catch (error) {
+          console.error(`Error fetching location for completed check-in ${checkin.id}:`, error);
+          locationMap.set(checkin.id, 'Location unavailable');
+        }
+      }
+      setCompletedCheckinLocations(locationMap);
+    };
+
+    fetchLocations();
+  }, [completedCheckins]);
 
   // Save handlers for Plan tab
   const handleSaveVision = async (visionData: VisionData) => {
@@ -1142,42 +1235,76 @@ export default function ClientDetailPage() {
                   </Link>
                 </div>
 
-                {/* Training Summary Cards */}
+                {/* Metrics Cards - Placeholder */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Performance Overview</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Workout Assignments Card */}
+                    <Card className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Dumbbell className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-sm text-gray-600">💪 Workout Assignments</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3">Last Month & Last 3 Months</p>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Last Month</p>
+                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Last 3 Months</p>
+                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* In-Person Sessions Card */}
+                    <Card className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-sm text-gray-600">🗓️ In-Person Training Sessions</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3">Last Month & Last 3 Months</p>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Last Month</p>
+                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Last 3 Months</p>
+                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Weekly Check-ins Card */}
+                    <Card className="p-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ClipboardList className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold text-sm text-gray-600">📝 Weekly Check-ins</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-3">Last Month & Last 3 Months</p>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Last Month</p>
+                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-600">Last 3 Months</p>
+                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+
                 {trainingLoading ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                    <p className="text-sm text-muted-foreground mt-2">Loading workout data...</p>
+                    <p className="text-sm text-muted-foreground mt-2">Loading training data...</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">📋</span>
-                        <h4 className="font-semibold">Total Assigned</h4>
-                      </div>
-                      <p className="text-3xl font-bold text-foreground">{workoutStats.total}</p>
-                      <p className="text-sm text-muted-foreground">workouts assigned</p>
-                    </div>
-                    
-                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">✅</span>
-                        <h4 className="font-semibold">Completed</h4>
-                      </div>
-                      <p className="text-3xl font-bold text-foreground">{workoutStats.completed}</p>
-                      <p className="text-sm text-muted-foreground">workouts completed</p>
-                    </div>
-                    
-                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">📊</span>
-                        <h4 className="font-semibold">Completion Rate</h4>
-                      </div>
-                      <p className="text-3xl font-bold text-foreground">{workoutStats.completionRate}%</p>
-                      <p className="text-sm text-muted-foreground">success rate</p>
-                    </div>
-                  </div>
-                )}
+                  <>
 
                 {/* SECTION 1: WORKOUT ASSIGNMENTS */}
                 <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
@@ -1205,155 +1332,63 @@ export default function ClientDetailPage() {
                     </div>
                   </div>
 
-                  {/* This Week's Workouts - Collapsible */}
-                <div>
-                  <button
-                    onClick={() => setIsThisWeekExpanded(!isThisWeekExpanded)}
-                    className="flex items-center justify-between w-full text-left mb-3 group"
-                  >
-                    <h3 className="text-lg font-semibold">
-                      This Week's Workouts {!isThisWeekExpanded && `(${thisWeek.length})`}
-                    </h3>
-                    {isThisWeekExpanded ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                    )}
-                  </button>
-                  
-                  {isThisWeekExpanded && (
-                    <>
-                      {thisWeek.length > 0 ? (
-                        <div className="space-y-2">
-                          {thisWeek.map((workout) => {
-                            const isOverdue = new Date(workout.dueDate) < new Date() && workout.status !== 'completed';
-                            return (
-                              <div key={workout.id} className="bg-primary/5 border border-primary/50 rounded-lg p-4 hover:shadow-md transition-all">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="font-semibold text-foreground">{workout.name}</h4>
-                                    <p className="text-sm text-muted-foreground">
-                                      Due: {new Date(workout.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                    </p>
-                                  </div>
-                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    workout.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                    isOverdue ? 'bg-red-100 text-red-700' :
-                                    workout.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>
-                                    {workout.status === 'completed' ? '✓ Completed' :
-                                     isOverdue ? '⚠ Overdue' :
-                                     workout.status === 'in_progress' ? 'In Progress' :
-                                     'Assigned'}
-                                  </span>
-                                </div>
+                  {/* Recently Completed */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold mb-3">Recently Completed</h4>
+                    {recentlyCompleted.length > 0 ? (
+                      <div className="space-y-2">
+                        {recentlyCompleted.slice(0, 2).map((workout) => (
+                          <div key={workout.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900">{workout.name}</h4>
+                                <p className="text-sm text-gray-600">
+                                  Completed: {new Date(workout.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </p>
                               </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center">
-                          <span className="text-4xl mb-2 block">💪</span>
-                          <p className="font-semibold text-foreground mb-2">No workouts due this week</p>
-                          <p className="text-sm text-muted-foreground">Assign workouts to appear here</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                  {/* Recently Completed - Collapsible */}
-                <div>
-                  <button
-                    onClick={() => setIsRecentlyCompletedExpanded(!isRecentlyCompletedExpanded)}
-                    className="flex items-center justify-between w-full text-left mb-3 group"
-                  >
-                    <h3 className="text-lg font-semibold">
-                      Recently Completed Workouts {!isRecentlyCompletedExpanded && `(${recentlyCompleted.length})`}
-                    </h3>
-                    {isRecentlyCompletedExpanded ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                    )}
-                  </button>
-                  
-                  {isRecentlyCompletedExpanded && (
-                    <>
-                      {recentlyCompleted.length > 0 ? (
-                        <div className="space-y-2">
-                          {recentlyCompleted.map((workout) => (
-                            <div key={workout.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <h4 className="font-semibold text-gray-900">{workout.name}</h4>
-                                  <p className="text-sm text-gray-600">
-                                    Completed: {new Date(workout.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                  </p>
-                                </div>
-                                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                              </div>
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center">
-                          <span className="text-4xl mb-2 block">✅</span>
-                          <p className="font-semibold text-foreground mb-2">No completed workouts yet</p>
-                          <p className="text-sm text-muted-foreground">Completed workouts will appear here</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                  {/* Upcoming Workouts - Collapsible */}
-                <div>
-                  <button
-                    onClick={() => setIsUpcomingExpanded(!isUpcomingExpanded)}
-                    className="flex items-center justify-between w-full text-left mb-3 group"
-                  >
-                    <h3 className="text-lg font-semibold">
-                      Upcoming Workouts (Beyond This Week) {!isUpcomingExpanded && `(${upcoming.length})`}
-                    </h3>
-                    {isUpcomingExpanded ? (
-                      <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                          </div>
+                        ))}
+                      </div>
                     ) : (
-                      <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <span className="text-4xl mb-2 block">✅</span>
+                        <p className="font-semibold text-gray-900 mb-2">No completed workouts yet</p>
+                        <p className="text-sm text-gray-600">Completed workouts will appear here</p>
+                      </div>
                     )}
-                  </button>
-                  
-                  {isUpcomingExpanded && (
-                    <>
-                      {upcoming.length > 0 ? (
-                        <div className="space-y-2">
-                          {upcoming.map((workout) => (
-                            <div key={workout.id} className="bg-primary/5 border border-primary/50 rounded-lg p-4 hover:shadow-md transition-all">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <h4 className="font-semibold text-foreground">{workout.name}</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    Due: {new Date(workout.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                  </p>
-                                </div>
-                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                  Scheduled
-                                </span>
+                  </div>
+
+                  {/* Upcoming - Blue Theme */}
+                  <div>
+                    <h4 className="font-semibold mb-3">Upcoming</h4>
+                    {upcoming.length > 0 ? (
+                      <div className="space-y-2">
+                        {upcoming.slice(0, 3).map((workout) => (
+                          <div key={workout.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 hover:shadow-md transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900">{workout.name}</h4>
+                                <p className="text-sm text-gray-600">
+                                  Due: {new Date(workout.dueDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                </p>
                               </div>
+                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                Scheduled
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center">
-                          <span className="text-4xl mb-2 block">📅</span>
-                          <p className="font-semibold text-foreground mb-2">No upcoming workouts scheduled</p>
-                          <p className="text-sm text-muted-foreground">Future workouts will appear here</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <span className="text-4xl mb-2 block">📅</span>
+                        <p className="font-semibold text-gray-900 mb-2">No upcoming workouts scheduled</p>
+                        <p className="text-sm text-gray-600">Future workouts will appear here</p>
+                      </div>
+                    )}
+                  </div>
 
                 </div>
 
@@ -1375,57 +1410,63 @@ export default function ClientDetailPage() {
                     </Link>
                   </div>
 
-                  {/* Session Balance & Upcoming Sessions */}
-                  <div className="space-y-4">
-                    {/* Session Balance Summary */}
-                    {sessionBalance && sessionBalance.available !== undefined && (
-                    <div className="p-4 bg-primary/5 rounded-lg">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Total Purchased</p>
-                          <p className="text-2xl font-bold text-blue-600">{sessionBalance.purchased || 0}</p>
+                  {/* Recently Completed */}
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-3">Recently Completed</h4>
+                      {completedSessions.length > 0 ? (
+                        <div className="space-y-2">
+                          {completedSessions.map((session) => {
+                            const location = completedSessionLocations.get(session.id);
+                            const hasValidLocation = location && 
+                              !location.includes('TBD') && 
+                              !location.includes('unavailable') && 
+                              !location.includes('Loading');
+                            
+                            return (
+                              <div key={session.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium text-gray-900">
+                                      {formatSessionDate(session.scheduledDate)}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      {formatSessionTimeRange(session.scheduledDate, session.duration)}
+                                    </p>
+                                    {hasValidLocation && (
+                                      <p className="text-sm text-gray-600">
+                                        📍 {location}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Used</p>
-                          <p className="text-2xl font-bold text-gray-600">{sessionBalance.used || 0}</p>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-6 text-center">
+                          <span className="text-4xl mb-2 block">✅</span>
+                          <p className="font-semibold text-gray-900 mb-2">No completed sessions yet</p>
+                          <p className="text-sm text-gray-600">Completed sessions will appear here</p>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600 mb-1">Available</p>
-                          <p className="text-2xl font-bold text-green-600">{sessionBalance.available || 0}</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
-                    )}
 
-                    {/* Upcoming Sessions - Collapsible */}
+                    {/* Upcoming Sessions - Blue Theme */}
                     <div>
-                      <button
-                        onClick={() => setIsSessionsExpanded(!isSessionsExpanded)}
-                        className="flex items-center justify-between w-full text-left mb-3 group"
-                      >
-                        <h4 className="font-semibold">
-                          Upcoming Sessions {!isSessionsExpanded && `(${upcomingSessions.length})`}
-                        </h4>
-                        {isSessionsExpanded ? (
-                          <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                        ) : (
-                          <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                        )}
-                      </button>
-                      
-                      {isSessionsExpanded && (
-                        <>
-                          {upcomingSessions.length > 0 ? (
-                            <div className="space-y-2">
-                              {upcomingSessions.slice(0, 5).map((session) => {
+                      <h4 className="font-semibold mb-3">Upcoming</h4>
+                      {upcomingSessions.length > 0 ? (
+                        <div className="space-y-2">
+                          {upcomingSessions.slice(0, 3).map((session) => {
                                 const location = sessionLocations.get(session.id);
                                 const hasValidLocation = location && 
                                   !location.includes('TBD') && 
                                   !location.includes('unavailable') && 
                                   !location.includes('Loading');
                                 
-                                return (
-                                  <div key={session.id} className="p-3 bg-gray-50 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:-translate-y-0.5">
+                            return (
+                              <div key={session.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 hover:shadow-md transition-all">
                                     <div className="flex items-center justify-between">
                                       <div>
                                         <p className="font-medium">
@@ -1450,19 +1491,17 @@ export default function ClientDetailPage() {
                                     </div>
                                   </div>
                                 );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8 bg-gray-50 rounded-lg">
-                              <span className="text-4xl mb-2 block">🗓️</span>
-                              <p className="text-sm text-gray-600">No upcoming sessions scheduled</p>
-                            </div>
-                          )}
-                        </>
+                          })}
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-6 text-center">
+                          <span className="text-4xl mb-2 block">🗓️</span>
+                          <p className="font-semibold text-gray-900 mb-2">No upcoming sessions scheduled</p>
+                          <p className="text-sm text-gray-600">Future sessions will appear here</p>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
 
                 {/* SECTION 3: WEEKLY CHECK-INS */}
                 <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
@@ -1482,35 +1521,63 @@ export default function ClientDetailPage() {
                     </Link>
                   </div>
 
-                  {/* Upcoming Check-ins - Collapsible */}
+                  {/* Recently Completed */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold mb-3">Recently Completed</h4>
+                    {completedCheckins.length > 0 ? (
+                      <div className="space-y-2">
+                        {completedCheckins.map((checkin) => {
+                          const location = completedCheckinLocations.get(checkin.id);
+                          const hasValidLocation = location && 
+                            !location.includes('TBD') && 
+                            !location.includes('unavailable') && 
+                            !location.includes('Loading');
+                          
+                          return (
+                            <div key={checkin.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {formatSessionDate(checkin.scheduledDate)}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {formatSessionTimeRange(checkin.scheduledDate, checkin.duration)}
+                                  </p>
+                                  {hasValidLocation && (
+                                    <p className="text-sm text-gray-600">
+                                      📍 {location}
+                                    </p>
+                                  )}
+                                </div>
+                                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <span className="text-4xl mb-2 block">✅</span>
+                        <p className="font-semibold text-gray-900 mb-2">No completed check-ins yet</p>
+                        <p className="text-sm text-gray-600">Completed check-ins will appear here</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upcoming Check-ins - Blue Theme */}
                   <div>
-                    <button
-                      onClick={() => setIsCheckinsExpanded(!isCheckinsExpanded)}
-                      className="flex items-center justify-between w-full text-left mb-3 group"
-                    >
-                      <h4 className="font-semibold">
-                        Upcoming Check-ins {!isCheckinsExpanded && `(${upcomingCheckins.length})`}
-                      </h4>
-                      {isCheckinsExpanded ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
-                      )}
-                    </button>
-                    
-                    {isCheckinsExpanded && (
-                      <>
-                        {upcomingCheckins.length > 0 ? (
-                          <div className="space-y-2">
-                            {upcomingCheckins.slice(0, 5).map((checkin) => {
+                    <h4 className="font-semibold mb-3">Upcoming</h4>
+                    {upcomingCheckins.length > 0 ? (
+                      <div className="space-y-2">
+                        {upcomingCheckins.slice(0, 3).map((checkin) => {
                               const location = checkinLocations.get(checkin.id);
                               const hasValidLocation = location && 
                                 !location.includes('TBD') && 
                                 !location.includes('unavailable') && 
                                 !location.includes('Loading');
                               
-                              return (
-                                <div key={checkin.id} className="p-3 bg-gray-50 rounded-lg transition-all duration-200 hover:bg-gray-100 hover:shadow-md hover:-translate-y-0.5">
+                          return (
+                            <div key={checkin.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 hover:shadow-md transition-all">
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <p className="font-medium">
@@ -1535,15 +1602,14 @@ export default function ClientDetailPage() {
                                   </div>
                                 </div>
                               );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg">
-                            <span className="text-4xl mb-2 block">📝</span>
-                            <p className="text-sm text-gray-600">No upcoming check-ins scheduled</p>
-                          </div>
-                        )}
-                      </>
+                        })}
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-6 text-center">
+                        <span className="text-4xl mb-2 block">📝</span>
+                        <p className="font-semibold text-gray-900 mb-2">No upcoming check-ins scheduled</p>
+                        <p className="text-sm text-gray-600">Future check-ins will appear here</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1554,6 +1620,8 @@ export default function ClientDetailPage() {
                     💡 <strong>Tip:</strong> Track workout assignments, in-person sessions, and check-ins in one place. Sessions and check-ins are scheduled by clients through their dashboard.
                   </p>
                 </div>
+                  </>
+                )}
               </div>
             )}
 

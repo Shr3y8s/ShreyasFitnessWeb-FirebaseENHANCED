@@ -199,6 +199,28 @@ export async function markSessionComplete(
 }
 
 /**
+ * Mark a session as incomplete (revert from completed to scheduled)
+ */
+export async function markSessionIncomplete(
+  sessionId: string
+): Promise<{ success: boolean }> {
+  try {
+    const sessionRef = doc(db, 'sessions', sessionId);
+    
+    await updateDoc(sessionRef, {
+      status: 'scheduled',
+      completedAt: null,
+      updatedAt: Timestamp.now()
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error marking session incomplete:', error);
+    throw new Error('Failed to mark session incomplete');
+  }
+}
+
+/**
  * Mark a session as no-show with optional credit return
  */
 export async function markSessionNoShow(

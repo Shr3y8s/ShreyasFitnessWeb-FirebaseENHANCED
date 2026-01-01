@@ -9,7 +9,8 @@ import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { useTrainerSessions } from '@/hooks/useTrainerSessions';
 import type { SessionFilters } from '@/lib/session-management-api';
-import { AlertCircle } from 'lucide-react';
+import { markSessionComplete, markSessionIncomplete, cancelSession, updateSessionNotes } from '@/lib/session-management-api';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { SessionCard } from '@/components/sessions/SessionCard';
 import { SessionFiltersCard } from '@/components/sessions/SessionFiltersCard';
 import { db } from '@/lib/firebase';
@@ -33,6 +34,8 @@ export default function TrainingSessionsPage() {
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Map<string, string>>(new Map());
   const [packageExpirations, setPackageExpirations] = useState<Map<string, Date>>(new Map());
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   // Initialize filters from URL parameters
   const [filters, setFilters] = useState<SessionFilters>(() => {
@@ -45,7 +48,7 @@ export default function TrainingSessionsPage() {
   });
   
   // Fetch sessions using custom hook
-  const { sessions, stats, loading: sessionsLoading, error: sessionsError } = useTrainerSessions(
+  const { sessions, stats, loading: sessionsLoading, error: sessionsError, refetch } = useTrainerSessions(
     user?.uid || null,
     filters
   );
@@ -234,7 +237,30 @@ export default function TrainingSessionsPage() {
             trainerId={user?.uid || ''}
           />
 
-          {/* Error Display */}
+          {/* Success Message */}
+          {successMessage && (
+            <Card className="mb-6 mt-6 bg-green-50 border border-green-500/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 text-green-700">
+                  <CheckCircle className="h-5 w-5" />
+                  <p>{successMessage}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Error Messages */}
+          {errorMessage && (
+            <Card className="mb-6 mt-6 bg-red-50 border border-red-500/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 text-red-700">
+                  <AlertCircle className="h-5 w-5" />
+                  <p>{errorMessage}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {sessionsError && (
             <Card className="mb-6 mt-6 bg-red-50 border border-red-500/50">
               <CardContent className="pt-6">
@@ -248,7 +274,7 @@ export default function TrainingSessionsPage() {
 
           {/* Sessions List */}
           <div>
-            <div className="mb-4">
+            <div className="mt-8 mb-4">
               <h2 className="text-xl font-semibold">
                 Sessions ({sessions.length})
               </h2>
@@ -274,9 +300,52 @@ export default function TrainingSessionsPage() {
                     session={session}
                     locations={locations}
                     packageExpirations={packageExpirations}
-                    onMarkComplete={(id) => console.log('Mark complete:', id)}
-                    onMarkNoShow={(id) => console.log('Mark no-show:', id)}
-                    onCancel={(id) => console.log('Cancel:', id)}
+                    onMarkComplete={async (sessionId, notes) => {
+                      try {
+                        await markSessionComplete(sessionId, notes, false);
+                        setSuccessMessage('Session marked as complete successfully!');
+                        setTimeout(() => setSuccessMessage(null), 3000);
+                        // Refetch to update UI immediately
+                        await refetch();
+                      } catch (error) {
+                        setErrorMessage('Failed to mark session as complete. Please try again.');
+                        setTimeout(() => setErrorMessage(null), 5000);
+                      }
+                    }}
+                    onMarkIncomplete={async (sessionId) => {
+                      try {
+                        await markSessionIncomplete(sessionId);
+                        setSuccessMessage('Session reverted to scheduled successfully!');
+                        setTimeout(() => setSuccessMessage(null), 3000);
+                        // Refetch to update UI immediately
+                        await refetch();
+                      } catch (error) {
+                        setErrorMessage('Failed to revert session. Please try again.');
+                        setTimeout(() => setErrorMessage(null), 5000);
+                      }
+                    }}
+                    onCancel={async (sessionId) => {
+                      const reason = prompt('Please provide a reason for cancellation:');
+                      if (!reason) return;
+                      
+                      try {
+                        await cancelSession(sessionId, reason, false);
+                        setSuccessMessage('Session cancelled successfully. Credit has been returned to client.');
+                        setTimeout(() => setSuccessMessage(null), 3000);
+                        // Refetch to update UI immediately
+                        await refetch();
+                      } catch (error) {
+                        setErrorMessage('Failed to cancel session. Please try again.');
+                        setTimeout(() => setErrorMessage(null), 5000);
+                      }
+                    }}
+                    onNotesUpdate={async (sessionId, notes) => {
+                      try {
+                        await updateSessionNotes(sessionId, notes, false);
+                      } catch (error) {
+                        throw new Error('Failed to save notes');
+                      }
+                    }}
                   />
                 ))}
               </div>

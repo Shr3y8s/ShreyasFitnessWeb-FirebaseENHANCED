@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Clock, MapPin, Package } from 'lucide-react';
+import { Calendar, Clock, MapPin, Package, Check } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Session } from '@/types/session';
@@ -10,22 +11,29 @@ interface SessionCardProps {
   session: Session;
   locations?: Map<string, string>; // locationId -> location name
   packageExpirations?: Map<string, Date>; // packageId -> expiration date
-  onMarkComplete?: (sessionId: string) => void;
-  onMarkNoShow?: (sessionId: string) => void;
+  onMarkComplete?: (sessionId: string, notes: string) => Promise<void>;
+  onMarkIncomplete?: (sessionId: string) => Promise<void>;
   onCancel?: (sessionId: string) => void;
+  onNotesUpdate?: (sessionId: string, notes: string) => Promise<void>;
 }
 
 export function SessionCard({ 
   session, 
   locations, 
   packageExpirations,
-  onMarkComplete, 
-  onMarkNoShow, 
-  onCancel 
+  onMarkComplete,
+  onMarkIncomplete,
+  onCancel,
+  onNotesUpdate
 }: SessionCardProps) {
+  const [notes, setNotes] = useState(session.notes || '');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  
   const sessionDate = session.scheduledDate.toDate();
   const isPast = sessionDate < new Date();
   const isToday = format(sessionDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+  const isCompleted = session.status === 'completed';
 
   // Get package expiration if available (only for training sessions)
   const packageExpiration = session.sessionType === 'training' && 'packageId' in session
@@ -55,13 +63,52 @@ export function SessionCard({
       : 'bg-teal-100 text-teal-800 border-teal-200';
   };
 
+  const handleNotesBlur = async () => {
+    if (notes === session.notes) return; // No changes
+    
+    setIsSavingNotes(true);
+    try {
+      await onNotesUpdate?.(session.id, notes);
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      // Revert on error
+      setNotes(session.notes || '');
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    if (!onMarkComplete) return;
+    
+    setIsMarkingComplete(true);
+    try {
+      await onMarkComplete(session.id, notes);
+    } catch (error) {
+      console.error('Error marking complete:', error);
+    } finally {
+      setIsMarkingComplete(false);
+    }
+  };
+
+  const handleMarkIncomplete = async () => {
+    if (!onMarkIncomplete) return;
+    
+    setIsMarkingComplete(true);
+    try {
+      await onMarkIncomplete(session.id);
+    } catch (error) {
+      console.error('Error marking incomplete:', error);
+    } finally {
+      setIsMarkingComplete(false);
+    }
+  };
+
   return (
-    <Card className={`transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
-      isToday ? 'border-primary border-2' : 'border border-gray-200'
-    }`}>
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border border-primary/50">
       <CardContent className="py-4">
         <div className="flex items-start justify-between gap-4">
-          {/* Left Section - Session Info (Compact 4-row layout) */}
+          {/* Left Section - Session Info */}
           <div className="flex-1 space-y-2">
             {/* Row 1: Client Name with Badges */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -79,7 +126,7 @@ export function SessionCard({
               )}
             </div>
 
-            {/* Row 2: Date, Time & Duration (all on one line) */}
+            {/* Row 2: Date, Time & Duration */}
             <div className="flex items-center gap-3 text-sm text-gray-700">
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4 text-gray-500" />
@@ -94,7 +141,7 @@ export function SessionCard({
               <span>{session.duration} min</span>
             </div>
 
-            {/* Row 3: Location (if available for training sessions) */}
+            {/* Row 3: Location */}
             {session.sessionType === 'training' && 'locationId' in session && session.locationId && (
               <div className="flex items-center gap-1.5 text-sm text-gray-700">
                 <MapPin className="h-4 w-4 text-gray-500" />
@@ -121,43 +168,57 @@ export function SessionCard({
               )}
             </div>
 
-            {/* Notes (if available) - Collapsible for space */}
-            {session.notes && (
-              <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
-                <span className="font-medium">Notes: </span>
-                {session.notes}
-              </div>
-            )}
+            {/* Notes Section - Always visible for editing */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <label className="text-xs font-medium text-gray-600 mb-1 block">
+                Session Notes {isSavingNotes && <span className="text-blue-600">(saving...)</span>}
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={handleNotesBlur}
+                placeholder="Add notes about this session (visible to you only)..."
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                rows={2}
+                disabled={isSavingNotes}
+              />
+            </div>
           </div>
 
-          {/* Right Section - Action Buttons (Compact) */}
-          {session.status === 'scheduled' && isPast && (
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => onMarkComplete?.(session.id)}
-                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
-              >
-                Complete
-              </button>
-              <button
-                onClick={() => onMarkNoShow?.(session.id)}
-                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
-              >
-                No-Show
-              </button>
-            </div>
-          )}
+          {/* Right Section - Action Controls */}
+          <div className="flex flex-col gap-3 items-end">
+            {/* Mark Complete/Incomplete Checkbox - For past sessions */}
+            {isPast && (session.status === 'scheduled' || session.status === 'completed') && (
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={session.status === 'completed'}
+                    onChange={session.status === 'completed' ? handleMarkIncomplete : handleMarkComplete}
+                    disabled={isMarkingComplete}
+                    className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary focus:ring-offset-0 cursor-pointer accent-primary"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-green-600 whitespace-nowrap">
+                    {isMarkingComplete 
+                      ? (session.status === 'completed' ? 'Reverting...' : 'Completing...') 
+                      : (session.status === 'completed' ? 'Completed' : 'Mark Complete')
+                    }
+                  </span>
+                  <Check className="h-4 w-4 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </label>
+              </div>
+            )}
 
-          {session.status === 'scheduled' && !isPast && (
-            <div>
+            {/* Cancel Button - Only for future scheduled sessions */}
+            {session.status === 'scheduled' && !isPast && (
               <button
                 onClick={() => onCancel?.(session.id)}
-                className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded text-sm font-medium transition-colors whitespace-nowrap"
               >
                 Cancel
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
