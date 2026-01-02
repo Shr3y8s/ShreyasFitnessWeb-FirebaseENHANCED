@@ -408,15 +408,37 @@ export default function ClientDetailPage() {
                  date1.getDate() === date2.getDate();
         };
 
-        // Fetch workout assignments for this client
+        // Create all 3 queries with date filtering
         const assignmentsQuery = query(
           collection(db, 'workoutAssignments'),
           where('clientId', '==', clientId),
           where('trainerId', '==', user.uid),
+          where('dueDate', '>=', Timestamp.fromDate(threeMonthsAgo)),
           orderBy('dueDate', 'desc')
         );
         
-        const assignmentsSnapshot = await getDocs(assignmentsQuery);
+        const trainingSessionsQuery = query(
+          collection(db, 'sessions'),
+          where('clientId', '==', clientId),
+          where('sessionType', '==', 'training'),
+          where('scheduledDate', '>=', Timestamp.fromDate(threeMonthsAgo))
+        );
+
+        const checkInSessionsQuery = query(
+          collection(db, 'sessions'),
+          where('clientId', '==', clientId),
+          where('sessionType', '==', 'checkin'),
+          where('scheduledDate', '>=', Timestamp.fromDate(threeMonthsAgo))
+        );
+
+        // Execute all queries in parallel
+        const [assignmentsSnapshot, trainingSnaps, checkInSnaps] = await Promise.all([
+          getDocs(assignmentsQuery),
+          getDocs(trainingSessionsQuery),
+          getDocs(checkInSessionsQuery)
+        ]);
+
+        // Process workout assignments
         const assignments = assignmentsSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -435,7 +457,7 @@ export default function ClientDetailPage() {
         
         setWorkoutAssignments(assignments);
 
-        // Calculate workout metrics
+        // Calculate workout metrics (data already filtered by Firestore)
         let wo1mCompleted = 0, wo1mTotal = 0, wo1mOnTime = 0;
         let wo3mCompleted = 0, wo3mTotal = 0, wo3mOnTime = 0;
         
@@ -447,6 +469,16 @@ export default function ClientDetailPage() {
           
           if (!dueDate) return;
           
+          // Count for 3 months
+          wo3mTotal++;
+          if (status === 'completed') {
+            wo3mCompleted++;
+            if (completedAt && completedAt <= dueDate) {
+              wo3mOnTime++;
+            }
+          }
+          
+          // Also count for 1 month if within range
           if (dueDate >= oneMonthAgo) {
             wo1mTotal++;
             if (status === 'completed') {
@@ -456,26 +488,9 @@ export default function ClientDetailPage() {
               }
             }
           }
-          
-          if (dueDate >= threeMonthsAgo) {
-            wo3mTotal++;
-            if (status === 'completed') {
-              wo3mCompleted++;
-              if (completedAt && completedAt <= dueDate) {
-                wo3mOnTime++;
-              }
-            }
-          }
         });
 
-        // Fetch training sessions for metrics
-        const trainingSessionsQuery = query(
-          collection(db, 'sessions'),
-          where('clientId', '==', clientId),
-          where('sessionType', '==', 'training')
-        );
-        const trainingSnaps = await getDocs(trainingSessionsQuery);
-        
+        // Calculate training session metrics (data already filtered by Firestore)
         let ts1mCompleted = 0, ts1mTotal = 0, ts1mOnTime = 0;
         let ts3mCompleted = 0, ts3mTotal = 0, ts3mOnTime = 0;
         
@@ -487,6 +502,16 @@ export default function ClientDetailPage() {
           
           if (!scheduledDate) return;
           
+          // Count for 3 months
+          ts3mTotal++;
+          if (status === 'completed') {
+            ts3mCompleted++;
+            if (completedAt && isSameDay(completedAt, scheduledDate)) {
+              ts3mOnTime++;
+            }
+          }
+          
+          // Also count for 1 month if within range
           if (scheduledDate >= oneMonthAgo) {
             ts1mTotal++;
             if (status === 'completed') {
@@ -496,26 +521,9 @@ export default function ClientDetailPage() {
               }
             }
           }
-          
-          if (scheduledDate >= threeMonthsAgo) {
-            ts3mTotal++;
-            if (status === 'completed') {
-              ts3mCompleted++;
-              if (completedAt && isSameDay(completedAt, scheduledDate)) {
-                ts3mOnTime++;
-              }
-            }
-          }
         });
 
-        // Fetch check-in sessions for metrics
-        const checkInSessionsQuery = query(
-          collection(db, 'sessions'),
-          where('clientId', '==', clientId),
-          where('sessionType', '==', 'checkin')
-        );
-        const checkInSnaps = await getDocs(checkInSessionsQuery);
-        
+        // Calculate check-in session metrics (data already filtered by Firestore)
         let ci1mCompleted = 0, ci1mTotal = 0, ci1mOnTime = 0;
         let ci3mCompleted = 0, ci3mTotal = 0, ci3mOnTime = 0;
         
@@ -527,22 +535,22 @@ export default function ClientDetailPage() {
           
           if (!scheduledDate) return;
           
+          // Count for 3 months
+          ci3mTotal++;
+          if (status === 'completed') {
+            ci3mCompleted++;
+            if (completedAt && isSameDay(completedAt, scheduledDate)) {
+              ci3mOnTime++;
+            }
+          }
+          
+          // Also count for 1 month if within range
           if (scheduledDate >= oneMonthAgo) {
             ci1mTotal++;
             if (status === 'completed') {
               ci1mCompleted++;
               if (completedAt && isSameDay(completedAt, scheduledDate)) {
                 ci1mOnTime++;
-              }
-            }
-          }
-          
-          if (scheduledDate >= threeMonthsAgo) {
-            ci3mTotal++;
-            if (status === 'completed') {
-              ci3mCompleted++;
-              if (completedAt && isSameDay(completedAt, scheduledDate)) {
-                ci3mOnTime++;
               }
             }
           }
@@ -1489,9 +1497,9 @@ export default function ClientDetailPage() {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                          {/* Last Month */}
+                          {/* Last 30 Days */}
                           <div className="border-r pr-4">
-                            <p className="text-xs text-gray-500 mb-2">Last Month</p>
+                            <p className="text-xs text-gray-500 mb-2">Last 30 Days</p>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-gray-900">
                                 {metrics.workoutAssignments.lastMonth.completed} / {metrics.workoutAssignments.lastMonth.total}
@@ -1526,9 +1534,9 @@ export default function ClientDetailPage() {
                             </div>
                           </div>
                           
-                          {/* Last 3 Months */}
+                          {/* Last 90 Days */}
                           <div className="pl-4">
-                            <p className="text-xs text-gray-500 mb-2">Last 3 Months</p>
+                            <p className="text-xs text-gray-500 mb-2">Last 90 Days</p>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-gray-900">
                                 {metrics.workoutAssignments.last3Months.completed} / {metrics.workoutAssignments.last3Months.total}
@@ -1577,9 +1585,9 @@ export default function ClientDetailPage() {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                          {/* Last Month */}
+                          {/* Last 30 Days */}
                           <div className="border-r pr-4">
-                            <p className="text-xs text-gray-500 mb-2">Last Month</p>
+                            <p className="text-xs text-gray-500 mb-2">Last 30 Days</p>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-gray-900">
                                 {metrics.trainingSessions.lastMonth.completed} / {metrics.trainingSessions.lastMonth.total}
@@ -1614,9 +1622,9 @@ export default function ClientDetailPage() {
                             </div>
                           </div>
                           
-                          {/* Last 3 Months */}
+                          {/* Last 90 Days */}
                           <div className="pl-4">
-                            <p className="text-xs text-gray-500 mb-2">Last 3 Months</p>
+                            <p className="text-xs text-gray-500 mb-2">Last 90 Days</p>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-gray-900">
                                 {metrics.trainingSessions.last3Months.completed} / {metrics.trainingSessions.last3Months.total}
@@ -1665,9 +1673,9 @@ export default function ClientDetailPage() {
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
-                          {/* Last Month */}
+                          {/* Last 30 Days */}
                           <div className="border-r pr-4">
-                            <p className="text-xs text-gray-500 mb-2">Last Month</p>
+                            <p className="text-xs text-gray-500 mb-2">Last 30 Days</p>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-gray-900">
                                 {metrics.checkIns.lastMonth.completed} / {metrics.checkIns.lastMonth.total}
@@ -1702,9 +1710,9 @@ export default function ClientDetailPage() {
                             </div>
                           </div>
                           
-                          {/* Last 3 Months */}
+                          {/* Last 90 Days */}
                           <div className="pl-4">
-                            <p className="text-xs text-gray-500 mb-2">Last 3 Months</p>
+                            <p className="text-xs text-gray-500 mb-2">Last 90 Days</p>
                             <div className="space-y-1">
                               <p className="text-sm font-medium text-gray-900">
                                 {metrics.checkIns.last3Months.completed} / {metrics.checkIns.last3Months.total}
