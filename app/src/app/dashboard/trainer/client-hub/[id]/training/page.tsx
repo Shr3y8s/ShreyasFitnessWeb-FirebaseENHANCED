@@ -706,6 +706,9 @@ export default function ClientTrainingDashboard() {
                 </div>
                 <p className="text-sm text-gray-600">Bench: 200 (+5)</p>
                 <p className="text-xs text-gray-500 mt-1">Deadlift: 315 (+10)</p>
+                <p className="text-xs text-gray-400 italic mt-3 pt-2 border-t border-gray-200">
+                  Mock data - Coming soon with performance tracking
+                </p>
               </Card>
             </div>
           </div>
