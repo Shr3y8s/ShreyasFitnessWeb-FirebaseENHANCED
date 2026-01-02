@@ -463,3 +463,83 @@ const upcoming = await getDocs(
 - **Mark complete functionality** is on dedicated pages, not in Training Tab
 - **Training Performance Dashboard** remains separate for detailed analytics
 - **Session balance** moved to Account tab only
+
+---
+
+## Training Performance Dashboard - Volume Calculation Implementation
+
+### Current Implementation (Phase 1)
+
+The Volume Trend card calculates training volume using **planned configuration data**:
+
+**Data Source**: `workoutExecutions.exercises[i].plannedConfiguration.sets`
+
+**Formula**: Volume = Weight × Reps (averaged from repsRange)
+
+**Example Calculation**:
+```typescript
+// For a Bench Press exercise with 3 sets:
+// Set 1: 135 lbs, 8-12 reps → 135 × 10 = 1,350 lbs
+// Set 2: 150 lbs, 8-12 reps → 150 × 10 = 1,500 lbs
+// Set 3: 150 lbs, 8-12 reps → 150 × 10 = 1,500 lbs
+// Total Volume: 4,350 lbs
+```
+
+**Current Data Structure**:
+- `exerciseType`: Field used to identify strength exercises
+- `plannedConfiguration.sets[]`: Contains prescribed weights and rep ranges
+- `actualData.completedSets[]`: Only tracks completion status (true/false), not actual performance values
+
+**Rationale**:
+- Shows **prescribed volume** from trainer's programming
+- Provides meaningful volume tracking with existing data structure
+- Works immediately without UI/data structure changes
+
+### Future Enhancement (Phase 2)
+
+**Goal**: Track actual performance for more accurate progression analysis
+
+**Proposed Changes**:
+
+1. **UI Enhancement**: Add weight/reps input when clients check off sets
+   ```
+   ✓ Set 1: [135] lbs × [10] reps ← Input fields
+   ✓ Set 2: [150] lbs × [12] reps
+   ✓ Set 3: [150] lbs × [10] reps
+   ```
+
+2. **Data Structure Update**:
+   ```typescript
+   actualData.completedSets[i] = {
+     completed: true,
+     setNumber: 1,
+     actualWeight: 135,    // NEW: Client input
+     actualReps: 10,       // NEW: Client input
+     actualRPE: 7          // NEW: Optional RPE rating
+   }
+   ```
+
+3. **Volume Calculation Priority**:
+   ```typescript
+   // Prioritize actual data when available
+   if (set.actualWeight && set.actualReps) {
+     volume = set.actualWeight × set.actualReps;
+   } else {
+     // Fallback to planned configuration
+     volume = plannedConfig.weight × avgReps;
+   }
+   ```
+
+**Benefits**:
+- **Progressive Overload Tracking**: See real strength gains
+- **Accurate Volume Calculations**: Based on actual performance
+- **Program Adjustments**: Trainers see if prescribed weights are appropriate
+- **Client Accountability**: Clients record what they actually lifted
+
+**Implementation Considerations**:
+- Backward compatible with existing workout executions
+- Optional feature: defaults to planned config if not entered
+- Client can choose to skip input for faster completion
+- Trainer dashboard shows both planned vs actual when available
+
+**Priority**: Medium - Can be implemented based on trainer/client feedback

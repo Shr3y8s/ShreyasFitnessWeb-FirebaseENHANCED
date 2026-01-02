@@ -37,6 +37,19 @@ interface DurationMetrics {
   workoutCount: number;
 }
 
+interface StreakMetrics {
+  currentStreak: number;
+  longestStreak: number;
+  lastWorkoutDate: Date | null;
+}
+
+interface VolumeMetrics {
+  currentVolume: number;
+  previousVolume: number;
+  percentChange: number;
+  trend: 'up' | 'down' | 'stable';
+}
+
 export default function ClientTrainingDashboard() {
   const router = useRouter();
   const params = useParams();
@@ -50,6 +63,10 @@ export default function ClientTrainingDashboard() {
   // Analytics metrics state
   const [durationMetrics, setDurationMetrics] = useState<DurationMetrics | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(true);
+  const [streakMetrics, setStreakMetrics] = useState<StreakMetrics | null>(null);
+  const [streakLoading, setStreakLoading] = useState(true);
+  const [volumeMetrics, setVolumeMetrics] = useState<VolumeMetrics | null>(null);
+  const [volumeLoading, setVolumeLoading] = useState(true);
 
   // Fetch client data
   useEffect(() => {
@@ -177,6 +194,293 @@ export default function ClientTrainingDashboard() {
     }
   }, [clientId, clientData]);
 
+  // Helper: Extract unique workout dates from executions
+  const getUniqueDates = (executions: any[]): string[] => {
+    const dateSet = new Set<string>();
+    
+    for (const exec of executions) {
+      if (exec.completedAt && typeof exec.completedAt.toDate === 'function') {
+        const date = exec.completedAt.toDate();
+        const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+        dateSet.add(dateStr);
+      }
+    }
+    
+    return Array.from(dateSet).sort();
+  };
+
+  // Helper: Calculate current streak
+  const calculateCurrentStreak = (sortedDates: string[]): number => {
+    if (sortedDates.length === 0) return 0;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Check if streak is active (last workout was today or yesterday)
+    const latestDate = sortedDates[sortedDates.length - 1];
+    if (latestDate !== todayStr && latestDate !== yesterdayStr) {
+      return 0; // Streak is broken
+    }
+    
+    // Count consecutive days backward
+    let streak = 1;
+    for (let i = sortedDates.length - 2; i >= 0; i--) {
+      const currentDate = new Date(sortedDates[i + 1] + 'T00:00:00');
+      const prevDate = new Date(sortedDates[i] + 'T00:00:00');
+      const daysDiff = Math.floor((currentDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000));
+      
+      if (daysDiff === 1) {
+        streak++;
+      } else {
+        break; // Streak broken
+      }
+    }
+    
+    return streak;
+  };
+
+  // Helper: Calculate longest streak in history
+  const calculateLongestStreak = (sortedDates: string[]): number => {
+    if (sortedDates.length === 0) return 0;
+    
+    let maxStreak = 1;
+    let currentStreak = 1;
+    
+    for (let i = 1; i < sortedDates.length; i++) {
+      const currentDate = new Date(sortedDates[i] + 'T00:00:00');
+      const prevDate = new Date(sortedDates[i - 1] + 'T00:00:00');
+      const daysDiff = Math.floor((currentDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000));
+      
+      if (daysDiff === 1) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 1; // Reset streak
+      }
+    }
+    
+    return maxStreak;
+  };
+
+  // Helper: Calculate volume from a single exercise
+  const calculateExerciseVolume = (exercise: any): number => {
+    // Only calculate volume for strength exercises
+    if (exercise.exerciseType !== 'strength') return 0;
+    
+    let totalVolume = 0;
+    
+    // Use plannedConfiguration.sets for volume calculation
+    if (exercise.plannedConfiguration?.sets && Array.isArray(exercise.plannedConfiguration.sets)) {
+      for (const set of exercise.plannedConfiguration.sets) {
+        const weight = set.weight || 0;
+        
+        // Calculate reps as average of repsRange
+        let reps = 0;
+        if (set.repsRange?.min && set.repsRange?.max) {
+          reps = (set.repsRange.min + set.repsRange.max) / 2;
+        }
+        
+        // Volume = weight × reps
+        totalVolume += weight * reps;
+      }
+    }
+    
+    return totalVolume;
+  };
+
+  // Helper: Calculate total volume from a workout execution
+  const calculateWorkoutVolume = (execution: any): number => {
+    if (!execution.exercises || !Array.isArray(execution.exercises)) {
+      return 0;
+    }
+    
+    let totalVolume = 0;
+    for (const exercise of execution.exercises) {
+      totalVolume += calculateExerciseVolume(exercise);
+    }
+    
+    return totalVolume;
+  };
+
+  // Fetch volume metrics
+  useEffect(() => {
+    const fetchVolumeMetrics = async () => {
+      if (!clientId) return;
+      
+      try {
+        setVolumeLoading(true);
+        
+        // Calculate date ranges
+        const now = new Date();
+        const fourWeeksAgo = new Date(now);
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        const eightWeeksAgo = new Date(now);
+        eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+        
+        // Fetch last 8 weeks of completed workouts
+        const executionsRef = collection(db, 'workoutExecutions');
+        const q = query(
+          executionsRef,
+          where('clientId', '==', clientId),
+          where('completionStatus', '==', 'completed'),
+          where('completedAt', '>=', eightWeeksAgo)
+        );
+        
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          setVolumeMetrics({
+            currentVolume: 0,
+            previousVolume: 0,
+            percentChange: 0,
+            trend: 'stable'
+          });
+          return;
+        }
+        
+        // Separate workouts into current and previous periods
+        let currentPeriodVolume = 0;
+        let previousPeriodVolume = 0;
+        
+        for (const doc of snapshot.docs) {
+          const execution = doc.data();
+          const completedAt = execution.completedAt?.toDate();
+          
+          if (!completedAt) continue;
+          
+          const volume = calculateWorkoutVolume(execution);
+          
+          if (completedAt >= fourWeeksAgo) {
+            // Current period (last 4 weeks)
+            currentPeriodVolume += volume;
+          } else {
+            // Previous period (weeks 5-8)
+            previousPeriodVolume += volume;
+          }
+        }
+        
+        // Calculate percent change
+        let percentChange = 0;
+        let trend: 'up' | 'down' | 'stable' = 'stable';
+        
+        if (previousPeriodVolume > 0) {
+          percentChange = Math.round(
+            ((currentPeriodVolume - previousPeriodVolume) / previousPeriodVolume) * 100
+          );
+          
+          if (percentChange > 2) trend = 'up';
+          else if (percentChange < -2) trend = 'down';
+          else trend = 'stable';
+        } else if (currentPeriodVolume > 0) {
+          // No previous data but have current data
+          percentChange = 100;
+          trend = 'up';
+        }
+        
+        setVolumeMetrics({
+          currentVolume: Math.round(currentPeriodVolume),
+          previousVolume: Math.round(previousPeriodVolume),
+          percentChange,
+          trend
+        });
+      } catch (error) {
+        console.error('Error fetching volume metrics:', error);
+        setVolumeMetrics({
+          currentVolume: 0,
+          previousVolume: 0,
+          percentChange: 0,
+          trend: 'stable'
+        });
+      } finally {
+        setVolumeLoading(false);
+      }
+    };
+
+    if (clientData) {
+      fetchVolumeMetrics();
+    }
+  }, [clientId, clientData]);
+
+  // Fetch streak metrics
+  useEffect(() => {
+    const fetchStreakMetrics = async () => {
+      if (!clientId) return;
+      
+      try {
+        setStreakLoading(true);
+        
+        // Fetch ALL completed workout executions (no date filter for longest streak)
+        const executionsRef = collection(db, 'workoutExecutions');
+        const q = query(
+          executionsRef,
+          where('clientId', '==', clientId),
+          where('completionStatus', '==', 'completed'),
+          orderBy('completedAt', 'asc')
+        );
+        
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          setStreakMetrics({
+            currentStreak: 0,
+            longestStreak: 0,
+            lastWorkoutDate: null
+          });
+          return;
+        }
+        
+        // Extract execution data
+        const executions = snapshot.docs.map(doc => doc.data());
+        
+        // Get unique workout dates
+        const uniqueDates = getUniqueDates(executions);
+        
+        if (uniqueDates.length === 0) {
+          setStreakMetrics({
+            currentStreak: 0,
+            longestStreak: 0,
+            lastWorkoutDate: null
+          });
+          return;
+        }
+        
+        // Calculate streaks
+        const currentStreak = calculateCurrentStreak(uniqueDates);
+        const longestStreak = calculateLongestStreak(uniqueDates);
+        
+        // Get last workout date
+        const lastExecution = executions[executions.length - 1];
+        const lastWorkoutDate = lastExecution.completedAt && typeof lastExecution.completedAt.toDate === 'function'
+          ? lastExecution.completedAt.toDate()
+          : null;
+        
+        setStreakMetrics({
+          currentStreak,
+          longestStreak,
+          lastWorkoutDate
+        });
+      } catch (error) {
+        console.error('Error fetching streak metrics:', error);
+        setStreakMetrics({
+          currentStreak: 0,
+          longestStreak: 0,
+          lastWorkoutDate: null
+        });
+      } finally {
+        setStreakLoading(false);
+      }
+    };
+
+    if (clientData) {
+      fetchStreakMetrics();
+    }
+  }, [clientId, clientData]);
+
   // Loading state
   if (loading) {
     return (
@@ -294,11 +598,49 @@ export default function ClientTrainingDashboard() {
                   <h3 className="font-semibold text-sm text-gray-600">Training Streak</h3>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">&nbsp;</p>
-                <div className="mb-3">
-                  <p className="text-4xl font-bold text-gray-900">5 <span className="text-lg">days 🔥</span></p>
-                </div>
-                <p className="text-sm text-gray-600">Longest: 12 days</p>
-                <p className="text-xs text-gray-500 mt-1">Last workout: Today</p>
+                {streakLoading ? (
+                  <div className="mb-3">
+                    <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                ) : streakMetrics ? (
+                  <>
+                    <div className="mb-3">
+                      {streakMetrics.currentStreak > 0 ? (
+                        <p className="text-4xl font-bold text-gray-900">
+                          {streakMetrics.currentStreak} <span className="text-lg">day{streakMetrics.currentStreak !== 1 ? 's' : ''} 🔥</span>
+                        </p>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-400">No Streak</p>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Longest: {streakMetrics.longestStreak} day{streakMetrics.longestStreak !== 1 ? 's' : ''}
+                    </p>
+                    {streakMetrics.lastWorkoutDate ? (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Last workout: {(() => {
+                          const lastWorkout = streakMetrics.lastWorkoutDate;
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const workoutDate = new Date(lastWorkout);
+                          workoutDate.setHours(0, 0, 0, 0);
+                          
+                          const daysDiff = Math.floor((today.getTime() - workoutDate.getTime()) / (24 * 60 * 60 * 1000));
+                          
+                          if (daysDiff === 0) return 'Today';
+                          if (daysDiff === 1) return 'Yesterday';
+                          return `${daysDiff} days ago`;
+                        })()}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">No workouts yet</p>
+                    )}
+                  </>
+                ) : (
+                  <div className="mb-3">
+                    <p className="text-2xl font-bold text-gray-400">No Data</p>
+                  </div>
+                )}
               </Card>
 
               {/* Card 3: Volume Trend */}
@@ -308,11 +650,48 @@ export default function ClientTrainingDashboard() {
                   <h3 className="font-semibold text-sm text-gray-600">Volume Trend</h3>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">Last 4 Weeks</p>
-                <div className="mb-3">
-                  <p className="text-4xl font-bold text-green-600">↑ +12%</p>
-                </div>
-                <p className="text-sm text-gray-600">This: 58,500 lbs</p>
-                <p className="text-xs text-gray-500 mt-1">Prev: 52,000 lbs</p>
+                {volumeLoading ? (
+                  <div className="mb-3">
+                    <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                ) : volumeMetrics && (volumeMetrics.currentVolume > 0 || volumeMetrics.previousVolume > 0) ? (
+                  <>
+                    <div className="mb-3">
+                      {volumeMetrics.trend === 'up' ? (
+                        <p className="text-4xl font-bold text-green-600">
+                          ↑ +{volumeMetrics.percentChange}%
+                        </p>
+                      ) : volumeMetrics.trend === 'down' ? (
+                        <p className="text-4xl font-bold text-red-600">
+                          ↓ {volumeMetrics.percentChange}%
+                        </p>
+                      ) : (
+                        <p className="text-4xl font-bold text-gray-600">
+                          → {volumeMetrics.percentChange}%
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      This: {volumeMetrics.currentVolume.toLocaleString()} lbs
+                    </p>
+                    {volumeMetrics.previousVolume > 0 ? (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Prev: {volumeMetrics.previousVolume.toLocaleString()} lbs
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1">
+                        No previous period data
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="mb-3">
+                    <p className="text-2xl font-bold text-gray-400">No Data</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      No strength training data in the last 8 weeks
+                    </p>
+                  </div>
+                )}
               </Card>
 
               {/* Card 4: Personal Records */}
