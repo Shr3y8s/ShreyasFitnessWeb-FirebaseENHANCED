@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, Timestamp } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -126,6 +126,23 @@ export default function ClientDetailPage() {
   const [completedSessionLocations, setCompletedSessionLocations] = useState<Map<string, string>>(new Map());
   const [completedCheckinLocations, setCompletedCheckinLocations] = useState<Map<string, string>>(new Map());
   const [trainingLoading, setTrainingLoading] = useState(false);
+
+  // Metrics state for performance overview cards
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metrics, setMetrics] = useState({
+    workoutAssignments: {
+      lastMonth: { completed: 0, total: 0, onTime: 0 },
+      last3Months: { completed: 0, total: 0, onTime: 0 }
+    },
+    trainingSessions: {
+      lastMonth: { completed: 0, total: 0, onTime: 0 },
+      last3Months: { completed: 0, total: 0, onTime: 0 }
+    },
+    checkIns: {
+      lastMonth: { completed: 0, total: 0, onTime: 0 },
+      last3Months: { completed: 0, total: 0, onTime: 0 }
+    }
+  });
 
   // Plan state for Plan tab
   const [plan, setPlan] = useState<ClientPlan | null>(null);
@@ -377,8 +394,20 @@ export default function ClientDetailPage() {
 
     const fetchTrainingData = async () => {
       setTrainingLoading(true);
+      setMetricsLoading(true);
       
       try {
+        const now = new Date();
+        const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+        
+        // Helper to check if date is same day
+        const isSameDay = (date1: Date, date2: Date) => {
+          return date1.getFullYear() === date2.getFullYear() &&
+                 date1.getMonth() === date2.getMonth() &&
+                 date1.getDate() === date2.getDate();
+        };
+
         // Fetch workout assignments for this client
         const assignmentsQuery = query(
           collection(db, 'workoutAssignments'),
@@ -405,11 +434,140 @@ export default function ClientDetailPage() {
         });
         
         setWorkoutAssignments(assignments);
+
+        // Calculate workout metrics
+        let wo1mCompleted = 0, wo1mTotal = 0, wo1mOnTime = 0;
+        let wo3mCompleted = 0, wo3mTotal = 0, wo3mOnTime = 0;
+        
+        assignmentsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          const dueDate = data.dueDate?.toDate();
+          const completedAt = data.completedAt?.toDate();
+          const status = data.status;
+          
+          if (!dueDate) return;
+          
+          if (dueDate >= oneMonthAgo) {
+            wo1mTotal++;
+            if (status === 'completed') {
+              wo1mCompleted++;
+              if (completedAt && completedAt <= dueDate) {
+                wo1mOnTime++;
+              }
+            }
+          }
+          
+          if (dueDate >= threeMonthsAgo) {
+            wo3mTotal++;
+            if (status === 'completed') {
+              wo3mCompleted++;
+              if (completedAt && completedAt <= dueDate) {
+                wo3mOnTime++;
+              }
+            }
+          }
+        });
+
+        // Fetch training sessions for metrics
+        const trainingSessionsQuery = query(
+          collection(db, 'sessions'),
+          where('clientId', '==', clientId),
+          where('sessionType', '==', 'training')
+        );
+        const trainingSnaps = await getDocs(trainingSessionsQuery);
+        
+        let ts1mCompleted = 0, ts1mTotal = 0, ts1mOnTime = 0;
+        let ts3mCompleted = 0, ts3mTotal = 0, ts3mOnTime = 0;
+        
+        trainingSnaps.forEach((doc) => {
+          const data = doc.data();
+          const scheduledDate = data.scheduledDate?.toDate();
+          const completedAt = data.completedAt?.toDate();
+          const status = data.status;
+          
+          if (!scheduledDate) return;
+          
+          if (scheduledDate >= oneMonthAgo) {
+            ts1mTotal++;
+            if (status === 'completed') {
+              ts1mCompleted++;
+              if (completedAt && isSameDay(completedAt, scheduledDate)) {
+                ts1mOnTime++;
+              }
+            }
+          }
+          
+          if (scheduledDate >= threeMonthsAgo) {
+            ts3mTotal++;
+            if (status === 'completed') {
+              ts3mCompleted++;
+              if (completedAt && isSameDay(completedAt, scheduledDate)) {
+                ts3mOnTime++;
+              }
+            }
+          }
+        });
+
+        // Fetch check-in sessions for metrics
+        const checkInSessionsQuery = query(
+          collection(db, 'sessions'),
+          where('clientId', '==', clientId),
+          where('sessionType', '==', 'checkin')
+        );
+        const checkInSnaps = await getDocs(checkInSessionsQuery);
+        
+        let ci1mCompleted = 0, ci1mTotal = 0, ci1mOnTime = 0;
+        let ci3mCompleted = 0, ci3mTotal = 0, ci3mOnTime = 0;
+        
+        checkInSnaps.forEach((doc) => {
+          const data = doc.data();
+          const scheduledDate = data.scheduledDate?.toDate();
+          const completedAt = data.completedAt?.toDate();
+          const status = data.status;
+          
+          if (!scheduledDate) return;
+          
+          if (scheduledDate >= oneMonthAgo) {
+            ci1mTotal++;
+            if (status === 'completed') {
+              ci1mCompleted++;
+              if (completedAt && isSameDay(completedAt, scheduledDate)) {
+                ci1mOnTime++;
+              }
+            }
+          }
+          
+          if (scheduledDate >= threeMonthsAgo) {
+            ci3mTotal++;
+            if (status === 'completed') {
+              ci3mCompleted++;
+              if (completedAt && isSameDay(completedAt, scheduledDate)) {
+                ci3mOnTime++;
+              }
+            }
+          }
+        });
+
+        setMetrics({
+          workoutAssignments: {
+            lastMonth: { completed: wo1mCompleted, total: wo1mTotal, onTime: wo1mOnTime },
+            last3Months: { completed: wo3mCompleted, total: wo3mTotal, onTime: wo3mOnTime }
+          },
+          trainingSessions: {
+            lastMonth: { completed: ts1mCompleted, total: ts1mTotal, onTime: ts1mOnTime },
+            last3Months: { completed: ts3mCompleted, total: ts3mTotal, onTime: ts3mOnTime }
+          },
+          checkIns: {
+            lastMonth: { completed: ci1mCompleted, total: ci1mTotal, onTime: ci1mOnTime },
+            last3Months: { completed: ci3mCompleted, total: ci3mTotal, onTime: ci3mOnTime }
+          }
+        });
       } catch (error) {
         console.error('Error fetching training data:', error);
         setWorkoutAssignments([]);
       } finally {
         setTrainingLoading(false);
+        setMetricsLoading(false);
       }
     };
 
@@ -1314,67 +1472,280 @@ export default function ClientDetailPage() {
                   </Link>
                 </div>
 
-                {/* Metrics Cards - Placeholder */}
+                {/* Performance Overview - Ultra-Compact Metrics */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Performance Overview</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Workout Assignments Card */}
-                    <Card className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Dumbbell className="h-5 w-5 text-primary" />
-                        <h3 className="font-semibold text-sm text-gray-600">💪 Workout Assignments</h3>
-                      </div>
-                      <p className="text-xs text-gray-500 mb-3">Last Month & Last 3 Months</p>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Last Month</p>
-                          <p className="text-sm text-gray-700">• Coming soon</p>
+                  {metricsLoading ? (
+                    <div className="bg-white rounded-xl border p-8 text-center">
+                      <div className="animate-pulse text-gray-500">Loading metrics...</div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Card 1: Workout Assignments */}
+                      <div className="bg-primary/5 border border-primary/50 rounded-lg p-5 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Dumbbell className="h-5 w-5 text-primary" />
+                          <h3 className="font-semibold text-gray-900">Workout Assignments</h3>
                         </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Last 3 Months</p>
-                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Last Month */}
+                          <div className="border-r pr-4">
+                            <p className="text-xs text-gray-500 mb-2">Last Month</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {metrics.workoutAssignments.lastMonth.completed} / {metrics.workoutAssignments.lastMonth.total}
+                                {metrics.workoutAssignments.lastMonth.total > 0 && (
+                                  <span className={`ml-1 ${
+                                    ((metrics.workoutAssignments.lastMonth.completed / metrics.workoutAssignments.lastMonth.total) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.workoutAssignments.lastMonth.completed / metrics.workoutAssignments.lastMonth.total) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}>
+                                    ({Math.round((metrics.workoutAssignments.lastMonth.completed / metrics.workoutAssignments.lastMonth.total) * 100)}%)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {metrics.workoutAssignments.lastMonth.completed > 0 && (
+                                  <span className={
+                                    ((metrics.workoutAssignments.lastMonth.onTime / metrics.workoutAssignments.lastMonth.completed) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.workoutAssignments.lastMonth.onTime / metrics.workoutAssignments.lastMonth.completed) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }>
+                                    {Math.round((metrics.workoutAssignments.lastMonth.onTime / metrics.workoutAssignments.lastMonth.completed) * 100)}% on-time
+                                  </span>
+                                )}
+                                {metrics.workoutAssignments.lastMonth.completed === 0 && (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Last 3 Months */}
+                          <div className="pl-4">
+                            <p className="text-xs text-gray-500 mb-2">Last 3 Months</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {metrics.workoutAssignments.last3Months.completed} / {metrics.workoutAssignments.last3Months.total}
+                                {metrics.workoutAssignments.last3Months.total > 0 && (
+                                  <span className={`ml-1 ${
+                                    ((metrics.workoutAssignments.last3Months.completed / metrics.workoutAssignments.last3Months.total) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.workoutAssignments.last3Months.completed / metrics.workoutAssignments.last3Months.total) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}>
+                                    ({Math.round((metrics.workoutAssignments.last3Months.completed / metrics.workoutAssignments.last3Months.total) * 100)}%)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {metrics.workoutAssignments.last3Months.completed > 0 && (
+                                  <span className={
+                                    ((metrics.workoutAssignments.last3Months.onTime / metrics.workoutAssignments.last3Months.completed) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.workoutAssignments.last3Months.onTime / metrics.workoutAssignments.last3Months.completed) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }>
+                                    {Math.round((metrics.workoutAssignments.last3Months.onTime / metrics.workoutAssignments.last3Months.completed) * 100)}% on-time
+                                  </span>
+                                )}
+                                {metrics.workoutAssignments.last3Months.completed === 0 && (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
                         </div>
+                        
+                        {metrics.workoutAssignments.lastMonth.total === 0 && metrics.workoutAssignments.last3Months.total === 0 && (
+                          <p className="text-xs text-gray-400 mt-3 text-center">No assignments yet</p>
+                        )}
                       </div>
-                    </Card>
 
-                    {/* In-Person Sessions Card */}
-                    <Card className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <h3 className="font-semibold text-sm text-gray-600">🗓️ In-Person Training Sessions</h3>
-                      </div>
-                      <p className="text-xs text-gray-500 mb-3">Last Month & Last 3 Months</p>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Last Month</p>
-                          <p className="text-sm text-gray-700">• Coming soon</p>
+                      {/* Card 2: In-Person Training Sessions */}
+                      <div className="bg-primary/5 border border-primary/50 rounded-lg p-5 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Calendar className="h-5 w-5 text-blue-600" />
+                          <h3 className="font-semibold text-gray-900">In-Person Training</h3>
                         </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Last 3 Months</p>
-                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Last Month */}
+                          <div className="border-r pr-4">
+                            <p className="text-xs text-gray-500 mb-2">Last Month</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {metrics.trainingSessions.lastMonth.completed} / {metrics.trainingSessions.lastMonth.total}
+                                {metrics.trainingSessions.lastMonth.total > 0 && (
+                                  <span className={`ml-1 ${
+                                    ((metrics.trainingSessions.lastMonth.completed / metrics.trainingSessions.lastMonth.total) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.trainingSessions.lastMonth.completed / metrics.trainingSessions.lastMonth.total) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}>
+                                    ({Math.round((metrics.trainingSessions.lastMonth.completed / metrics.trainingSessions.lastMonth.total) * 100)}%)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {metrics.trainingSessions.lastMonth.completed > 0 && (
+                                  <span className={
+                                    ((metrics.trainingSessions.lastMonth.onTime / metrics.trainingSessions.lastMonth.completed) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.trainingSessions.lastMonth.onTime / metrics.trainingSessions.lastMonth.completed) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }>
+                                    {Math.round((metrics.trainingSessions.lastMonth.onTime / metrics.trainingSessions.lastMonth.completed) * 100)}% on-time
+                                  </span>
+                                )}
+                                {metrics.trainingSessions.lastMonth.completed === 0 && (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Last 3 Months */}
+                          <div className="pl-4">
+                            <p className="text-xs text-gray-500 mb-2">Last 3 Months</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {metrics.trainingSessions.last3Months.completed} / {metrics.trainingSessions.last3Months.total}
+                                {metrics.trainingSessions.last3Months.total > 0 && (
+                                  <span className={`ml-1 ${
+                                    ((metrics.trainingSessions.last3Months.completed / metrics.trainingSessions.last3Months.total) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.trainingSessions.last3Months.completed / metrics.trainingSessions.last3Months.total) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}>
+                                    ({Math.round((metrics.trainingSessions.last3Months.completed / metrics.trainingSessions.last3Months.total) * 100)}%)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {metrics.trainingSessions.last3Months.completed > 0 && (
+                                  <span className={
+                                    ((metrics.trainingSessions.last3Months.onTime / metrics.trainingSessions.last3Months.completed) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.trainingSessions.last3Months.onTime / metrics.trainingSessions.last3Months.completed) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }>
+                                    {Math.round((metrics.trainingSessions.last3Months.onTime / metrics.trainingSessions.last3Months.completed) * 100)}% on-time
+                                  </span>
+                                )}
+                                {metrics.trainingSessions.last3Months.completed === 0 && (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
                         </div>
+                        
+                        {metrics.trainingSessions.lastMonth.total === 0 && metrics.trainingSessions.last3Months.total === 0 && (
+                          <p className="text-xs text-gray-400 mt-3 text-center">No sessions yet</p>
+                        )}
                       </div>
-                    </Card>
 
-                    {/* Weekly Check-ins Card */}
-                    <Card className="p-6">
-                      <div className="flex items-center gap-2 mb-2">
-                        <ClipboardList className="h-5 w-5 text-primary" />
-                        <h3 className="font-semibold text-sm text-gray-600">📝 Weekly Check-ins</h3>
-                      </div>
-                      <p className="text-xs text-gray-500 mb-3">Last Month & Last 3 Months</p>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Last Month</p>
-                          <p className="text-sm text-gray-700">• Coming soon</p>
+                      {/* Card 3: Weekly Check-ins */}
+                      <div className="bg-primary/5 border border-primary/50 rounded-lg p-5 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <h3 className="font-semibold text-gray-900">Weekly Check-ins</h3>
                         </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-600">Last 3 Months</p>
-                          <p className="text-sm text-gray-700">• Coming soon</p>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Last Month */}
+                          <div className="border-r pr-4">
+                            <p className="text-xs text-gray-500 mb-2">Last Month</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {metrics.checkIns.lastMonth.completed} / {metrics.checkIns.lastMonth.total}
+                                {metrics.checkIns.lastMonth.total > 0 && (
+                                  <span className={`ml-1 ${
+                                    ((metrics.checkIns.lastMonth.completed / metrics.checkIns.lastMonth.total) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.checkIns.lastMonth.completed / metrics.checkIns.lastMonth.total) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}>
+                                    ({Math.round((metrics.checkIns.lastMonth.completed / metrics.checkIns.lastMonth.total) * 100)}%)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {metrics.checkIns.lastMonth.completed > 0 && (
+                                  <span className={
+                                    ((metrics.checkIns.lastMonth.onTime / metrics.checkIns.lastMonth.completed) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.checkIns.lastMonth.onTime / metrics.checkIns.lastMonth.completed) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }>
+                                    {Math.round((metrics.checkIns.lastMonth.onTime / metrics.checkIns.lastMonth.completed) * 100)}% on-time
+                                  </span>
+                                )}
+                                {metrics.checkIns.lastMonth.completed === 0 && (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Last 3 Months */}
+                          <div className="pl-4">
+                            <p className="text-xs text-gray-500 mb-2">Last 3 Months</p>
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-gray-900">
+                                {metrics.checkIns.last3Months.completed} / {metrics.checkIns.last3Months.total}
+                                {metrics.checkIns.last3Months.total > 0 && (
+                                  <span className={`ml-1 ${
+                                    ((metrics.checkIns.last3Months.completed / metrics.checkIns.last3Months.total) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.checkIns.last3Months.completed / metrics.checkIns.last3Months.total) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}>
+                                    ({Math.round((metrics.checkIns.last3Months.completed / metrics.checkIns.last3Months.total) * 100)}%)
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {metrics.checkIns.last3Months.completed > 0 && (
+                                  <span className={
+                                    ((metrics.checkIns.last3Months.onTime / metrics.checkIns.last3Months.completed) * 100) >= 80
+                                      ? 'text-green-600'
+                                      : ((metrics.checkIns.last3Months.onTime / metrics.checkIns.last3Months.completed) * 100) >= 60
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }>
+                                    {Math.round((metrics.checkIns.last3Months.onTime / metrics.checkIns.last3Months.completed) * 100)}% on-time
+                                  </span>
+                                )}
+                                {metrics.checkIns.last3Months.completed === 0 && (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
                         </div>
+                        
+                        {metrics.checkIns.lastMonth.total === 0 && metrics.checkIns.last3Months.total === 0 && (
+                          <p className="text-xs text-gray-400 mt-3 text-center">No check-ins yet</p>
+                        )}
                       </div>
-                    </Card>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {trainingLoading ? (
@@ -1386,7 +1757,7 @@ export default function ClientDetailPage() {
                   <>
 
                 {/* SECTION 1: WORKOUT ASSIGNMENTS */}
-                <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
+                <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-bold flex items-center gap-2">
@@ -1417,7 +1788,7 @@ export default function ClientDetailPage() {
                     {recentlyCompleted.length > 0 ? (
                       <div className="space-y-2">
                         {recentlyCompleted.slice(0, 2).map((workout) => (
-                          <div key={workout.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                          <div key={workout.id} className="bg-green-50 border border-green-200 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900">{workout.name}</h4>
@@ -1445,7 +1816,7 @@ export default function ClientDetailPage() {
                     {upcoming.length > 0 ? (
                       <div className="space-y-2">
                         {upcoming.slice(0, 3).map((workout) => (
-                          <div key={workout.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 hover:shadow-md transition-all">
+                          <div key={workout.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                             <div className="flex items-center justify-between">
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900">{workout.name}</h4>
@@ -1472,7 +1843,7 @@ export default function ClientDetailPage() {
                 </div>
 
                 {/* SECTION 2: IN-PERSON TRAINING SESSIONS */}
-                <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
+                <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-bold flex items-center gap-2">
@@ -1502,7 +1873,7 @@ export default function ClientDetailPage() {
                               !location.includes('Loading');
                             
                             return (
-                              <div key={session.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                              <div key={session.id} className="bg-green-50 border border-green-200 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <p className="font-medium text-gray-900">
@@ -1545,7 +1916,7 @@ export default function ClientDetailPage() {
                                   !location.includes('Loading');
                                 
                             return (
-                              <div key={session.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 hover:shadow-md transition-all">
+                              <div key={session.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                                     <div className="flex items-center justify-between">
                                       <div>
                                         <p className="font-medium">
@@ -1583,7 +1954,7 @@ export default function ClientDetailPage() {
                   </div>
 
                 {/* SECTION 3: WEEKLY CHECK-INS */}
-                <div className="bg-white border-2 border-primary/20 rounded-xl p-6">
+                <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-bold flex items-center gap-2">
@@ -1613,7 +1984,7 @@ export default function ClientDetailPage() {
                             !location.includes('Loading');
                           
                           return (
-                            <div key={checkin.id} className="bg-green-50 border border-green-200 rounded-lg p-4 hover:shadow-md transition-all">
+                            <div key={checkin.id} className="bg-green-50 border border-green-200 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="font-medium text-gray-900">
@@ -1656,7 +2027,7 @@ export default function ClientDetailPage() {
                                 !location.includes('Loading');
                               
                           return (
-                            <div key={checkin.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 hover:shadow-md transition-all">
+                            <div key={checkin.id} className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <p className="font-medium">

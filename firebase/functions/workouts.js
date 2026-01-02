@@ -657,11 +657,18 @@ exports.completeWorkoutExecution = onCall({
 
       const assignmentDoc = await transaction.get(assignmentRef);
       if (assignmentDoc.exists) {
-        transaction.update(assignmentRef, {
+        const assignmentUpdate = {
           status: overallStatus === "completed" ? "completed" : "in_progress",
           completionPercentage: completionPercentage,
           updatedAt: now,
-        });
+        };
+        
+        // Add completedAt timestamp when status becomes completed
+        if (overallStatus === "completed") {
+          assignmentUpdate.completedAt = now;
+        }
+        
+        transaction.update(assignmentRef, assignmentUpdate);
       }
     });
 

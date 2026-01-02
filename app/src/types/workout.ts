@@ -426,6 +426,7 @@ export interface WorkoutAssignment {
   
   status: 'scheduled' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
   completionPercentage: number;  // 0-100, calculated based on exercises completed
+  completedAt?: Date;          // When client marked assignment as complete
   
   exercises: WorkoutAssignmentExercise[];  // Configured exercises with concrete values (array position = order)
   
