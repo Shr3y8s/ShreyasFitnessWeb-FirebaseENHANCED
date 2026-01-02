@@ -18,7 +18,7 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 interface MarkCompleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onComplete: (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', completionDate: Date, notes?: string) => Promise<void>;
+  onComplete: (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', completionDate: Date, durationMinutes: number, notes?: string) => Promise<void>;
   workoutName: string;
   completionPercentage: number;
 }
@@ -36,16 +36,18 @@ export function MarkCompleteDialog({
 }: MarkCompleteDialogProps) {
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'hard' | 'very_hard'>('moderate');
   const [completionDate, setCompletionDate] = useState(new Date());
+  const [durationMinutes, setDurationMinutes] = useState(45); // Default 45 minutes
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-      await onComplete(difficulty, completionDate, notes || undefined);
+      await onComplete(difficulty, completionDate, durationMinutes, notes || undefined);
       // Reset form
       setDifficulty('moderate');
       setCompletionDate(new Date());
+      setDurationMinutes(45);
       setNotes('');
     } finally {
       setIsSaving(false);
@@ -136,6 +138,26 @@ export function MarkCompleteDialog({
             />
             <p className="text-xs text-muted-foreground">
               When did you complete this workout? (Can backdate up to 30 days)
+            </p>
+          </div>
+
+          {/* Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="duration" className="text-base font-semibold">Workout Duration</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                id="duration"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(Math.max(1, Math.min(300, parseInt(e.target.value) || 45)))}
+                min="1"
+                max="300"
+                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <span className="text-sm font-medium text-muted-foreground">minutes</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              How long did this workout take? (approximately)
             </p>
           </div>
 

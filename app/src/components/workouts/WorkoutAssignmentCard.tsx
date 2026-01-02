@@ -43,25 +43,6 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Helper function to convert Firestore Timestamp or Date to milliseconds
-  const getTimestamp = (dateOrTimestamp: any): number => {
-    if (!dateOrTimestamp) return Date.now();
-    
-    // Check if it's a Date object
-    if (dateOrTimestamp instanceof Date) {
-      return dateOrTimestamp.getTime();
-    }
-    
-    // Check if it's a Firestore Timestamp (has toDate method)
-    if (dateOrTimestamp?.toDate && typeof dateOrTimestamp.toDate === 'function') {
-      return dateOrTimestamp.toDate().getTime();
-    }
-    
-    // Try to parse as string/number
-    const parsed = new Date(dateOrTimestamp).getTime();
-    return isNaN(parsed) ? Date.now() : parsed;
-  };
-
   // Load existing workout execution if it exists
   useEffect(() => {
     const loadExistingExecution = async () => {
@@ -88,7 +69,6 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
           const loadedExecution: WorkoutExecution = {
             ...executionData,
             id: executionDoc.id,
-            startedAt: executionData.startedAt?.toDate ? executionData.startedAt.toDate() : new Date(executionData.startedAt),
             completedAt: executionData.completedAt?.toDate ? executionData.completedAt.toDate() : executionData.completedAt ? new Date(executionData.completedAt) : undefined,
             createdAt: executionData.createdAt?.toDate ? executionData.createdAt.toDate() : new Date(executionData.createdAt),
             updatedAt: executionData.updatedAt?.toDate ? executionData.updatedAt.toDate() : new Date(executionData.updatedAt),
@@ -128,7 +108,6 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
       workoutAssignmentId: assignment.id,
       clientId: assignment.clientId,
       trainerId: assignment.trainerId,
-      startedAt: new Date(),
       durationMinutes: 0,
       completionStatus: 'in_progress',
       completionPercentage: 0,
@@ -290,13 +269,8 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
     
     setIsSaving(true);
     try {
-      // Calculate current duration using the helper function
-      const startTime = getTimestamp(workoutExecution.startedAt);
-      const durationMinutes = Math.round((Date.now() - startTime) / 60000);
-      
       const updatedExecution = {
         ...workoutExecution,
-        durationMinutes,
         updatedAt: new Date(),
       };
       
@@ -324,16 +298,11 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
   };
 
   // Handle marking workout complete
-  const handleComplete = async (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', completionDate: Date, notes?: string) => {
+  const handleComplete = async (difficulty: 'easy' | 'moderate' | 'hard' | 'very_hard', completionDate: Date, durationMinutes: number, notes?: string) => {
     if (!workoutExecution) return;
 
     setIsSaving(true);
     try {
-      // Calculate duration using the helper function
-      const startTime = getTimestamp(workoutExecution.startedAt);
-      const completionTime = getTimestamp(completionDate);
-      const durationMinutes = Math.round((completionTime - startTime) / 60000);
-
       // Update execution with final data
       const completedExecution: WorkoutExecution = {
         ...workoutExecution,

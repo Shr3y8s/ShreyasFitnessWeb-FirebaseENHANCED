@@ -30,6 +30,13 @@ interface ClientData {
   profilePhotoSmall?: string;
 }
 
+interface DurationMetrics {
+  avgDuration: number;
+  minDuration: number;
+  maxDuration: number;
+  workoutCount: number;
+}
+
 export default function ClientTrainingDashboard() {
   const router = useRouter();
   const params = useParams();
@@ -39,6 +46,10 @@ export default function ClientTrainingDashboard() {
   const [loading, setLoading] = useState(true);
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<any>(null);
+  
+  // Analytics metrics state
+  const [durationMetrics, setDurationMetrics] = useState<DurationMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
 
   // Fetch client data
   useEffect(() => {
@@ -87,6 +98,84 @@ export default function ClientTrainingDashboard() {
 
     fetchClient();
   }, [user, router, authLoading, canAccessTrainerDashboard, clientId]);
+
+  // Fetch duration metrics
+  useEffect(() => {
+    const fetchDurationMetrics = async () => {
+      if (!clientId) return;
+      
+      try {
+        setMetricsLoading(true);
+        
+        // Calculate date 4 weeks ago
+        const fourWeeksAgo = new Date();
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+        
+        // Fetch workout executions for last 4 weeks
+        const executionsRef = collection(db, 'workoutExecutions');
+        const q = query(
+          executionsRef,
+          where('clientId', '==', clientId),
+          where('completionStatus', '==', 'completed'),
+          where('completedAt', '>=', fourWeeksAgo)
+        );
+        
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          setDurationMetrics({
+            avgDuration: 0,
+            minDuration: 0,
+            maxDuration: 0,
+            workoutCount: 0
+          });
+          return;
+        }
+        
+        // Extract durations
+        const durations = snapshot.docs
+          .map(doc => doc.data().durationMinutes)
+          .filter(d => d > 0);
+        
+        if (durations.length === 0) {
+          setDurationMetrics({
+            avgDuration: 0,
+            minDuration: 0,
+            maxDuration: 0,
+            workoutCount: 0
+          });
+          return;
+        }
+        
+        // Calculate metrics
+        const sum = durations.reduce((acc, dur) => acc + dur, 0);
+        const avg = Math.round(sum / durations.length);
+        const min = Math.min(...durations);
+        const max = Math.max(...durations);
+        
+        setDurationMetrics({
+          avgDuration: avg,
+          minDuration: min,
+          maxDuration: max,
+          workoutCount: durations.length
+        });
+      } catch (error) {
+        console.error('Error fetching duration metrics:', error);
+        setDurationMetrics({
+          avgDuration: 0,
+          minDuration: 0,
+          maxDuration: 0,
+          workoutCount: 0
+        });
+      } finally {
+        setMetricsLoading(false);
+      }
+    };
+
+    if (clientData) {
+      fetchDurationMetrics();
+    }
+  }, [clientId, clientData]);
 
   // Loading state
   if (loading) {
@@ -145,73 +234,64 @@ export default function ClientTrainingDashboard() {
               )}
               
               <div className="flex-1">
-                <h1 className="text-2xl font-bold">{clientData.name} - Training Dashboard</h1>
-                <p className="text-gray-600">Comprehensive workout performance and progress tracking</p>
+                <h1 className="text-2xl font-bold">{clientData.name} - Training Analytics</h1>
+                <p className="text-gray-600">Historical trends and progression insights for data-driven programming</p>
               </div>
             </div>
           </div>
 
-          {/* SECTION 1: Performance Snapshot Cards */}
+          {/* SECTION 1: Analytics Summary Cards */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">Performance Snapshot</h2>
+            <h2 className="text-lg font-semibold mb-3">Analytics Summary</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Card 1: Completion Rate */}
-              <Card className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <h3 className="font-semibold text-sm text-gray-600">Completion Rate</h3>
-                </div>
-                <p className="text-xs text-gray-500 mb-3">Last 4 Weeks</p>
-                <div className="mb-3">
-                  <p className="text-4xl font-bold text-gray-900">85%</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">17/20 workouts completed</p>
-                <p className="text-xs text-green-600 mt-1">↑ +5% vs previous period</p>
-              </Card>
-
-              {/* Card 2: On-Time Completion */}
-              <Card className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-semibold text-sm text-gray-600">On-Time Completion</h3>
-                </div>
-                <p className="text-xs text-gray-500 mb-3">Last 4 Weeks</p>
-                <div className="mb-3">
-                  <p className="text-4xl font-bold text-gray-900">70%</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '70%' }}></div>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600">12/17 within deadline</p>
-                <div className="flex gap-2 mt-1 text-xs">
-                  <span className="text-yellow-600">⚠️ 3 late</span>
-                  <span className="text-red-600">🔴 2 overdue</span>
-                </div>
-              </Card>
-
-              {/* Card 3: Avg Duration */}
+              {/* Card 1: Avg Workout Duration */}
               <Card className="p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="h-5 w-5 text-purple-600" />
                   <h3 className="font-semibold text-sm text-gray-600">Avg Workout Duration</h3>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">Last 4 Weeks</p>
-                <div className="mb-3">
-                  <p className="text-4xl font-bold text-gray-900">52<span className="text-lg"> min</span></p>
-                  <p className="text-xs text-gray-500 mt-1">Range: 35-68 min</p>
-                </div>
-                <p className="text-sm text-gray-600">Target: 45-60 min</p>
-                <p className="text-xs text-green-600 mt-1">✓ Mostly within range</p>
+                {metricsLoading ? (
+                  <div className="mb-3">
+                    <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                ) : durationMetrics && durationMetrics.workoutCount > 0 ? (
+                  <>
+                    <div className="mb-3">
+                      <p className="text-4xl font-bold text-gray-900">
+                        {durationMetrics.avgDuration}<span className="text-lg"> min</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Range: {durationMetrics.minDuration}-{durationMetrics.maxDuration} min
+                      </p>
+                    </div>
+                    <p className="text-sm text-gray-600">Target: 45-60 min</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Based on {durationMetrics.workoutCount} workout{durationMetrics.workoutCount !== 1 ? 's' : ''}
+                    </p>
+                    {durationMetrics.avgDuration >= 45 && durationMetrics.avgDuration <= 60 ? (
+                      <p className="text-xs text-green-600 mt-1">✓ Within target range</p>
+                    ) : durationMetrics.avgDuration < 45 ? (
+                      <p className="text-xs text-yellow-600 mt-1">⚠ Below target</p>
+                    ) : (
+                      <p className="text-xs text-blue-600 mt-1">ℹ Above target</p>
+                    )}
+                  </>
+                ) : (
+                  <div className="mb-3">
+                    <p className="text-2xl font-bold text-gray-400">No Data</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      No completed workouts in the last 4 weeks
+                    </p>
+                  </div>
+                )}
               </Card>
 
-              {/* Card 4: Training Streak */}
+              {/* Card 2: Training Streak */}
               <Card className="p-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Flame className="h-5 w-5 text-orange-600" />
-                  <h3 className="font-semibold text-sm text-gray-600">Current Streak</h3>
+                  <h3 className="font-semibold text-sm text-gray-600">Training Streak</h3>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">&nbsp;</p>
                 <div className="mb-3">
@@ -220,92 +300,38 @@ export default function ClientTrainingDashboard() {
                 <p className="text-sm text-gray-600">Longest: 12 days</p>
                 <p className="text-xs text-gray-500 mt-1">Last workout: Today</p>
               </Card>
-            </div>
-          </div>
 
-          {/* SECTION 2: Session Management Quick Links */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">Session Management</h2>
-            <div className="bg-white rounded-xl border p-6">
-              <p className="text-sm text-gray-600 mb-4">
-                Manage in-person training sessions and weekly check-ins with {clientData.name}
-              </p>
-
-              {/* Quick Links */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <Link 
-                  href={`/dashboard/trainer/training-sessions?clientId=${clientId}&dateRange=month`}
-                  className="block p-6 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <Calendar className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-lg">View All In-person Sessions</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Manage scheduled training sessions, track attendance, and add session notes
-                  </p>
-                  <div className="flex items-center gap-2 text-primary font-medium text-sm">
-                    <span>Open Session Manager</span>
-                    <span>→</span>
-                  </div>
-                </Link>
-
-                <Link 
-                  href={`/dashboard/trainer/weekly-checkins?clientId=${clientId}&dateRange=month`}
-                  className="block p-6 border-2 border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-lg">View All Check-ins</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Review weekly accountability check-ins and track progress discussions
-                  </p>
-                  <div className="flex items-center gap-2 text-primary font-medium text-sm">
-                    <span>Open Check-in Manager</span>
-                    <span>→</span>
-                  </div>
-                </Link>
-              </div>
-
-              {/* Mini Stats */}
-              <div className="border-t pt-6">
-                <h4 className="font-semibold text-sm text-gray-700 mb-4">Session Summary (This Month)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Next Session</p>
-                    <p className="font-semibold text-gray-900">Jan 2, 3:00 PM</p>
-                    <p className="text-xs text-gray-500 mt-1">In-person Training</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Sessions This Month</p>
-                    <p className="font-semibold text-gray-900">8 / 12</p>
-                    <p className="text-xs text-gray-500 mt-1">67% completion rate</p>
-                  </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-600 mb-1">Last Check-in</p>
-                    <p className="font-semibold text-gray-900">Dec 28</p>
-                    <p className="text-xs text-gray-500 mt-1">3 days ago</p>
-                  </div>
+              {/* Card 3: Volume Trend */}
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold text-sm text-gray-600">Volume Trend</h3>
                 </div>
-              </div>
+                <p className="text-xs text-gray-500 mb-3">Last 4 Weeks</p>
+                <div className="mb-3">
+                  <p className="text-4xl font-bold text-green-600">↑ +12%</p>
+                </div>
+                <p className="text-sm text-gray-600">This: 58,500 lbs</p>
+                <p className="text-xs text-gray-500 mt-1">Prev: 52,000 lbs</p>
+              </Card>
 
-              {/* Note */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-800">
-                  <strong>💡 Tip:</strong> Session data is filtered to "This Month" by default. Use the date filters on the session pages to view different time ranges.
-                </p>
-              </div>
+              {/* Card 4: Personal Records */}
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Dumbbell className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-sm text-gray-600">Personal Records</h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">This Month</p>
+                <div className="mb-3">
+                  <p className="text-4xl font-bold text-gray-900">3 <span className="text-lg">PRs 🎉</span></p>
+                </div>
+                <p className="text-sm text-gray-600">Bench: 200 (+5)</p>
+                <p className="text-xs text-gray-500 mt-1">Deadlift: 315 (+10)</p>
+              </Card>
             </div>
           </div>
 
-          {/* SECTION 3: Performance Metrics & Trends */}
+          {/* SECTION 2: Performance Metrics & Trends */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-3">Performance Metrics & Trends</h2>
             <div className="bg-white rounded-xl border p-6">
@@ -371,8 +397,9 @@ export default function ClientTrainingDashboard() {
           {/* Development Note */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              <strong>📝 Phase 1 Complete:</strong> Page structure with all 3 sections visible. 
-              Next: Phase 2 will add real data fetching and calculations.
+              <strong>📝 Phase 1:</strong> Core structure with placeholder data. Analytics cards show static values to demonstrate layout.
+              <br />
+              <strong>Next:</strong> Phase 2 will implement real data calculations for all metrics.
             </p>
           </div>
         </div>

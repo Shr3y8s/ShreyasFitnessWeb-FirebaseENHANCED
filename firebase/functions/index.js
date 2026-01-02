@@ -989,7 +989,6 @@ const workoutFunctions = require("./workouts");
 
 // Export workout management functions
 exports.assignWorkout = workoutFunctions.assignWorkout;
-exports.startWorkoutExecution = workoutFunctions.startWorkoutExecution;
 exports.updateWorkoutExecution = workoutFunctions.updateWorkoutExecution;
 exports.saveWorkoutExecution = workoutFunctions.saveWorkoutExecution;
 exports.completeWorkoutExecution = workoutFunctions.completeWorkoutExecution;

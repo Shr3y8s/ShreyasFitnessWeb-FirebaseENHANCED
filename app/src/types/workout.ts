@@ -448,9 +448,8 @@ export interface WorkoutExecution {
   clientId: string;
   trainerId: string;
   
-  startedAt: Date;              // When client started the workout
   completedAt?: Date;           // When client completed (null if incomplete)
-  durationMinutes: number;      // Actual duration
+  durationMinutes: number;      // Actual duration (user-entered)
   
   // Overall workout feedback
   overallDifficulty?: 'easy' | 'moderate' | 'hard' | 'very_hard';

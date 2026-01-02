@@ -252,7 +252,6 @@ export default function WorkoutAssignmentsPage() {
           const execution: WorkoutExecution = {
             ...executionData,
             id: executionDoc.id,
-            startedAt: executionData.startedAt?.toDate ? executionData.startedAt.toDate() : new Date(executionData.startedAt),
             completedAt: executionData.completedAt?.toDate ? executionData.completedAt.toDate() : executionData.completedAt ? new Date(executionData.completedAt) : undefined,
             createdAt: executionData.createdAt?.toDate ? executionData.createdAt.toDate() : new Date(executionData.createdAt),
             updatedAt: executionData.updatedAt?.toDate ? executionData.updatedAt.toDate() : new Date(executionData.updatedAt),
