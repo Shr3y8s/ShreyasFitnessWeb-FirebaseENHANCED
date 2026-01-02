@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { 
   subscribeToContactSubmissions,
@@ -39,6 +40,7 @@ type SortOption = 'DATE_DESC' | 'DATE_ASC' | 'SERVICE' | 'PRIORITY';
 export default function LeadInboxPage() {
   const router = useRouter();
   const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
+  const { toast } = useToast();
   
   // State
   const [submissions, setSubmissions] = useState<ContactSubmission[]>([]);
@@ -232,11 +234,23 @@ export default function LeadInboxPage() {
       
       // Show specific error message for terminal state violation
       if (error.message?.includes('replied to cannot be marked')) {
-        alert('Cannot change status: Messages that have been replied to cannot be marked as unread or read.');
+        toast({
+          title: "Cannot Change Status",
+          description: "Messages that have been replied to cannot be marked as unread or read.",
+          variant: "destructive",
+        });
       } else if (error.message?.includes('Message not found')) {
-        alert('Message not found. It may have been deleted.');
+        toast({
+          title: "Message Not Found",
+          description: "Message not found. It may have been deleted.",
+          variant: "destructive",
+        });
       } else {
-        alert('Failed to update status. Please try again.');
+        toast({
+          title: "Update Failed",
+          description: "Failed to update status. Please try again.",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -252,10 +266,17 @@ export default function LeadInboxPage() {
       if (selectedSubmission && selectedSubmission.id === submissionId) {
         setSelectedSubmission(null);
       }
-      alert('Message deleted successfully');
+      toast({
+        title: "Message Deleted",
+        description: "Message deleted successfully",
+      });
     } catch (error) {
       console.error('Error deleting message:', error);
-      alert('Failed to delete message');
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete message",
+        variant: "destructive",
+      });
     }
   };
 
@@ -325,14 +346,22 @@ export default function LeadInboxPage() {
           const errorData = await emailResponse.json();
           console.error('Email sending failed:', errorData);
           // Don't fail the whole operation - reply is already saved to Firestore
-          alert('Reply saved to inbox, but email notification failed to send. You may want to follow up manually via email.');
+          toast({
+            title: "Partial Success",
+            description: "Reply saved to inbox, but email notification failed to send. You may want to follow up manually via email.",
+            variant: "destructive",
+          });
         } else {
           console.log('Email notification sent successfully');
         }
       } catch (emailError) {
         console.error('Error sending email notification:', emailError);
         // Don't fail the whole operation - reply is already saved
-        alert('Reply saved to inbox, but email notification could not be sent. Please follow up manually.');
+        toast({
+          title: "Partial Success",
+          description: "Reply saved to inbox, but email notification could not be sent. Please follow up manually.",
+          variant: "destructive",
+        });
       }
       
       // Update local submission status
@@ -342,13 +371,20 @@ export default function LeadInboxPage() {
       
       // Show success message with slight delay
       setTimeout(() => {
-        alert('Reply sent successfully! Email notification sent to lead.');
+        toast({
+          title: "Reply Sent",
+          description: "Reply sent successfully! Email notification sent to lead.",
+        });
       }, 300);
       
     } catch (err) {
       console.error('Error sending reply:', err);
       // Keep optimistic update but show error
-      alert('Network error. Reply may not have been saved properly.');
+      toast({
+        title: "Network Error",
+        description: "Reply may not have been saved properly. Please verify.",
+        variant: "destructive",
+      });
     } finally {
       setSendingReply(false);
     }

@@ -7,6 +7,7 @@ import { Target, Square, Loader2, Check, CheckSquare } from 'lucide-react';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { DailyHabit } from '@/types/plan';
 import { DailyHabitLog } from '@/types/activity';
+import { useToast } from '@/hooks/use-toast';
 
 interface DailyHabitsChecklistProps {
   habits: DailyHabit[];
@@ -15,6 +16,7 @@ interface DailyHabitsChecklistProps {
 }
 
 export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: DailyHabitsChecklistProps) {
+  const { toast } = useToast();
   const [savingHabitId, setSavingHabitId] = useState<string | null>(null);
   const [completingAll, setCompletingAll] = useState(false);
 
@@ -25,13 +27,22 @@ export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: Dail
 
   const handleToggle = async (habitId: string) => {
     const currentlyCompleted = isHabitCompleted(habitId);
+    const habit = habits.find(h => h.id === habitId);
     setSavingHabitId(habitId);
     
     try {
       await onToggle(habitId, !currentlyCompleted);
+      toast({
+        title: !currentlyCompleted ? "✅ Habit Complete" : "Habit Unchecked",
+        description: habit ? `${habit.title} ${!currentlyCompleted ? 'completed' : 'unchecked'}` : !currentlyCompleted ? 'Habit completed' : 'Habit unchecked',
+      });
     } catch (error) {
       console.error('Error toggling habit:', error);
-      alert('Failed to update habit. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to update habit. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingHabitId(null);
     }
@@ -45,9 +56,17 @@ export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: Dail
       for (const habit of incompleteHabits) {
         await onToggle(habit.id, true);
       }
+      toast({
+        title: "🎉 All Habits Complete!",
+        description: `Great job! All ${habits.length} habits completed today`,
+      });
     } catch (error) {
       console.error('Error completing all habits:', error);
-      alert('Failed to complete all habits. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to complete all habits. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setCompletingAll(false);
     }

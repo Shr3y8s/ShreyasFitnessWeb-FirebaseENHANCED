@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, ChevronDown, ChevronUp, CalendarDays, Play } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { 
@@ -34,6 +35,7 @@ interface WorkoutAssignmentCardProps {
 type DisplayMode = 'display' | 'track' | 'review';
 
 export function WorkoutAssignmentCard({ assignment, isCompleted = false }: WorkoutAssignmentCardProps) {
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<DisplayMode>('display');
   const [workoutExecution, setWorkoutExecution] = useState<WorkoutExecution | null>(null);
@@ -304,11 +306,18 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
       // Update local state with saved execution (includes generated ID)
       setWorkoutExecution(result.execution);
       
-      // TODO: Replace with proper toast notification
-      alert('Progress saved!');
+      // Show success toast
+      toast({
+        title: "✅ Progress Saved",
+        description: "Your workout progress has been saved successfully.",
+      });
     } catch (error) {
       console.error('Failed to save progress:', error);
-      alert('Failed to save progress. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save progress. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -345,11 +354,18 @@ export function WorkoutAssignmentCard({ assignment, isCompleted = false }: Worko
       setShowCompleteDialog(false);
       setMode('review');
       
-      // TODO: Replace with proper toast notification
-      alert(`Workout completed! Duration: ${durationMinutes} minutes`);
+      // Show success toast
+      toast({
+        title: "🎉 Workout Complete!",
+        description: `Great job! Duration: ${durationMinutes} minutes`,
+      });
     } catch (error) {
       console.error('Failed to complete workout:', error);
-      alert('Failed to save completion. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save completion. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }

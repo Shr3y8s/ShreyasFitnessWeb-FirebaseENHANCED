@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Key, Mail, Smartphone, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { LoginHistoryCard } from '@/components/security/LoginHistoryCard';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -14,6 +15,7 @@ import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 
 export default function SecurityPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   
   // Password change state
@@ -129,7 +131,10 @@ export default function SecurityPage() {
       // Update password
       await updatePassword(user, newPassword);
 
-      alert('Password updated successfully!');
+      toast({
+        title: "Password Updated",
+        description: "Your password has been updated successfully!",
+      });
       setIsChangingPassword(false);
       setCurrentPassword('');
       setNewPassword('');

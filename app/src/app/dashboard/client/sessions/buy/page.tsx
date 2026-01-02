@@ -6,6 +6,7 @@ import { Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { signOutUser, functions, db } from '@/lib/firebase';
 import { getSessionPricing, calculateSessionSavings, createStripeCheckoutSession } from '@/lib/stripe';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -18,6 +19,7 @@ import { SessionBalance, SessionPackage } from '@/types/session';
 export default function BuySessionsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [processingPriceId, setProcessingPriceId] = useState<string | null>(null);
   const [sessionOptions, setSessionOptions] = useState<any[]>([]);
@@ -118,7 +120,11 @@ export default function BuySessionsPage() {
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Error creating checkout session:', error);
-      alert(`Failed to create checkout session: ${(error as Error).message}`);
+      toast({
+        title: "Checkout Failed",
+        description: `Failed to create checkout session: ${(error as Error).message}`,
+        variant: "destructive",
+      });
       setProcessingPriceId(null);
     }
   };

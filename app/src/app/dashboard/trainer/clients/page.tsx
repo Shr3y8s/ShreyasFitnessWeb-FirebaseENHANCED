@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -88,6 +89,7 @@ export default function ClientsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<ClientData[]>([]);
   const [filteredClients, setFilteredClients] = useState<ClientData[]>([]);
@@ -882,7 +884,12 @@ export default function ClientsPage() {
                         <p className="text-gray-600 text-sm mb-4">
                           Bulk update the status of selected clients (Active, Inactive, Pending).
                         </p>
-                        <Button variant="outline" onClick={() => alert('Bulk status update coming in Phase 3!')}>
+                        <Button variant="outline" onClick={() => {
+                          toast({
+                            title: "Coming Soon",
+                            description: "Bulk status update coming in Phase 3!",
+                          });
+                        }}>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Change Status
                         </Button>
@@ -1605,7 +1612,10 @@ export default function ClientsPage() {
                     });
 
                     if (result.success) {
-                      alert(`Success! Workout assigned to ${selectedClientIds.length} client${selectedClientIds.length !== 1 ? 's' : ''}!`);
+                      toast({
+                        title: "Workout Assigned",
+                        description: `Success! Workout assigned to ${selectedClientIds.length} client${selectedClientIds.length !== 1 ? 's' : ''}.`,
+                      });
                       setBulkAssignModalOpen(false);
                       setSelectedClientIds([]);
                       setAssignmentDueDate('');
@@ -1629,11 +1639,19 @@ export default function ClientsPage() {
                       });
                       setAssignments(assignmentsData);
                     } else {
-                      alert(`Failed to assign workout. ${result.error?.message || 'Please try again.'}`);
+                      toast({
+                        title: "Assignment Failed",
+                        description: `Failed to assign workout. ${result.error?.message || 'Please try again.'}`,
+                        variant: "destructive",
+                      });
                     }
                   } catch (error) {
                     console.error('Error assigning workout:', error);
-                    alert('An error occurred while assigning the workout.');
+                    toast({
+                      title: "Error",
+                      description: "An error occurred while assigning the workout.",
+                      variant: "destructive",
+                    });
                   } finally {
                     setIsProcessing(false);
                   }
@@ -1786,7 +1804,10 @@ export default function ClientsPage() {
                     });
 
                     if (result.success) {
-                      alert(`Success! Workout assigned to ${activeClient.name}!`);
+                      toast({
+                        title: "Workout Assigned",
+                        description: `Success! Workout assigned to ${activeClient.name}.`,
+                      });
                       setIndividualAssignModalOpen(false);
                       setAssignmentDueDate('');
                       setAssignmentNotes('');
@@ -1809,11 +1830,19 @@ export default function ClientsPage() {
                       });
                       setAssignments(assignmentsData);
                     } else {
-                      alert(`Failed to assign workout. ${result.error?.message || 'Please try again.'}`);
+                      toast({
+                        title: "Assignment Failed",
+                        description: `Failed to assign workout. ${result.error?.message || 'Please try again.'}`,
+                        variant: "destructive",
+                      });
                     }
                   } catch (error) {
                     console.error('Error assigning workout:', error);
-                    alert('An error occurred while assigning the workout.');
+                    toast({
+                      title: "Error",
+                      description: "An error occurred while assigning the workout.",
+                      variant: "destructive",
+                    });
                   } finally {
                     setIsProcessing(false);
                   }

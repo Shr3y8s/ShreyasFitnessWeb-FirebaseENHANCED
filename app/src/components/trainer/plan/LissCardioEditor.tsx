@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeartPulse, Save, Loader2, Trash2, Info } from 'lucide-react';
 import { CARDIO_FREQUENCY_OPTIONS, CARDIO_TIMING_OPTIONS, LissCardioData } from '@/types/plan';
+import { useToast } from '@/hooks/use-toast';
 
 interface LissCardioEditorProps {
   initialData: LissCardioData | null;
@@ -14,6 +15,7 @@ interface LissCardioEditorProps {
 }
 
 export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: LissCardioEditorProps) {
+  const { toast } = useToast();
   const [frequency, setFrequency] = useState<string>('3x per week');
   const [duration, setDuration] = useState<string>('20-30 min');
   const [targetHeartRate, setTargetHeartRate] = useState<string>('120-130 BPM');
@@ -54,7 +56,11 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
   const handleSave = async () => {
     // Validate inputs
     if (!frequency || !duration || !targetHeartRate || !timing) {
-      alert('Please fill in all fields');
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
       return;
     }
 

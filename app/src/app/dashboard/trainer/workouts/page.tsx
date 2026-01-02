@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { 
   listenToWorkoutTemplates, 
   deleteWorkoutTemplate,
@@ -40,6 +41,7 @@ import {
 export default function WorkoutLibraryPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [workoutTemplates, setWorkoutTemplates] = useState<any[]>([]);
   const [filteredWorkouts, setFilteredWorkouts] = useState<any[]>([]);
@@ -157,9 +159,16 @@ export default function WorkoutLibraryPage() {
     if (confirm('Archive this workout? It will be hidden from your active library but can be restored later.')) {
       const result = await deactivateWorkoutTemplate(workoutId, user.uid, canAccessAdminDashboard);
       if (result.success) {
-        alert('Workout archived successfully!');
+        toast({
+          title: "Workout Archived",
+          description: "Workout archived successfully",
+        });
       } else {
-        alert(result.error || 'Failed to archive workout');
+        toast({
+          title: "Archive Failed",
+          description: result.error || "Failed to archive workout",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -169,9 +178,16 @@ export default function WorkoutLibraryPage() {
     
     const result = await reactivateWorkoutTemplate(workoutId);
     if (result.success) {
-      alert('Workout restored successfully!');
+      toast({
+        title: "Workout Restored",
+        description: "Workout restored successfully",
+      });
     } else {
-      alert(result.error || 'Failed to restore workout');
+      toast({
+        title: "Restore Failed",
+        description: result.error || "Failed to restore workout",
+        variant: "destructive",
+      });
     }
   };
 
@@ -183,21 +199,36 @@ export default function WorkoutLibraryPage() {
       const usage = await checkWorkoutUsage(workoutId);
       
       if (usage.isUsed) {
-        alert(`Cannot delete: This workout is used in ${usage.usedInAssignments} assignment(s). Please archive it instead.`);
+        toast({
+          title: "Cannot Delete Workout",
+          description: `This workout is used in ${usage.usedInAssignments} assignment(s). Please archive it instead.`,
+          variant: "destructive",
+        });
         return;
       }
       
       if (confirm('⚠️ PERMANENTLY DELETE this workout? This action cannot be undone.\n\nTo keep the workout but hide it, use the Archive button instead.')) {
         const result = await deleteWorkoutTemplate(workoutId, user.uid, canAccessAdminDashboard);
         if (result.success) {
-          alert('Workout deleted successfully!');
+          toast({
+            title: "Workout Deleted",
+            description: "Workout deleted successfully",
+          });
         } else {
-          alert(result.error || 'Failed to delete workout');
+          toast({
+            title: "Delete Failed",
+            description: result.error || "Failed to delete workout",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {
       // Handle errors from checkWorkoutUsage (e.g., permission errors, network issues)
-      alert((error as Error).message || 'Failed to verify workout usage. Please try again.');
+      toast({
+        title: "Error",
+        description: (error as Error).message || "Failed to verify workout usage. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

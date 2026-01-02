@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db, auth } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,7 @@ import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils'
 export default function ProfilePage() {
   const router = useRouter();
   const { user, userData, loading: authLoading, updateUserData } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -158,7 +160,10 @@ export default function ProfilePage() {
 
   const handleChangeEmailSuccess = (newEmail: string) => {
     // Show success message
-    alert(`Verification email sent to ${newEmail}. Please check your inbox and click the link to verify your new email.`);
+    toast({
+      title: "Verification Email Sent",
+      description: `Please check ${newEmail} and click the link to verify your new email.`,
+    });
     
     // Update pending verification state
     setPendingEmailVerification(true);
@@ -204,13 +209,21 @@ export default function ProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file (JPG, PNG, or WebP)');
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file (JPG, PNG, or WebP)",
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Please select an image smaller than 5MB');
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -251,14 +264,21 @@ export default function ProfilePage() {
         profilePhotoLarge: large,
       });
 
-      alert('Profile photo updated successfully!');
+      toast({
+        title: "Photo Updated",
+        description: "Profile photo updated successfully!",
+      });
 
       // Close modal
       setImageSrc(null);
       setCroppedAreaPixels(null);
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Failed to upload photo. Please try again.');
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload photo. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -326,7 +346,11 @@ export default function ProfilePage() {
 
     // Validate required fields
     if (!editedName.trim()) {
-      alert('Name is required');
+      toast({
+        title: "Name Required",
+        description: "Please enter your name",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -358,12 +382,19 @@ export default function ProfilePage() {
       // Update auth context userData to sync with database
       updateUserData(updatedData);
 
-      alert('Personal information updated successfully!');
+      toast({
+        title: "Profile Updated",
+        description: "Personal information updated successfully!",
+      });
       setIsEditingPersonal(false);
       setEditedPhoneError(null);
     } catch (error) {
       console.error('Error updating personal information:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingPersonal(false);
     }
@@ -425,11 +456,18 @@ export default function ProfilePage() {
       // Update auth context userData to sync with database
       updateUserData({ address: updatedData });
 
-      alert('Location information updated successfully!');
+      toast({
+        title: "Location Updated",
+        description: "Location information updated successfully!",
+      });
       setIsEditingLocation(false);
     } catch (error) {
       console.error('Error updating location information:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingLocation(false);
     }
@@ -518,12 +556,19 @@ export default function ProfilePage() {
       // Update auth context userData to sync with database
       updateUserData({ emergencyContact: updatedData });
 
-      alert('Emergency contact information updated successfully!');
+      toast({
+        title: "Emergency Contact Updated",
+        description: "Emergency contact information updated successfully!",
+      });
       setIsEditingEmergency(false);
       setEditedEmergencyPhoneError(null);
     } catch (error) {
       console.error('Error updating emergency contact:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingEmergency(false);
     }
@@ -573,12 +618,19 @@ export default function ProfilePage() {
       // Update auth context userData to sync with database
       updateUserData({ notificationPreferences: updatedData });
 
-      alert('Contact preferences updated successfully!');
+      toast({
+        title: "Preferences Updated",
+        description: "Contact preferences updated successfully!",
+      });
       setIsEditingPreferences(false);
     } catch (error) {
       console.error('Error updating contact preferences:', error);
-      alert('Failed to update. Please try again.');
-    } finally {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
+    } finally{
       setSavingPreferences(false);
     }
   };
@@ -635,7 +687,10 @@ export default function ProfilePage() {
       // Update password
       await updatePassword(user, newPassword);
 
-      alert('Password updated successfully!');
+      toast({
+        title: "Password Updated",
+        description: "Password updated successfully!",
+      });
       setIsEditingSecurity(false);
       setCurrentPassword('');
       setNewPassword('');
@@ -698,10 +753,17 @@ export default function ProfilePage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      alert('Your data has been downloaded successfully!');
+      toast({
+        title: "Data Downloaded",
+        description: "Your data has been downloaded successfully!",
+      });
     } catch (error) {
       console.error('Error downloading data:', error);
-      alert('Failed to download data. Please try again.');
+      toast({
+        title: "Download Failed",
+        description: "Failed to download data. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setDownloadingData(false);
     }

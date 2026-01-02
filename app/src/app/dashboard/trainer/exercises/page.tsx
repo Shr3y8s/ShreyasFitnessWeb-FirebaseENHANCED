@@ -34,6 +34,7 @@ import {
   Eye,
   CheckCircle2
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -54,6 +55,7 @@ import {
 export default function ExerciseLibraryPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
@@ -331,7 +333,11 @@ export default function ExerciseLibraryPage() {
     if (confirm('Archive this exercise? It will be hidden from your active library but can be restored later.')) {
       const result = await deactivateExercise(exerciseId, user.uid, canAccessAdminDashboard);
       if (!result.success) {
-        alert(result.error || 'Failed to archive exercise');
+        toast({
+          title: "Archive Failed",
+          description: result.error || 'Failed to archive exercise',
+          variant: "destructive",
+        });
       }
     }
   };
@@ -341,7 +347,11 @@ export default function ExerciseLibraryPage() {
     
     const result = await reactivateExercise(exerciseId);
     if (!result.success) {
-      alert(result.error || 'Failed to restore exercise');
+      toast({
+        title: "Restore Failed",
+        description: result.error || 'Failed to restore exercise',
+        variant: "destructive",
+      });
     }
   };
 
@@ -352,14 +362,22 @@ export default function ExerciseLibraryPage() {
     const usage = await checkExerciseUsage(exerciseId);
     
     if (usage.isUsed) {
-      alert(`Cannot delete: This exercise is used in ${usage.usedInWorkouts} workout template(s). Please archive it instead.`);
+      toast({
+        title: "Cannot Delete",
+        description: `This exercise is used in ${usage.usedInWorkouts} workout template(s). Please archive it instead.`,
+        variant: "destructive",
+      });
       return;
     }
     
     if (confirm('⚠️ PERMANENTLY DELETE this exercise? This action cannot be undone.\n\nTo keep the exercise but hide it, use the Archive button instead.')) {
       const result = await deleteExercise(exerciseId, user.uid, canAccessAdminDashboard);
       if (!result.success) {
-        alert(result.error || 'Failed to delete exercise');
+        toast({
+          title: "Delete Failed",
+          description: result.error || 'Failed to delete exercise',
+          variant: "destructive",
+        });
       }
     }
   };

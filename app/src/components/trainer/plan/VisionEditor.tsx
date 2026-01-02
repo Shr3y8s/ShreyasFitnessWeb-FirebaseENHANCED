@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, Plus, X, Save, Loader2 } from 'lucide-react';
 import { VISION_TEMPLATES, VisionData } from '@/types/plan';
+import { useToast } from '@/hooks/use-toast';
 
 interface VisionEditorProps {
   initialData: VisionData | null;
@@ -13,6 +14,7 @@ interface VisionEditorProps {
 }
 
 export function VisionEditor({ initialData, onSave, isSaving }: VisionEditorProps) {
+  const { toast } = useToast();
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [goals, setGoals] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -66,7 +68,11 @@ export function VisionEditor({ initialData, onSave, isSaving }: VisionEditorProp
     const validGoals = goals.filter(g => g.trim() !== '').map(text => ({ text }));
     
     if (validGoals.length === 0) {
-      alert('Please add at least one goal');
+      toast({
+        title: "No Goals Added",
+        description: "Please add at least one goal",
+        variant: "destructive",
+      });
       return;
     }
 

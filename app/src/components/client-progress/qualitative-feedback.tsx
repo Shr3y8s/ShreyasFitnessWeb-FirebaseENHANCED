@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from '@/lib/auth-context'
+import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Send, Smile, Meh, Frown, Dumbbell, Utensils, Check, BrainCircuit, Activity, Bed, Sparkles, Loader2, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
@@ -75,6 +76,7 @@ const RatingScale = ({ value, onValueChange }: { value: number; onValueChange: (
 
 export function QualitativeFeedback() {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -186,7 +188,11 @@ export function QualitativeFeedback() {
             // Auto-hide success message after 5 seconds
             setTimeout(() => setSubmitSuccess(false), 5000);
         } else {
-            alert(`Error submitting survey: ${result.error}`);
+            toast({
+                title: "Submission Failed",
+                description: `Error submitting survey: ${result.error}`,
+                variant: "destructive",
+            });
         }
     };
 

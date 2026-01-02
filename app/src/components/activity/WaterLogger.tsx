@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Droplets, Save, Loader2, Plus, Minus, Check } from 'lucide-react';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { DailyWaterLog } from '@/types/activity';
+import { useToast } from '@/hooks/use-toast';
 
 interface WaterLoggerProps {
   currentLog?: DailyWaterLog;
@@ -15,6 +16,7 @@ interface WaterLoggerProps {
 }
 
 export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps) {
+  const { toast } = useToast();
   const [amount, setAmount] = useState<string>(currentLog?.amount.toString() || '0');
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -38,14 +40,22 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
     const amountValue = parseFloat(amount) || 0;
     
     if (amountValue < 0) {
-      alert('Water intake cannot be negative');
+      toast({
+        title: "Invalid Amount",
+        description: "Water intake cannot be negative",
+        variant: "destructive",
+      });
       return;
     }
 
     // Set max based on unit
     const maxAmount = unit === 'oz' ? 300 : unit === 'liters' ? 10 : 30;
     if (amountValue > maxAmount) {
-      alert(`Please enter a realistic amount (max ${maxAmount} ${unit})`);
+      toast({
+        title: "Amount Too High",
+        description: `Please enter a realistic amount (max ${maxAmount} ${unit})`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -53,9 +63,17 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
     try {
       await onSave(amountValue);
       setHasChanges(false);
+      toast({
+        title: "💧 Water Logged",
+        description: `Successfully logged ${amountValue} ${unit}`,
+      });
     } catch (error) {
       console.error('Error saving water:', error);
-      alert('Failed to save water intake. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save water intake. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -67,9 +85,17 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
       setAmount(goal.toString());
       await onSave(goal);
       setHasChanges(false);
+      toast({
+        title: "🎉 Goal Complete!",
+        description: `Great job! You hit your ${goal} ${unit} goal`,
+      });
     } catch (error) {
       console.error('Error completing goal:', error);
-      alert('Failed to complete goal. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to complete goal. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

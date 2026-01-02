@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dumbbell, Plus, X, Loader2 } from 'lucide-react';
 import { updateTrainingProtocol } from '@/lib/plan-api';
+import { useToast } from '@/hooks/use-toast';
 
 interface TrainingProtocolEditorProps {
   clientId: string;
@@ -20,6 +21,7 @@ export function TrainingProtocolEditor({
   keyPriorities: initialPriorities,
   onUpdate
 }: TrainingProtocolEditorProps) {
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [priorities, setPriorities] = useState<string[]>(initialPriorities || []);
   const [newPriority, setNewPriority] = useState('');
@@ -55,13 +57,25 @@ export function TrainingProtocolEditor({
 
       if (result.success) {
         await onUpdate();
+        toast({
+          title: "Training Protocol Saved",
+          description: "Key priorities updated successfully",
+        });
       } else {
         console.error('Failed to save training protocol');
-        alert('Failed to save. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving training protocol:', error);
-      alert('An error occurred. Please try again.');
+      toast({
+        title: "Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

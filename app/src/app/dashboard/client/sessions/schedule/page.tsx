@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { Timestamp, collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { signOutUser, db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -29,6 +30,7 @@ declare global {
 export default function ScheduleSessionsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [sessionToCancel, setSessionToCancel] = useState<TrainingSession | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<TrainingSession[]>([]);
@@ -241,14 +243,25 @@ export default function ScheduleSessionsPage() {
       if (data.success) {
         // Show success message
         if (data.creditReturned) {
-          alert('✅ Session canceled successfully! Credit returned to your balance.');
+          toast({
+            title: "Session Canceled",
+            description: "Credit returned to your balance.",
+          });
         } else {
-          alert('✅ Session canceled. No credit returned (less than 24 hours notice).');
+          toast({
+            title: "Session Canceled",
+            description: "No credit returned (less than 24 hours notice).",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {
       console.error('Error canceling session:', error);
-      alert('Failed to cancel session. Please try again.');
+      toast({
+        title: "Cancellation Failed",
+        description: "Failed to cancel session. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setCancelling(null);
       setSessionToCancel(null);

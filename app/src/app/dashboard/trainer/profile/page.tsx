@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db, auth } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -18,6 +19,7 @@ import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils'
 export default function TrainerProfilePage() {
   const router = useRouter();
   const { user, userData, loading: authLoading, updateUserData, canAccessTrainerDashboard } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -112,12 +114,20 @@ export default function TrainerProfilePage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file (JPG, PNG, or WebP)');
+      toast({
+        title: "Invalid File Type",
+        description: "Please select an image file (JPG, PNG, or WebP)",
+        variant: "destructive",
+      });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Please select an image smaller than 5MB');
+      toast({
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -156,12 +166,19 @@ export default function TrainerProfilePage() {
         profilePhotoLarge: large,
       });
 
-      alert('Profile photo updated successfully!');
+      toast({
+        title: "Photo Updated",
+        description: "Profile photo updated successfully!",
+      });
       setImageSrc(null);
       setCroppedAreaPixels(null);
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Failed to upload photo. Please try again.');
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload photo. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -213,7 +230,11 @@ export default function TrainerProfilePage() {
     if (!user) return;
 
     if (!editedName.trim()) {
-      alert('Name is required');
+      toast({
+        title: "Name Required",
+        description: "Please enter your name",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -238,12 +259,19 @@ export default function TrainerProfilePage() {
       await updateDoc(doc(db, 'admins', user.uid), updatedData);
       updateUserData(updatedData);
 
-      alert('Personal information updated successfully!');
+      toast({
+        title: "Profile Updated",
+        description: "Personal information updated successfully!",
+      });
       setIsEditingPersonal(false);
       setEditedPhoneError(null);
     } catch (error) {
       console.error('Error updating personal information:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingPersonal(false);
     }
@@ -330,45 +358,85 @@ export default function TrainerProfilePage() {
 
     // Validate required fields
     if (!editedEducationDegree.trim()) {
-      alert('Degree is required');
+      toast({
+        title: "Degree Required",
+        description: "Please enter your degree",
+        variant: "destructive",
+      });
       return;
     }
     if (!editedEducationMajor.trim()) {
-      alert('Major is required');
+      toast({
+        title: "Major Required",
+        description: "Please enter your major",
+        variant: "destructive",
+      });
       return;
     }
     if (!editedEducationInstitution.trim()) {
-      alert('Institution is required');
+      toast({
+        title: "Institution Required",
+        description: "Please enter your institution",
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate field lengths
     if (editedEducationDegree.length > 50) {
-      alert('Degree must be 50 characters or less');
+      toast({
+        title: "Degree Too Long",
+        description: "Degree must be 50 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedEducationMajor.length > 100) {
-      alert('Major must be 100 characters or less');
+      toast({
+        title: "Major Too Long",
+        description: "Major must be 100 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedEducationMinor.length > 100) {
-      alert('Minor must be 100 characters or less');
+      toast({
+        title: "Minor Too Long",
+        description: "Minor must be 100 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedEducationInstitution.length > 150) {
-      alert('Institution must be 150 characters or less');
+      toast({
+        title: "Institution Too Long",
+        description: "Institution must be 150 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedFitnessCertifications.length > 300) {
-      alert('Fitness certifications must be 300 characters or less');
+      toast({
+        title: "Text Too Long",
+        description: "Fitness certifications must be 300 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedNutritionCertifications.length > 300) {
-      alert('Nutrition certifications must be 300 characters or less');
+      toast({
+        title: "Text Too Long",
+        description: "Nutrition certifications must be 300 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedSpecialtyCertifications.length > 300) {
-      alert('Specialty certifications must be 300 characters or less');
+      toast({
+        title: "Text Too Long",
+        description: "Specialty certifications must be 300 characters or less",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -376,7 +444,11 @@ export default function TrainerProfilePage() {
     const allUrls = [...editedFitnessUrls, ...editedNutritionUrls, ...editedSpecialtyUrls];
     for (const url of allUrls) {
       if (url.trim() && !isValidUrl(url)) {
-        alert('Please enter valid URLs (must start with http:// or https://)');
+        toast({
+          title: "Invalid URL",
+          description: "Please enter valid URLs (must start with http:// or https://)",
+          variant: "destructive",
+        });
         return;
       }
     }
@@ -404,11 +476,18 @@ export default function TrainerProfilePage() {
       await updateDoc(doc(db, 'admins', user.uid), updatedData);
       updateUserData(updatedData);
 
-      alert('Education & credentials updated successfully!');
+      toast({
+        title: "Education Updated",
+        description: "Education & credentials updated successfully!",
+      });
       setIsEditingEducation(false);
     } catch (error) {
       console.error('Error updating education:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingEducation(false);
     }
@@ -434,23 +513,39 @@ export default function TrainerProfilePage() {
 
     // Validate required fields
     if (!editedYearsExperience) {
-      alert('Years of experience is required');
+      toast({
+        title: "Experience Required",
+        description: "Please enter years of experience",
+        variant: "destructive",
+      });
       return;
     }
     if (!editedSpecializations.trim()) {
-      alert('Specializations are required');
+      toast({
+        title: "Specializations Required",
+        description: "Please enter your specializations",
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate years of experience
     if (isNaN(Number(editedYearsExperience)) || Number(editedYearsExperience) < 0) {
-      alert('Please enter a valid number for years of experience');
+      toast({
+        title: "Invalid Number",
+        description: "Please enter a valid number for years of experience",
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate field length
     if (editedSpecializations.length > 300) {
-      alert('Specializations must be 300 characters or less');
+      toast({
+        title: "Text Too Long",
+        description: "Specializations must be 300 characters or less",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -464,11 +559,18 @@ export default function TrainerProfilePage() {
       await updateDoc(doc(db, 'admins', user.uid), updatedData);
       updateUserData(updatedData);
 
-      alert('Experience & expertise updated successfully!');
+      toast({
+        title: "Experience Updated",
+        description: "Experience & expertise updated successfully!",
+      });
       setIsEditingExperience(false);
     } catch (error) {
       console.error('Error updating experience:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingExperience(false);
     }
@@ -491,21 +593,37 @@ export default function TrainerProfilePage() {
 
     // Validate required fields
     if (!editedTrainingPhilosophy.trim()) {
-      alert('Training philosophy is required');
+      toast({
+        title: "Philosophy Required",
+        description: "Please enter your training philosophy",
+        variant: "destructive",
+      });
       return;
     }
     if (!editedAreasOfExpertise.trim()) {
-      alert('Areas of expertise are required');
+      toast({
+        title: "Expertise Required",
+        description: "Please enter your areas of expertise",
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate field lengths
     if (editedTrainingPhilosophy.length > 400) {
-      alert('Training philosophy must be 400 characters or less');
+      toast({
+        title: "Text Too Long",
+        description: "Training philosophy must be 400 characters or less",
+        variant: "destructive",
+      });
       return;
     }
     if (editedAreasOfExpertise.length > 400) {
-      alert('Areas of expertise must be 400 characters or less');
+      toast({
+        title: "Text Too Long",
+        description: "Areas of expertise must be 400 characters or less",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -519,11 +637,18 @@ export default function TrainerProfilePage() {
       await updateDoc(doc(db, 'admins', user.uid), updatedData);
       updateUserData(updatedData);
 
-      alert('Training philosophy updated successfully!');
+      toast({
+        title: "Philosophy Updated",
+        description: "Training philosophy updated successfully!",
+      });
       setIsEditingPhilosophy(false);
     } catch (error) {
       console.error('Error updating philosophy:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingPhilosophy(false);
     }
@@ -558,19 +683,35 @@ export default function TrainerProfilePage() {
 
     // Validate URLs if provided
     if (editedLinkedinUrl.trim() && !isValidUrl(editedLinkedinUrl)) {
-      alert('Please enter a valid LinkedIn URL (must start with http:// or https://)');
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid LinkedIn URL (must start with http:// or https://)",
+        variant: "destructive",
+      });
       return;
     }
     if (editedFacebookUrl.trim() && !isValidUrl(editedFacebookUrl)) {
-      alert('Please enter a valid Facebook URL (must start with http:// or https://)');
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid Facebook URL (must start with http:// or https://)",
+        variant: "destructive",
+      });
       return;
     }
     if (editedYoutubeUrl.trim() && !isValidUrl(editedYoutubeUrl)) {
-      alert('Please enter a valid YouTube URL (must start with http:// or https://)');
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid YouTube URL (must start with http:// or https://)",
+        variant: "destructive",
+      });
       return;
     }
     if (editedInstagramUrl.trim() && !isValidUrl(editedInstagramUrl)) {
-      alert('Please enter a valid Instagram URL (must start with http:// or https://)');
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid Instagram URL (must start with http:// or https://)",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -586,11 +727,18 @@ export default function TrainerProfilePage() {
       await updateDoc(doc(db, 'admins', user.uid), updatedData);
       updateUserData(updatedData);
 
-      alert('Social media links updated successfully!');
+      toast({
+        title: "Social Media Updated",
+        description: "Social media links updated successfully!",
+      });
       setIsEditingSocialMedia(false);
     } catch (error) {
       console.error('Error updating social media:', error);
-      alert('Failed to update. Please try again.');
+      toast({
+        title: "Update Failed",
+        description: "Failed to update. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSavingSocialMedia(false);
     }
@@ -635,7 +783,10 @@ export default function TrainerProfilePage() {
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
 
-      alert('Password updated successfully!');
+      toast({
+        title: "Password Updated",
+        description: "Password updated successfully!",
+      });
       setIsEditingSecurity(false);
       setCurrentPassword('');
       setNewPassword('');

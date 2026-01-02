@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 import { LoginHistoryItem } from './LoginHistoryItem';
 import { 
   getMyLoginHistory, 
@@ -13,6 +14,7 @@ import { LoginHistoryEntry, LoginHistoryStats } from '@/types/login-history';
 import { History, AlertTriangle, Download, Loader2 } from 'lucide-react';
 
 export function LoginHistoryCard() {
+  const { toast } = useToast();
   const [history, setHistory] = useState<LoginHistoryEntry[]>([]);
   const [stats, setStats] = useState<LoginHistoryStats | null>(null);
   const [suspicious, setSuspicious] = useState<LoginHistoryEntry[]>([]);
@@ -49,7 +51,11 @@ export function LoginHistoryCard() {
       await exportLoginHistory();
     } catch (error) {
       console.error('Error exporting history:', error);
-      alert('Failed to export history. Please try again.');
+      toast({
+        title: "Export Failed",
+        description: "Failed to export history. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setExporting(false);
     }

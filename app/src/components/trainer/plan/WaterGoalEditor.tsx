@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Droplets, Plus, X, Save, Loader2 } from 'lucide-react';
 import { DEFAULT_WATER_TIPS, WaterGoalData } from '@/types/plan';
+import { useToast } from '@/hooks/use-toast';
 
 interface WaterGoalEditorProps {
   initialData: WaterGoalData | null;
@@ -13,6 +14,7 @@ interface WaterGoalEditorProps {
 }
 
 export function WaterGoalEditor({ initialData, onSave, isSaving }: WaterGoalEditorProps) {
+  const { toast } = useToast();
   const [target, setTarget] = useState<number>(100);
   const [unit, setUnit] = useState<'oz' | 'liters' | 'cups'>('oz');
   const [tips, setTips] = useState<string[]>(DEFAULT_WATER_TIPS);
@@ -100,7 +102,11 @@ export function WaterGoalEditor({ initialData, onSave, isSaving }: WaterGoalEdit
     }
 
     if (target < minValue || target > maxValue) {
-      alert(`Water goal must be between ${minValue} and ${maxValue} ${unit}`);
+      toast({
+        title: "Invalid Water Goal",
+        description: `Water goal must be between ${minValue} and ${maxValue} ${unit}`,
+        variant: "destructive",
+      });
       return;
     }
 

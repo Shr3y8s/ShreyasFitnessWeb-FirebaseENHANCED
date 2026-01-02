@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Footprints, Save, Loader2, Check } from 'lucide-react';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { DailyStepsLog } from '@/types/activity';
+import { useToast } from '@/hooks/use-toast';
 
 interface StepsLoggerProps {
   currentLog?: DailyStepsLog;
@@ -14,6 +15,7 @@ interface StepsLoggerProps {
 }
 
 export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
+  const { toast } = useToast();
   const [steps, setSteps] = useState<string>(currentLog?.steps.toString() || '');
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -30,12 +32,20 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
     const stepsValue = parseInt(steps) || 0;
     
     if (stepsValue < 0) {
-      alert('Steps cannot be negative');
+      toast({
+        title: "Invalid Input",
+        description: "Steps cannot be negative",
+        variant: "destructive",
+      });
       return;
     }
 
     if (stepsValue > 100000) {
-      alert('Please enter a realistic step count (max 100,000)');
+      toast({
+        title: "Count Too High",
+        description: "Please enter a realistic step count (max 100,000)",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -43,9 +53,17 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
     try {
       await onSave(stepsValue);
       setHasChanges(false);
+      toast({
+        title: "👟 Steps Logged",
+        description: `Successfully logged ${stepsValue.toLocaleString()} steps`,
+      });
     } catch (error) {
       console.error('Error saving steps:', error);
-      alert('Failed to save steps. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save steps. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -57,9 +75,17 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
       setSteps(goal.toString());
       await onSave(goal);
       setHasChanges(false);
+      toast({
+        title: "🎉 Goal Complete!",
+        description: `Amazing! You hit your ${goal.toLocaleString()} step goal`,
+      });
     } catch (error) {
       console.error('Error completing goal:', error);
-      alert('Failed to complete goal. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to complete goal. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

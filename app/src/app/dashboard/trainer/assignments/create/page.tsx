@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { 
@@ -76,6 +77,7 @@ export default function CreateAssignmentPage() {
   const searchParams = useSearchParams();
   const preselectedTemplateId = searchParams.get('templateId');
   const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -286,7 +288,11 @@ export default function CreateAssignmentPage() {
 
   const handleSaveAssignment = async () => {
     if (!user || !selectedTemplate || !selectedClientId || configuredExercises.length === 0) {
-      alert('Please complete all steps before saving.');
+      toast({
+        title: "Validation Error",
+        description: "Please complete all steps before saving.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -303,11 +309,18 @@ export default function CreateAssignmentPage() {
         // Description comes from template, not stored in assignment
       });
 
-      alert('Workout assigned successfully!');
+      toast({
+        title: "Workout Assigned",
+        description: "Workout assigned successfully!",
+      });
       router.push('/dashboard/trainer/assignments');
     } catch (error) {
       console.error('Error assigning workout:', error);
-      alert('Failed to assign workout. Please try again.');
+      toast({
+        title: "Assignment Failed",
+        description: "Failed to assign workout. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

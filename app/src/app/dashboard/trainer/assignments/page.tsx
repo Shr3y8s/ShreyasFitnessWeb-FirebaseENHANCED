@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { 
   doc, 
@@ -78,6 +79,7 @@ export default function WorkoutAssignmentsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+  const { toast } = useToast();
 
   // Mode state - always view mode
   const [mode, setMode] = useState<'create' | 'view'>('view');
@@ -384,7 +386,10 @@ export default function WorkoutAssignmentsPage() {
       });
 
       if (result.success) {
-        alert(`Success! Workout assigned to ${selectedClientIds.length} client${selectedClientIds.length !== 1 ? 's' : ''}!`);
+        toast({
+          title: "Workout Assigned",
+          description: `Successfully assigned to ${selectedClientIds.length} client${selectedClientIds.length !== 1 ? 's' : ''}`,
+        });
         
         // Reload assignments
         const assignmentsQuery = query(
@@ -418,11 +423,19 @@ export default function WorkoutAssignmentsPage() {
         // Switch to view mode
         setMode('view');
       } else {
-        alert(`Failed to assign workout. ${result.error?.message || 'Please try again.'}`);
+        toast({
+          title: "Assignment Failed",
+          description: result.error?.message || "Failed to assign workout. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error assigning workout:', error);
-      alert('An error occurred while assigning the workout.');
+      toast({
+        title: "Error",
+        description: "An error occurred while assigning the workout.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -1006,7 +1019,10 @@ export default function WorkoutAssignmentsPage() {
                                     updateDoc(doc(db, 'workoutAssignments', selectedAssignment.id), {
                                       dueDate: Timestamp.fromDate(new Date(newDeadline))
                                     }).then(() => {
-                                      alert('Deadline updated!');
+                                      toast({
+                                        title: "Deadline Updated",
+                                        description: "Assignment deadline updated successfully",
+                                      });
                                       // Reload assignments
                                       const assignmentsQuery = query(
                                         collection(db, 'workoutAssignments'),
@@ -1036,7 +1052,11 @@ export default function WorkoutAssignmentsPage() {
                                       });
                                     }).catch(error => {
                                       console.error('Error updating deadline:', error);
-                                      alert('Failed to update deadline');
+                                      toast({
+                                        title: "Update Failed",
+                                        description: "Failed to update deadline",
+                                        variant: "destructive",
+                                      });
                                     });
                                   }
                                 }}

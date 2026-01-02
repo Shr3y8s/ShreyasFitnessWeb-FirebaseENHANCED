@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -86,6 +87,7 @@ export default function ClientDetailPage() {
   const params = useParams();
   const clientId = params?.id as string;
   const { user, loading: authLoading, canAccessTrainerDashboard, canAccessAdminDashboard } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [clientData, setClientData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -623,13 +625,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('Vision saved successfully!');
+        toast({
+          title: "Vision Saved",
+          description: "Vision saved successfully!",
+        });
       } else {
-        alert('Failed to save vision. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save vision. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving vision:', error);
-      alert('An error occurred while saving.');
+      toast({
+        title: "Error",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
     } finally {
       setSavingVision(false);
     }
@@ -644,13 +657,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('Step goal saved successfully!');
+        toast({
+          title: "Step Goal Saved",
+          description: "Step goal saved successfully!",
+        });
       } else {
-        alert('Failed to save step goal. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save step goal. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving step goal:', error);
-      alert('An error occurred while saving.');
+      toast({
+        title: "Error",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
     } finally {
       setSavingStepGoal(false);
     }
@@ -665,13 +689,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('Water goal saved successfully!');
+        toast({
+          title: "Water Goal Saved",
+          description: "Water goal saved successfully!",
+        });
       } else {
-        alert('Failed to save water goal. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save water goal. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving water goal:', error);
-      alert('An error occurred while saving.');
+      toast({
+        title: "Error",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
     } finally {
       setSavingWaterGoal(false);
     }
@@ -686,13 +721,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('LISS Cardio saved successfully!');
+        toast({
+          title: "LISS Cardio Saved",
+          description: "LISS Cardio saved successfully!",
+        });
       } else {
-        alert('Failed to save LISS cardio. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save LISS cardio. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving LISS cardio:', error);
-      alert('An error occurred while saving.');
+      toast({
+        title: "Error",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
     } finally {
       setSavingLissCardio(false);
     }
@@ -705,13 +751,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('LISS Cardio removed successfully!');
+        toast({
+          title: "LISS Cardio Removed",
+          description: "LISS Cardio removed successfully!",
+        });
       } else {
-        alert('Failed to remove LISS cardio. Please try again.');
+        toast({
+          title: "Remove Failed",
+          description: "Failed to remove LISS cardio. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error removing LISS cardio:', error);
-      alert('An error occurred while removing.');
+      toast({
+        title: "Error",
+        description: "An error occurred while removing.",
+        variant: "destructive",
+      });
     } finally {
       setSavingLissCardio(false);
     }
@@ -726,13 +783,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('Weekly Focus saved successfully!');
+        toast({
+          title: "Weekly Focus Saved",
+          description: "Weekly Focus saved successfully!",
+        });
       } else {
-        alert('Failed to save weekly focus. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save weekly focus. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving weekly focus:', error);
-      alert('An error occurred while saving.');
+      toast({
+        title: "Error",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
     } finally {
       setSavingWeeklyFocus(false);
     }
@@ -747,13 +815,24 @@ export default function ClientDetailPage() {
       if (result.success) {
         const updatedPlan = await getClientPlan(clientId);
         setPlan(updatedPlan);
-        alert('Daily Habits saved successfully!');
+        toast({
+          title: "Daily Habits Saved",
+          description: "Daily Habits saved successfully!",
+        });
       } else {
-        alert('Failed to save daily habits. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save daily habits. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving daily habits:', error);
-      alert('An error occurred while saving.');
+      toast({
+        title: "Error",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
     } finally {
       setSavingDailyHabits(false);
     }

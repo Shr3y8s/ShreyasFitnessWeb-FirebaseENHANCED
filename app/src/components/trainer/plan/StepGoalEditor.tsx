@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Footprints, Plus, X, Save, Loader2 } from 'lucide-react';
 import { DEFAULT_STEP_TIPS, StepGoalData } from '@/types/plan';
+import { useToast } from '@/hooks/use-toast';
 
 interface StepGoalEditorProps {
   initialData: StepGoalData | null;
@@ -13,6 +14,7 @@ interface StepGoalEditorProps {
 }
 
 export function StepGoalEditor({ initialData, onSave, isSaving }: StepGoalEditorProps) {
+  const { toast } = useToast();
   const [target, setTarget] = useState<number>(10000);
   const [tips, setTips] = useState<string[]>(DEFAULT_STEP_TIPS);
   const [hasChanges, setHasChanges] = useState(false);
@@ -61,7 +63,11 @@ export function StepGoalEditor({ initialData, onSave, isSaving }: StepGoalEditor
   const handleSave = async () => {
     // Validate target
     if (target < 1000 || target > 30000) {
-      alert('Step goal must be between 1,000 and 30,000 steps');
+      toast({
+        title: "Invalid Step Goal",
+        description: "Step goal must be between 1,000 and 30,000 steps",
+        variant: "destructive",
+      });
       return;
     }
 

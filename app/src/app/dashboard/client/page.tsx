@@ -7,6 +7,7 @@ import { signOutUser, db } from '@/lib/firebase';
 import { doc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
 import { Session, TrainingSession } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
+import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
 import { WelcomeHeader } from '@/components/dashboard/welcome-header';
@@ -42,6 +43,7 @@ const completedSessions = [
 export default function ClientDashboardPage() {
   const router = useRouter();
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -189,12 +191,18 @@ export default function ClientDashboardPage() {
   // Button handlers
   const handleLogMeal = () => {
     console.log('Log Meal clicked');
-    alert('Meal logging feature coming soon!');
+    toast({
+      title: "Coming Soon",
+      description: "Meal logging feature is coming soon!",
+    });
   };
 
   const handleAddWater = () => {
     console.log('Add Water clicked');
-    alert('Water tracking feature coming soon!');
+    toast({
+      title: "Coming Soon",
+      description: "Water tracking feature is coming soon!",
+    });
   };
 
   const formatSessionDateTime = (timestamp: Timestamp) => {

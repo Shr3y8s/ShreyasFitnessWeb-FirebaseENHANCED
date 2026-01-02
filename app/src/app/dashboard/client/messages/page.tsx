@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -41,6 +42,7 @@ interface TrainerData {
 export default function ClientMessagesPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -239,7 +241,11 @@ export default function ClientMessagesPage() {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       setMessageContent(messageText);
-      alert('Failed to send message. Please try again.');
+      toast({
+        title: "Send Failed",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSending(false);
     }

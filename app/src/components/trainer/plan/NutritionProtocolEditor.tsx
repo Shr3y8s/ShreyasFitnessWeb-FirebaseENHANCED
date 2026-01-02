@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy } from 'lucide-react';
 import { updateNutritionProtocol } from '@/lib/plan-api';
 import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO } from '@/types/plan';
+import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -141,6 +142,7 @@ export function NutritionProtocolEditor({
   currentData,
   onUpdate
 }: NutritionProtocolEditorProps) {
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<NutritionApproach>(currentApproach || 'healthy_habits');
   
@@ -381,14 +383,25 @@ export function NutritionProtocolEditor({
 
       if (result.success) {
         await onUpdate();
-        alert('Nutrition protocol saved successfully!');
+        toast({
+          title: "Nutrition Protocol Saved",
+          description: "Nutrition protocol saved successfully",
+        });
       } else {
         console.error('Failed to save nutrition protocol');
-        alert('Failed to save. Please try again.');
+        toast({
+          title: "Save Failed",
+          description: "Failed to save. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error('Error saving nutrition protocol:', error);
-      alert('An error occurred. Please try again.');
+      toast({
+        title: "Error",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

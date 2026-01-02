@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { 
   collection, 
@@ -46,6 +47,7 @@ interface PendingAccount {
 export default function AdminPendingAccountsPage() {
   const router = useRouter();
   const { user, canAccessAdminDashboard } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [accounts, setAccounts] = useState<PendingAccount[]>([]);
   const [filteredAccounts, setFilteredAccounts] = useState<PendingAccount[]>([]);
@@ -166,8 +168,12 @@ export default function AdminPendingAccountsPage() {
       setSelectedIds(prev => prev.filter(id => id !== accountId));
     } catch (error) {
       console.error('Error deleting account:', error);
-      alert('Failed to delete account. Please try again.');
-    } finally {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    } finally{
       setIsDeleting(false);
     }
   };
@@ -183,7 +189,11 @@ export default function AdminPendingAccountsPage() {
       setBulkDeleteConfirm(false);
     } catch (error) {
       console.error('Error bulk deleting accounts:', error);
-      alert('Failed to delete some accounts. Please try again.');
+      toast({
+        title: "Bulk Delete Failed",
+        description: "Failed to delete some accounts. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsDeleting(false);
     }

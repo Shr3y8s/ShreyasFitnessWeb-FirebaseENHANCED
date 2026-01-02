@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Scale, Save, Loader2, TrendingDown, TrendingUp, Info } from 'lucide-react';
 import { WeightLog } from '@/types/activity';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 interface WeightLoggerProps {
   currentLog?: WeightLog;
@@ -21,6 +22,7 @@ interface WeightLoggerProps {
 }
 
 export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerProps) {
+  const { toast } = useToast();
   const [weight, setWeight] = useState<string>(currentLog?.weight.toString() || '');
   const [unit, setUnit] = useState<'lbs' | 'kg'>(currentLog?.unit || 'lbs');
   const [bodyFat, setBodyFat] = useState<string>(currentLog?.bodyFat?.toString() || '');
@@ -106,7 +108,11 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
     const weightValue = parseFloat(weight);
     
     if (!weightValue || weightValue <= 0) {
-      alert('Please enter a valid weight');
+      toast({
+        title: "Invalid Input",
+        description: "Please enter a valid weight",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -115,14 +121,22 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
     const maxWeight = unit === 'lbs' ? 500 : 250;
     
     if (weightValue < minWeight || weightValue > maxWeight) {
-      alert(`Please enter a weight between ${minWeight} and ${maxWeight} ${unit}`);
+      toast({
+        title: "Invalid Weight",
+        description: `Please enter a weight between ${minWeight} and ${maxWeight} ${unit}`,
+        variant: "destructive",
+      });
       return;
     }
 
     // Validate body fat if provided
     const bodyFatValue = bodyFat ? parseFloat(bodyFat) : undefined;
     if (bodyFatValue !== undefined && (bodyFatValue < 1 || bodyFatValue > 60)) {
-      alert('Body fat percentage should be between 1% and 60%');
+      toast({
+        title: "Invalid Body Fat %",
+        description: "Body fat percentage should be between 1% and 60%",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -132,7 +146,11 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
       const minHeight = heightUnit === 'in' ? 36 : 90; // 3 feet or 90cm
       const maxHeight = heightUnit === 'in' ? 96 : 240; // 8 feet or 240cm
       if (heightValue < minHeight || heightValue > maxHeight) {
-        alert(`Please enter a height between ${minHeight} and ${maxHeight} ${heightUnit}`);
+        toast({
+          title: "Invalid Height",
+          description: `Please enter a height between ${minHeight} and ${maxHeight} ${heightUnit}`,
+          variant: "destructive",
+        });
         return;
       }
     }
@@ -148,9 +166,17 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
         notes.trim() || undefined
       );
       setHasChanges(false);
+      toast({
+        title: "✅ Weight Logged",
+        description: `Successfully logged ${weightValue} ${unit}`,
+      });
     } catch (error) {
       console.error('Error saving weight:', error);
-      alert('Failed to save weight. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to save weight. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }

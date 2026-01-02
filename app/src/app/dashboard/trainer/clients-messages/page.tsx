@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { 
   doc, 
@@ -64,6 +65,7 @@ export default function ClientMessagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+  const { toast } = useToast();
   
   // Mode state
   const [mode, setMode] = useState<'compose' | 'view'>('view');
@@ -425,14 +427,21 @@ export default function ClientMessagesPage() {
 
       await Promise.all(promises);
 
-      alert(`Success! Message sent to ${selectedClientIds.length} client${selectedClientIds.length !== 1 ? 's' : ''}!`);
+      toast({
+        title: "Message Sent",
+        description: `Success! Message sent to ${selectedClientIds.length} client${selectedClientIds.length !== 1 ? 's' : ''}.`,
+      });
       
       // Clear form and switch to view mode
       clearSelection();
       setMode('view');
     } catch (error) {
       console.error('Error sending group message:', error);
-      alert('An error occurred while sending the message.');
+      toast({
+        title: "Send Failed",
+        description: "An error occurred while sending the message.",
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -488,7 +497,11 @@ export default function ClientMessagesPage() {
       console.error('Error sending message:', error);
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       setMessageContent(messageText);
-      alert('Failed to send message. Please try again.');
+      toast({
+        title: "Send Failed",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSending(false);
     }

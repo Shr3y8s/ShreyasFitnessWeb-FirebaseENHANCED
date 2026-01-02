@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 import { db, listenToExercises } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { 
@@ -127,6 +128,7 @@ export default function CreateWorkoutTemplatePage() {
   const searchParams = useSearchParams();
   const templateId = searchParams.get('id');
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState<'basic' | 'exercises' | 'preview'>('basic');
@@ -273,7 +275,11 @@ export default function CreateWorkoutTemplatePage() {
 
   const handleSaveTemplate = async () => {
     if (!user || !templateForm.name || templateExercises.length === 0) {
-      alert('Please provide a name and add at least one exercise.');
+      toast({
+        title: "Validation Error",
+        description: "Please provide a name and add at least one exercise.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -315,18 +321,28 @@ export default function CreateWorkoutTemplatePage() {
           templateId,
           ...templateData,
         });
-        alert('Workout template updated successfully!');
+        toast({
+          title: "Template Updated",
+          description: "Workout template updated successfully!",
+        });
       } else {
         // Create new template using cloud function
         const { createWorkoutTemplate } = await import('@/lib/workout-api');
         await createWorkoutTemplate(templateData);
-        alert('Workout template created successfully!');
+        toast({
+          title: "Template Created",
+          description: "Workout template created successfully!",
+        });
       }
       
       router.push('/dashboard/trainer/workouts');
     } catch (error) {
       console.error('Error saving template:', error);
-      alert(`Failed to ${templateId ? 'update' : 'create'} template. Please try again.`);
+      toast({
+        title: "Save Failed",
+        description: `Failed to ${templateId ? 'update' : 'create'} template. Please try again.`,
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
