@@ -22,6 +22,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
+import { VolumeChart } from '@/components/charts/VolumeChart';
+import { ExerciseCompletionChart } from '@/components/charts/ExerciseCompletionChart';
 
 interface ClientData {
   id: string;
@@ -851,12 +853,7 @@ export default function ClientTrainingDashboard() {
                 </TabsContent>
 
                 <TabsContent value="volume">
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="font-semibold text-gray-700 mb-2">Weekly Training Volume</h3>
-                    <p className="text-sm text-gray-600">Total training volume over time (Sets × Reps × Weight)</p>
-                    <p className="text-xs text-gray-500 mt-4">(Phase 3: Chart implementation)</p>
-                  </div>
+                  <VolumeChart clientId={clientId} weeksBack={12} />
                 </TabsContent>
 
                 <TabsContent value="consistency">
@@ -869,12 +866,7 @@ export default function ClientTrainingDashboard() {
                 </TabsContent>
 
                 <TabsContent value="completion">
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Activity className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="font-semibold text-gray-700 mb-2">Exercise Completion Rates</h3>
-                    <p className="text-sm text-gray-600">Which exercises are completed vs frequently skipped</p>
-                    <p className="text-xs text-gray-500 mt-4">(Phase 3: Bar chart implementation)</p>
-                  </div>
+                  <ExerciseCompletionChart clientId={clientId} monthsBack={3} />
                 </TabsContent>
               </Tabs>
             </div>
