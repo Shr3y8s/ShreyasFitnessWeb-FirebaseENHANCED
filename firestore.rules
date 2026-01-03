@@ -332,6 +332,20 @@ service cloud.firestore {
                     request.auth.uid == resource.data.clientId &&
                     validateWorkoutUpdate();
     }
+    
+    // CLIENT STATS COLLECTION - Personal records and training metrics
+    // Stores aggregated statistics like strength PRs for efficient dashboard queries
+    match /clientStats/{clientId} {
+      // Trainers/admins can read all client stats (for training dashboards)
+      allow read: if isTrainerOrAdmin();
+      
+      // Clients can read their own stats (for future client-facing features)
+      allow read: if isAuthenticated() && request.auth.uid == clientId;
+      
+      // Only Cloud Functions can write (via completeWorkout function)
+      // Cloud Functions use admin SDK which bypasses rules, but explicit deny for clarity
+      allow write: if false;
+    }
 
     // CLIENT MESSAGING SYSTEM - Phase 3
     match /client_messages/{messageId} {

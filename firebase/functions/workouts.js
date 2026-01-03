@@ -390,7 +390,96 @@ exports.completeWorkout = onCall({
     const startedAtMillis = completedAt.toMillis() - (durationMinutes * 60 * 1000);
     const startedAt = admin.firestore.Timestamp.fromMillis(startedAtMillis);
 
-    // Update workout
+    // ============================================================================
+    // PERSONAL RECORDS DETECTION & STORAGE
+    // ============================================================================
+    
+    const now = admin.firestore.Timestamp.now();
+    const personalRecords = {}; // Track PRs detected in this workout
+    
+    // Get client stats document
+    const clientStatsRef = admin.firestore().collection('clientStats').doc(clientId);
+    const clientStatsDoc = await clientStatsRef.get();
+    
+    let clientStats = clientStatsDoc.exists ? clientStatsDoc.data() : {
+      strengthRecords: {},
+      updatedAt: now
+    };
+    
+    if (!clientStats.strengthRecords) {
+      clientStats.strengthRecords = {};
+    }
+    
+    // Process each exercise to detect PRs
+    for (const exercise of exercises) {
+      // Only process strength exercises with actual data
+      if (exercise.exerciseType !== 'strength' || !exercise.actual || exercise.actual.type !== 'strength') {
+        continue;
+      }
+      
+      // Find max weight lifted in this workout
+      let maxWeight = 0;
+      let weightUnit = 'lbs';
+      
+      if (exercise.actual.completedSets && Array.isArray(exercise.actual.completedSets)) {
+        for (const set of exercise.actual.completedSets) {
+          if (set.completed && set.actualWeight) {
+            if (set.actualWeight > maxWeight) {
+              maxWeight = set.actualWeight;
+              weightUnit = set.actualWeightUnit || 'lbs';
+            }
+          }
+        }
+      }
+      
+      // Skip if no weight was lifted
+      if (maxWeight === 0) continue;
+      
+      // Check if this is a new PR
+      const exerciseId = exercise.exerciseId;
+      const existingRecord = clientStats.strengthRecords[exerciseId];
+      
+      if (!existingRecord || maxWeight > existingRecord.maxWeight) {
+        // New PR detected!
+        const oldMax = existingRecord ? existingRecord.maxWeight : 0;
+        
+        // Update clientStats
+        clientStats.strengthRecords[exerciseId] = {
+          exerciseName: exercise.exerciseName,
+          maxWeight: maxWeight,
+          weightUnit: weightUnit,
+          date: completedAt,
+          workoutId: data.workoutId
+        };
+        
+        // Store PR in workout doc for display
+        personalRecords[exerciseId] = {
+          exerciseName: exercise.exerciseName,
+          newMax: maxWeight,
+          oldMax: oldMax,
+          improvement: maxWeight - oldMax,
+          weightUnit: weightUnit,
+          isNewPR: true
+        };
+        
+        logger.info('Personal Record detected', {
+          clientId,
+          workoutId: data.workoutId,
+          exerciseId,
+          exerciseName: exercise.exerciseName,
+          newMax: maxWeight,
+          oldMax: oldMax
+        });
+      }
+    }
+    
+    // Update clientStats document if there were any PRs
+    if (Object.keys(personalRecords).length > 0) {
+      clientStats.updatedAt = now;
+      await clientStatsRef.set(clientStats, { merge: true });
+    }
+
+    // Update workout with PR data
     await workoutRef.update({
       status: 'completed',
       startedAt: startedAt,
@@ -399,7 +488,8 @@ exports.completeWorkout = onCall({
       durationMinutes: durationMinutes,
       overallDifficulty: data.overallDifficulty || workoutData.overallDifficulty,
       overallNotes: data.overallNotes || workoutData.overallNotes || "",
-      updatedAt: admin.firestore.Timestamp.now(),
+      personalRecords: personalRecords, // Store detected PRs
+      updatedAt: now,
     });
 
     logger.info("Workout completed successfully", {

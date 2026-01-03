@@ -424,7 +424,7 @@ export default function ClientTrainingDashboard() {
     }
   }, [clientId, clientData]);
 
-  // Fetch Personal Records
+  // Fetch Personal Records from clientStats
   useEffect(() => {
     const fetchPRMetrics = async () => {
       if (!clientId) return;
@@ -436,138 +436,43 @@ export default function ClientTrainingDashboard() {
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         
-        // Fetch ALL completed workouts
-        const workoutsRef = collection(db, 'workouts');
-        const q = query(
-          workoutsRef,
-          where('clientId', '==', clientId),
-          where('status', '==', 'completed'),
-          orderBy('completedAt', 'asc')
-        );
+        // Read clientStats document (single read!)
+        const clientStatsRef = doc(db, 'clientStats', clientId);
+        const clientStatsDoc = await getDoc(clientStatsRef);
         
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty) {
+        if (!clientStatsDoc.exists()) {
           setPRMetrics({ prs: [], totalPRs: 0 });
           return;
         }
         
-        // Track max weight per exercise: { exerciseId: { max, name, unit, date } }
-        const exerciseMaxes: Record<string, { 
-          historicalMax: number; 
-          currentMonthMax: number;
-          name: string; 
-          unit: string;
-          date: Date;
-        }> = {};
+        const clientStats = clientStatsDoc.data();
+        const strengthRecords = clientStats.strengthRecords || {};
         
-        snapshot.docs.forEach(doc => {
-          const workout = doc.data();
-          const completedAt = workout.completedAt?.toDate();
-          if (!completedAt) return;
-          
-          const isCurrentMonth = completedAt >= monthStart;
-          
-          // Process each exercise
-          workout.exercises?.forEach((exercise: any) => {
-            // Only process strength exercises with actual data
-            if (exercise.exerciseType !== 'strength' || !exercise.actual?.completedSets) return;
-            
-            // Find max weight in this workout for this exercise
-            let maxWeight = 0;
-            let weightUnit = 'lbs';
-            
-            exercise.actual.completedSets.forEach((set: any) => {
-              if (set.completed && set.actualWeight) {
-                if (set.actualWeight > maxWeight) {
-                  maxWeight = set.actualWeight;
-                  weightUnit = set.actualWeightUnit || 'lbs';
-                }
-              }
-            });
-            
-            if (maxWeight === 0) return;
-            
-            // Initialize or update tracking
-            if (!exerciseMaxes[exercise.exerciseId]) {
-              exerciseMaxes[exercise.exerciseId] = {
-                historicalMax: maxWeight,
-                currentMonthMax: isCurrentMonth ? maxWeight : 0,
-                name: exercise.exerciseName,
-                unit: weightUnit,
-                date: completedAt
-              };
-            } else {
-              // Update historical max
-              if (maxWeight > exerciseMaxes[exercise.exerciseId].historicalMax) {
-                exerciseMaxes[exercise.exerciseId].historicalMax = maxWeight;
-                exerciseMaxes[exercise.exerciseId].date = completedAt;
-              }
-              
-              // Update current month max
-              if (isCurrentMonth && maxWeight > exerciseMaxes[exercise.exerciseId].currentMonthMax) {
-                exerciseMaxes[exercise.exerciseId].currentMonthMax = maxWeight;
-              }
-            }
-          });
-        });
-        
-        // Detect PRs: current month max > any historical max before this month
+        // Filter PRs from current month
         const prs: PersonalRecord[] = [];
         
-        // Re-scan to find PRs properly
-        const exerciseHistory: Record<string, number[]> = {}; // exerciseId -> [weights by date]
-        
-        snapshot.docs.forEach(doc => {
-          const workout = doc.data();
-          const completedAt = workout.completedAt?.toDate();
-          if (!completedAt) return;
+        Object.entries(strengthRecords).forEach(([exerciseId, record]: [string, any]) => {
+          const prDate = record.date?.toDate();
           
-          workout.exercises?.forEach((exercise: any) => {
-            if (exercise.exerciseType !== 'strength' || !exercise.actual?.completedSets) return;
-            
-            let maxWeight = 0;
-            exercise.actual.completedSets.forEach((set: any) => {
-              if (set.completed && set.actualWeight > maxWeight) {
-                maxWeight = set.actualWeight;
-              }
-            });
-            
-            if (maxWeight === 0) return;
-            
-            if (!exerciseHistory[exercise.exerciseId]) {
-              exerciseHistory[exercise.exerciseId] = [];
-            }
-            exerciseHistory[exercise.exerciseId].push(maxWeight);
-          });
-        });
-        
-        // Now detect PRs: current month max > all-time previous max
-        Object.keys(exerciseMaxes).forEach(exerciseId => {
-          const data = exerciseMaxes[exerciseId];
-          if (data.currentMonthMax === 0) return; // No lifts this month
-          
-          const history = exerciseHistory[exerciseId] || [];
-          const previousMax = Math.max(...history.slice(0, -1)); // All except latest
-          
-          if (data.currentMonthMax > previousMax && previousMax > 0) {
+          // Check if PR was set this month
+          if (prDate && prDate >= monthStart) {
             prs.push({
               exerciseId,
-              exerciseName: data.name,
-              newMax: data.currentMonthMax,
-              oldMax: previousMax,
-              improvement: data.currentMonthMax - previousMax,
-              weightUnit: data.unit,
-              date: data.date
+              exerciseName: record.exerciseName,
+              newMax: record.maxWeight,
+              oldMax: 0, // We don't store old max in clientStats, but that's ok
+              improvement: record.maxWeight, // Show as absolute value
+              weightUnit: record.weightUnit,
+              date: prDate
             });
           }
         });
         
-        // Sort by improvement (biggest PRs first)
-        prs.sort((a, b) => b.improvement - a.improvement);
+        // Sort by weight (biggest lifts first)
+        prs.sort((a, b) => b.newMax - a.newMax);
         
         setPRMetrics({
-          prs: prs.slice(0, 5), // Top 5 PRs
+          prs: prs.slice(0, 5), // Top 5 PRs this month
           totalPRs: prs.length
         });
       } catch (error) {

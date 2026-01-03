@@ -426,6 +426,18 @@ export interface Workout {
   overallDifficulty?: 'easy' | 'moderate' | 'hard' | 'very_hard';
   overallNotes?: string; // Client's overall notes
   
+  // Personal Records (detected at completion time)
+  personalRecords?: {
+    [exerciseId: string]: {
+      exerciseName: string;
+      newMax: number;
+      oldMax: number;
+      improvement: number;
+      weightUnit: string;
+      isNewPR: boolean;
+    };
+  };
+  
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
