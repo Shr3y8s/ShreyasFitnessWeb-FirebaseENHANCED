@@ -112,8 +112,8 @@ export function SetTracker({
               </div>
             </div>
 
-            {/* Actual Performance Inputs */}
-            {!readOnly && isCompleted && (
+            {/* Actual Performance Inputs - Always show during tracking */}
+            {!readOnly && (
               <div className="flex items-center gap-2">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor={`reps-${plannedSet.setNumber}`} className="text-xs">

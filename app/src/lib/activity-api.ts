@@ -24,7 +24,7 @@ import {
   getTodayDateString
 } from '@/types/activity';
 
-// Top-level collection for consistency with nutritionLogs and workoutExecutions
+// Top-level collection for consistency with nutritionLogs and workouts (unified model)
 const ACTIVITIES_COLLECTION = 'dailyActivities';
 
 // Helper to generate document ID: {userId}_{date}

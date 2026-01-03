@@ -96,6 +96,17 @@ export function RoundTracker({
       });
     };
 
+    const handleActualDuration = (roundNumber: number, seconds: number) => {
+      const updatedRounds = coreData.completedRounds?.map(round =>
+        round.roundNumber === roundNumber ? { ...round, actualDurationSeconds: seconds } : round
+      ) || [];
+      
+      onUpdate({
+        ...coreData,
+        completedRounds: updatedRounds,
+      });
+    };
+
     return (
       <div className="space-y-2">
         {coreConfig.rounds?.map((plannedRound) => {
@@ -128,14 +139,36 @@ export function RoundTracker({
                   Round {plannedRound.roundNumber}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {plannedRound.durationSeconds}s
+                  Target: {plannedRound.durationSeconds}s
                   {plannedRound.restSeconds && ` • ${plannedRound.restSeconds}s rest`}
                 </div>
               </div>
 
-              {isCompleted && (
+              {/* Duration Input - Always visible during tracking */}
+              {!readOnly && (
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`duration-${plannedRound.roundNumber}`} className="text-xs">
+                    Duration
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      id={`duration-${plannedRound.roundNumber}`}
+                      type="number"
+                      min="0"
+                      value={actualRound?.actualDurationSeconds || ''}
+                      onChange={(e) => handleActualDuration(plannedRound.roundNumber, parseInt(e.target.value) || 0)}
+                      placeholder={String(plannedRound.durationSeconds)}
+                      className="w-16 h-8 text-sm"
+                    />
+                    <span className="text-xs">sec</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Display Actual Duration (Read-Only) */}
+              {readOnly && isCompleted && actualRound?.actualDurationSeconds && (
                 <div className="text-sm font-medium text-green-700">
-                  ✓ Completed
+                  {actualRound.actualDurationSeconds}s
                 </div>
               )}
             </div>

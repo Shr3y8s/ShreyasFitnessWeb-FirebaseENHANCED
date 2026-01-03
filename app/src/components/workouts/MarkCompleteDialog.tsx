@@ -36,6 +36,10 @@ export function MarkCompleteDialog({
 }: MarkCompleteDialogProps) {
   const [difficulty, setDifficulty] = useState<'easy' | 'moderate' | 'hard' | 'very_hard'>('moderate');
   const [completionDate, setCompletionDate] = useState(new Date());
+  const [completionTime, setCompletionTime] = useState(() => {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+  });
   const [durationMinutes, setDurationMinutes] = useState(45); // Default 45 minutes
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -43,10 +47,17 @@ export function MarkCompleteDialog({
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-      await onComplete(difficulty, completionDate, durationMinutes, notes || undefined);
+      // Combine date and time into a single Date object
+      const [hours, minutes] = completionTime.split(':').map(Number);
+      const completedAt = new Date(completionDate);
+      completedAt.setHours(hours, minutes, 0, 0);
+      
+      await onComplete(difficulty, completedAt, durationMinutes, notes || undefined);
       // Reset form
       setDifficulty('moderate');
       setCompletionDate(new Date());
+      const now = new Date();
+      setCompletionTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
       setDurationMinutes(45);
       setNotes('');
     } finally {
@@ -76,7 +87,7 @@ export function MarkCompleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="h-6 w-6 text-green-600" />
@@ -124,20 +135,35 @@ export function MarkCompleteDialog({
             </RadioGroup>
           </div>
 
-          {/* Completion Date */}
+          {/* Completion Date & Time */}
           <div className="space-y-2">
-            <Label htmlFor="completion-date" className="text-base font-semibold">Completion Date</Label>
-            <input
-              type="date"
-              id="completion-date"
-              value={formatDateForInput(completionDate)}
-              onChange={(e) => setCompletionDate(new Date(e.target.value))}
-              min={minDate}
-              max={today}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
+            <Label className="text-base font-semibold">When did you complete this workout?</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="completion-date" className="text-sm text-muted-foreground">Date</Label>
+                <input
+                  type="date"
+                  id="completion-date"
+                  value={formatDateForInput(completionDate)}
+                  onChange={(e) => setCompletionDate(new Date(e.target.value))}
+                  min={minDate}
+                  max={today}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+              <div>
+                <Label htmlFor="completion-time" className="text-sm text-muted-foreground">Time</Label>
+                <input
+                  type="time"
+                  id="completion-time"
+                  value={completionTime}
+                  onChange={(e) => setCompletionTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground">
-              When did you complete this workout? (Can backdate up to 30 days)
+              Can backdate up to 30 days. Time helps calculate when you started.
             </p>
           </div>
 

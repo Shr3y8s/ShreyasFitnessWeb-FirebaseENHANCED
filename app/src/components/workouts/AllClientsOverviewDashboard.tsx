@@ -4,6 +4,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, TrendingUp, Calendar, CheckCircle, ChevronRight } from 'lucide-react';
+import { Workout } from '@/types/workout';
 
 interface ClientData {
   id: string;
@@ -11,24 +12,9 @@ interface ClientData {
   email: string;
 }
 
-interface Assignment {
-  id: string;
-  name: string;
-  clientId: string;
-  templateId: string;
-  trainerId: string;
-  assignedDate: Date;
-  dueDate: Date;
-  status: string;
-  progress?: {
-    completionPercentage: number;
-  };
-  notes?: string;
-}
-
 interface AllClientsOverviewDashboardProps {
   clients: ClientData[];
-  assignments: Assignment[];
+  assignments: Workout[];
   onSelectClient: (clientId: string) => void;
 }
 
@@ -46,16 +32,18 @@ export function AllClientsOverviewDashboard({
     
     const active = clientAssignments.filter(a => a.status !== 'completed').length;
     const overdue = clientAssignments.filter(a => 
-      a.status !== 'completed' && new Date(a.dueDate) < now
+      a.status !== 'completed' && a.dueDate && a.dueDate < now
     ).length;
     const completedThisWeek = clientAssignments.filter(a => 
       a.status === 'completed' && 
-      new Date(a.assignedDate) >= oneWeekAgo
+      a.completedAt && 
+      a.completedAt >= oneWeekAgo
     ).length;
     const dueThisWeek = clientAssignments.filter(a =>
       a.status !== 'completed' &&
-      new Date(a.dueDate) >= now &&
-      new Date(a.dueDate) <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      a.dueDate &&
+      a.dueDate >= now &&
+      a.dueDate <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     ).length;
     
     return { active, overdue, completedThisWeek, dueThisWeek, total: clientAssignments.length };
@@ -69,7 +57,8 @@ export function AllClientsOverviewDashboard({
       overdueWorkouts: assignments.filter(a => 
         a.clientId === client.id &&
         a.status !== 'completed' && 
-        new Date(a.dueDate) < new Date()
+        a.dueDate &&
+        a.dueDate < new Date()
       )
     }))
     .filter(item => item.stats.overdue > 0)
@@ -81,7 +70,7 @@ export function AllClientsOverviewDashboard({
   const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   
   const thisWeekAssignments = assignments.filter(a => 
-    new Date(a.assignedDate) >= oneWeekAgo
+    a.createdAt >= oneWeekAgo
   );
   const completedThisWeek = thisWeekAssignments.filter(a => a.status === 'completed').length;
   const completionRate = thisWeekAssignments.length > 0 
@@ -90,8 +79,9 @@ export function AllClientsOverviewDashboard({
   
   const upcomingCount = assignments.filter(a =>
     a.status !== 'completed' &&
-    new Date(a.dueDate) >= now &&
-    new Date(a.dueDate) <= oneWeekFromNow
+    a.dueDate &&
+    a.dueDate >= now &&
+    a.dueDate <= oneWeekFromNow
   ).length;
 
   return (
@@ -129,9 +119,9 @@ export function AllClientsOverviewDashboard({
                   </div>
                   <div className="pl-10 space-y-1">
                     {overdueWorkouts.slice(0, 2).map(workout => {
-                      const daysOverdue = Math.floor(
-                        (now.getTime() - new Date(workout.dueDate).getTime()) / (1000 * 60 * 60 * 24)
-                      );
+                      const daysOverdue = workout.dueDate ? Math.floor(
+                        (now.getTime() - workout.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+                      ) : 0;
                       return (
                         <p key={workout.id} className="text-sm text-red-700">
                           • {workout.name} - {daysOverdue} day{daysOverdue !== 1 ? 's' : ''} overdue

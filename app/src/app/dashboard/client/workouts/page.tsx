@@ -10,14 +10,14 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, CheckCircle, Loader2 } from 'lucide-react';
-import { WorkoutAssignment } from '@/types/workout';
+import { Workout } from '@/types/workout';
 import { WorkoutAssignmentCard } from '@/components/workouts/WorkoutAssignmentCard';
 
 export default function ClientWorkoutsPage() {
   const router = useRouter();
   const { userData, user } = useAuth();
-  const [upcomingWorkouts, setUpcomingWorkouts] = useState<WorkoutAssignment[]>([]);
-  const [completedWorkouts, setCompletedWorkouts] = useState<WorkoutAssignment[]>([]);
+  const [upcomingWorkouts, setUpcomingWorkouts] = useState<Workout[]>([]);
+  const [completedWorkouts, setCompletedWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
 
   const handleLogout = async () => {
@@ -38,9 +38,9 @@ export default function ClientWorkoutsPage() {
       return;
     }
 
-    const assignmentsRef = collection(db, 'workoutAssignments');
+    const workoutsRef = collection(db, 'workouts');
     const q = query(
-      assignmentsRef,
+      workoutsRef,
       where('clientId', '==', user.uid),
       orderBy('scheduledDate', 'asc')
     );
@@ -48,18 +48,28 @@ export default function ClientWorkoutsPage() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const assignments: WorkoutAssignment[] = [];
+        const workoutsData: Workout[] = [];
         snapshot.forEach((doc) => {
-          assignments.push({ id: doc.id, ...doc.data() } as WorkoutAssignment);
+          const data = doc.data();
+          workoutsData.push({
+            id: doc.id,
+            ...data,
+            scheduledDate: data.scheduledDate?.toDate() || new Date(),
+            dueDate: data.dueDate?.toDate() || undefined,
+            completedAt: data.completedAt?.toDate() || undefined,
+            startedAt: data.startedAt?.toDate() || undefined,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+          } as Workout);
         });
 
         // Separate into upcoming and completed
         const now = new Date();
-        const upcoming = assignments.filter(
-          (a) => a.status === 'scheduled' || a.status === 'in_progress'
+        const upcoming = workoutsData.filter(
+          (w) => w.status === 'scheduled' || w.status === 'started'
         );
-        const completed = assignments.filter(
-          (a) => a.status === 'completed'
+        const completed = workoutsData.filter(
+          (w) => w.status === 'completed'
         );
 
         setUpcomingWorkouts(upcoming);
@@ -154,7 +164,7 @@ export default function ClientWorkoutsPage() {
                       {upcomingWorkouts.map((workout) => (
                         <WorkoutAssignmentCard
                           key={workout.id}
-                          assignment={workout}
+                          workout={workout}
                         />
                       ))}
                     </div>
@@ -174,7 +184,7 @@ export default function ClientWorkoutsPage() {
                       {completedWorkouts.map((workout) => (
                         <WorkoutAssignmentCard
                           key={workout.id}
-                          assignment={workout}
+                          workout={workout}
                           isCompleted
                         />
                       ))}
@@ -216,7 +226,7 @@ export default function ClientWorkoutsPage() {
                       {upcomingWorkouts.map((workout) => (
                         <WorkoutAssignmentCard
                           key={workout.id}
-                          assignment={workout}
+                          workout={workout}
                         />
                       ))}
                     </div>
@@ -257,7 +267,7 @@ export default function ClientWorkoutsPage() {
                       {completedWorkouts.map((workout) => (
                         <WorkoutAssignmentCard
                           key={workout.id}
-                          assignment={workout}
+                          workout={workout}
                           isCompleted
                         />
                       ))}

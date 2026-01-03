@@ -242,9 +242,9 @@ export function HabitTracker() {
                 getDoc(doc(db, 'nutritionLogs', user.uid, nutritionSubcollection, todayStr)),
                 getDoc(doc(db, 'nutritionLogs', user.uid, nutritionSubcollection, yesterdayStr)),
                 getDocs(query(
-                    collection(db, 'workoutExecutions'),
+                    collection(db, 'workouts'),
                     where('clientId', '==', user.uid),
-                    where('completionStatus', '==', 'completed'),
+                    where('status', '==', 'completed'),
                     limit(10) // Only need recent few for today/yesterday
                 ))
             ]);
@@ -385,9 +385,9 @@ export function HabitTracker() {
                     ));
                 })(),
                 getDocs(query(
-                    collection(db, 'workoutExecutions'),
+                    collection(db, 'workouts'),
                     where('clientId', '==', user.uid),
-                    where('completionStatus', '==', 'completed'),
+                    where('status', '==', 'completed'),
                     limit(50)
                 ))
             ]);
@@ -504,9 +504,9 @@ export function HabitTracker() {
                     ));
                 })(),
                 getDocs(query(
-                    collection(db, 'workoutExecutions'),
+                    collection(db, 'workouts'),
                     where('clientId', '==', user.uid),
-                    where('completionStatus', '==', 'completed'),
+                    where('status', '==', 'completed'),
                     limit(100)
                 ))
             ]);

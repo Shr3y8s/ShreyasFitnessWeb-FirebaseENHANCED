@@ -208,9 +208,9 @@ export default function ClientsPage() {
           
           const clientsSnapshot = await getDocs(clientsQuery);
           
-          // Fetch assignments for stats
+          // Fetch workouts for stats (unified model)
           const assignmentsQuery = query(
-            collection(db, 'workoutAssignments'),
+            collection(db, 'workouts'),
             where('trainerId', '==', user.uid)
           );
           const assignmentsSnapshot = await getDocs(assignmentsQuery);
@@ -1623,7 +1623,7 @@ export default function ClientsPage() {
                       
                       // Reload assignments
                       const assignmentsQuery = query(
-                        collection(db, 'workoutAssignments'),
+                        collection(db, 'workouts'),
                         where('trainerId', '==', user.uid)
                       );
                       const assignmentsSnapshot = await getDocs(assignmentsQuery);
@@ -1814,7 +1814,7 @@ export default function ClientsPage() {
                       
                       // Reload assignments
                       const assignmentsQuery = query(
-                        collection(db, 'workoutAssignments'),
+                        collection(db, 'workouts'),
                         where('trainerId', '==', user.uid)
                       );
                       const assignmentsSnapshot = await getDocs(assignmentsQuery);

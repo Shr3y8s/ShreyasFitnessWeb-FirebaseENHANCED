@@ -83,7 +83,7 @@ import {
   increment,
   Timestamp
 } from 'firebase/firestore';
-import type { Exercise, AssignedWorkout } from '@/types/workout';
+import type { Exercise, Workout } from '@/types/workout';
 
 // Types
 interface ServiceTier {
@@ -536,7 +536,7 @@ export async function assignWorkoutToClients(assignment: {
     });
 
     for (const clientId of assignment.clientIds) {
-      const assignmentRef = doc(collection(db, 'workoutAssignments'));
+      const assignmentRef = doc(collection(db, 'workouts'));
       batch.set(assignmentRef, {
         templateId: assignment.templateId,
         clientId,
@@ -564,15 +564,15 @@ export async function assignWorkoutToClients(assignment: {
   }
 }
 
-export function listenToTrainerAssignments(trainerId: string, callback: (assignments: AssignedWorkout[]) => void) {
+export function listenToTrainerWorkouts(trainerId: string, callback: (assignments: Workout[]) => void) {
   const assignmentsQuery = query(
-    collection(db, 'workoutAssignments'),
+    collection(db, 'workouts'),
     where('trainerId', '==', trainerId),
     orderBy('assignedDate', 'desc')
   );
   
   return onSnapshot(assignmentsQuery, (snapshot) => {
-    const assignments: AssignedWorkout[] = [];
+    const assignments: Workout[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
       assignments.push({
@@ -585,21 +585,21 @@ export function listenToTrainerAssignments(trainerId: string, callback: (assignm
           ...data.progress,
           lastUpdatedAt: data.progress?.lastUpdatedAt?.toDate()
         }
-      } as AssignedWorkout);
+      } as any as Workout);
     });
     callback(assignments);
   });
 }
 
-export function listenToClientAssignments(clientId: string, callback: (assignments: AssignedWorkout[]) => void) {
+export function listenToClientAssignments(clientId: string, callback: (assignments: Workout[]) => void) {
   const assignmentsQuery = query(
-    collection(db, 'workoutAssignments'),
+    collection(db, 'workouts'),
     where('clientId', '==', clientId),
     orderBy('assignedDate', 'desc')
   );
   
   return onSnapshot(assignmentsQuery, (snapshot) => {
-    const assignments: AssignedWorkout[] = [];
+    const assignments: Workout[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
       assignments.push({
@@ -612,7 +612,7 @@ export function listenToClientAssignments(clientId: string, callback: (assignmen
           ...data.progress,
           lastUpdatedAt: data.progress?.lastUpdatedAt?.toDate()
         }
-      } as AssignedWorkout);
+      } as any as Workout);
     });
     callback(assignments);
   });
@@ -872,7 +872,7 @@ export async function decrementWorkoutUsage(templateId: string) {
 export async function unassignWorkout(assignmentId: string): Promise<{ success: boolean; error?: string }> {
   try {
     // Get the assignment to find the templateId
-    const assignmentDoc = await getDoc(doc(db, 'workoutAssignments', assignmentId));
+    const assignmentDoc = await getDoc(doc(db, 'workouts', assignmentId));
     if (!assignmentDoc.exists()) {
       return { success: false, error: 'Assignment not found' };
     }
@@ -881,7 +881,7 @@ export async function unassignWorkout(assignmentId: string): Promise<{ success: 
     
     // Delete the assignment and decrement usage count in a batch
     const batch = writeBatch(db);
-    batch.delete(doc(db, 'workoutAssignments', assignmentId));
+    batch.delete(doc(db, 'workouts', assignmentId));
     batch.update(doc(db, 'workoutTemplates', templateId), {
       usageCount: increment(-1)
     });

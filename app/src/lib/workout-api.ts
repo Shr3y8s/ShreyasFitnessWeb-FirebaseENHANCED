@@ -1,101 +1,111 @@
 /**
- * WORKOUT API INTEGRATION
- * Firebase Cloud Functions integration for polymorphic workout system
+ * WORKOUT API INTEGRATION (UNIFIED MODEL)
+ * Firebase Cloud Functions integration for unified workout system
+ * 
+ * REFACTORED: January 2026
+ * - Works with single 'workouts' collection
+ * - Simplified API: 3 workout functions instead of 5+
+ * - No more dual-collection complexity
  */
 
 import { httpsCallable } from 'firebase/functions';
 import { functions } from './firebase';
 import type {
   WorkoutTemplate,
-  WorkoutAssignment,
-  WorkoutExecution,
-  WorkoutAssignmentExercise,
-  WorkoutExecutionExercise,
+  Workout,
+  WorkoutExercise,
 } from '@/types/workout';
 
 // ============================================================================
-// TYPE DEFINITIONS FOR API CALLS
+// TYPE DEFINITIONS FOR UNIFIED WORKOUT API
 // ============================================================================
 
 interface AssignWorkoutRequest {
   workoutTemplateId: string;
   clientId: string;
-  exercises: WorkoutAssignmentExercise[];
+  name?: string;
+  description?: string;
+  exercises: Array<{
+    exerciseId: string;
+    exerciseName: string;
+    exerciseType: string;
+    configuration: any; // Polymorphic configuration
+    notes?: string;
+  }>;
   scheduledDate: string; // YYYY-MM-DD format
   dueDate?: string; // YYYY-MM-DD format
   notes?: string;
-  name?: string;
-  // Note: description comes from template, not stored in assignment
 }
 
 interface AssignWorkoutResponse {
   success: boolean;
-  assignmentId: string;
-  assignment: WorkoutAssignment;
+  workoutId: string;
+  workout: Workout;
 }
 
-interface StartExecutionRequest {
-  workoutAssignmentId: string;
-}
-
-interface StartExecutionResponse {
-  success: boolean;
-  executionId: string;
-  execution: WorkoutExecution;
-  resumed: boolean;
-}
-
-interface UpdateExecutionRequest {
-  executionId: string;
-  exercises: WorkoutExecutionExercise[];
-  durationMinutes: number;
+interface SaveWorkoutRequest {
+  workoutId: string;
+  exercises: WorkoutExercise[];
+  durationMinutes?: number;
+  overallDifficulty?: 'easy' | 'moderate' | 'hard' | 'very_hard';
   overallNotes?: string;
 }
 
-interface UpdateExecutionResponse {
+interface SaveWorkoutResponse {
   success: boolean;
-  executionId: string;
+  workoutId: string;
+  status: 'scheduled' | 'started' | 'completed' | 'skipped';
 }
 
-interface CompleteExecutionRequest {
-  executionId: string;
-  exercises: WorkoutExecutionExercise[];
+interface CompleteWorkoutRequest {
+  workoutId: string;
+  exercises: WorkoutExercise[];
   durationMinutes: number;
+  completedAt?: Date; // When client completed the workout
+  overallDifficulty?: 'easy' | 'moderate' | 'hard' | 'very_hard';
   overallNotes?: string;
 }
 
-interface CompleteExecutionResponse {
+interface CompleteWorkoutResponse {
   success: boolean;
-  executionId: string;
-  completionStatus: 'completed' | 'partial' | 'not_started';
-  completionPercentage: number;
+  workoutId: string;
   stats: {
     completedExercises: number;
     partialExercises: number;
     totalExercises: number;
+    completionPercentage: number;
   };
 }
 
 // ============================================================================
-// API FUNCTIONS
+// UNIFIED WORKOUT API FUNCTIONS
 // ============================================================================
 
 /**
  * Assign a workout template to a client with configured parameters
+ * Creates a unified Workout document with prescribed configuration
  * 
- * @param data - Assignment configuration
- * @returns Promise with assignment ID and data
+ * @param data - Assignment configuration with polymorphic exercise configs
+ * @returns Promise with workout ID and data
  * 
  * @example
  * ```typescript
  * const result = await assignWorkout({
  *   workoutTemplateId: 'template_123',
  *   clientId: 'client_456',
- *   exercises: configuredExercises,
+ *   exercises: [{
+ *     exerciseId: 'bench_press',
+ *     exerciseName: 'Bench Press',
+ *     exerciseType: 'strength',
+ *     configuration: {
+ *       exerciseType: 'strength',
+ *       // ... strength-specific config
+ *     }
+ *   }],
  *   scheduledDate: '2025-12-10',
  *   notes: 'Focus on form'
  * });
- * console.log('Assigned:', result.assignmentId);
+ * console.log('Assigned workout:', result.workoutId);
  * ```
  */
 export async function assignWorkout(
@@ -116,150 +126,74 @@ export async function assignWorkout(
 }
 
 /**
- * Start a workout execution session
- * Creates a new execution record or resumes an existing in-progress execution
+ * Save workout progress (unified save function)
+ * Updates the workout document with client's actual performance data
+ * Automatically updates status: scheduled → started → completed
  * 
- * @param workoutAssignmentId - ID of the assignment to execute
- * @returns Promise with execution ID and data
- * 
- * @example
- * ```typescript
- * const result = await startWorkoutExecution('assignment_123');
- * if (result.resumed) {
- *   console.log('Resumed existing execution');
- * } else {
- *   console.log('Started new execution');
- * }
- * ```
- */
-export async function startWorkoutExecution(
-  workoutAssignmentId: string
-): Promise<StartExecutionResponse> {
-  const startFn = httpsCallable<StartExecutionRequest, StartExecutionResponse>(
-    functions,
-    'startWorkoutExecution'
-  );
-
-  try {
-    const result = await startFn({ workoutAssignmentId });
-    return result.data;
-  } catch (error: any) {
-    console.error('Error starting workout execution:', error);
-    throw new Error(error.message || 'Failed to start workout execution');
-  }
-}
-
-/**
- * Update a workout execution with actual performance data
- * Called periodically as the client completes exercises
- * 
- * @param data - Execution update data
- * @returns Promise with success status
+ * @param data - Progress update with exercises containing actual data
+ * @returns Promise with workout status
  * 
  * @example
  * ```typescript
- * await updateWorkoutExecution({
- *   executionId: 'exec_123',
- *   exercises: updatedExercises,
+ * await saveWorkout({
+ *   workoutId: 'workout_123',
+ *   exercises: exercisesWithActualData,
  *   durationMinutes: 45,
+ *   overallDifficulty: 'moderate',
  *   overallNotes: 'Feeling strong today'
  * });
  * ```
  */
-export async function updateWorkoutExecution(
-  data: UpdateExecutionRequest
-): Promise<UpdateExecutionResponse> {
-  const updateFn = httpsCallable<UpdateExecutionRequest, UpdateExecutionResponse>(
+export async function saveWorkout(
+  data: SaveWorkoutRequest
+): Promise<SaveWorkoutResponse> {
+  const saveWorkoutFn = httpsCallable<SaveWorkoutRequest, SaveWorkoutResponse>(
     functions,
-    'updateWorkoutExecution'
+    'saveWorkout'
   );
 
   try {
-    const result = await updateFn(data);
+    const result = await saveWorkoutFn(data);
     return result.data;
   } catch (error: any) {
-    console.error('Error updating workout execution:', error);
-    throw new Error(error.message || 'Failed to update workout execution');
+    console.error('Error saving workout progress:', error);
+    throw new Error(error.message || 'Failed to save workout progress');
   }
 }
 
 /**
- * Complete a workout execution
- * Finalizes the execution and calculates completion stats
+ * Complete a workout
+ * Finalizes the workout and marks it as completed
  * 
- * @param data - Final execution data
+ * @param data - Final workout data with completed exercises
  * @returns Promise with completion stats
  * 
  * @example
  * ```typescript
- * const result = await completeWorkoutExecution({
- *   executionId: 'exec_123',
+ * const result = await completeWorkout({
+ *   workoutId: 'workout_123',
  *   exercises: finalExercises,
  *   durationMinutes: 60,
+ *   overallDifficulty: 'hard',
  *   overallNotes: 'Great workout!'
  * });
  * console.log(`Completed ${result.stats.completedExercises}/${result.stats.totalExercises} exercises`);
  * ```
  */
-export async function completeWorkoutExecution(
-  data: CompleteExecutionRequest
-): Promise<CompleteExecutionResponse> {
-  const completeFn = httpsCallable<CompleteExecutionRequest, CompleteExecutionResponse>(
+export async function completeWorkout(
+  data: CompleteWorkoutRequest
+): Promise<CompleteWorkoutResponse> {
+  const completeWorkoutFn = httpsCallable<CompleteWorkoutRequest, CompleteWorkoutResponse>(
     functions,
-    'completeWorkoutExecution'
+    'completeWorkout'
   );
 
   try {
-    const result = await completeFn(data);
+    const result = await completeWorkoutFn(data);
     return result.data;
   } catch (error: any) {
-    console.error('Error completing workout execution:', error);
-    throw new Error(error.message || 'Failed to complete workout execution');
-  }
-}
-
-/**
- * Save workout execution (unified create/update)
- * Handles both creating new executions and updating existing ones
- * This is the primary function for the "Save Progress" button
- * 
- * @param workoutAssignmentId - ID of the assignment being executed
- * @param execution - Full execution data including exercises with actualData
- * @returns Promise with execution ID and data
- * 
- * @example
- * ```typescript
- * const result = await saveWorkoutExecution(
- *   'assignment_123',
- *   workoutExecutionData
- * );
- * if (result.isUpdate) {
- *   console.log('Progress updated');
- * } else {
- *   console.log('Execution created');
- * }
- * ```
- */
-export async function saveWorkoutExecution(
-  workoutAssignmentId: string,
-  execution: WorkoutExecution
-): Promise<{
-  success: boolean;
-  executionId: string;
-  execution: WorkoutExecution;
-  isUpdate: boolean;
-}> {
-  const saveFn = httpsCallable<
-    { workoutAssignmentId: string; execution: WorkoutExecution },
-    { success: boolean; executionId: string; execution: WorkoutExecution; isUpdate: boolean }
-  >(functions, 'saveWorkoutExecution');
-
-  try {
-    const result = await saveFn({ workoutAssignmentId, execution });
-    return result.data;
-  } catch (error: any) {
-    console.error('Error saving workout execution:', error);
-    throw new Error(error.message || 'Failed to save workout execution');
+    console.error('Error completing workout:', error);
+    throw new Error(error.message || 'Failed to complete workout');
   }
 }
 
@@ -290,7 +224,7 @@ export function calculateDuration(startTime: Date, endTime?: Date): number {
 }
 
 // ============================================================================
-// WORKOUT TEMPLATE MANAGEMENT
+// WORKOUT TEMPLATE MANAGEMENT (Unchanged)
 // ============================================================================
 
 interface CreateWorkoutTemplateRequest {
@@ -309,7 +243,7 @@ interface CreateWorkoutTemplateRequest {
 interface CreateWorkoutTemplateResponse {
   success: boolean;
   templateId: string;
-  template: any;
+  template: WorkoutTemplate;
 }
 
 interface UpdateWorkoutTemplateRequest {
@@ -431,7 +365,7 @@ export async function updateWorkoutTemplate(
 
 /**
  * Delete a workout template with atomic exercise usage count updates
- * Checks for active assignments and decrements exercise usage counts
+ * Checks for active workouts and decrements exercise usage counts
  * 
  * @param data - Template ID and optional force flag
  * @returns Promise with success status

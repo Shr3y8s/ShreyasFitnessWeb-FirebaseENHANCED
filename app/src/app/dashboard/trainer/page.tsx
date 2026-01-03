@@ -98,7 +98,7 @@ export default function TrainerDashboardPage() {
           
           // Fetch assignments for stats
           const assignmentsQuery = query(
-            collection(db, 'workoutAssignments'),
+            collection(db, 'workouts'),
             where('trainerId', '==', user.uid)
           );
           const assignmentsSnapshot = await getDocs(assignmentsQuery);

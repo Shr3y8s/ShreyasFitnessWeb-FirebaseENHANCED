@@ -90,9 +90,9 @@ async function calculateHabitScore(
                 limit(10)
             )),
             getDocs(query(
-                collection(db, 'workoutExecutions'),
+                collection(db, 'workouts'),
                 where('clientId', '==', userId),
-                where('completionStatus', '==', 'completed'),
+                where('status', '==', 'completed'),
                 limit(50)
             ))
         ]);

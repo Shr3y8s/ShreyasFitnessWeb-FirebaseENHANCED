@@ -12,7 +12,7 @@ import { CircularProgress } from '@/components/ui/circular-progress';
 import { Dumbbell, Calendar, Check, Loader2 } from 'lucide-react';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { WorkoutAssignment } from '@/types/workout';
+import { Workout } from '@/types/workout';
 import { getCurrentWeekISO, formatWeekRange } from '@/lib/week-utils';
 
 interface ClientTrainingProtocolProps {
@@ -21,7 +21,7 @@ interface ClientTrainingProtocolProps {
 }
 
 export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTrainingProtocolProps) {
-  const [assignments, setAssignments] = useState<WorkoutAssignment[]>([]);
+  const [assignments, setAssignments] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         const endTimestamp = Timestamp.fromDate(weekEnd);
         
         // Query assignments with dueDate in current week
-        const assignmentsRef = collection(db, 'workoutAssignments');
+        const assignmentsRef = collection(db, 'workouts');
         const q = query(
           assignmentsRef,
           where('clientId', '==', clientId),
@@ -52,13 +52,13 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         );
         
         const querySnapshot = await getDocs(q);
-        const fetchedAssignments: WorkoutAssignment[] = [];
+        const fetchedAssignments: Workout[] = [];
         
         querySnapshot.forEach((doc) => {
           fetchedAssignments.push({
             id: doc.id,
             ...doc.data()
-          } as WorkoutAssignment);
+          } as any as Workout);
         });
         
         // Sort by due date (handle Timestamp objects)
@@ -179,7 +179,7 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
                       <p className="text-xs text-muted-foreground mt-1 truncate">{assignment.name}</p>
                     </div>
                     <CircularProgress 
-                      percentage={assignment.completionPercentage || 0}
+                      percentage={(assignment as any).progress?.completionPercentage || 0}
                       size={44}
                       strokeWidth={4}
                     />

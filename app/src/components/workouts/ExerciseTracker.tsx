@@ -39,7 +39,7 @@ interface ExerciseTrackerProps {
   exerciseName: string;
   exerciseType: string;
   plannedConfiguration: ExerciseConfigurationType;
-  actualData: ExerciseActualData;
+  actualData?: ExerciseActualData;
   onUpdate: (actualData: ExerciseActualData) => void;
   readOnly?: boolean;
 }
@@ -56,6 +56,18 @@ export function ExerciseTracker({
   onUpdate,
   readOnly = false,
 }: ExerciseTrackerProps) {
+  // If no actual data yet, show placeholder
+  if (!actualData) {
+    return (
+      <div className="space-y-3">
+        <h3 className="font-semibold text-lg">{exerciseName}</h3>
+        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center text-gray-600">
+          <p>Start tracking to record your performance</p>
+        </div>
+      </div>
+    );
+  }
+
   // Route to appropriate tracker based on actual data type
   switch (actualData.type) {
     case 'strength':
@@ -234,7 +246,7 @@ export function ExerciseTracker({
       return (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-700">
-            Unknown exercise type: {actualData.type}
+            Unknown exercise type: {(actualData as ExerciseActualData).type}
           </p>
         </div>
       );

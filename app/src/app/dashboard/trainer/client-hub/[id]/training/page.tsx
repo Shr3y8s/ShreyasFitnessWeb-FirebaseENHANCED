@@ -50,6 +50,21 @@ interface VolumeMetrics {
   trend: 'up' | 'down' | 'stable';
 }
 
+interface PersonalRecord {
+  exerciseId: string;
+  exerciseName: string;
+  newMax: number;
+  oldMax: number;
+  improvement: number;
+  weightUnit: string;
+  date: Date;
+}
+
+interface PRMetrics {
+  prs: PersonalRecord[];
+  totalPRs: number;
+}
+
 export default function ClientTrainingDashboard() {
   const router = useRouter();
   const params = useParams();
@@ -67,6 +82,8 @@ export default function ClientTrainingDashboard() {
   const [streakLoading, setStreakLoading] = useState(true);
   const [volumeMetrics, setVolumeMetrics] = useState<VolumeMetrics | null>(null);
   const [volumeLoading, setVolumeLoading] = useState(true);
+  const [prMetrics, setPRMetrics] = useState<PRMetrics | null>(null);
+  const [prLoading, setPRLoading] = useState(true);
 
   // Fetch client data
   useEffect(() => {
@@ -128,12 +145,12 @@ export default function ClientTrainingDashboard() {
         const fourWeeksAgo = new Date();
         fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
         
-        // Fetch workout executions for last 4 weeks
-        const executionsRef = collection(db, 'workoutExecutions');
+        // Fetch workouts for last 4 weeks
+        const workoutsRef = collection(db, 'workouts');
         const q = query(
-          executionsRef,
+          workoutsRef,
           where('clientId', '==', clientId),
-          where('completionStatus', '==', 'completed'),
+          where('status', '==', 'completed'),
           where('completedAt', '>=', fourWeeksAgo)
         );
         
@@ -267,25 +284,26 @@ export default function ClientTrainingDashboard() {
     return maxStreak;
   };
 
-  // Helper: Calculate volume from a single exercise
+  // Helper: Calculate volume from a single exercise (uses ACTUAL data)
   const calculateExerciseVolume = (exercise: any): number => {
     // Only calculate volume for strength exercises
     if (exercise.exerciseType !== 'strength') return 0;
     
+    // Must have actual data (workout was tracked)
+    if (!exercise.actual || exercise.actual.type !== 'strength') return 0;
+    
     let totalVolume = 0;
     
-    // Use plannedConfiguration.sets for volume calculation
-    if (exercise.plannedConfiguration?.sets && Array.isArray(exercise.plannedConfiguration.sets)) {
-      for (const set of exercise.plannedConfiguration.sets) {
-        const weight = set.weight || 0;
+    // Use actual.completedSets for volume calculation (what client actually lifted)
+    if (exercise.actual.completedSets && Array.isArray(exercise.actual.completedSets)) {
+      for (const set of exercise.actual.completedSets) {
+        // Only count completed sets
+        if (!set.completed) continue;
         
-        // Calculate reps as average of repsRange
-        let reps = 0;
-        if (set.repsRange?.min && set.repsRange?.max) {
-          reps = (set.repsRange.min + set.repsRange.max) / 2;
-        }
+        const weight = set.actualWeight || 0;
+        const reps = set.actualReps || 0;
         
-        // Volume = weight × reps
+        // Volume = actual weight × actual reps
         totalVolume += weight * reps;
       }
     }
@@ -293,14 +311,14 @@ export default function ClientTrainingDashboard() {
     return totalVolume;
   };
 
-  // Helper: Calculate total volume from a workout execution
-  const calculateWorkoutVolume = (execution: any): number => {
-    if (!execution.exercises || !Array.isArray(execution.exercises)) {
+  // Helper: Calculate total volume from a workout (uses ACTUAL data from unified model)
+  const calculateWorkoutVolume = (workout: any): number => {
+    if (!workout.exercises || !Array.isArray(workout.exercises)) {
       return 0;
     }
     
     let totalVolume = 0;
-    for (const exercise of execution.exercises) {
+    for (const exercise of workout.exercises) {
       totalVolume += calculateExerciseVolume(exercise);
     }
     
@@ -323,11 +341,11 @@ export default function ClientTrainingDashboard() {
         eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
         
         // Fetch last 8 weeks of completed workouts
-        const executionsRef = collection(db, 'workoutExecutions');
+        const workoutsRef = collection(db, 'workouts');
         const q = query(
-          executionsRef,
+          workoutsRef,
           where('clientId', '==', clientId),
-          where('completionStatus', '==', 'completed'),
+          where('status', '==', 'completed'),
           where('completedAt', '>=', eightWeeksAgo)
         );
         
@@ -406,6 +424,165 @@ export default function ClientTrainingDashboard() {
     }
   }, [clientId, clientData]);
 
+  // Fetch Personal Records
+  useEffect(() => {
+    const fetchPRMetrics = async () => {
+      if (!clientId) return;
+      
+      try {
+        setPRLoading(true);
+        
+        // Calculate current month start
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        
+        // Fetch ALL completed workouts
+        const workoutsRef = collection(db, 'workouts');
+        const q = query(
+          workoutsRef,
+          where('clientId', '==', clientId),
+          where('status', '==', 'completed'),
+          orderBy('completedAt', 'asc')
+        );
+        
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          setPRMetrics({ prs: [], totalPRs: 0 });
+          return;
+        }
+        
+        // Track max weight per exercise: { exerciseId: { max, name, unit, date } }
+        const exerciseMaxes: Record<string, { 
+          historicalMax: number; 
+          currentMonthMax: number;
+          name: string; 
+          unit: string;
+          date: Date;
+        }> = {};
+        
+        snapshot.docs.forEach(doc => {
+          const workout = doc.data();
+          const completedAt = workout.completedAt?.toDate();
+          if (!completedAt) return;
+          
+          const isCurrentMonth = completedAt >= monthStart;
+          
+          // Process each exercise
+          workout.exercises?.forEach((exercise: any) => {
+            // Only process strength exercises with actual data
+            if (exercise.exerciseType !== 'strength' || !exercise.actual?.completedSets) return;
+            
+            // Find max weight in this workout for this exercise
+            let maxWeight = 0;
+            let weightUnit = 'lbs';
+            
+            exercise.actual.completedSets.forEach((set: any) => {
+              if (set.completed && set.actualWeight) {
+                if (set.actualWeight > maxWeight) {
+                  maxWeight = set.actualWeight;
+                  weightUnit = set.actualWeightUnit || 'lbs';
+                }
+              }
+            });
+            
+            if (maxWeight === 0) return;
+            
+            // Initialize or update tracking
+            if (!exerciseMaxes[exercise.exerciseId]) {
+              exerciseMaxes[exercise.exerciseId] = {
+                historicalMax: maxWeight,
+                currentMonthMax: isCurrentMonth ? maxWeight : 0,
+                name: exercise.exerciseName,
+                unit: weightUnit,
+                date: completedAt
+              };
+            } else {
+              // Update historical max
+              if (maxWeight > exerciseMaxes[exercise.exerciseId].historicalMax) {
+                exerciseMaxes[exercise.exerciseId].historicalMax = maxWeight;
+                exerciseMaxes[exercise.exerciseId].date = completedAt;
+              }
+              
+              // Update current month max
+              if (isCurrentMonth && maxWeight > exerciseMaxes[exercise.exerciseId].currentMonthMax) {
+                exerciseMaxes[exercise.exerciseId].currentMonthMax = maxWeight;
+              }
+            }
+          });
+        });
+        
+        // Detect PRs: current month max > any historical max before this month
+        const prs: PersonalRecord[] = [];
+        
+        // Re-scan to find PRs properly
+        const exerciseHistory: Record<string, number[]> = {}; // exerciseId -> [weights by date]
+        
+        snapshot.docs.forEach(doc => {
+          const workout = doc.data();
+          const completedAt = workout.completedAt?.toDate();
+          if (!completedAt) return;
+          
+          workout.exercises?.forEach((exercise: any) => {
+            if (exercise.exerciseType !== 'strength' || !exercise.actual?.completedSets) return;
+            
+            let maxWeight = 0;
+            exercise.actual.completedSets.forEach((set: any) => {
+              if (set.completed && set.actualWeight > maxWeight) {
+                maxWeight = set.actualWeight;
+              }
+            });
+            
+            if (maxWeight === 0) return;
+            
+            if (!exerciseHistory[exercise.exerciseId]) {
+              exerciseHistory[exercise.exerciseId] = [];
+            }
+            exerciseHistory[exercise.exerciseId].push(maxWeight);
+          });
+        });
+        
+        // Now detect PRs: current month max > all-time previous max
+        Object.keys(exerciseMaxes).forEach(exerciseId => {
+          const data = exerciseMaxes[exerciseId];
+          if (data.currentMonthMax === 0) return; // No lifts this month
+          
+          const history = exerciseHistory[exerciseId] || [];
+          const previousMax = Math.max(...history.slice(0, -1)); // All except latest
+          
+          if (data.currentMonthMax > previousMax && previousMax > 0) {
+            prs.push({
+              exerciseId,
+              exerciseName: data.name,
+              newMax: data.currentMonthMax,
+              oldMax: previousMax,
+              improvement: data.currentMonthMax - previousMax,
+              weightUnit: data.unit,
+              date: data.date
+            });
+          }
+        });
+        
+        // Sort by improvement (biggest PRs first)
+        prs.sort((a, b) => b.improvement - a.improvement);
+        
+        setPRMetrics({
+          prs: prs.slice(0, 5), // Top 5 PRs
+          totalPRs: prs.length
+        });
+      } catch (error) {
+        console.error('Error fetching PR metrics:', error);
+        setPRMetrics({ prs: [], totalPRs: 0 });
+      } finally {
+        setPRLoading(false);
+      }
+    };
+
+    if (clientData) {
+      fetchPRMetrics();
+    }
+  }, [clientId, clientData]);
+
   // Fetch streak metrics
   useEffect(() => {
     const fetchStreakMetrics = async () => {
@@ -414,12 +591,12 @@ export default function ClientTrainingDashboard() {
       try {
         setStreakLoading(true);
         
-        // Fetch ALL completed workout executions (no date filter for longest streak)
-        const executionsRef = collection(db, 'workoutExecutions');
+        // Fetch ALL completed workouts (no date filter for longest streak)
+        const workoutsRef = collection(db, 'workouts');
         const q = query(
-          executionsRef,
+          workoutsRef,
           where('clientId', '==', clientId),
-          where('completionStatus', '==', 'completed'),
+          where('status', '==', 'completed'),
           orderBy('completedAt', 'asc')
         );
         
@@ -701,14 +878,36 @@ export default function ClientTrainingDashboard() {
                   <h3 className="font-semibold text-sm text-gray-600">Personal Records</h3>
                 </div>
                 <p className="text-xs text-gray-500 mb-3">This Month</p>
-                <div className="mb-3">
-                  <p className="text-4xl font-bold text-gray-900">3 <span className="text-lg">PRs 🎉</span></p>
-                </div>
-                <p className="text-sm text-gray-600">Bench: 200 (+5)</p>
-                <p className="text-xs text-gray-500 mt-1">Deadlift: 315 (+10)</p>
-                <p className="text-xs text-gray-400 italic mt-3 pt-2 border-t border-gray-200">
-                  Mock data - Coming soon with performance tracking
-                </p>
+                {prLoading ? (
+                  <div className="mb-3">
+                    <div className="h-12 bg-gray-200 animate-pulse rounded"></div>
+                  </div>
+                ) : prMetrics && prMetrics.totalPRs > 0 ? (
+                  <>
+                    <div className="mb-3">
+                      <p className="text-4xl font-bold text-gray-900">
+                        {prMetrics.totalPRs} <span className="text-lg">PR{prMetrics.totalPRs !== 1 ? 's' : ''} 🎉</span>
+                      </p>
+                    </div>
+                    {prMetrics.prs.slice(0, 3).map((pr, idx) => (
+                      <p key={pr.exerciseId} className={idx === 0 ? "text-sm text-gray-600" : "text-xs text-gray-500 mt-1"}>
+                        {pr.exerciseName}: {pr.newMax} {pr.weightUnit} (+{pr.improvement})
+                      </p>
+                    ))}
+                    {prMetrics.totalPRs > 3 && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        +{prMetrics.totalPRs - 3} more PR{prMetrics.totalPRs - 3 !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="mb-3">
+                    <p className="text-2xl font-bold text-gray-400">No PRs</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      No new personal records this month
+                    </p>
+                  </div>
+                )}
               </Card>
             </div>
           </div>

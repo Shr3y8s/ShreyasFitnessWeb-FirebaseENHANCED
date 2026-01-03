@@ -8,6 +8,9 @@ const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, 'utf8'));
 
 const nextConfig: NextConfig = {
   /* config options here */
+  turbopack: {
+    root: process.cwd(), // Use app/ directory as Turbopack root
+  },
   env: {
     // Expose Firebase region from shared config file
     NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION: firebaseConfig.region,

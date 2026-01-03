@@ -27,12 +27,20 @@ import {
   Exercise,
   WorkoutTemplate,
   WorkoutTemplateExercise,
-  WorkoutAssignmentExercise,
   StrengthConfiguration,
   CardioSteadyStateConfiguration,
   CardioIntervalsConfiguration,
   ExerciseConfigurationType,
 } from '@/types/workout';
+
+// Type for exercises being configured for assignment (inline - no longer in types)
+interface ConfiguredExercise {
+  exerciseId: string;
+  exerciseName: string;
+  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+  configuration: ExerciseConfigurationType;
+  notes?: string;
+}
 import { assignWorkout, formatDateForAPI } from '@/lib/workout-api';
 import {
   createDefaultStrengthConfiguration,
@@ -94,7 +102,7 @@ export default function CreateAssignmentPage() {
   
   // Step 3: Exercise configuration
   const [libraryExercises, setLibraryExercises] = useState<Record<string, Exercise>>({});
-  const [configuredExercises, setConfiguredExercises] = useState<WorkoutAssignmentExercise[]>([]);
+  const [configuredExercises, setConfiguredExercises] = useState<ConfiguredExercise[]>([]);
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   
   // Step 4: Scheduling
@@ -209,7 +217,7 @@ export default function CreateAssignmentPage() {
       setLibraryExercises(exercisesMap);
 
       // Initialize configured exercises with default configurations
-      const initialConfigs: WorkoutAssignmentExercise[] = selectedTemplate.exercises.map(templateEx => {
+      const initialConfigs: ConfiguredExercise[] = selectedTemplate.exercises.map(templateEx => {
         const exercise = exercisesMap[templateEx.exerciseId];
         if (!exercise) {
           return {
@@ -287,10 +295,10 @@ export default function CreateAssignmentPage() {
   };
 
   const handleSaveAssignment = async () => {
-    if (!user || !selectedTemplate || !selectedClientId || configuredExercises.length === 0) {
+    if (!user || !selectedTemplate || !selectedClientId || configuredExercises.length === 0 || !dueDate) {
       toast({
         title: "Validation Error",
-        description: "Please complete all steps before saving.",
+        description: "Please complete all required fields including Due Date.",
         variant: "destructive",
       });
       return;
@@ -303,7 +311,7 @@ export default function CreateAssignmentPage() {
         clientId: selectedClientId,
         exercises: configuredExercises,
         scheduledDate: scheduledDate,
-        dueDate: dueDate || undefined,
+        dueDate: dueDate, // Now required
         notes: assignmentNotes || undefined,
         name: customName || selectedTemplate.name,
         // Description comes from template, not stored in assignment
@@ -644,14 +652,18 @@ export default function CreateAssignmentPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="dueDate">Due Date (optional)</Label>
+                    <Label htmlFor="dueDate">Due Date *</Label>
                     <Input
                       id="dueDate"
                       type="date"
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
                       className="mt-2"
+                      required
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Required: Deadline for the client to complete this workout
+                    </p>
                   </div>
 
                   <div>
@@ -671,7 +683,10 @@ export default function CreateAssignmentPage() {
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Configuration
                   </Button>
-                  <Button onClick={() => setCurrentStep('review')}>
+                  <Button 
+                    onClick={() => setCurrentStep('review')}
+                    disabled={!dueDate}
+                  >
                     Review & Assign
                     <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
                   </Button>

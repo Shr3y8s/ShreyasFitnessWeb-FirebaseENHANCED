@@ -1,12 +1,16 @@
 /**
- * WORKOUT MANAGEMENT CLOUD FUNCTIONS
- * Handles business logic for the polymorphic workout system
+ * WORKOUT MANAGEMENT CLOUD FUNCTIONS (UNIFIED MODEL)
+ * Handles business logic for the unified workout system
  * 
  * Collections:
  * - exercises: Exercise library
  * - workoutTemplates: Workout blueprints
- * - workoutAssignments: Configured workouts assigned to clients
- * - workoutExecutions: Actual performance tracking
+ * - workouts: Unified workout documents (assignment + execution)
+ * 
+ * REFACTORED: January 2026
+ * - Merged workoutAssignments and workoutExecutions into single 'workouts' collection
+ * - Prescribed and actual data live side-by-side in same document
+ * - Single source of truth for workout lifecycle
  */
 
 const {onCall} = require("firebase-functions/v2/https");
@@ -18,16 +22,18 @@ const sharedConfig = require("./firebase-config.json");
 
 /**
  * Assign a workout template to a client with configured parameters
- * Creates a WorkoutAssignment with polymorphic exercise configurations
+ * Creates a unified Workout document with prescribed configuration
  * 
  * @param {Object} request.data
  * @param {string} request.data.workoutTemplateId - Required template reference
  * @param {string} request.data.clientId - Client to assign to
+ * @param {string} request.data.name - Workout name
+ * @param {string} request.data.description - Optional description
  * @param {Array} request.data.exercises - Configured exercises with polymorphic configs
  * @param {string} request.data.scheduledDate - ISO 8601 date (YYYY-MM-DD)
  * @param {string} request.data.dueDate - Optional due date
  * @param {string} request.data.notes - Optional trainer notes
- * @return {Object} Created assignment with ID
+ * @return {Object} Created workout with ID
  */
 exports.assignWorkout = onCall({
   region: sharedConfig.region,
@@ -43,8 +49,8 @@ exports.assignWorkout = onCall({
     const data = request.data;
 
     // Validate required fields
-    if (!data.workoutTemplateId || !data.clientId || !data.exercises || !data.scheduledDate) {
-      throw new Error("Missing required fields: workoutTemplateId, clientId, exercises, scheduledDate");
+    if (!data.workoutTemplateId || !data.clientId || !data.exercises || !data.scheduledDate || !data.dueDate) {
+      throw new Error("Missing required fields: workoutTemplateId, clientId, exercises, scheduledDate, dueDate");
     }
 
     logger.info("Assigning workout to client", {
@@ -77,9 +83,11 @@ exports.assignWorkout = onCall({
       throw new Error("Exercises must be a non-empty array");
     }
 
-    // Validate each exercise has required fields
+    // Validate and transform exercises for unified model
+    const workoutExercises = [];
     for (let i = 0; i < data.exercises.length; i++) {
       const exercise = data.exercises[i];
+      
       if (!exercise.exerciseId || !exercise.exerciseName || !exercise.exerciseType || !exercise.configuration) {
         throw new Error(`Exercise at index ${i} is missing required fields`);
       }
@@ -89,43 +97,57 @@ exports.assignWorkout = onCall({
         throw new Error(`Exercise at index ${i} configuration missing exerciseType`);
       }
 
-      // Validate exerciseType matches between exercise and configuration
+      // Validate exerciseType matches
       if (exercise.exerciseType !== exercise.configuration.exerciseType) {
         throw new Error(`Exercise at index ${i} has mismatched exerciseType`);
       }
+
+      // Transform to unified model: prescribed + actual (initially null)
+      workoutExercises.push({
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        exerciseType: exercise.exerciseType,
+        prescribed: exercise.configuration, // What trainer prescribed
+        actual: null, // What client actually did (null until they start)
+        completionStatus: 'not_started',
+        completionPercentage: 0,
+        notes: exercise.notes || "",
+      });
     }
 
-    // Helper function to parse date string (YYYY-MM-DD) to Timestamp
-    const parseDate = (dateStr) => {
-      if (!dateStr) return null;
-      const [year, month, day] = dateStr.split('-');
-      // Create date at midnight UTC for the given date
-      const date = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day)));
-      return admin.firestore.Timestamp.fromDate(date);
-    };
-
-    // Create assignment document
-    const assignmentRef = admin.firestore().collection("workoutAssignments").doc();
     const now = admin.firestore.Timestamp.now();
+    const workoutRef = admin.firestore().collection("workouts").doc();
 
-    const assignmentData = {
-      id: assignmentRef.id,
+    const workoutData = {
       workoutTemplateId: data.workoutTemplateId,
       clientId: data.clientId,
       trainerId: trainerId,
       name: data.name || templateData.name,
       description: data.description || templateData.description || "",
-      scheduledDate: parseDate(data.scheduledDate),
       assignedAt: now,
-      dueDate: parseDate(data.dueDate),
-      status: "scheduled",
-      completionPercentage: 0,
-      exercises: data.exercises,
+      scheduledDate: admin.firestore.Timestamp.fromDate(new Date(data.scheduledDate)),
+      dueDate: admin.firestore.Timestamp.fromDate(new Date(data.dueDate)),
       notes: data.notes || "",
+      
+      // Lifecycle tracking
+      status: "scheduled",
+      startedAt: null,
+      completedAt: null,
+      durationMinutes: null,
+      
+      // Exercise data (prescribed + actual side-by-side)
+      exercises: workoutExercises,
+      
+      // Overall feedback
+      overallDifficulty: null,
+      overallNotes: null,
+      
+      // Timestamps
+      createdAt: now,
       updatedAt: now,
     };
 
-    // Use transaction to increment template usage count and create assignment
+    // Use transaction to increment template usage count and create workout
     await admin.firestore().runTransaction(async (transaction) => {
       // Increment template usageCount
       transaction.update(templateRef, {
@@ -133,12 +155,12 @@ exports.assignWorkout = onCall({
         updatedAt: now,
       });
 
-      // Create assignment
-      transaction.set(assignmentRef, assignmentData);
+      // Create unified workout
+      transaction.set(workoutRef, workoutData);
     });
 
-    logger.info("Workout assigned successfully", {
-      assignmentId: assignmentRef.id,
+    logger.info("Workout assigned successfully (unified model)", {
+      workoutId: workoutRef.id,
       trainerId,
       clientId: data.clientId,
       templateId: data.workoutTemplateId,
@@ -146,8 +168,8 @@ exports.assignWorkout = onCall({
 
     return {
       success: true,
-      assignmentId: assignmentRef.id,
-      assignment: assignmentData,
+      workoutId: workoutRef.id,
+      workout: workoutData,
     };
   } catch (error) {
     logger.error("Error assigning workout", {
@@ -161,17 +183,19 @@ exports.assignWorkout = onCall({
 });
 
 /**
- * Update workout execution with actual performance data
- * Tracks exercise-by-exercise actual performance
+ * Save workout progress (unified create/update)
+ * Updates the workout document with client's actual performance data
+ * Handles both initial save and subsequent updates
  * 
  * @param {Object} request.data
- * @param {string} request.data.executionId - Execution to update
+ * @param {string} request.data.workoutId - Workout to update
  * @param {Array} request.data.exercises - Updated exercises with actual data
  * @param {number} request.data.durationMinutes - Current duration
- * @param {string} request.data.overallNotes - Client notes
+ * @param {string} request.data.overallDifficulty - Optional difficulty rating
+ * @param {string} request.data.overallNotes - Optional client notes
  * @return {Object} Success response
  */
-exports.updateWorkoutExecution = onCall({
+exports.saveWorkout = onCall({
   region: sharedConfig.region,
   cors: true,
 }, async (request) => {
@@ -185,35 +209,44 @@ exports.updateWorkoutExecution = onCall({
     const data = request.data;
 
     // Validate required fields
-    if (!data.executionId) {
-      throw new Error("Missing required field: executionId");
+    if (!data.workoutId) {
+      throw new Error("Missing required field: workoutId");
     }
 
-    logger.info("Updating workout execution", {
+    logger.info("Saving workout progress", {
       clientId,
-      executionId: data.executionId,
+      workoutId: data.workoutId,
     });
 
-    // Get execution
-    const executionRef = admin.firestore().collection("workoutExecutions").doc(data.executionId);
-    const executionDoc = await executionRef.get();
+    // Get workout
+    const workoutRef = admin.firestore().collection("workouts").doc(data.workoutId);
+    const workoutDoc = await workoutRef.get();
 
-    if (!executionDoc.exists) {
-      throw new Error("Workout execution not found");
+    if (!workoutDoc.exists) {
+      throw new Error("Workout not found");
     }
 
-    const executionData = executionDoc.data();
+    const workoutData = workoutDoc.data();
 
-    // Verify client owns this execution
-    if (executionData.clientId !== clientId) {
-      throw new Error("Unauthorized: You can only update your own executions");
+    // Verify client owns this workout
+    if (workoutData.clientId !== clientId) {
+      throw new Error("Unauthorized: You can only save your own workouts");
     }
 
+    const now = admin.firestore.Timestamp.now();
+    
     // Prepare update
     const updates = {
-      updatedAt: admin.firestore.Timestamp.now(),
+      updatedAt: now,
     };
 
+    // Update status to 'started' if it was 'scheduled'
+    if (workoutData.status === 'scheduled') {
+      updates.status = 'started';
+      updates.startedAt = now;
+    }
+
+    // Update exercises with actual data
     if (data.exercises) {
       updates.exercises = data.exercises;
 
@@ -222,204 +255,67 @@ exports.updateWorkoutExecution = onCall({
       data.exercises.forEach((exercise) => {
         totalCompletion += exercise.completionPercentage || 0;
       });
-      updates.completionPercentage = Math.round(totalCompletion / data.exercises.length);
+      
+      // Update completion status based on exercises
+      const completedCount = data.exercises.filter(ex => ex.completionStatus === 'completed').length;
+      if (completedCount === data.exercises.length) {
+        updates.status = 'completed';
+        updates.completedAt = now;
+      } else if (completedCount > 0) {
+        updates.status = 'started';
+      }
     }
 
     if (data.durationMinutes !== undefined) {
       updates.durationMinutes = data.durationMinutes;
     }
 
+    if (data.overallDifficulty !== undefined) {
+      updates.overallDifficulty = data.overallDifficulty;
+    }
+
     if (data.overallNotes !== undefined) {
       updates.overallNotes = data.overallNotes;
     }
 
-    // Update execution
-    await executionRef.update(updates);
+    // Update workout
+    await workoutRef.update(updates);
 
-    logger.info("Workout execution updated successfully", {
-      executionId: data.executionId,
+    logger.info("Workout progress saved successfully", {
+      workoutId: data.workoutId,
       clientId,
+      status: updates.status || workoutData.status,
     });
 
     return {
       success: true,
-      executionId: data.executionId,
+      workoutId: data.workoutId,
+      status: updates.status || workoutData.status,
     };
   } catch (error) {
-    logger.error("Error updating workout execution", {
+    logger.error("Error saving workout progress", {
       error: error.message,
       stack: error.stack,
       userId: request.auth?.uid,
     });
 
-    throw new Error(`Failed to update workout execution: ${error.message}`);
+    throw new Error(`Failed to save workout progress: ${error.message}`);
   }
 });
 
 /**
- * Save workout execution (unified create/update)
- * Handles both creating new executions and updating existing ones
- * This is the primary function for the "Save Progress" button
+ * Complete a workout
+ * Finalizes the workout and marks it as completed
  * 
  * @param {Object} request.data
- * @param {string} request.data.workoutAssignmentId - Assignment being executed
- * @param {Object} request.data.execution - Full execution data including exercises with actualData
- * @return {Object} Saved execution with ID
- */
-exports.saveWorkoutExecution = onCall({
-  region: sharedConfig.region,
-  cors: true,
-}, async (request) => {
-  try {
-    // Require authentication
-    if (!request.auth) {
-      throw new Error("Authentication required");
-    }
-
-    const clientId = request.auth.uid;
-    const data = request.data;
-
-    // Validate required fields
-    if (!data.workoutAssignmentId || !data.execution) {
-      throw new Error("Missing required fields: workoutAssignmentId and execution");
-    }
-
-    logger.info("Saving workout execution", {
-      clientId,
-      assignmentId: data.workoutAssignmentId,
-    });
-
-    // Get assignment
-    const assignmentRef = admin.firestore().collection("workoutAssignments").doc(data.workoutAssignmentId);
-    const assignmentDoc = await assignmentRef.get();
-
-    if (!assignmentDoc.exists) {
-      throw new Error("Workout assignment not found");
-    }
-
-    const assignmentData = assignmentDoc.data();
-
-    // Verify client owns this assignment
-    if (assignmentData.clientId !== clientId) {
-      throw new Error("Unauthorized: You can only save your own workouts");
-    }
-
-    // Check if execution already exists
-    const existingExecutionsQuery = await admin.firestore()
-        .collection("workoutExecutions")
-        .where("workoutAssignmentId", "==", data.workoutAssignmentId)
-        .where("clientId", "==", clientId)
-        .limit(1)
-        .get();
-
-    const now = admin.firestore.Timestamp.now();
-    let executionRef;
-    let isUpdate = false;
-
-    if (!existingExecutionsQuery.empty) {
-      // Update existing execution
-      executionRef = existingExecutionsQuery.docs[0].ref;
-      isUpdate = true;
-    } else {
-      // Create new execution
-      executionRef = admin.firestore().collection("workoutExecutions").doc();
-    }
-
-    // Prepare execution data
-    const executionData = {
-      ...data.execution,
-      id: executionRef.id,
-      workoutAssignmentId: data.workoutAssignmentId,
-      clientId: clientId,
-      trainerId: assignmentData.trainerId,
-      updatedAt: now,
-    };
-
-    // Convert Date objects to Timestamps if needed
-    // Handle various date formats: Date objects, ISO strings, Timestamps
-    if (executionData.completedAt && !(executionData.completedAt instanceof admin.firestore.Timestamp)) {
-      try {
-        const completeDate = executionData.completedAt instanceof Date 
-          ? executionData.completedAt 
-          : new Date(executionData.completedAt);
-        
-        if (isNaN(completeDate.getTime())) {
-          throw new Error("Invalid completedAt date");
-        }
-        executionData.completedAt = admin.firestore.Timestamp.fromDate(completeDate);
-      } catch (error) {
-        logger.error("Error converting completedAt to Timestamp", {error: error.message});
-        executionData.completedAt = now; // Fallback to current time
-      }
-    }
-    
-    if (!executionData.createdAt) {
-      executionData.createdAt = now;
-    }
-
-    // Calculate overall completion percentage from exercises
-    if (executionData.exercises && Array.isArray(executionData.exercises)) {
-      let totalCompletion = 0;
-      executionData.exercises.forEach((exercise) => {
-        totalCompletion += exercise.completionPercentage || 0;
-      });
-      executionData.completionPercentage = Math.round(totalCompletion / executionData.exercises.length);
-    }
-
-    // Use transaction to save execution and update assignment
-    await admin.firestore().runTransaction(async (transaction) => {
-      if (isUpdate) {
-        transaction.update(executionRef, executionData);
-      } else {
-        transaction.set(executionRef, executionData);
-      }
-
-      // Update assignment status
-      const assignmentUpdate = {
-        status: executionData.completionStatus === "completed" ? "completed" : "in_progress",
-        completionPercentage: executionData.completionPercentage || 0,
-        updatedAt: now,
-      };
-      transaction.update(assignmentRef, assignmentUpdate);
-    });
-
-    logger.info("Workout execution saved successfully", {
-      executionId: executionRef.id,
-      clientId,
-      assignmentId: data.workoutAssignmentId,
-      isUpdate,
-      completionPercentage: executionData.completionPercentage,
-    });
-
-    return {
-      success: true,
-      executionId: executionRef.id,
-      execution: executionData,
-      isUpdate,
-    };
-  } catch (error) {
-    logger.error("Error saving workout execution", {
-      error: error.message,
-      stack: error.stack,
-      userId: request.auth?.uid,
-    });
-
-    throw new Error(`Failed to save workout execution: ${error.message}`);
-  }
-});
-
-/**
- * Complete a workout execution
- * Finalizes the execution and updates assignment status
- * 
- * @param {Object} request.data
- * @param {string} request.data.executionId - Execution to complete
+ * @param {string} request.data.workoutId - Workout to complete
  * @param {Array} request.data.exercises - Final exercises with actual data
  * @param {number} request.data.durationMinutes - Final duration
+ * @param {string} request.data.overallDifficulty - Difficulty rating
  * @param {string} request.data.overallNotes - Final client notes
  * @return {Object} Success response with stats
  */
-exports.completeWorkoutExecution = onCall({
+exports.completeWorkout = onCall({
   region: sharedConfig.region,
   cors: true,
 }, async (request) => {
@@ -433,120 +329,110 @@ exports.completeWorkoutExecution = onCall({
     const data = request.data;
 
     // Validate required fields
-    if (!data.executionId) {
-      throw new Error("Missing required field: executionId");
+    if (!data.workoutId) {
+      throw new Error("Missing required field: workoutId");
     }
 
-    logger.info("Completing workout execution", {
+    logger.info("Completing workout", {
       clientId,
-      executionId: data.executionId,
+      workoutId: data.workoutId,
     });
 
-    // Get execution
-    const executionRef = admin.firestore().collection("workoutExecutions").doc(data.executionId);
-    const executionDoc = await executionRef.get();
+    // Get workout
+    const workoutRef = admin.firestore().collection("workouts").doc(data.workoutId);
+    const workoutDoc = await workoutRef.get();
 
-    if (!executionDoc.exists) {
-      throw new Error("Workout execution not found");
+    if (!workoutDoc.exists) {
+      throw new Error("Workout not found");
     }
 
-    const executionData = executionDoc.data();
+    const workoutData = workoutDoc.data();
 
-    // Verify client owns this execution
-    if (executionData.clientId !== clientId) {
-      throw new Error("Unauthorized: You can only complete your own executions");
+    // Verify client owns this workout
+    if (workoutData.clientId !== clientId) {
+      throw new Error("Unauthorized: You can only complete your own workouts");
     }
 
-    // Calculate completion status based on exercises
+    const exercises = data.exercises || workoutData.exercises;
+
+    // Update completionStatus for each exercise based on completionPercentage
+    exercises.forEach((exercise) => {
+      const percentage = exercise.completionPercentage || 0;
+      if (percentage >= 80) {
+        exercise.completionStatus = 'completed';
+      } else if (percentage > 0) {
+        exercise.completionStatus = 'partial';
+      } else {
+        exercise.completionStatus = 'not_started';
+      }
+    });
+
+    // Calculate completion stats
     let completedCount = 0;
     let partialCount = 0;
-    const exercises = data.exercises || executionData.exercises;
-
     exercises.forEach((exercise) => {
-      if (exercise.completionStatus === "completed") {
+      if (exercise.completionStatus === 'completed') {
         completedCount++;
-      } else if (exercise.completionStatus === "partial") {
+      } else if (exercise.completionStatus === 'partial') {
         partialCount++;
       }
     });
 
     const totalExercises = exercises.length;
-    let overallStatus = "completed";
-    if (completedCount === 0) {
-      overallStatus = "not_started";
-    } else if (completedCount < totalExercises) {
-      overallStatus = "partial";
-    }
+    
+    // Use provided completedAt timestamp (from client) or default to now
+    const completedAt = data.completedAt 
+      ? admin.firestore.Timestamp.fromDate(new Date(data.completedAt))
+      : admin.firestore.Timestamp.now();
+    
+    // Calculate startedAt: completedAt - durationMinutes
+    const durationMinutes = data.durationMinutes || workoutData.durationMinutes || 45;
+    const startedAtMillis = completedAt.toMillis() - (durationMinutes * 60 * 1000);
+    const startedAt = admin.firestore.Timestamp.fromMillis(startedAtMillis);
 
-    const completionPercentage = Math.round((completedCount / totalExercises) * 100);
-
-    const now = admin.firestore.Timestamp.now();
-
-    // Use transaction to update both execution and assignment
-    await admin.firestore().runTransaction(async (transaction) => {
-      // Update execution
-      transaction.update(executionRef, {
-        exercises: exercises,
-        completedAt: now,
-        durationMinutes: data.durationMinutes || executionData.durationMinutes,
-        overallNotes: data.overallNotes || executionData.overallNotes || "",
-        completionStatus: overallStatus,
-        completionPercentage: completionPercentage,
-        updatedAt: now,
-      });
-
-      // Update assignment
-      const assignmentRef = admin.firestore()
-          .collection("workoutAssignments")
-          .doc(executionData.workoutAssignmentId);
-
-      const assignmentDoc = await transaction.get(assignmentRef);
-      if (assignmentDoc.exists) {
-        const assignmentUpdate = {
-          status: overallStatus === "completed" ? "completed" : "in_progress",
-          completionPercentage: completionPercentage,
-          updatedAt: now,
-        };
-        
-        // Add completedAt timestamp when status becomes completed
-        if (overallStatus === "completed") {
-          assignmentUpdate.completedAt = now;
-        }
-        
-        transaction.update(assignmentRef, assignmentUpdate);
-      }
+    // Update workout
+    await workoutRef.update({
+      status: 'completed',
+      startedAt: startedAt,
+      completedAt: completedAt,
+      exercises: exercises,
+      durationMinutes: durationMinutes,
+      overallDifficulty: data.overallDifficulty || workoutData.overallDifficulty,
+      overallNotes: data.overallNotes || workoutData.overallNotes || "",
+      updatedAt: admin.firestore.Timestamp.now(),
     });
 
-    logger.info("Workout execution completed successfully", {
-      executionId: data.executionId,
+    logger.info("Workout completed successfully", {
+      workoutId: data.workoutId,
       clientId,
-      completionStatus: overallStatus,
-      completionPercentage,
       completedExercises: completedCount,
       totalExercises,
     });
 
     return {
       success: true,
-      executionId: data.executionId,
-      completionStatus: overallStatus,
-      completionPercentage,
+      workoutId: data.workoutId,
       stats: {
         completedExercises: completedCount,
         partialExercises: partialCount,
         totalExercises,
+        completionPercentage: Math.round((completedCount / totalExercises) * 100),
       },
     };
   } catch (error) {
-    logger.error("Error completing workout execution", {
+    logger.error("Error completing workout", {
       error: error.message,
       stack: error.stack,
       userId: request.auth?.uid,
     });
 
-    throw new Error(`Failed to complete workout execution: ${error.message}`);
+    throw new Error(`Failed to complete workout: ${error.message}`);
   }
 });
+
+// ============================================================================
+// WORKOUT TEMPLATE FUNCTIONS (Unchanged - still work with templates)
+// ============================================================================
 
 /**
  * Create a new workout template with atomic exercise usage count updates
@@ -625,7 +511,6 @@ exports.createWorkoutTemplate = onCall({
     const templateRef = admin.firestore().collection("workoutTemplates").doc();
 
     const templateData = {
-      id: templateRef.id,
       name: data.name,
       description: data.description || "",
       difficulty: data.difficulty || "beginner",
@@ -897,19 +782,19 @@ exports.deleteWorkoutTemplate = onCall({
       throw new Error("Unauthorized: You can only delete your own templates");
     }
 
-    // Check for active assignments unless force is true
+    // Check for active workouts unless force is true
     if (!data.force) {
-      const activeAssignmentsQuery = await admin.firestore()
-          .collection("workoutAssignments")
+      const activeWorkoutsQuery = await admin.firestore()
+          .collection("workouts")
           .where("workoutTemplateId", "==", data.templateId)
-          .where("status", "in", ["scheduled", "in_progress"])
+          .where("status", "in", ["scheduled", "started"])
           .limit(1)
           .get();
 
-      if (!activeAssignmentsQuery.empty) {
+      if (!activeWorkoutsQuery.empty) {
         throw new Error(
-            "Cannot delete template: It has active assignments. " +
-        "Please complete or cancel those assignments first, or use force=true to delete anyway."
+            "Cannot delete template: It has active workouts. " +
+        "Please complete or cancel those workouts first, or use force=true to delete anyway."
         );
       }
     }

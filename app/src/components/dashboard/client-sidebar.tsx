@@ -70,6 +70,7 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
   const { user, userData } = useAuth();
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [availableSessions, setAvailableSessions] = useState(0);
+  const [activeWorkoutsCount, setActiveWorkoutsCount] = useState(0);
   
   // Listen for real-time session balance updates
   useEffect(() => {
@@ -157,8 +158,40 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
       }
     };
   }, [user, userData]);
+
+  // Listen for active workouts (scheduled or started)
+  useEffect(() => {
+    if (!user) {
+      setActiveWorkoutsCount(0);
+      return;
+    }
+
+    const workoutsQuery = query(
+      collection(db, 'workouts'),
+      where('clientId', '==', user.uid),
+      where('status', 'in', ['scheduled', 'started'])
+    );
+
+    const unsubscribe = onSnapshot(
+      workoutsQuery,
+      (snapshot) => {
+        setActiveWorkoutsCount(snapshot.size);
+      },
+      (error) => {
+        console.error('Error listening to workouts:', error);
+        setActiveWorkoutsCount(0);
+      }
+    );
+
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
+  }, [user]);
   
-  // Filter notifications by type to get counts for each section
+  // Filter notifications by type to get counts for each section (keeping for other features)
   const workoutUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'workout'
   ).length;
@@ -277,9 +310,9 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/dashboard/client/workouts">
                     <Dumbbell className="w-4 h-4" />
                     <span className="font-medium">My Workouts</span>
-                    {workoutUpdatesCount > 0 && (
+                    {activeWorkoutsCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {workoutUpdatesCount}
+                        {activeWorkoutsCount}
                       </SidebarMenuBadge>
                     )}
                   </Link>

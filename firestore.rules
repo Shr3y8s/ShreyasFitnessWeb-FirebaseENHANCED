@@ -294,81 +294,43 @@ service cloud.firestore {
       allow delete: if isTrainerOrAdmin();
     }
     
-    // Workout Assignments Collection - Configured workouts assigned to clients
-    match /workoutAssignments/{assignmentId} {
-      // Trainers can create, read, update, and manage assignments
-      allow read, write: if isTrainerOrAdmin();
+    // UNIFIED WORKOUT SYSTEM - Single collection for assignments + execution
+    match /workouts/{workoutId} {
+      // Trainers can read workouts (query filters by trainerId)
+      allow read: if isTrainerOrAdmin();
       
-      // Clients can read their own assignments
+      // Clients can read their own workouts
       allow read: if isAuthenticated() && 
                   request.auth.uid == resource.data.clientId;
       
-      // Clients can update status and completionPercentage of their own assignments
+      // Only Cloud Functions can create workouts (via assignWorkout)
+      allow create: if false;
+      
+      // Clients can update workout progress (actual data, status, timestamps)
+      // Updated fields during tracking: exercises.actual, status, startedAt, updatedAt
+      // Updated fields during completion: completedAt, durationMinutes, overallDifficulty, overallNotes
+      allow update: if isAuthenticated() && 
+                    request.auth.uid == resource.data.clientId;
+      
+      // Trainers can delete workouts they assigned
+      allow delete: if isTrainerOrAdmin() && 
+                    resource.data.trainerId == request.auth.uid;
+      
+      // Workout validation for client updates
+      function validateWorkoutUpdate() {
+        let data = request.resource.data;
+        // Clients can only modify specific fields during tracking
+        let allowedFields = ['status', 'startedAt', 'completedAt', 'durationMinutes', 
+                            'exercises', 'overallDifficulty', 'overallNotes', 'updatedAt'];
+        return data.clientId == resource.data.clientId &&
+               data.trainerId == resource.data.trainerId &&
+               data.status in ['scheduled', 'started', 'completed', 'skipped'];
+      }
+      
+      // Apply validation on client updates
       allow update: if isAuthenticated() && 
                     request.auth.uid == resource.data.clientId &&
-                    request.resource.data.diff(resource.data).affectedKeys()
-                      .hasOnly(['status', 'completionPercentage', 'updatedAt']);
-      
-      // Assignment validation
-      function validateWorkoutAssignment() {
-        let data = request.resource.data;
-        return data.keys().hasAll(['workoutTemplateId', 'clientId', 'trainerId', 'name', 'exercises', 'status', 'completionPercentage']) &&
-               data.workoutTemplateId is string && data.workoutTemplateId.size() > 0 &&
-               data.clientId is string &&
-               data.trainerId is string &&
-               data.name is string && data.name.size() > 0 &&
-               data.exercises is list &&
-               data.status in ['scheduled', 'in_progress', 'completed', 'skipped', 'cancelled'] &&
-               data.completionPercentage is number && 
-               data.completionPercentage >= 0 && data.completionPercentage <= 100;
-      }
-      
-      // Apply validation on create and update
-      allow create: if isTrainerOrAdmin() && validateWorkoutAssignment();
-      allow update: if isTrainerOrAdmin() && validateWorkoutAssignment();
-    }
-    
-    // Workout Executions Collection - Actual performance tracking (planned vs actual)
-    match /workoutExecutions/{executionId} {
-      // Trainers can read all execution data for analytics
-      allow read: if isTrainerOrAdmin();
-      
-      // Clients can read their own execution history (individual documents)
-      allow get: if isAuthenticated() && 
-                 request.auth.uid == resource.data.clientId;
-      
-      // Clients can LIST/QUERY their own workout executions
-      // Uses 'userId' field (not 'clientId') for queries
-      allow list: if isAuthenticated() && 
-                  request.query.limit <= 100;
-      
-      // Clients can create and update their own execution records
-      allow create, update: if isAuthenticated() && 
-                            request.auth.uid == request.resource.data.clientId;
-      
-      // No deletions allowed (historical data preservation)
-      allow delete: if false;
-      
-      // Execution validation
-      function validateWorkoutExecution() {
-        let data = request.resource.data;
-        return data.keys().hasAll(['workoutAssignmentId', 'clientId', 'trainerId', 'startedAt', 'exercises', 'completionStatus']) &&
-               data.workoutAssignmentId is string &&
-               data.clientId is string &&
-               data.trainerId is string &&
-               data.startedAt is timestamp &&
-               data.exercises is list &&
-               data.completionStatus in ['not_started', 'in_progress', 'partial', 'completed'] &&
-               data.durationMinutes is number && data.durationMinutes >= 0;
-      }
-      
-      // Apply validation on create and update
-      allow create: if isAuthenticated() && 
-                    request.resource.data.clientId == request.auth.uid &&
-                    validateWorkoutExecution();
-      allow update: if isAuthenticated() && 
-                    resource.data.clientId == request.auth.uid &&
-                    validateWorkoutExecution();
+                    validateWorkoutUpdate();
     }
 
     // CLIENT MESSAGING SYSTEM - Phase 3

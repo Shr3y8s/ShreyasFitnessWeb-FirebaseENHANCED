@@ -1,9 +1,9 @@
 import React from 'react';
-import { WorkoutAssignmentExercise } from '@/types/workout';
+import { WorkoutExercise } from '@/types/workout';
 import { Clock, Activity, Dumbbell, Heart, Target } from 'lucide-react';
 
 interface ExerciseConfigurationDisplayProps {
-  exercises: WorkoutAssignmentExercise[];
+  exercises: WorkoutExercise[];
 }
 
 export function ExerciseConfigurationDisplay({ exercises }: ExerciseConfigurationDisplayProps) {
@@ -24,8 +24,8 @@ export function ExerciseConfigurationDisplay({ exercises }: ExerciseConfiguratio
   );
 }
 
-function ExerciseCard({ exercise, index }: { exercise: WorkoutAssignmentExercise; index: number }) {
-  const config = exercise.configuration;
+function ExerciseCard({ exercise, index }: { exercise: WorkoutExercise; index: number }) {
+  const config = exercise.prescribed;
 
   return (
     <div className="bg-white border rounded-lg overflow-hidden">

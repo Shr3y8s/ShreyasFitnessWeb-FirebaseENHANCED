@@ -390,105 +390,70 @@ export interface WorkoutTemplate {
 }
 
 // ============================================================================
-// WORKOUT ASSIGNMENT (Where Configuration Happens!)
+// UNIFIED WORKOUT MODEL (Replaces WorkoutAssignment + WorkoutExecution)
 // ============================================================================
 
 /**
- * WorkoutAssignmentExercise - Configured exercise within an assignment
- * This is where the trainer specifies concrete values (sets, reps, weights, etc.)
- * Exercise order is determined by array position (same as template).
+ * Workout - Unified model combining assignment and execution
+ * Represents the complete lifecycle of a workout from assignment to completion
+ * Prescribed configuration and actual performance live side-by-side
  */
-export interface WorkoutAssignmentExercise {
-  exerciseId: string;
-  exerciseName: string;      // Denormalized for display
-  exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
-  configuration: ExerciseConfigurationType;  // Polymorphic configuration based on exercise type
-  notes?: string;            // Assignment-specific coaching cues
-}
-
-/**
- * WorkoutAssignment - Instance of a workout assigned to a specific client
- * Contains actual configured parameters for that client (sets, reps, weights, etc.)
- * This is what gets saved to Firestore when a trainer assigns a workout.
- * Assignments ALWAYS reference a template - no custom workouts.
- */
-export interface WorkoutAssignment {
+export interface Workout {
+  // Identity
   id: string;
-  workoutTemplateId: string;  // Required - every assignment comes from a template
+  workoutTemplateId: string;
   clientId: string;
   trainerId: string;
   
-  name: string;                // Can differ from template name
-  // Note: Description comes from template, not stored here
-  scheduledDate: string;       // ISO 8601 date (YYYY-MM-DD)
-  assignedAt: Date;            // When trainer assigned this workout
-  dueDate?: string;            // Optional due date (YYYY-MM-DD)
+  // Assignment metadata
+  name: string;
+  description?: string;
+  assignedAt: Date;
+  scheduledDate: Date; // Firestore Timestamp (converted to Date in frontend)
+  dueDate?: Date; // Firestore Timestamp (converted to Date in frontend)
+  notes?: string; // Trainer's assignment notes
   
-  status: 'scheduled' | 'in_progress' | 'completed' | 'skipped' | 'cancelled';
-  completionPercentage: number;  // 0-100, calculated based on exercises completed
-  completedAt?: Date;          // When client marked assignment as complete
+  // Lifecycle tracking (single source of truth)
+  status: 'scheduled' | 'started' | 'completed' | 'skipped';
+  startedAt?: Date;
+  completedAt?: Date;
+  durationMinutes?: number;
   
-  exercises: WorkoutAssignmentExercise[];  // Configured exercises with concrete values (array position = order)
+  // Exercise data (prescribed + actual side-by-side)
+  exercises: WorkoutExercise[];
   
-  notes?: string;              // Trainer notes for this assignment
-  updatedAt: Date;             // Last modification timestamp
-}
-
-// ============================================================================
-// WORKOUT EXECUTION TRACKING (Actual Performance Data)
-// ============================================================================
-
-/**
- * WorkoutExecution - Records actual client performance of an assigned workout
- * This is the "what actually happened" data structure
- */
-export interface WorkoutExecution {
-  id: string;
-  workoutAssignmentId: string;  // Reference to the assignment
-  clientId: string;
-  trainerId: string;
-  
-  completedAt?: Date;           // When client completed (null if incomplete)
-  durationMinutes: number;      // Actual duration (user-entered)
-  
-  // Overall workout feedback
+  // Overall feedback
   overallDifficulty?: 'easy' | 'moderate' | 'hard' | 'very_hard';
-  overallNotes?: string;        // Client's overall workout notes
+  overallNotes?: string; // Client's overall notes
   
-  // Completion tracking
-  completionStatus: 'not_started' | 'in_progress' | 'partial' | 'completed';
-  completionPercentage: number; // 0-100, calculated from exercises
-  
-  // Exercise-by-exercise actual performance
-  exercises: WorkoutExecutionExercise[];
-  
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * WorkoutExecutionExercise - Records actual performance for an exercise
- * Contains both planned configuration and actual results
+ * WorkoutExercise - Exercise within a workout (prescribed + actual)
+ * Contains both the trainer's prescription and client's actual performance
  */
-export interface WorkoutExecutionExercise {
+export interface WorkoutExercise {
   exerciseId: string;
-  exerciseName: string;      // Denormalized for display
+  exerciseName: string;
   exerciseType: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
   
-  // Completion tracking
-  completionStatus: 'not_started' | 'partial' | 'completed';
-  completionPercentage: number;  // 0-100
+  // What trainer prescribed (always present)
+  prescribed: ExerciseConfigurationType;
   
-  // What was prescribed
-  plannedConfiguration: ExerciseConfigurationType;
+  // What client actually did (null until they start)
+  actual?: ExerciseActualData;
   
-  // What was actually done
-  actualData: ExerciseActualData;
+  // Completion tracking (calculated from actual)
+  completionStatus?: 'not_started' | 'partial' | 'completed';
+  completionPercentage?: number; // 0-100
   
   // Exercise-specific notes
   notes?: string;
-  deviations?: string[];     // Array of notes about what differed from plan
 }
+
 
 /**
  * ExerciseActualData - Polymorphic union of all actual performance data types
@@ -529,6 +494,7 @@ export interface StrengthActualData {
  */
 export interface CardioSteadyStateActualData {
   type: 'cardio_steady_state';
+  completed: boolean; // Explicit completion flag
   actualDurationSeconds: number;
   actualPace?: string;
   actualHeartRate?: string;
@@ -550,6 +516,7 @@ export interface CardioIntervalsActualData {
  */
 export interface CardioActivityActualData {
   type: 'cardio_activity';
+  completed: boolean; // Explicit completion flag
   actualDurationSeconds: number;
 }
 
@@ -582,9 +549,10 @@ export interface CoreRepBasedActualData {
  */
 export interface CoreDurationActualData {
   type: 'core_duration';
-  // Simple format: just a single duration
+  // Simple format: just a single duration with completion flag
+  completed?: boolean; // Only for simple format
   actualDurationSeconds?: number;
-  // Rounds format: multiple rounds
+  // Rounds format: multiple rounds (each round has its own completed flag)
   completedRounds?: Array<{
     roundNumber: number;
     completed: boolean;
@@ -643,131 +611,11 @@ export interface PlyometricActualData {
  */
 export interface YogaPilatesActualData {
   type: 'yoga_pilates';
+  completed: boolean; // Explicit completion flag
   actualDurationSeconds: number;
   actualIntensity?: 'light' | 'moderate' | 'high';
 }
 
-// ============================================================================
-// DEPRECATED INTERFACES (Legacy - To Be Removed)
-// ============================================================================
-
-/**
- * DEPRECATED: Old interfaces kept for reference during migration
- * These will be removed once UI is updated
- */
-export interface WorkoutExercise {
-  exerciseId: string;
-  sets: WorkoutSet[];
-  order: number;
-  notes?: string;
-}
-
-export interface AssignedWorkout {
-  id: string;
-  templateId: string;
-  clientId: string;
-  trainerId: string;
-  assignedDate: Date;
-  dueDate: Date;
-  status: 'assigned' | 'in_progress' | 'completed' | 'overdue';
-  progress: WorkoutProgress;
-  notes?: string;
-  completedAt?: Date;
-}
-
-export interface WorkoutProgress {
-  exercisesCompleted: string[]; // Exercise IDs
-  totalExercises: number;
-  completionPercentage: number;
-  timeSpent?: number; // in minutes
-  exerciseDetails: ExerciseProgress[];
-  startedAt?: Date;
-  lastUpdatedAt: Date;
-}
-
-export interface ExerciseProgress {
-  exerciseId: string;
-  completed: boolean;
-  setsCompleted: number;
-  actualReps?: number[];
-  actualWeight?: number[];
-  actualDuration?: number;
-  notes?: string;
-  completedAt?: Date;
-}
-
-export interface WorkoutSession {
-  id: string;
-  assignedWorkoutId: string;
-  clientId: string;
-  startedAt: Date;
-  completedAt?: Date;
-  totalDuration?: number; // in minutes
-  exercisesSessions: ExerciseSession[];
-  notes?: string;
-  rating?: number; // 1-5 scale
-}
-
-export interface ExerciseSession {
-  exerciseId: string;
-  sets: SetData[];
-  duration?: number;
-  notes?: string;
-}
-
-export interface SetData {
-  reps: number;
-  weight?: number;
-  duration?: number;
-  restTime?: number;
-  completedAt: Date;
-}
-
-// Client-specific data
-export interface ClientWorkoutStats {
-  clientId: string;
-  totalWorkoutsCompleted: number;
-  totalWorkoutsAssigned: number;
-  averageCompletionRate: number;
-  currentStreak: number;
-  longestStreak: number;
-  totalTimeSpent: number; // in minutes
-  lastWorkoutDate?: Date;
-  preferredDifficulty: 'beginner' | 'intermediate' | 'advanced';
-  preferredCategories: string[];
-}
-
-// Form types for UI
-export interface CreateWorkoutForm {
-  name: string;
-  description: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  category: 'strength' | 'cardio' | 'hiit' | 'flexibility' | 'mixed';
-  estimatedDuration: number;
-  exercises: CreateExerciseForm[];
-  tags: string[];
-  scope: 'personal' | 'company'; // Replaced isPublic field
-}
-
-export interface CreateExerciseForm {
-  name: string;
-  instructions: string;
-  sets?: number;
-  reps?: number;
-  duration?: number;
-  restTime?: number;
-  category: 'strength' | 'cardio' | 'flexibility' | 'core' | 'other';
-  targetMuscleGroups: string[];
-  equipment: string[];
-  notes?: string;
-}
-
-export interface AssignWorkoutForm {
-  templateId: string;
-  clientIds: string[];
-  dueDate: Date;
-  notes?: string;
-}
 
 // Constants
 export const MUSCLE_GROUPS = [

@@ -987,11 +987,10 @@ exports.cancelSession = sessionFunctions.cancelSession;
  */
 const workoutFunctions = require("./workouts");
 
-// Export workout management functions
+// Export workout management functions (UNIFIED MODEL)
 exports.assignWorkout = workoutFunctions.assignWorkout;
-exports.updateWorkoutExecution = workoutFunctions.updateWorkoutExecution;
-exports.saveWorkoutExecution = workoutFunctions.saveWorkoutExecution;
-exports.completeWorkoutExecution = workoutFunctions.completeWorkoutExecution;
+exports.saveWorkout = workoutFunctions.saveWorkout;  // NEW unified function
+exports.completeWorkout = workoutFunctions.completeWorkout;  // NEW unified function
 exports.createWorkoutTemplate = workoutFunctions.createWorkoutTemplate;
 exports.updateWorkoutTemplate = workoutFunctions.updateWorkoutTemplate;
 exports.deleteWorkoutTemplate = workoutFunctions.deleteWorkoutTemplate;

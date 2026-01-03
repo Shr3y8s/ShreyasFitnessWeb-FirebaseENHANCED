@@ -408,13 +408,24 @@ export default function ClientDetailPage() {
                  date1.getDate() === date2.getDate();
         };
 
-        // Create all 3 queries with date filtering
-        const assignmentsQuery = query(
-          collection(db, 'workoutAssignments'),
+        // Query for Recently Completed workouts (use completedAt)
+        const completedWorkoutsQuery = query(
+          collection(db, 'workouts'),
           where('clientId', '==', clientId),
           where('trainerId', '==', user.uid),
-          where('dueDate', '>=', Timestamp.fromDate(threeMonthsAgo)),
-          orderBy('dueDate', 'desc')
+          where('status', '==', 'completed'),
+          orderBy('completedAt', 'desc'),
+          limit(5)
+        );
+        
+        // Query for Upcoming/Scheduled workouts (use dueDate for scheduling)
+        const upcomingWorkoutsQuery = query(
+          collection(db, 'workouts'),
+          where('clientId', '==', clientId),
+          where('trainerId', '==', user.uid),
+          where('status', 'in', ['scheduled', 'started']),
+          orderBy('dueDate', 'asc'),
+          limit(10)
         );
         
         const trainingSessionsQuery = query(
@@ -432,14 +443,15 @@ export default function ClientDetailPage() {
         );
 
         // Execute all queries in parallel
-        const [assignmentsSnapshot, trainingSnaps, checkInSnaps] = await Promise.all([
-          getDocs(assignmentsQuery),
+        const [completedSnapshot, upcomingSnapshot, trainingSnaps, checkInSnaps] = await Promise.all([
+          getDocs(completedWorkoutsQuery),
+          getDocs(upcomingWorkoutsQuery),
           getDocs(trainingSessionsQuery),
           getDocs(checkInSessionsQuery)
         ]);
 
-        // Process workout assignments
-        const assignments = assignmentsSnapshot.docs.map(doc => {
+        // Process completed workouts
+        const completedWorkouts = completedSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
@@ -448,20 +460,42 @@ export default function ClientDetailPage() {
             templateId: data.workoutTemplateId,
             trainerId: data.trainerId,
             assignedDate: data.assignedAt?.toDate() || new Date(),
-            dueDate: typeof data.dueDate === 'string' ? new Date(data.dueDate) : data.dueDate?.toDate() || new Date(),
+            dueDate: data.dueDate?.toDate() || new Date(),
+            completedAt: data.completedAt?.toDate() || null,
             status: data.status || 'assigned',
             progress: data.progress,
             notes: data.notes
           };
         });
         
-        setWorkoutAssignments(assignments);
+        // Process upcoming workouts
+        const upcomingWorkouts = upcomingSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name || 'Unnamed Workout',
+            clientId: data.clientId,
+            templateId: data.workoutTemplateId,
+            trainerId: data.trainerId,
+            assignedDate: data.assignedAt?.toDate() || new Date(),
+            dueDate: data.dueDate?.toDate() || new Date(),
+            completedAt: data.completedAt?.toDate() || null,
+            status: data.status || 'assigned',
+            progress: data.progress,
+            notes: data.notes
+          };
+        });
+        
+        // Combine all workouts for state
+        const allWorkouts = [...completedWorkouts, ...upcomingWorkouts];
+        setWorkoutAssignments(allWorkouts);
 
-        // Calculate workout metrics (data already filtered by Firestore)
+        // Calculate workout metrics (use combined snapshots)
         let wo1mCompleted = 0, wo1mTotal = 0, wo1mOnTime = 0;
         let wo3mCompleted = 0, wo3mTotal = 0, wo3mOnTime = 0;
         
-        assignmentsSnapshot.forEach((doc) => {
+        // Process both completed and upcoming for metrics
+        [...completedSnapshot.docs, ...upcomingSnapshot.docs].forEach((doc) => {
           const data = doc.data();
           const dueDate = data.dueDate?.toDate();
           const completedAt = data.completedAt?.toDate();
@@ -1045,7 +1079,12 @@ export default function ClientDetailPage() {
 
     const recentlyCompleted = workoutAssignments
       .filter(w => w.status === 'completed')
-      .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime())
+      .sort((a, b) => {
+        // Sort by completedAt (most recent first)
+        const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+        const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+        return bTime - aTime;
+      })
       .slice(0, 5);
 
     const upcoming = workoutAssignments
@@ -1801,7 +1840,7 @@ export default function ClientDetailPage() {
                               <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900">{workout.name}</h4>
                                 <p className="text-sm text-gray-600">
-                                  Completed: {new Date(workout.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  Completed: {workout.completedAt ? new Date(workout.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Recently'}
                                 </p>
                               </div>
                               <CheckCircle2 className="h-5 w-5 text-green-600" />
