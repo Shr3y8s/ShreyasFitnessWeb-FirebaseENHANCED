@@ -25,6 +25,7 @@ import Link from 'next/link';
 import { VolumeChart } from '@/components/charts/VolumeChart';
 import { ExerciseCompletionChart } from '@/components/charts/ExerciseCompletionChart';
 import { StrengthProgressionChart } from '@/components/charts/StrengthProgressionChart';
+import { ConsistencyHeatmap } from '@/components/charts/ConsistencyHeatmap';
 
 interface ClientData {
   id: string;
@@ -853,12 +854,7 @@ export default function ClientTrainingDashboard() {
                 </TabsContent>
 
                 <TabsContent value="consistency">
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <h3 className="font-semibold text-gray-700 mb-2">Workout Consistency Heatmap</h3>
-                    <p className="text-sm text-gray-600">90-day calendar view with completion patterns</p>
-                    <p className="text-xs text-gray-500 mt-4">(Phase 3: Heatmap implementation)</p>
-                  </div>
+                  <ConsistencyHeatmap clientId={clientId} daysBack={90} />
                 </TabsContent>
 
                 <TabsContent value="completion">
