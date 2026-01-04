@@ -387,10 +387,12 @@ export default function ClientDetailPage() {
     loadPlanData();
   }, [activeTab, clientId]);
 
-  // Fetch workout assignments and subscribe to sessions when on Training tab
+  // Fetch workout assignments and subscribe to sessions when on Training or Overview tab
   useEffect(() => {
-    if (!user || !clientId || activeTab !== 'training') {
-      setUpcomingSessions([]);
+    if (!user || !clientId || (activeTab !== 'training' && activeTab !== 'overview')) {
+      if (activeTab !== 'overview') {
+        setUpcomingSessions([]);
+      }
       return;
     }
 
@@ -1229,8 +1231,26 @@ export default function ClientDetailPage() {
                       </div>
                       <h3 className="font-semibold text-gray-900">Training Status</h3>
                     </div>
-                    <p className="text-2xl font-bold text-foreground">On Track</p>
-                    <p className="text-sm text-muted-foreground mt-1">Last workout today</p>
+                    {trainingLoading ? (
+                      <p className="text-xl font-bold text-foreground">Loading...</p>
+                    ) : recentlyCompleted.length > 0 ? (
+                      <>
+                        <p className="text-2xl font-bold text-green-600">Active</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Last: {new Date(recentlyCompleted[0].completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </>
+                    ) : workoutAssignments.length > 0 ? (
+                      <>
+                        <p className="text-2xl font-bold text-yellow-600">Pending</p>
+                        <p className="text-sm text-muted-foreground mt-1">No completed workouts</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-gray-600">Not Started</p>
+                        <p className="text-sm text-muted-foreground mt-1">No workouts assigned</p>
+                      </>
+                    )}
                   </div>
 
                   {/* Upcoming Session */}
@@ -1244,8 +1264,23 @@ export default function ClientDetailPage() {
                       </div>
                       <h3 className="font-semibold text-gray-900">Next Session</h3>
                     </div>
-                    <p className="text-2xl font-bold text-foreground">-</p>
-                    <p className="text-sm text-muted-foreground mt-1">No upcoming sessions</p>
+                    {trainingLoading ? (
+                      <p className="text-xl font-bold text-foreground">Loading...</p>
+                    ) : upcomingSessions.length > 0 || upcomingCheckins.length > 0 ? (
+                      <>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {formatSessionDate(upcomingSessions[0]?.scheduledDate || upcomingCheckins[0]?.scheduledDate)}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {upcomingSessions.length > 0 ? 'Training' : 'Check-in'}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-gray-600">-</p>
+                        <p className="text-sm text-muted-foreground mt-1">No upcoming sessions</p>
+                      </>
+                    )}
                   </div>
 
                   {/* Session Balance */}
@@ -1285,15 +1320,27 @@ export default function ClientDetailPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                       <p className="text-sm text-muted-foreground mb-1">Total Workouts Assigned</p>
-                      <p className="text-3xl font-bold text-foreground">-</p>
+                      <p className="text-3xl font-bold text-foreground">
+                        {trainingLoading ? '...' : workoutStats.total}
+                      </p>
                     </div>
                     <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                       <p className="text-sm text-muted-foreground mb-1">Workouts Completed</p>
-                      <p className="text-3xl font-bold text-foreground">-</p>
+                      <p className="text-3xl font-bold text-foreground">
+                        {trainingLoading ? '...' : workoutStats.completed}
+                      </p>
                     </div>
                     <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                       <p className="text-sm text-muted-foreground mb-1">Completion Rate</p>
-                      <p className="text-3xl font-bold text-foreground">-%</p>
+                      <p className={`text-3xl font-bold ${
+                        trainingLoading ? 'text-foreground' :
+                        workoutStats.completionRate >= 80 ? 'text-green-600' :
+                        workoutStats.completionRate >= 60 ? 'text-yellow-600' :
+                        workoutStats.completionRate > 0 ? 'text-red-600' :
+                        'text-foreground'
+                      }`}>
+                        {trainingLoading ? '...' : `${workoutStats.completionRate}%`}
+                      </p>
                     </div>
                     <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
                       <p className="text-sm text-muted-foreground mb-1">Days as Client</p>
@@ -1312,25 +1359,118 @@ export default function ClientDetailPage() {
                   <div>
                     <h3 className="text-lg font-semibold mb-3">Alerts & Notifications</h3>
                     <div className="space-y-2">
+                      {/* Account Not Activated */}
                       {!clientData.accountActivated && (
                         <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-start gap-3 transition-all duration-300 hover:shadow-md">
                           <span className="text-amber-600 text-xl">⚠️</span>
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium text-amber-900">Account Not Activated</p>
                             <p className="text-sm text-amber-700">Client hasn't activated their account yet</p>
                           </div>
                         </div>
                       )}
-                      <div className="bg-primary/5 border border-primary/50 rounded-lg p-3 text-center transition-all duration-300">
-                        <p className="text-sm text-muted-foreground">No critical alerts at this time</p>
-                      </div>
+
+                      {/* Overdue Workouts */}
+                      {(() => {
+                        const overdueWorkouts = workoutAssignments.filter(w => 
+                          w.status !== 'completed' && 
+                          w.dueDate && 
+                          new Date(w.dueDate) < new Date()
+                        );
+                        return overdueWorkouts.length > 0 && (
+                          <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-3 transition-all duration-300 hover:shadow-md cursor-pointer"
+                               onClick={() => setActiveTab('training')}>
+                            <span className="text-red-600 text-xl">🔴</span>
+                            <div className="flex-1">
+                              <p className="font-medium text-red-900">{overdueWorkouts.length} Overdue Workout{overdueWorkouts.length !== 1 ? 's' : ''}</p>
+                              <p className="text-sm text-red-700">Past due date and not completed</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Upcoming Session (24h warning) */}
+                      {(() => {
+                        const nextSession = upcomingSessions[0] || upcomingCheckins[0];
+                        if (nextSession) {
+                          const sessionDate = nextSession.scheduledDate instanceof Date 
+                            ? nextSession.scheduledDate 
+                            : (nextSession.scheduledDate as any).toDate ? (nextSession.scheduledDate as any).toDate() : new Date();
+                          const hoursUntil = (sessionDate.getTime() - Date.now()) / (1000 * 60 * 60);
+                          return hoursUntil <= 24 && hoursUntil > 0 && (
+                            <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 flex items-start gap-3 transition-all duration-300 hover:shadow-md cursor-pointer"
+                                 onClick={() => setActiveTab('training')}>
+                              <span className="text-blue-600 text-xl">📅</span>
+                              <div className="flex-1">
+                                <p className="font-medium text-blue-900">Upcoming Session</p>
+                                <p className="text-sm text-blue-700">
+                                  {hoursUntil < 1 ? 'In less than 1 hour' : 
+                                   hoursUntil < 2 ? 'In 1 hour' :
+                                   Math.floor(hoursUntil) < 24 ? `In ${Math.floor(hoursUntil)} hours` : 'Tomorrow'} - {formatSessionDate(sessionDate)}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Session Balance Critical */}
+                      {clientData.sessionBalance?.available > 0 && clientData.sessionBalance.available < 2 && (
+                        <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 flex items-start gap-3 transition-all duration-300 hover:shadow-md">
+                          <span className="text-orange-600 text-xl">⚠️</span>
+                          <div className="flex-1">
+                            <p className="font-medium text-orange-900">Low Session Balance</p>
+                            <p className="text-sm text-orange-700">
+                              Only {clientData.sessionBalance.available} session{clientData.sessionBalance.available !== 1 ? 's' : ''} remaining
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Inactive Training */}
+                      {recentlyCompleted.length > 0 && (() => {
+                        const daysSinceLastWorkout = Math.floor(
+                          (Date.now() - new Date(recentlyCompleted[0].completedAt).getTime()) / (1000 * 60 * 60 * 24)
+                        );
+                        return daysSinceLastWorkout > 14 && (
+                          <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 flex items-start gap-3 transition-all duration-300 hover:shadow-md cursor-pointer"
+                               onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}>
+                            <span className="text-orange-600 text-xl">💤</span>
+                            <div className="flex-1">
+                              <p className="font-medium text-orange-900">Inactive Training</p>
+                              <p className="text-sm text-orange-700">
+                                No workouts completed in {daysSinceLastWorkout} days - Consider reaching out
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* No Alerts - Only show if truly none */}
+                      {clientData.accountActivated && 
+                       !trainingLoading &&
+                       !workoutAssignments.some(w => w.status !== 'completed' && w.dueDate && new Date(w.dueDate) < new Date()) &&
+                       (!clientData.sessionBalance || clientData.sessionBalance.available >= 2 || clientData.sessionBalance.available === 0) &&
+                       !(recentlyCompleted.length > 0 && Math.floor((Date.now() - new Date(recentlyCompleted[0].completedAt).getTime()) / (1000 * 60 * 60 * 24)) > 14) &&
+                       !(() => {
+                         const nextSession = upcomingSessions[0] || upcomingCheckins[0];
+                         if (!nextSession) return false;
+                         const sessionDate = nextSession.scheduledDate instanceof Date 
+                           ? nextSession.scheduledDate 
+                           : (nextSession.scheduledDate as any).toDate ? (nextSession.scheduledDate as any).toDate() : new Date();
+                         const hoursUntil = (sessionDate.getTime() - Date.now()) / (1000 * 60 * 60);
+                         return hoursUntil <= 24 && hoursUntil > 0;
+                       })() && (
+                        <p className="text-sm text-muted-foreground text-center py-3">✅ No critical alerts at this time</p>
+                      )}
                     </div>
                   </div>
 
                   {/* Quick Actions */}
-                  <div>
+                  <div className="flex flex-col h-full">
                     <h3 className="text-lg font-semibold mb-3">Quick Actions</h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-3 flex-1">
                       <button 
                         onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
                         className="bg-primary/10 hover:bg-primary/20 border border-primary/50 text-foreground rounded-lg p-4 text-left transition-all duration-300 hover:shadow-glow hover:-translate-y-1"
