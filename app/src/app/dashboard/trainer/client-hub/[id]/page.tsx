@@ -31,7 +31,8 @@ import {
   Download,
   ChevronDown,
   ChevronRight,
-  Calendar
+  Calendar,
+  Target
 } from 'lucide-react';
 import Link from 'next/link';
 import { LoginHistoryCard } from '@/components/security/LoginHistoryCard';
@@ -80,7 +81,7 @@ import {
   DailyHabitsData 
 } from '@/types/plan';
 
-type TabType = 'overview' | 'plan' | 'training' | 'nutrition' | 'progress' | 'support' | 'account';
+type TabType = 'overview' | 'plan' | 'training' | 'nutrition' | 'progress' | 'support' | 'account' | 'goals';
 
 export default function ClientDetailPage() {
   const router = useRouter();
@@ -1121,6 +1122,7 @@ export default function ClientDetailPage() {
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
     { id: 'plan', label: 'Plan', icon: <ClipboardList className="h-4 w-4" /> },
+    { id: 'goals', label: 'Goals & Milestones', icon: <Target className="h-4 w-4" /> },
     { id: 'training', label: 'Training', icon: <Dumbbell className="h-4 w-4" /> },
     { id: 'nutrition', label: 'Nutrition', icon: <Apple className="h-4 w-4" /> },
     { id: 'progress', label: 'Progress', icon: <TrendingUp className="h-4 w-4" /> },
@@ -2304,6 +2306,99 @@ export default function ClientDetailPage() {
                     </div>
                   </>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'goals' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                      <Target className="h-6 w-6 text-primary" />
+                      Goals & Milestones
+                    </h2>
+                    <p className="text-gray-600">View and manage client goals - Full interface available on dedicated page</p>
+                  </div>
+                  <Link
+                    href={`/dashboard/trainer/client-hub/${clientId}/goals`}
+                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Manage Goals
+                  </Link>
+                </div>
+
+                {/* Quick Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center transition-all duration-300 hover:shadow-glow">
+                    <div className="text-3xl mb-2">🎯</div>
+                    <p className="text-2xl font-bold text-foreground">-</p>
+                    <p className="text-sm text-muted-foreground">Active Goals</p>
+                  </div>
+                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center transition-all duration-300 hover:shadow-glow">
+                    <div className="text-3xl mb-2">✅</div>
+                    <p className="text-2xl font-bold text-foreground">-</p>
+                    <p className="text-sm text-muted-foreground">Milestones Completed</p>
+                  </div>
+                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center transition-all duration-300 hover:shadow-glow">
+                    <div className="text-3xl mb-2">🏆</div>
+                    <p className="text-2xl font-bold text-foreground">-</p>
+                    <p className="text-sm text-muted-foreground">Goals Completed</p>
+                  </div>
+                </div>
+
+                {/* Feature Overview */}
+                <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
+                  <h3 className="text-lg font-semibold mb-4">Goals & Milestones System</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Goal Categories:</h4>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        <li className="flex items-center gap-2">
+                          <span>👟</span>
+                          <span>Steps/Activity tracking with streak goals</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>💧</span>
+                          <span>Water intake habit consistency</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>🥗</span>
+                          <span>Nutrition adherence milestones</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>💪</span>
+                          <span>Workout completion consistency</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Additional Goals:</h4>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        <li className="flex items-center gap-2">
+                          <span>⚖️</span>
+                          <span>Weight loss with progressive milestones</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>🏋️</span>
+                          <span>Strength progression tracking</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span>📋</span>
+                          <span>Setup & onboarding tasks</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Call to Action */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Tip:</strong> Use the dedicated Goals page to create and manage goals with category-specific 
+                    templates. Most goals are automatically tracked based on client activity data. Click "Manage Goals" above 
+                    to access the full interface.
+                  </p>
+                </div>
               </div>
             )}
 

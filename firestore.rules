@@ -346,6 +346,26 @@ service cloud.firestore {
       // Cloud Functions use admin SDK which bypasses rules, but explicit deny for clarity
       allow write: if false;
     }
+    
+    // GOALS COLLECTION - Goals and milestones tracking
+    // Document ID format: {clientId}_{category} (7 slots per client)
+    match /goals/{goalId} {
+      // Trainers/admins can read and write all goals
+      allow read, write: if isTrainerOrAdmin();
+      
+      // Clients can read their own goals (only active ones will be shown in UI)
+      // Extract clientId from document ID (format: clientId_category)
+      allow read: if isAuthenticated() && 
+                  goalId.split('_')[0] == request.auth.uid;
+      
+      // Clients can update currentValue (for manual progress tracking if needed)
+      // But cannot change configuration
+      allow update: if isAuthenticated() && 
+                    goalId.split('_')[0] == request.auth.uid &&
+                    !request.resource.data.diff(resource.data).affectedKeys()
+                      .hasAny(['clientId', 'trainerId', 'category', 'isActive', 'isConfigured', 
+                             'targetValue', 'unit', 'term', 'priority', 'title']);
+    }
 
     // CLIENT MESSAGING SYSTEM - Phase 3
     match /client_messages/{messageId} {

@@ -2337,6 +2337,16 @@ exports.trackLogin = onCall({
 });
 
 /**
+ * GOALS & MILESTONES SYSTEM
+ * Auto-tracking functions for goal progress
+ */
+const goalFunctions = require("./goals");
+exports.onDailyActivityWrite = goalFunctions.onDailyActivityWrite;
+exports.onWorkoutComplete = goalFunctions.onWorkoutComplete;
+exports.onWeightLog = goalFunctions.onWeightLog;
+exports.onNutritionLogWrite = goalFunctions.onNutritionLogWrite;
+
+/**
  * MIGRATION FUNCTIONS
  * One-time or administrative functions for data migrations
  */
