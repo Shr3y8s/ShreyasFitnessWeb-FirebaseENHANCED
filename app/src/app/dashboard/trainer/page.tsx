@@ -277,7 +277,7 @@ export default function TrainerDashboardPage() {
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Client Metrics</h3>
-              <Link href="/dashboard/trainer/clients">
+              <Link href="/dashboard/trainer/client-hub">
                 <Button variant="outline" size="sm">
                   View All Clients
                 </Button>
@@ -454,8 +454,8 @@ export default function TrainerDashboardPage() {
                 </Button>
               </Link>
               
-              <Link href="/dashboard/trainer/clients">
-                <Button 
+              <Link href="/dashboard/trainer/client-hub">
+                <Button
                   variant="outline" 
                   className="w-full justify-start h-auto p-4 flex-col items-start bg-white hover:bg-gray-50"
                 >
@@ -481,7 +481,7 @@ export default function TrainerDashboardPage() {
             <div className="bg-white rounded-xl border p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Recent Client Activity</h3>
-                <Link href="/dashboard/trainer/clients">
+                <Link href="/dashboard/trainer/client-hub">
                   <Button variant="ghost" size="sm">View All</Button>
                 </Link>
               </div>

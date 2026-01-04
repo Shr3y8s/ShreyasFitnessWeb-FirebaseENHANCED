@@ -116,14 +116,14 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Dashboard - Top Level */}
+        {/* Dashboard/Overview - Top Level */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
-                  className={pathname === '/dashboard/trainer' || currentPage === 'dashboard' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                <SidebarMenuButton
+                  asChild
+                  className={pathname === '/dashboard/trainer' || currentPage === 'overview' ? 'bg-primary text-white hover:bg-primary/90' : ''}
                 >
                   <Link href="/dashboard/trainer">
                     <LayoutDashboard className="w-4 h-4" />
@@ -145,30 +145,16 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
               <SidebarMenuItem>
                 <SidebarMenuButton 
                   asChild 
-                  className={pathname === '/dashboard/trainer/clients' || currentPage === 'clients' ? 'bg-primary text-white hover:bg-primary/90' : ''}
-                >
-                  <Link href="/dashboard/trainer/clients">
-                    <Users className="w-4 h-4" />
-                    <span className="font-medium">Client Roster</span>
-                    {clientCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {clientCount}
-                      </SidebarMenuBadge>
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                  asChild 
                   className={pathname.startsWith('/dashboard/trainer/client-hub') || currentPage === 'client-hub' ? 'bg-primary text-white hover:bg-primary/90' : ''}
                 >
                   <Link href="/dashboard/trainer/client-hub">
                     <UserCircle className="w-4 h-4" />
                     <span className="font-medium">Client Hub</span>
-                    <span className="ml-auto border border-primary/50 text-primary text-xs px-2 py-0.5 rounded-full">
-                      New
-                    </span>
+                    {clientCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {clientCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
