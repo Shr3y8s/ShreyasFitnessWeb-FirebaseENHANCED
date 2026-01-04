@@ -1,30 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import TrainerSidebar from '@/components/TrainerSidebar';
-import { Breadcrumb } from '@/components/Breadcrumb';
+import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { 
-  ArrowLeft,
-  Target,
   Settings,
   TrendingUp,
   MoreVertical,
   Star,
-  CheckCircle2,
-  Circle,
-  Calendar,
-  Flag
+  Flag,
+  Calendar
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -32,17 +20,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
 import { Goal, GOAL_CATEGORIES, getCategoryMetadata, calculateGoalCompletion } from '@/types/goals';
 import { GoalFormDialog } from '@/components/trainer/goals/GoalFormDialog';
-import { useToast } from '@/hooks/use-toast';
 import { getClientGoals, saveGoalConfig, toggleGoalActive } from '@/lib/goals-api';
 
-interface ClientData {
-  id: string;
-  name: string;
-  email: string;
-  profilePhotoSmall?: string;
+interface GoalsManagementPanelProps {
+  clientId: string;
+  clientName: string;
 }
 
 // Initialize 7 goal slots (one per category)
@@ -54,71 +38,17 @@ const initializeGoalSlots = (): Map<string, Goal | null> => {
   return slots;
 };
 
-export default function ClientGoalsPage() {
-  const router = useRouter();
-  const params = useParams();
-  const clientId = params?.id as string;
-  const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
+export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPanelProps) {
   const { toast } = useToast();
   
-  const [loading, setLoading] = useState(true);
-  const [clientData, setClientData] = useState<ClientData | null>(null);
   const [goalSlots, setGoalSlots] = useState<Map<string, Goal | null>>(initializeGoalSlots());
   const [goalsLoading, setGoalsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
 
-  // Fetch client data
-  useEffect(() => {
-    const fetchClient = async () => {
-      if (authLoading) return;
-      
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      if (!canAccessTrainerDashboard) {
-        router.push('/dashboard');
-        return;
-      }
-
-      if (!clientId) {
-        router.push('/dashboard/trainer/client-hub');
-        return;
-      }
-      
-      try {
-        const clientRef = doc(db, 'users', clientId);
-        const clientSnap = await getDoc(clientRef);
-        
-        if (!clientSnap.exists()) {
-          console.error('Client not found');
-          router.push('/dashboard/trainer/client-hub');
-          return;
-        }
-        
-        const data = clientSnap.data();
-        setClientData({
-          id: clientSnap.id,
-          name: data.name,
-          email: data.email,
-          profilePhotoSmall: data.profilePhotoSmall
-        });
-      } catch (error) {
-        console.error('Error fetching client:', error);
-        router.push('/dashboard/trainer/client-hub');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchClient();
-  }, [user, router, authLoading, canAccessTrainerDashboard, clientId]);
-
   // Fetch goals from Firestore
   useEffect(() => {
-    if (!clientId || loading) return;
+    if (!clientId) return;
 
     const loadGoals = async () => {
       try {
@@ -138,7 +68,7 @@ export default function ClientGoalsPage() {
     };
 
     loadGoals();
-  }, [clientId, loading, toast]);
+  }, [clientId, toast]);
 
   const handleConfigureGoal = (category: string) => {
     setEditingCategory(category);
@@ -146,16 +76,11 @@ export default function ClientGoalsPage() {
   };
 
   const handleSaveGoal = async (goalData: any) => {
-    if (!user) return;
-    
     const category = goalData.category;
     
     try {
       // Save to Firestore
-      const result = await saveGoalConfig(clientId, category, {
-        ...goalData,
-        trainerId: user.uid
-      });
+      const result = await saveGoalConfig(clientId, category, goalData);
       
       if (result.success) {
         // Reload goals from Firestore
@@ -232,145 +157,102 @@ export default function ClientGoalsPage() {
     }
   };
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
-        <div className="text-stone-600">Loading client data...</div>
-      </div>
-    );
-  }
-
-  if (!clientData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
-        <div className="text-stone-600">Client not found</div>
-      </div>
-    );
-  }
-
   const activeGoals = Array.from(goalSlots.values()).filter(g => g?.isActive && g?.isConfigured);
   const configuredCount = Array.from(goalSlots.values()).filter(g => g?.isConfigured).length;
 
+  if (goalsLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-stone-600">Loading goals...</div>
+      </div>
+    );
+  }
+
   return (
-    <SidebarProvider>
-      <TrainerSidebar currentPage="client-hub" />
-      <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
-          {/* Breadcrumb */}
-          <div className="mb-6">
-            <Breadcrumb items={[
-              { label: 'Client Management' },
-              { label: 'Client Hub', href: '/dashboard/trainer/client-hub' },
-              { label: clientData.name, href: `/dashboard/trainer/client-hub/${clientId}` },
-              { label: 'Goals & Milestones' }
-            ]} />
-          </div>
+    <div className="space-y-6">
+      {/* Header Stats */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Goals & Milestones - {clientName}</h2>
+          <p className="text-gray-600">Configure goal tracking system with 7 category slots</p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-gray-600">Configured</p>
+          <p className="text-2xl font-bold">{configuredCount}/7</p>
+        </div>
+      </div>
 
-          {/* Header */}
-          <div className="bg-white rounded-xl border shadow-sm p-6 mb-6">
-            <div className="flex items-center gap-4">
-              {clientData.profilePhotoSmall ? (
-                <img
-                  src={clientData.profilePhotoSmall}
-                  alt={clientData.name}
-                  className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+      {/* Main Tabs */}
+      <Tabs defaultValue="configure" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="configure" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Configure Goals
+          </TabsTrigger>
+          <TabsTrigger value="progress" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Progress & Tracking ({activeGoals.length} active)
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Configure Goals */}
+        <TabsContent value="configure">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {GOAL_CATEGORIES.map(category => {
+              const goal = goalSlots.get(category.value);
+              const isConfigured = goal?.isConfigured || false;
+              const isActive = goal?.isActive || false;
+
+              return (
+                <GoalSlotCard
+                  key={category.value}
+                  category={category}
+                  goal={goal}
+                  isConfigured={isConfigured}
+                  isActive={isActive}
+                  onConfigure={() => handleConfigureGoal(category.value)}
+                  onToggleActive={() => handleToggleActive(category.value)}
                 />
-              ) : (
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-                  {clientData.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Target className="h-6 w-6 text-primary" />
-                  {clientData.name} - Goals & Milestones
-                </h1>
-                <p className="text-gray-600">Configure goal tracking system with 7 category slots</p>
-              </div>
+              );
+            })}
+          </div>
+        </TabsContent>
 
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Configured</p>
-                <p className="text-2xl font-bold">{configuredCount}/7</p>
+        {/* Tab 2: Progress & Tracking */}
+        <TabsContent value="progress">
+          {activeGoals.length === 0 ? (
+            <Card className="p-12 text-center">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">No Active Goals</h3>
+              <p className="text-gray-500 mb-4">Configure and activate goals in the "Configure Goals" tab to track progress</p>
+              <Button onClick={() => document.querySelector('[value="configure"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
+                Go to Configure Goals
+              </Button>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Showing {activeGoals.length} active goal{activeGoals.length !== 1 ? 's' : ''} with live tracking
+              </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {activeGoals.map(goal => goal && (
+                  <GoalProgressCard key={goal.id} goal={goal} />
+                ))}
               </div>
             </div>
-          </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
-          {/* Main Tabs */}
-          <Tabs defaultValue="configure" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="configure" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configure Goals
-              </TabsTrigger>
-              <TabsTrigger value="progress" className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Progress & Tracking ({activeGoals.length} active)
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Tab 1: Configure Goals */}
-            <TabsContent value="configure">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {GOAL_CATEGORIES.map(category => {
-                  const goal = goalSlots.get(category.value);
-                  const isConfigured = goal?.isConfigured || false;
-                  const isActive = goal?.isActive || false;
-
-                  return (
-                    <GoalSlotCard
-                      key={category.value}
-                      category={category}
-                      goal={goal}
-                      isConfigured={isConfigured}
-                      isActive={isActive}
-                      onConfigure={() => handleConfigureGoal(category.value)}
-                      onToggleActive={() => handleToggleActive(category.value)}
-                    />
-                  );
-                })}
-              </div>
-            </TabsContent>
-
-            {/* Tab 2: Progress & Tracking */}
-            <TabsContent value="progress">
-              {activeGoals.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No Active Goals</h3>
-                  <p className="text-gray-500 mb-4">Configure and activate goals in the "Configure Goals" tab to track progress</p>
-                  <Button onClick={() => document.querySelector('[value="configure"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
-                    Go to Configure Goals
-                  </Button>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    Showing {activeGoals.length} active goal{activeGoals.length !== 1 ? 's' : ''} with live tracking
-                  </p>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {activeGoals.map(goal => goal && (
-                      <GoalProgressCard key={goal.id} goal={goal} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          {/* Goal Form Dialog */}
-          <GoalFormDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            onSave={handleSaveGoal}
-            editingGoal={editingCategory ? (goalSlots.get(editingCategory) || null) : null}
-            clientName={clientData.name}
-            preselectedCategory={editingCategory as any}
-          />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      {/* Goal Form Dialog */}
+      <GoalFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSave={handleSaveGoal}
+        editingGoal={editingCategory ? (goalSlots.get(editingCategory) ?? null) : null}
+        clientName={clientName}
+        preselectedCategory={editingCategory as any}
+      />
+    </div>
   );
 }
 
