@@ -419,12 +419,20 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                 <SidebarMenuButton asChild className={pathname === '/goals' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/goals">
                     <Goal className="w-4 h-4" />
-                    <span className="font-medium">Goals & Milestones</span>
+                    <span className="font-medium">Goals & Milestones (Mock)</span>
                     {goalsUpdatesCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
                         {goalsUpdatesCount}
                       </SidebarMenuBadge>
                     )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/goals' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/goals">
+                    <Goal className="w-4 h-4" />
+                    <span className="font-medium">Goals & Milestones</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

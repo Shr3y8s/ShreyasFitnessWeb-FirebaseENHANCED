@@ -77,23 +77,25 @@ exports.onDailyActivityWrite = onDocumentWritten({
   document: 'dailyActivities/{activityId}',
   region: sharedConfig.region,
 }, async (event) => {
-    const change = event.data;
+  const change = event.data;
     try {
       const activityData = change.after.exists ? change.after.data() : null;
       if (!activityData) return null; // Deleted
 
-      const userId = activityData.userId;
+      // Extract clientId from document ID: {clientId}_{date}
+      const activityId = event.params.activityId;
+      const clientId = activityId.split('_')[0];
       
       // Query all active goals for this client (steps + water categories)
       const goalsSnapshot = await db.collection('goals')
-        .where('clientId', '==', userId)
+        .where('clientId', '==', clientId)
         .where('isActive', '==', true)
         .where('isConfigured', '==', true)
         .where('category', 'in', ['steps', 'water'])
         .get();
       
       if (goalsSnapshot.empty) {
-        console.log(`No active steps/water goals for user ${userId}`);
+        console.log(`No active steps/water goals for user ${clientId}`);
         return null;
       }
 
@@ -104,8 +106,8 @@ exports.onDailyActivityWrite = onDocumentWritten({
         
         if (goal.category === 'steps') {
           // Calculate steps streak using goal's configured dailyTarget
-          const stepsStreak = await calculateStreak(userId, async (dateStr) => {
-            const actId = `${userId}_${dateStr}`;
+          const stepsStreak = await calculateStreak(clientId, async (dateStr) => {
+            const actId = `${clientId}_${dateStr}`;
             const actDoc = await db.collection('dailyActivities').doc(actId).get();
             if (!actDoc.exists) return false;
             const data = actDoc.data();
@@ -114,7 +116,7 @@ exports.onDailyActivityWrite = onDocumentWritten({
             return stepsValue >= (goal.dailyTarget || 10000); // Use configured target
           });
           
-          logger.info(`[GOALS] Steps streak calculated for ${userId}`, { streak: stepsStreak, goalId: goalDoc.id, dailyTarget: goal.dailyTarget });
+          logger.info(`[GOALS] Steps streak calculated for ${clientId}`, { streak: stepsStreak, goalId: goalDoc.id, dailyTarget: goal.dailyTarget });
           
           // Prepare update data - write to currentStreak field
           const updateData = {
@@ -156,8 +158,8 @@ exports.onDailyActivityWrite = onDocumentWritten({
         
         if (goal.category === 'water') {
           // Calculate water intake streak using goal's configured dailyTarget
-          const waterStreak = await calculateStreak(userId, async (dateStr) => {
-            const actId = `${userId}_${dateStr}`;
+          const waterStreak = await calculateStreak(clientId, async (dateStr) => {
+            const actId = `${clientId}_${dateStr}`;
             const actDoc = await db.collection('dailyActivities').doc(actId).get();
             if (!actDoc.exists) return false;
             const data = actDoc.data();
@@ -166,7 +168,7 @@ exports.onDailyActivityWrite = onDocumentWritten({
             return waterValue >= (goal.dailyTarget || 64); // Use configured target
           });
           
-          logger.info(`[GOALS] Water streak calculated for ${userId}`, { streak: waterStreak, goalId: goalDoc.id, dailyTarget: goal.dailyTarget });
+          logger.info(`[GOALS] Water streak calculated for ${clientId}`, { streak: waterStreak, goalId: goalDoc.id, dailyTarget: goal.dailyTarget });
           
           // Prepare update data - write to currentStreak field
           const updateData = {
@@ -197,8 +199,8 @@ exports.onDailyActivityWrite = onDocumentWritten({
       }
       
       await batch.commit();
-      logger.info(`[GOALS] Batch committed successfully for user ${userId}`);
-      console.log(`Updated goals for user ${userId} after activity log`);
+      logger.info(`[GOALS] Batch committed successfully for user ${clientId}`);
+      console.log(`Updated goals for user ${clientId} after activity log`);
       return null;
     } catch (error) {
       console.error('Error updating goals after activity:', error);
@@ -366,12 +368,45 @@ exports.onWeightLog = onDocumentWritten({
         return null;
       }
 
-      const userId = activityData.userId;
-      const latestWeight = activityData.weight.weight;
+      // Extract clientId from document ID: {clientId}_{date}
+      const activityId = event.params.activityId;
+      const clientId = activityId.split('_')[0];
+      
+      logger.info(`[GOALS] Weight function triggered for ${clientId}`);
+      
+      // Find most recent weight using flexible date iteration (same as steps/water)
+      let latestWeight = null;
+      let latestWeightDate = null;
+      const today = new Date();
+      
+      for (let i = 0; i < 90; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() - i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        const actId = `${clientId}_${dateStr}`;
+        
+        const actDoc = await db.collection('dailyActivities').doc(actId).get();
+        if (actDoc.exists && actDoc.data().weight?.weight) {
+          latestWeight = actDoc.data().weight.weight;
+          latestWeightDate = dateStr;
+          break;
+        }
+      }
+      
+      if (!latestWeight) {
+        logger.info(`[GOALS] No weight data found for ${clientId} in last 90 days`);
+        return null;
+      }
+      
+      logger.info(`[GOALS] Using weight from most recent date`, {
+        clientId,
+        date: latestWeightDate,
+        weight: latestWeight
+      });
       
       // Query weight loss goals
       const goalsSnapshot = await db.collection('goals')
-        .where('clientId', '==', userId)
+        .where('clientId', '==', clientId)
         .where('isActive', '==', true)
         .where('isConfigured', '==', true)
         .where('category', '==', 'weight_loss')
@@ -411,7 +446,8 @@ exports.onWeightLog = onDocumentWritten({
       }
       
       await batch.commit();
-      console.log(`Updated weight loss goal for ${userId}`);
+      logger.info(`[GOALS] Weight loss goal updated for ${clientId}`);
+      console.log(`Updated weight loss goal for ${clientId}`);
       return null;
     } catch (error) {
       console.error('Error updating weight loss goal:', error);
