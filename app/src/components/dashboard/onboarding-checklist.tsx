@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ClipboardList, X, ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/auth-context';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
 const onboardingSteps = [
   { id: 'schedule', label: 'Schedule your 30-minute planning consultation' },
@@ -16,34 +19,53 @@ interface OnboardingChecklistProps {
 }
 
 export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+  const { user } = useAuth();
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCheckedChange = (id: string) => {
-    setCheckedItems((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // Auto-dismiss when all items are checked
+  // Fetch setup goal milestones from Firestore
   useEffect(() => {
-    const allChecked = onboardingSteps.every(step => checkedItems[step.id]);
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const setupGoalRef = doc(db, 'goals', `${user.uid}_setup`);
     
-    if (allChecked && onDismiss) {
-      // Small delay for better UX - let user see the last checkbox animate
+    // Real-time listener for milestone updates
+    const unsubscribe = onSnapshot(setupGoalRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const goalData = docSnap.data();
+        setMilestones(goalData.milestones || []);
+      } else {
+        // No setup goal yet - show all unchecked
+        setMilestones([]);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching setup goal:', error);
+      setMilestones([]);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Auto-dismiss when all milestones are completed
+  useEffect(() => {
+    if (milestones.length === 0) return;
+    
+    const allComplete = milestones.every(m => m.completed);
+    
+    if (allComplete && onDismiss) {
       setTimeout(() => {
         onDismiss();
-        
-        // TODO: Firebase Integration
-        // When ready to implement, save onboarding completion to Firestore:
-        // await setDoc(doc(db, 'users', userId), {
-        //   onboardingCompleted: true,
-        //   onboardingCompletedAt: serverTimestamp()
-        // }, { merge: true });
-        // This will allow the coach dashboard to track which clients have completed onboarding
       }, 800);
     }
-  }, [checkedItems, onDismiss]);
+  }, [milestones, onDismiss]);
 
   const handleSchedule = () => {
-    window.open('https://calendly.com/shreyas-annapureddy/30min', '_blank');
+    window.location.href = '/dashboard/client/consultation/schedule';
   };
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-glow">
@@ -81,42 +103,37 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
       </div>
       <div className="p-6 pt-0">
         <div className="space-y-3">
-          {onboardingSteps.map((step) => (
-            <div key={step.id} className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id={step.id}
-                checked={!!checkedItems[step.id]}
-                onChange={() => handleCheckedChange(step.id)}
-                className="sr-only"
-              />
-              <label
-                htmlFor={step.id}
-                className="flex items-center gap-3 cursor-pointer group"
-              >
-                <div
-                  className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                    checkedItems[step.id]
-                      ? "bg-primary border-primary"
-                      : "border-primary bg-transparent"
-                  )}
-                >
-                  {checkedItems[step.id] && (
-                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                  )}
+          {onboardingSteps.map((step, index) => {
+            const milestone = milestones[index];
+            const isCompleted = milestone?.completed || false;
+            
+            return (
+              <div key={step.id} className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      isCompleted
+                        ? "bg-primary border-primary"
+                        : "border-primary bg-transparent"
+                    )}
+                  >
+                    {isCompleted && (
+                      <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-sm font-medium transition-colors select-text",
+                      isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+                    )}
+                  >
+                    {step.label}
+                  </span>
                 </div>
-                <span
-                  className={cn(
-                    "text-sm font-medium transition-colors select-text",
-                    checkedItems[step.id] ? "text-muted-foreground line-through" : "text-foreground"
-                  )}
-                >
-                  {step.label}
-                </span>
-              </label>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

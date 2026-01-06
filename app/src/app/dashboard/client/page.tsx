@@ -117,10 +117,13 @@ export default function ClientDashboardPage() {
 
       // Fetch location based on sessionType and locationType
       try {
-        // Check-ins are virtual calls, no physical location
-        // @ts-expect-error - sessionType may include 'checkin' at runtime
+        // Check-ins and onboarding consultations are virtual calls, no physical location
+        // @ts-expect-error - sessionType may include 'checkin' or 'onboarding' at runtime
         if (session.sessionType === 'checkin') {
           setNextSessionLocation('Virtual check-in call');
+          // @ts-expect-error - sessionType may include 'onboarding' at runtime
+        } else if (session.sessionType === 'onboarding') {
+          setNextSessionLocation('Virtual consultation call');
         } else if (session.locationType === 'private') {
           const clientDoc = await getDoc(doc(db, 'users', session.clientId));
           if (clientDoc.exists()) {

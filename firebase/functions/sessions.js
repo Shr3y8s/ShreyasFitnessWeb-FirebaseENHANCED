@@ -322,12 +322,35 @@ exports.calendlyWebhook = onRequest({
       const eventUri = scheduledEvent.uri || "";
       const eventTypeUri = payload.event_type?.uri || "";
       const eventName = (scheduledEvent.name || "").toLowerCase();
+      
+      const isOnboarding = eventUri.includes('30-min-onboarding-consultation') || 
+                          eventTypeUri.includes('30-min-onboarding-consultation') ||
+                          eventName.includes('onboarding');
+      
       const isCheckin = eventUri.includes('weekly-checkin') || 
                         eventTypeUri.includes('weekly-checkin') ||
                         eventName.includes('check-in') ||
                         eventName.includes('checkin');
 
-      if (isCheckin) {
+      if (isOnboarding) {
+        // Handle as ONBOARDING CONSULTATION (no credit, one-time setup)
+        console.log(`Routing to onboarding consultation handler for user ${userId}`);
+        await scheduleOnboardingConsultation({
+          userId,
+          calendlyEventId,
+          eventDetails: {
+            scheduledDate,
+            duration,
+            eventUri: scheduledEvent.uri,
+          },
+          calendlyUrls: {
+            cancelUrl,
+            rescheduleUrl,
+          },
+          userData,
+        });
+        console.log(`Successfully scheduled onboarding consultation for user ${userId}`);
+      } else if (isCheckin) {
         // Handle as CHECK-IN (subscription-based, no credit deduction)
         console.log(`Routing to check-in handler for user ${userId}`);
         await scheduleCheckin({
@@ -627,6 +650,73 @@ async function scheduleCheckin({ userId, calendlyEventId, eventDetails, calendly
   
   await db.collection("sessions").doc().set(sessionData);
   console.log(`Check-in scheduled: ${userId}, week: ${sessionData.weekIdentifier}`);
+}
+
+/**
+ * Schedule Onboarding Consultation
+ * Creates an onboarding consultation session (one-time, no credit)
+ * Also marks milestone #1 in setup goal as complete
+ */
+async function scheduleOnboardingConsultation({ userId, calendlyEventId, eventDetails, calendlyUrls, userData }) {
+  const now = admin.firestore.Timestamp.now();
+  
+  // Create consultation session
+  const sessionData = {
+    clientId: userId,
+    clientName: userData.name || "",
+    clientEmail: userData.email || "",
+    trainerId: process.env.TRAINER_ID || "admin",
+    calendlyEventId,
+    calendlyEventUri: eventDetails.eventUri,
+    cancelUrl: calendlyUrls?.cancelUrl || null,
+    rescheduleUrl: calendlyUrls?.rescheduleUrl || null,
+    scheduledDate: eventDetails.scheduledDate,
+    duration: eventDetails.duration,
+    status: "scheduled",
+    sessionType: "onboarding",
+    createdAt: now,
+    updatedAt: now,
+  };
+  
+  // Create session and update setup goal in transaction
+  await db.runTransaction(async (transaction) => {
+    // IMPORTANT: All reads MUST happen before any writes in Firestore transactions
+    
+    // Read setup goal first
+    const setupGoalRef = db.collection("goals").doc(`${userId}_setup`);
+    const setupGoalDoc = await transaction.get(setupGoalRef);
+    
+    // Now do all writes
+    // Create session
+    const sessionRef = db.collection("sessions").doc();
+    transaction.set(sessionRef, sessionData);
+    
+    if (setupGoalDoc.exists) {
+      const goalData = setupGoalDoc.data();
+      const milestones = goalData.milestones || [];
+      
+      // Mark milestone #1 (index 0) as completed
+      if (milestones.length > 0 && !milestones[0].completed) {
+        milestones[0] = {
+          ...milestones[0],
+          completed: true,
+          completedAt: now,
+          updatedAt: now,
+        };
+        
+        transaction.update(setupGoalRef, {
+          milestones: milestones,
+          updatedAt: now,
+        });
+        
+        console.log(`Marked setup goal milestone #1 as complete for user ${userId}`);
+      }
+    } else {
+      console.warn(`Setup goal not found for user ${userId} - milestone not updated`);
+    }
+  });
+  
+  console.log(`Onboarding consultation scheduled: ${userId}`);
 }
 
 

@@ -304,9 +304,16 @@ function GoalSlotCard({
               <DropdownMenuItem onClick={onConfigure}>
                 Edit Configuration
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onToggleActive}>
-                {isActive ? 'Deactivate' : 'Activate'} Goal
-              </DropdownMenuItem>
+              {category.value !== 'setup' && (
+                <DropdownMenuItem onClick={onToggleActive}>
+                  {isActive ? 'Deactivate' : 'Activate'} Goal
+                </DropdownMenuItem>
+              )}
+              {category.value === 'setup' && (
+                <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                  Setup goals cannot be deactivated
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

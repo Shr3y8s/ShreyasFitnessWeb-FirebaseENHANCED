@@ -11,6 +11,7 @@ export const CALENDLY_URLS = {
   INTRO_CALL: 'https://calendly.com/shreyas-annapureddy/30min',
   TRAINING_SESSION: 'https://calendly.com/shreyas-annapureddy/1-1-training-session',
   WEEKLY_CHECKIN: 'https://calendly.com/shreyas-annapureddy/weekly-checkin',
+  ONBOARDING_CONSULTATION: 'https://calendly.com/shreyas-annapureddy/30-min-onboarding-consultation',
 } as const;
 
 // Note: Additional constants (subscription tiers, statuses, etc.) can be added here
