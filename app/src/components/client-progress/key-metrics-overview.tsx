@@ -156,7 +156,7 @@ const initialMetrics: Metric[] = [
         id: 'workout-streak',
         icon: <Flame className="h-4 w-4 text-primary animate-flicker" />,
         label: 'Workout Streak',
-        value: '5',
+        value: '0',
         unit: 'days',
         subtext: 'in a row',
         tooltip: "This is your longest active streak. Keeping a streak alive is a powerful motivator. Keep the fire going!",
@@ -391,6 +391,38 @@ export function KeyMetricsOverview() {
         };
 
         loadWeightData();
+    }, [user]);
+    
+    // Load workout streak from goals
+    useEffect(() => {
+        if (!user) return;
+
+        const loadWorkoutStreak = async () => {
+            try {
+                const goalDoc = await getDoc(doc(db, 'goals', `${user.uid}_workout_consistency`));
+                
+                if (goalDoc.exists()) {
+                    const streak = goalDoc.data().currentStreak || 0;
+                    
+                    // Update workout-streak metric
+                    setMetrics(currentMetrics => 
+                        currentMetrics.map(m => {
+                            if (m.id === 'workout-streak') {
+                                return {
+                                    ...m,
+                                    value: streak.toString(),
+                                };
+                            }
+                            return m;
+                        })
+                    );
+                }
+            } catch (error) {
+                console.error('Error loading workout streak:', error);
+            }
+        };
+
+        loadWorkoutStreak();
     }, [user]);
     
     // Load activity data for steps

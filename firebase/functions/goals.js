@@ -285,10 +285,9 @@ exports.onWorkoutComplete = onDocumentWritten({
       if (before.status !== 'completed' && after.status === 'completed') {
         const clientId = after.clientId;
         
-        // Query workout consistency goals
+        // Query workout consistency goals (always track, regardless of isActive status)
         const goalsSnapshot = await db.collection('goals')
           .where('clientId', '==', clientId)
-          .where('isActive', '==', true)
           .where('isConfigured', '==', true)
           .where('category', '==', 'workout_consistency')
           .get();
