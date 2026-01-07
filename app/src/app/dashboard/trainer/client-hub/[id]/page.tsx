@@ -1519,6 +1519,7 @@ export default function ClientDetailPage() {
                 <OnboardingMilestoneManager 
                   clientId={clientId}
                   clientName={clientData.name}
+                  clientTier={clientData.tier}
                 />
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

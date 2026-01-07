@@ -6,7 +6,7 @@ import { ClipboardList, X, ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, orderBy, limit } from 'firebase/firestore';
 
 const onboardingSteps = [
   { id: 'schedule', label: 'Schedule your 30-minute planning consultation' },
@@ -21,6 +21,7 @@ interface OnboardingChecklistProps {
 export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
   const { user } = useAuth();
   const [milestones, setMilestones] = useState<any[]>([]);
+  const [consultation, setConsultation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch setup goal milestones from Firestore
@@ -46,6 +47,32 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
       console.error('Error fetching setup goal:', error);
       setMilestones([]);
       setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Subscribe to consultation session (query by clientId and sessionType)
+  useEffect(() => {
+    if (!user) return;
+
+    const consultationQuery = query(
+      collection(db, 'sessions'),
+      where('clientId', '==', user.uid),
+      where('sessionType', '==', 'onboarding'),
+      orderBy('scheduledDate', 'desc'),
+      limit(1)
+    );
+    
+    const unsubscribe = onSnapshot(consultationQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        setConsultation(snapshot.docs[0].data());
+      } else {
+        setConsultation(null);
+      }
+    }, (error) => {
+      console.error('Error fetching consultation:', error);
+      setConsultation(null);
     });
 
     return () => unsubscribe();
@@ -98,14 +125,27 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
                       <Check className="w-3 h-3 text-white" strokeWidth={3} />
                     )}
                   </div>
-                  <span
-                    className={cn(
-                      "text-sm font-medium transition-colors select-text",
-                      isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+                  <div className="flex-1">
+                    <span
+                      className={cn(
+                        "text-sm font-medium transition-colors select-text",
+                        isCompleted ? "text-muted-foreground line-through" : "text-foreground"
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                    {index === 1 && consultation && (
+                      <p className="text-xs text-blue-700 mt-0.5">
+                        (Scheduled: {consultation.scheduledDate.toDate().toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })})
+                      </p>
                     )}
-                  >
-                    {step.label}
-                  </span>
+                  </div>
                 </div>
               </div>
             );

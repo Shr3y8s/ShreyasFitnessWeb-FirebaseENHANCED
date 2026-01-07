@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, Timestamp, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { CheckCircle2, Circle, Loader2, Calendar, CheckSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { hasOnlineCoaching } from '@/lib/constants';
 
 interface OnboardingMilestoneManagerProps {
   clientId: string;
   clientName: string;
+  clientTier?: string;
 }
 
-export function OnboardingMilestoneManager({ clientId, clientName }: OnboardingMilestoneManagerProps) {
+export function OnboardingMilestoneManager({ clientId, clientName, clientTier }: OnboardingMilestoneManagerProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [setupGoal, setSetupGoal] = useState<any>(null);
@@ -41,13 +43,19 @@ export function OnboardingMilestoneManager({ clientId, clientName }: OnboardingM
     return () => unsubscribe();
   }, [clientId]);
 
-  // Subscribe to consultation session
+  // Subscribe to consultation session (query by clientId and sessionType)
   useEffect(() => {
-    const consultationRef = doc(db, 'sessions', `${clientId}_onboarding`);
+    const consultationQuery = query(
+      collection(db, 'sessions'),
+      where('clientId', '==', clientId),
+      where('sessionType', '==', 'onboarding'),
+      orderBy('scheduledDate', 'desc'),
+      limit(1)
+    );
     
-    const unsubscribe = onSnapshot(consultationRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setConsultation(docSnap.data());
+    const unsubscribe = onSnapshot(consultationQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        setConsultation(snapshot.docs[0].data());
       } else {
         setConsultation(null);
       }
@@ -135,13 +143,32 @@ export function OnboardingMilestoneManager({ clientId, clientName }: OnboardingM
     );
   }
 
+  // Check if setup goal exists first, then check tier
   if (!setupGoal) {
+    // If no setup goal AND client doesn't have online coaching, show tier message
+    if (!hasOnlineCoaching(clientTier)) {
+      return (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+          <span className="text-4xl mb-2 block">ℹ️</span>
+          <p className="font-semibold text-blue-900 mb-2">Onboarding Not Applicable</p>
+          <p className="text-sm text-blue-700">
+            This client has an in-person only plan. Onboarding consultation is only required 
+            for online coaching and complete transformation plans.
+          </p>
+        </div>
+      );
+    }
+    
+    // Has online coaching but no setup goal
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
         <span className="text-4xl mb-2 block">⚠️</span>
         <p className="font-semibold text-amber-900 mb-2">No Setup Goal Found</p>
         <p className="text-sm text-amber-700">
           This client doesn't have a setup goal yet. It should be created automatically when they activate their account.
+        </p>
+        <p className="text-xs text-gray-600 mt-2">
+          Tier: {clientTier || 'Unknown'}
         </p>
       </div>
     );
@@ -156,8 +183,51 @@ export function OnboardingMilestoneManager({ clientId, clientName }: OnboardingM
   const now = new Date();
   const consultationHasEnded = consultationEndTime ? now >= consultationEndTime : false;
 
+  // Use goal's configured deadline (set by trainer)
+  const deadlineDate = setupGoal.deadline?.toDate() || new Date();
+  const daysRemaining = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const isOverdue = daysRemaining < 0;
+  const isWarning = daysRemaining >= 0 && daysRemaining <= 7;
+
   return (
     <div className="space-y-6">
+      {/* Deadline Alert */}
+      {!allComplete && (
+        <div className={cn(
+          "rounded-lg p-4 border-2",
+          isOverdue && "bg-red-50 border-red-300",
+          isWarning && "bg-yellow-50 border-yellow-300",
+          !isWarning && !isOverdue && "bg-green-50 border-green-300"
+        )}>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">
+              {isOverdue ? '🔴' : isWarning ? '🟡' : '🟢'}
+            </span>
+            <div>
+              <p className={cn(
+                "font-semibold",
+                isOverdue && "text-red-900",
+                isWarning && "text-yellow-900",
+                !isWarning && !isOverdue && "text-green-900"
+              )}>
+                {isOverdue ? 'Onboarding Overdue' : isWarning ? 'Onboarding Deadline Approaching' : 'On Track'}
+              </p>
+              <p className={cn(
+                "text-sm",
+                isOverdue && "text-red-700",
+                isWarning && "text-yellow-700",
+                !isWarning && !isOverdue && "text-green-700"
+              )}>
+                {isOverdue 
+                  ? `Overdue by ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) !== 1 ? 's' : ''} - Complete onboarding ASAP`
+                  : `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining to complete onboarding (Due: ${deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Milestones Card */}
       <Card className="border-primary/50">
         <CardHeader>
@@ -227,7 +297,11 @@ export function OnboardingMilestoneManager({ clientId, clientName }: OnboardingM
                   
                   {index > 0 && !milestone.completed && !consultationHasEnded && consultation && (
                     <p className="text-xs text-amber-700 mt-1">
-                      ⏰ Available after consultation ends ({consultationEndTime?.toLocaleTimeString('en-US', { 
+                      ⏰ Available after consultation ends ({consultation.scheduledDate.toDate().toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })} at {consultationEndTime?.toLocaleTimeString('en-US', { 
                         hour: 'numeric', 
                         minute: '2-digit' 
                       })})

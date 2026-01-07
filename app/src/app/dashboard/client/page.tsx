@@ -26,6 +26,7 @@ import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { TodoList } from '@/components/dashboard/todo-list';
 import { PrimaryObjectives } from '@/components/dashboard/primary-objectives';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { hasOnlineCoaching } from '@/lib/constants';
 
 // Mock data for calendar (will be replaced with real data in future)
 const upcomingSessions = [
@@ -281,9 +282,10 @@ export default function ClientDashboardPage() {
     message: `Amazing job on your last deadlift session, ${userDataFromAuth?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
   };
 
-  // Derive showOnboarding from setup goal milestones
+  // Derive showOnboarding from setup goal milestones AND tier
   const allMilestonesComplete = setupGoal?.milestones?.every((m: any) => m.completed) ?? false;
-  const showOnboarding = !allMilestonesComplete;
+  const hasOnlineCoachingTier = hasOnlineCoaching(userDataFromAuth?.tier);
+  const showOnboarding = hasOnlineCoachingTier && !allMilestonesComplete;
 
   return (
     <SidebarProvider>
