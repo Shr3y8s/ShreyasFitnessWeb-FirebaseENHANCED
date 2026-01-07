@@ -372,26 +372,12 @@ export default function MembershipPage() {
             {/* Membership Overview */}
             <Card className="mb-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Star className="w-6 h-6 text-primary" />
-                    <div>
-                      <CardTitle>Membership Status</CardTitle>
-                      <CardDescription>Your current membership details</CardDescription>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <Star className="w-6 h-6 text-primary" />
+                  <div>
+                    <CardTitle>Membership Status</CardTitle>
+                    <CardDescription>Your current membership details</CardDescription>
                   </div>
-                  {membershipType === 'subscription' ? (
-                    <Badge variant={subscriptionStatus === 'active' ? 'default' : subscriptionStatus === 'paused' ? 'secondary' : 'destructive'} className="text-sm px-3 py-1">
-                      {subscriptionStatus === 'active' && 'Active Subscription'}
-                      {subscriptionStatus === 'paused' && 'Paused'}
-                      {subscriptionStatus === 'canceled' && 'Canceled'}
-                      {subscriptionStatus === 'past_due' && 'Past Due'}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-sm px-3 py-1">
-                      Session-Only
-                    </Badge>
-                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -409,7 +395,12 @@ export default function MembershipPage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Status</p>
-                        <p className="text-lg font-semibold capitalize">{subscriptionStatus}</p>
+                        <p className="text-lg font-semibold capitalize">
+                          {subscriptionStatus === 'canceled' && userData?.currentPeriodEnd
+                            ? `Canceled (Available until ${formatDate(userData.currentPeriodEnd)})`
+                            : subscriptionStatus
+                          }
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Next Billing</p>
@@ -651,9 +642,11 @@ export default function MembershipPage() {
                     <p className="text-sm text-foreground">
                       Get unlimited workouts, custom nutrition plans, and priority support with a monthly subscription.
                     </p>
-                    <Button className="w-full sm:w-auto" disabled>
-                      Contact Trainer to Upgrade
-                      <span className="ml-2 text-xs">(Coming Soon)</span>
+                    <Button 
+                      className="w-full sm:w-auto"
+                      onClick={() => router.push('/dashboard/client/upgrade')}
+                    >
+                      View Subscription Plans →
                     </Button>
                   </div>
                 </CardContent>

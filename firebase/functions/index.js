@@ -1012,8 +1012,10 @@ exports.syncSubscriptionToUser = onDocumentWritten({
   try {
     // If subscription was deleted
     if (!change.after.exists) {
-      logger.info("Subscription deleted, updating user", {userId, subscriptionId});
+      logger.info("Subscription deleted, cleaning up user subscription fields", {userId, subscriptionId});
       await admin.firestore().collection("users").doc(userId).update({
+        subscriptionId: admin.firestore.FieldValue.delete(),
+        subscriptionStatus: admin.firestore.FieldValue.delete(),
         subscriptionEndedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -1039,6 +1041,19 @@ exports.syncSubscriptionToUser = onDocumentWritten({
       subscriptionStatus: status,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
+
+    // Extract tier info from subscription metadata (set during checkout)
+    const metadata = subscriptionData.metadata || {};
+    if (metadata.tierId && metadata.tierName) {
+      updateData.tier = metadata.tierId;
+      updateData.tierName = metadata.tierName;
+      
+      logger.info("Updating tier from subscription metadata", {
+        userId,
+        tier: metadata.tierId,
+        tierName: metadata.tierName,
+      });
+    }
 
     // Only set accountActivated on first active subscription (write-once)
     if (status === "active" && (!userData || !userData.accountActivated)) {
