@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { trackSuccessfulLogin } from './login-tracking-api';
 
@@ -100,13 +100,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Function to refresh userData from database
   const refreshUserData = async () => {
-    if (!user) return;
+    // Check current auth state (not closure 'user' which may be stale)
+    if (!auth.currentUser) {
+      console.log('[AuthContext] No current user, skipping refresh');
+      return;
+    }
+
+    const uid = auth.currentUser.uid;
 
     try {
       // Multi-collection waterfall lookup: admin → trainer → client
       
       // 1. Check admins collection first
-      const adminDocRef = doc(db, 'admins', user.uid);
+      const adminDocRef = doc(db, 'admins', uid);
       const adminDoc = await getDoc(adminDocRef);
       
       if (adminDoc.exists()) {
@@ -121,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // 2. Check trainers collection
-      const trainerDocRef = doc(db, 'trainers', user.uid);
+      const trainerDocRef = doc(db, 'trainers', uid);
       const trainerDoc = await getDoc(trainerDocRef);
       
       if (trainerDoc.exists()) {
@@ -136,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // 3. Check users collection (clients)
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users', uid);
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
@@ -157,74 +163,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Track if this is a new login session (not a page refresh)
-    const sessionKey = `login_tracked_${user?.uid}`;
+    let firestoreUnsubscribe: (() => void) | null = null;
     
     // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const wasLoggedOut = !user;
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      setUser(authUser);
       
-      if (user) {
+      if (authUser) {
+        const sessionKey = `login_tracked_${authUser.uid}`;
+        
         // Track login if this is a new session
-        // Use sessionStorage to prevent tracking on page refreshes
         const hasTrackedThisSession = sessionStorage.getItem(sessionKey);
         
         if (!hasTrackedThisSession) {
-          // Track the login asynchronously (don't block auth flow)
           trackSuccessfulLogin().catch(error => {
             console.error('Login tracking failed:', error);
           });
-          
-          // Mark as tracked for this session
           sessionStorage.setItem(sessionKey, 'true');
         }
+        
         try {
-          // Multi-collection waterfall lookup: admin → trainer → client
+          // Initial fetch to determine user type
+          let userType: 'admin' | 'trainer' | 'client' | null = null;
+          let sourceCollection: 'admins' | 'trainers' | 'users' | null = null;
           
-          // 1. Check admins collection first
-          const adminDocRef = doc(db, 'admins', user.uid);
-          const adminDoc = await getDoc(adminDocRef);
-          
+          // 1. Check admins collection
+          const adminDoc = await getDoc(doc(db, 'admins', authUser.uid));
           if (adminDoc.exists()) {
-            const adminData = adminDoc.data();
-            setUserData({
-              ...adminData,
-              userType: 'admin',
-              sourceCollection: 'admins',
-              role: adminData.role || 'admin'
-            } as UserData);
-            setLoading(false);
-            return;
+            userType = 'admin';
+            sourceCollection = 'admins';
+          } else {
+            // 2. Check trainers collection
+            const trainerDoc = await getDoc(doc(db, 'trainers', authUser.uid));
+            if (trainerDoc.exists()) {
+              userType = 'trainer';
+              sourceCollection = 'trainers';
+            } else {
+              // 3. Check users collection (clients)
+              const userDoc = await getDoc(doc(db, 'users', authUser.uid));
+              if (userDoc.exists()) {
+                userType = 'client';
+                sourceCollection = 'users';
+              }
+            }
           }
           
-          // 2. Check trainers collection
-          const trainerDocRef = doc(db, 'trainers', user.uid);
-          const trainerDoc = await getDoc(trainerDocRef);
-          
-          if (trainerDoc.exists()) {
-            const trainerData = trainerDoc.data();
-            setUserData({
-              ...trainerData,
-              userType: 'trainer',
-              sourceCollection: 'trainers',
-              role: 'trainer'
-            } as UserData);
-            setLoading(false);
-            return;
-          }
-          
-          // 3. Check users collection (clients)
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            const clientData = userDoc.data();
-            setUserData({
-              ...clientData,
-              userType: 'client',
-              sourceCollection: 'users',
-              role: clientData.role || 'client'
-            } as UserData);
+          if (sourceCollection) {
+            // Setup real-time listener for this user's document
+            firestoreUnsubscribe = onSnapshot(
+              doc(db, sourceCollection, authUser.uid),
+              (snapshot) => {
+                if (snapshot.exists()) {
+                  const data = snapshot.data();
+                  setUserData({
+                    ...data,
+                    userType,
+                    sourceCollection,
+                    role: data.role || userType
+                  } as UserData);
+                }
+              },
+              (error) => {
+                console.error('[AuthContext] Firestore listener error:', error);
+              }
+            );
           } else {
             setUserData(null);
           }
@@ -233,18 +235,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserData(null);
         }
       } else {
-        // Clear tracking flag when user logs out
-        if (sessionKey) {
-          sessionStorage.removeItem(sessionKey);
+        // User logged out - cleanup Firestore listener first
+        if (firestoreUnsubscribe) {
+          firestoreUnsubscribe();
+          firestoreUnsubscribe = null;
         }
+        
+        // Clear session tracking
+        const allKeys = Object.keys(sessionStorage);
+        allKeys.forEach(key => {
+          if (key.startsWith('login_tracked_')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+        
         setUserData(null);
       }
       
       setLoading(false);
     });
 
-    // Cleanup subscription
-    return () => unsubscribe();
+    // Cleanup auth subscription
+    return () => {
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
+      unsubscribe();
+    };
   }, []);
 
   // Compute permission flags

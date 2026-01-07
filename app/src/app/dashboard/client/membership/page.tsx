@@ -44,26 +44,6 @@ export default function MembershipPage() {
   const [reactivating, setReactivating] = useState(false);
   const [downloadingData, setDownloadingData] = useState(false);
 
-  // REAL-TIME FIRESTORE LISTENER: Watch for subscription changes
-  // This is the KEY fix - auth context only fetches once, so we need a local listener
-  useEffect(() => {
-    if (!user) return;
-    
-    const unsubscribe = onSnapshot(
-      doc(db, 'users', user.uid),
-      (snapshot) => {
-        if (snapshot.exists()) {
-          refreshUserData();
-        }
-      },
-      (error) => {
-        console.error('[Membership] Firestore listener error:', error);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user, refreshUserData]);
-
   // Check auth and role
   useEffect(() => {
     if (authLoading) {
