@@ -45,7 +45,7 @@ export default function ClientDashboardPage() {
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [setupGoal, setSetupGoal] = useState<any>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
@@ -82,6 +82,31 @@ export default function ClientDashboardPage() {
 
     setLoading(false);
   }, [userDataFromAuth, authLoading, router]);
+
+  // Subscribe to setup goal to control onboarding checklist visibility
+  useEffect(() => {
+    if (!user) return;
+
+    const setupGoalRef = doc(db, 'goals', `${user.uid}_setup`);
+    
+    const unsubscribe = onSnapshot(setupGoalRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setSetupGoal(docSnap.data());
+      } else {
+        setSetupGoal(null);
+      }
+    }, (error) => {
+      console.error('Error fetching setup goal:', error);
+      setSetupGoal(null);
+    });
+
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
+  }, [user]);
 
   // Fetch next upcoming session
   useEffect(() => {
@@ -256,6 +281,10 @@ export default function ClientDashboardPage() {
     message: `Amazing job on your last deadlift session, ${userDataFromAuth?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
   };
 
+  // Derive showOnboarding from setup goal milestones
+  const allMilestonesComplete = setupGoal?.milestones?.every((m: any) => m.completed) ?? false;
+  const showOnboarding = !allMilestonesComplete;
+
   return (
     <SidebarProvider>
       <ClientSidebar
@@ -310,9 +339,7 @@ export default function ClientDashboardPage() {
               </InteractiveCard>
               {showOnboarding ? (
                 <InteractiveCard>
-                  <OnboardingChecklist
-                    onDismiss={() => setShowOnboarding(false)}
-                  />
+                  <OnboardingChecklist />
                 </InteractiveCard>
               ) : (
                 <div className="space-y-6">

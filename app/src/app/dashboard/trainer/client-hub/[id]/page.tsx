@@ -47,6 +47,7 @@ import { DailyHabitsEditor } from '@/components/trainer/plan/DailyHabitsEditor';
 import { TrainingProtocolEditor } from '@/components/trainer/plan/TrainingProtocolEditor';
 import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProtocolEditor';
 import { GoalsManagementPanel } from '@/components/trainer/goals/GoalsManagementPanel';
+import { OnboardingMilestoneManager } from '@/components/trainer/onboarding/OnboardingMilestoneManager';
 import {
   fetchClientBillingData, 
   formatCurrency, 
@@ -82,7 +83,7 @@ import {
   DailyHabitsData 
 } from '@/types/plan';
 
-type TabType = 'overview' | 'plan' | 'training' | 'nutrition' | 'progress' | 'support' | 'account' | 'goals';
+type TabType = 'overview' | 'onboarding' | 'plan' | 'training' | 'nutrition' | 'progress' | 'support' | 'account' | 'goals';
 
 export default function ClientDetailPage() {
   const router = useRouter();
@@ -1124,6 +1125,7 @@ export default function ClientDetailPage() {
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
+    { id: 'onboarding', label: 'Onboarding', icon: <ClipboardList className="h-4 w-4" /> },
     { id: 'plan', label: 'Plan', icon: <ClipboardList className="h-4 w-4" /> },
     { id: 'goals', label: 'Goals & Milestones', icon: <Target className="h-4 w-4" /> },
     { id: 'training', label: 'Training', icon: <Dumbbell className="h-4 w-4" /> },
@@ -1503,6 +1505,27 @@ export default function ClientDetailPage() {
                     <p className="text-foreground">Activity feed will show recent client actions</p>
                     <p className="text-sm text-muted-foreground mt-2">(Workout completions, weight logs, surveys, photos, messages)</p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'onboarding' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">🎯 Client Onboarding</h2>
+                  <p className="text-gray-600">Track and manage client onboarding progress</p>
+                </div>
+
+                <OnboardingMilestoneManager 
+                  clientId={clientId}
+                  clientName={clientData.name}
+                />
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Tip:</strong> Milestone #1 auto-completes when client schedules consultation. 
+                    Mark milestones #2 and #3 complete after the consultation and plan delivery.
+                  </p>
                 </div>
               </div>
             )}

@@ -51,35 +51,11 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
     return () => unsubscribe();
   }, [user]);
 
-  // Auto-dismiss when all milestones are completed
-  useEffect(() => {
-    if (milestones.length === 0) return;
-    
-    const allComplete = milestones.every(m => m.completed);
-    
-    if (allComplete && onDismiss) {
-      setTimeout(() => {
-        onDismiss();
-      }, 800);
-    }
-  }, [milestones, onDismiss]);
-
   const handleSchedule = () => {
     window.location.href = '/dashboard/client/consultation/schedule';
   };
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-glow">
-      {onDismiss && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDismiss}
-          className="absolute top-2 right-2 h-7 w-7 text-muted-foreground hover:bg-primary/10 cursor-pointer"
-        >
-          <X className="h-4 w-4" />
-          <span className="sr-only">Dismiss</span>
-        </Button>
-      )}
       <div className="flex p-6 flex-row gap-4 items-start pb-4">
         <div className="bg-primary/10 p-3 rounded-full mt-1">
           <ClipboardList className="w-6 h-6 text-primary" />
@@ -96,7 +72,7 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
             onClick={handleSchedule}
             className="mt-4 transition-transform hover:-translate-y-1 hover:shadow-lg cursor-pointer"
           >
-            Schedule Your Consultation
+            Manage Consultation
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
