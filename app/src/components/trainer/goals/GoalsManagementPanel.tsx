@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -39,6 +40,7 @@ const initializeGoalSlots = (): Map<string, Goal | null> => {
 };
 
 export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPanelProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [goalSlots, setGoalSlots] = useState<Map<string, Goal | null>>(initializeGoalSlots());
@@ -78,9 +80,24 @@ export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPa
   const handleSaveGoal = async (goalData: any) => {
     const category = goalData.category;
     
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'No user session found',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     try {
+      // Add trainerId to goalData
+      const goalDataWithTrainer = {
+        ...goalData,
+        trainerId: user.uid
+      };
+      
       // Save to Firestore
-      const result = await saveGoalConfig(clientId, category, goalData);
+      const result = await saveGoalConfig(clientId, category, goalDataWithTrainer);
       
       if (result.success) {
         // Reload goals from Firestore
@@ -248,7 +265,7 @@ export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPa
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSave={handleSaveGoal}
-        editingGoal={editingCategory ? (goalSlots.get(editingCategory) ?? null) : null}
+        editingGoal={editingCategory ? (goalSlots.get(editingCategory) || null) : null}
         clientName={clientName}
         preselectedCategory={editingCategory as any}
       />
