@@ -321,14 +321,14 @@ export default function ClientManagementDetailPage() {
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
-                          <Link href="/dashboard/admin/client-management" className="flex-1">
-                            <Button className="w-full">Back to Client List</Button>
-                          </Link>
-                          <Button onClick={() => setResult(null)} variant="outline">
-                            {deletionMode === 'mock' ? 'Run Another Preview' : 'Reset'}
-                          </Button>
-                        </div>
+                        <Button 
+                          onClick={() => setResult(null)} 
+                          variant="outline"
+                          size="lg"
+                          className="w-full"
+                        >
+                          Close
+                        </Button>
                       </div>
                     ) : isProcessing ? (
                       <div className="flex items-center gap-3 py-8 justify-center">
