@@ -12,6 +12,9 @@ import {
 } from 'firebase/firestore';
 import { Goal, GoalCategory, Milestone } from '@/types/goals';
 
+// Default deadline for setup/onboarding goals
+export const ONBOARDING_DEADLINE_DAYS = 15;
+
 /**
  * Fetch all goal slots for a client (7 documents max)
  * Document IDs: {clientId}_{category}
@@ -208,6 +211,96 @@ export async function updateMilestoneCompletion(
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to update milestone' 
+    };
+  }
+}
+
+/**
+ * Auto-create setup/onboarding goal for new clients
+ * Called on first dashboard load for clients with online coaching
+ */
+export async function createSetupGoal(
+  clientId: string,
+  trainerId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const goalId = `${clientId}_setup`;
+    const goalRef = doc(db, 'goals', goalId);
+    
+    // Check if already exists
+    const existing = await getDoc(goalRef);
+    if (existing.exists()) {
+      return { success: true }; // Already exists
+    }
+    
+    const now = Timestamp.now();
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + ONBOARDING_DEADLINE_DAYS);
+    
+    const goalDoc = {
+      clientId,
+      trainerId,
+      category: 'setup',
+      title: 'Complete Your Onboarding',
+      term: 'short-term',
+      priority: 'high',
+      isActive: true,
+      isConfigured: true,
+      targetValue: 3,
+      currentValue: 0,
+      unit: 'tasks',
+      lowerIsBetter: false,
+      status: 'active',
+      deadline: Timestamp.fromDate(deadline),
+      completedAt: null,
+      milestones: [
+        {
+          id: `${goalId}_m0`,
+          order: 1,
+          text: 'Schedule your 30-minute planning consultation',
+          targetValue: 1,
+          completed: false,
+          completedAt: null,
+          autoTracked: false,
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: `${goalId}_m1`,
+          order: 2,
+          text: 'Complete your consultation',
+          targetValue: 2,
+          completed: false,
+          completedAt: null,
+          autoTracked: false,
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          id: `${goalId}_m2`,
+          order: 3,
+          text: 'Receive your personalized fitness plan',
+          targetValue: 3,
+          completed: false,
+          completedAt: null,
+          autoTracked: false,
+          createdAt: now,
+          updatedAt: now
+        }
+      ],
+      createdAt: now,
+      updatedAt: now,
+      createdBy: trainerId
+    };
+    
+    await setDoc(goalRef, goalDoc);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating setup goal:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to create setup goal' 
     };
   }
 }

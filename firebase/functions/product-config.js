@@ -27,7 +27,13 @@ function isEligibleForCheckins(productId) {
   return CHECKIN_ELIGIBLE_PRODUCTS.includes(productId);
 }
 
+/**
+ * Default deadline for setup/onboarding goals (in days)
+ */
+const ONBOARDING_DEADLINE_DAYS = 15;
+
 module.exports = {
   CHECKIN_ELIGIBLE_PRODUCTS,
   isEligibleForCheckins,
+  ONBOARDING_DEADLINE_DAYS,
 };

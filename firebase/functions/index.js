@@ -10,6 +10,7 @@ admin.initializeApp();
 
 // Load shared configuration (copied from root by predeploy hook)
 const sharedConfig = require("./firebase-config.json");
+const { ONBOARDING_DEADLINE_DAYS } = require("./product-config");
 
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
@@ -1106,6 +1107,106 @@ exports.syncSubscriptionToUser = onDocumentWritten({
       subscriptionId,
       trainerAssigned: !!updateData.assignedTrainerId,
     });
+
+    // Auto-create setup goal for online coaching subscriptions
+    // Get trainer from either new assignment OR existing user data
+    const trainerId = updateData.assignedTrainerId || userData?.assignedTrainerId;
+    
+    if (status === "active" && trainerId) {
+      const metadata = subscriptionData.metadata || {};
+      
+      // Check if this is online coaching or complete transformation
+      // These tier IDs should match your Stripe product IDs
+      const isOnlineCoaching = 
+        metadata.tierId && (
+          metadata.tierId.includes('SwvHrfi1C4k4pS') ||  // Online Coaching
+          metadata.tierId.includes('SwvMU8AjAlHgQ0')     // Complete Transformation
+        );
+      
+      if (isOnlineCoaching) {
+        logger.info("Creating setup goal for online coaching subscription", {userId, trainerId});
+        
+        try {
+          const setupGoalRef = admin.firestore()
+            .collection("goals")
+            .doc(`${userId}_setup`);
+          
+          // Check if already exists
+          const existingGoal = await setupGoalRef.get();
+          
+          if (!existingGoal.exists) {
+            const now = admin.firestore.Timestamp.now();
+            const deadline = admin.firestore.Timestamp.fromDate(
+              new Date(Date.now() + ONBOARDING_DEADLINE_DAYS * 24 * 60 * 60 * 1000)
+            );
+            
+            await setupGoalRef.set({
+              clientId: userId,
+              trainerId: trainerId,
+              category: "setup",
+              title: "Complete Your Onboarding",
+              term: "short-term",
+              priority: "high",
+              isActive: true,
+              isConfigured: true,
+              targetValue: 3,
+              currentValue: 0,
+              unit: "tasks",
+              lowerIsBetter: false,
+              status: "active",
+              deadline: deadline,
+              completedAt: null,
+              milestones: [
+                {
+                  id: `${userId}_setup_m0`,
+                  order: 1,
+                  text: "Schedule your 30-minute planning consultation",
+                  targetValue: 1,
+                  completed: false,
+                  completedAt: null,
+                  autoTracked: false,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+                {
+                  id: `${userId}_setup_m1`,
+                  order: 2,
+                  text: "Complete your consultation",
+                  targetValue: 2,
+                  completed: false,
+                  completedAt: null,
+                  autoTracked: false,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+                {
+                  id: `${userId}_setup_m2`,
+                  order: 3,
+                  text: "Receive your personalized fitness plan",
+                  targetValue: 3,
+                  completed: false,
+                  completedAt: null,
+                  autoTracked: false,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              ],
+              createdAt: now,
+              updatedAt: now,
+              createdBy: trainerId,
+            });
+            
+            logger.info("Setup goal created successfully", {userId});
+          }
+        } catch (error) {
+          logger.error("Failed to create setup goal", {
+            userId,
+            error: error.message,
+          });
+          // Don't fail the whole subscription sync if goal creation fails
+        }
+      }
+    }
 
     return null;
   } catch (error) {

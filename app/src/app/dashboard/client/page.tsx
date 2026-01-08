@@ -86,7 +86,7 @@ export default function ClientDashboardPage() {
 
   // Subscribe to setup goal to control onboarding checklist visibility
   useEffect(() => {
-    if (!user) return;
+    if (!user || !userDataFromAuth) return;
 
     const setupGoalRef = doc(db, 'goals', `${user.uid}_setup`);
     
@@ -282,10 +282,12 @@ export default function ClientDashboardPage() {
     message: `Amazing job on your last deadlift session, ${userDataFromAuth?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
   };
 
-  // Derive showOnboarding from setup goal milestones AND tier
+  // Show onboarding if setup goal exists, is active, and not complete
   const allMilestonesComplete = setupGoal?.milestones?.every((m: any) => m.completed) ?? false;
-  const hasOnlineCoachingTier = hasOnlineCoaching(userDataFromAuth?.tier);
-  const showOnboarding = hasOnlineCoachingTier && !allMilestonesComplete;
+  const showOnboarding = 
+    setupGoal !== null && 
+    setupGoal.isActive && 
+    !allMilestonesComplete;
 
   return (
     <SidebarProvider>
