@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Trash2, Loader2, Users as UsersIcon, AlertCircle } from 'lucide-react';
+import { Search, Loader2, Users as UsersIcon, AlertCircle, UserCog } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import DeleteAccountDialog from '@/components/admin/DeleteAccountDialog';
 import { Breadcrumb } from '@/components/Breadcrumb';
+import Link from 'next/link';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
 
@@ -31,8 +31,6 @@ export default function ClientManagementPage() {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   useEffect(() => {
     fetchClients();
@@ -80,11 +78,6 @@ export default function ClientManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDeleteClick = (client: Client) => {
-    setSelectedClient(client);
-    setDeleteDialogOpen(true);
   };
 
   const handleDeleteSuccess = () => {
@@ -226,57 +219,60 @@ export default function ClientManagementPage() {
                 {filteredClients.map((client) => (
                   <div
                     key={client.uid}
-                    className="border border-stone-200 rounded-lg p-3 hover:bg-emerald-50/50 hover:border-emerald-200 transition-all duration-200 cursor-pointer"
+                    className="border border-stone-200 rounded-lg hover:bg-emerald-50/50 hover:border-emerald-200 transition-all duration-200"
                   >
-                    {/* Line 1: Name, Email, Badges, Delete Button */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-base">{client.name}</h3>
-                            <span className="text-sm text-muted-foreground">•</span>
-                            <p className="text-sm text-muted-foreground truncate">{client.email}</p>
+                    <div className="p-3">
+                      {/* Line 1: Name, Email, Badges, Manage Button */}
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-base">{client.name}</h3>
+                              <span className="text-sm text-muted-foreground">•</span>
+                              <p className="text-sm text-muted-foreground truncate">{client.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {getSubscriptionBadge(client)}
+                            {!client.accountActivated && (
+                              <Badge variant="outline" className="border-amber-500 text-amber-700">
+                                Pending
+                              </Badge>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {getSubscriptionBadge(client)}
-                          {!client.accountActivated && (
-                            <Badge variant="outline" className="border-amber-500 text-amber-700">
-                              Pending
-                            </Badge>
-                          )}
-                        </div>
+                        
+                        <Link href={`/dashboard/admin/client-management/${client.uid}`}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="gap-2"
+                          >
+                            <UserCog className="w-4 h-4" />
+                            Manage
+                          </Button>
+                        </Link>
                       </div>
-                      
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteClick(client)}
-                        className="gap-2 flex-shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </Button>
-                    </div>
 
-                    {/* Line 2: Member since and Trainer */}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <div>
-                        Member since:{' '}
-                        {client.createdAt?.toDate
-                          ? client.createdAt.toDate().toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })
-                          : 'Unknown'}
+                      {/* Line 2: Member since and Trainer */}
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div>
+                          Member since:{' '}
+                          {client.createdAt?.toDate
+                            ? client.createdAt.toDate().toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              })
+                            : 'Unknown'}
+                        </div>
+                        {client.assignedTrainerName && (
+                          <>
+                            <span>•</span>
+                            <div>Trainer: {client.assignedTrainerName}</div>
+                          </>
+                        )}
                       </div>
-                      {client.assignedTrainerName && (
-                        <>
-                          <span>•</span>
-                          <div>Trainer: {client.assignedTrainerName}</div>
-                        </>
-                      )}
                     </div>
                   </div>
                 ))}
@@ -295,14 +291,6 @@ export default function ClientManagementPage() {
             </Alert>
           </div>
         </div>
-
-        {/* Delete Account Dialog */}
-        <DeleteAccountDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          client={selectedClient}
-          onSuccess={handleDeleteSuccess}
-        />
       </SidebarInset>
     </SidebarProvider>
   );

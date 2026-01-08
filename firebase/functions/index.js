@@ -1397,9 +1397,12 @@ exports.cleanupPendingAccounts = onSchedule({
 });
 
 /**
- * ACCOUNT DELETION FUNCTION
+ * ACCOUNT DELETION FUNCTION (THREE MODES)
  * Admin-initiated account deletion with proper data handling
- * Preserves financial records while removing all PII
+ * Modes:
+ * - mock: Preview what would be deleted (no actual deletion)
+ * - no-traces: Complete removal of all data including financials
+ * - gdpr-clean: GDPR-compliant deletion preserving financial records
  */
 exports.deleteAccount = onCall({
   region: sharedConfig.region,
@@ -1414,6 +1417,7 @@ exports.deleteAccount = onCall({
 
     const adminId = request.auth.uid;
     const targetUserId = request.data?.targetUserId;
+    const mode = request.data?.mode || 'gdpr-clean'; // Default to gdpr-clean for backward compatibility
     const adminOverride = request.data?.adminOverride || false;
     const reason = request.data?.reason || "Admin-initiated deletion";
 
@@ -1421,9 +1425,15 @@ exports.deleteAccount = onCall({
       throw new Error("targetUserId is required");
     }
 
+    // Validate mode
+    if (!['mock', 'no-traces', 'gdpr-clean'].includes(mode)) {
+      throw new Error("Invalid deletion mode. Must be 'mock', 'no-traces', or 'gdpr-clean'");
+    }
+
     logger.info("Account deletion initiated", {
       adminId,
       targetUserId,
+      mode,
       adminOverride,
       reason,
     });
@@ -1445,45 +1455,540 @@ exports.deleteAccount = onCall({
     const userData = userDoc.data();
     const stripeCustomerId = userData.stripeCustomerId;
 
-    // STEP 1: VALIDATE - No upcoming sessions
-    logger.info("Validating no upcoming sessions", {targetUserId});
-    const now = new Date();
-    const sessionsSnapshot = await admin.firestore()
-        .collection("sessions")
-        .where("userId", "==", targetUserId)
-        .where("status", "==", "scheduled")
-        .where("scheduledAt", ">", now)
-        .get();
+    // ============================================
+    // MOCK MODE: Discovery without deletion (skip validations)
+    // ============================================
+    if (mode === 'mock') {
+      logger.info("Running MOCK mode - discovery only", {targetUserId});
 
-    if (!sessionsSnapshot.empty) {
-      throw new Error(
-          `Cannot delete account: User has ${sessionsSnapshot.size} upcoming sessions. Cancel all sessions first.`,
-      );
-    }
+      const steps = [];
+      let totalItemsFound = 0;
 
-    // STEP 2: VALIDATE - Subscription status
-    logger.info("Validating subscription status", {targetUserId});
-    if (userData.subscriptionId && userData.subscriptionStatus === "active" && !userData.cancelAtPeriodEnd) {
-      if (!adminOverride) {
-        throw new Error(
-            "Cannot delete account: User has active subscription. Cancel subscription first or use admin override.",
-        );
+      // Step 1: Progress Photos (Firebase Storage)
+      try {
+        const bucket = admin.storage().bucket();
+        const [files] = await bucket.getFiles({
+          prefix: `progress-photos/${targetUserId}/`,
+        });
+        
+        const samplePhotos = files.slice(0, 5).map(f => f.name);
+        steps.push({
+          name: "Progress Photos",
+          collection: `storage:progress-photos/${targetUserId}/`,
+          status: "complete",
+          itemsFound: files.length,
+          itemsDeleted: 0,
+          sampleItems: samplePhotos,
+        });
+        totalItemsFound += files.length;
+      } catch (error) {
+        steps.push({
+          name: "Progress Photos",
+          collection: `storage:progress-photos/${targetUserId}/`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
       }
 
-      // Admin override: Auto-cancel subscription
-      logger.info("Admin override: Auto-canceling subscription", {
+      // Step 1b: Nutrition Screenshots (Firebase Storage)
+      try {
+        const bucket = admin.storage().bucket();
+        const [files] = await bucket.getFiles({
+          prefix: `nutritionScreenshots/${targetUserId}/`,
+        });
+        
+        const sampleNutrition = files.slice(0, 5).map(f => f.name);
+        steps.push({
+          name: "Nutrition Screenshots",
+          collection: `storage:nutritionScreenshots/${targetUserId}/`,
+          status: "complete",
+          itemsFound: files.length,
+          itemsDeleted: 0,
+          sampleItems: sampleNutrition,
+        });
+        totalItemsFound += files.length;
+      } catch (error) {
+        steps.push({
+          name: "Nutrition Screenshots",
+          collection: `storage:nutritionScreenshots/${targetUserId}/`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 1c: Profile Photos (Firebase Storage)
+      try {
+        const bucket = admin.storage().bucket();
+        const [files] = await bucket.getFiles({
+          prefix: `profile-photos/${targetUserId}/`,
+        });
+        
+        const sampleProfile = files.slice(0, 5).map(f => f.name);
+        steps.push({
+          name: "Profile Photos",
+          collection: `storage:profile-photos/${targetUserId}/`,
+          status: "complete",
+          itemsFound: files.length,
+          itemsDeleted: 0,
+          sampleItems: sampleProfile,
+        });
+        totalItemsFound += files.length;
+      } catch (error) {
+        steps.push({
+          name: "Profile Photos",
+          collection: `storage:profile-photos/${targetUserId}/`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 2: Activity Logs (Subcollection)
+      try {
+        const activitiesSnapshot = await admin.firestore()
+            .collection("users")
+            .doc(targetUserId)
+            .collection("activities")
+            .get();
+        
+        const sampleActivities = activitiesSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Activity Logs",
+          collection: `users/${targetUserId}/activities`,
+          status: "complete",
+          itemsFound: activitiesSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleActivities,
+        });
+        totalItemsFound += activitiesSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Activity Logs",
+          collection: `users/${targetUserId}/activities`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 3: Workouts (Unified Collection)
+      try {
+        const workoutsSnapshot = await admin.firestore()
+            .collection("workouts")
+            .where("clientId", "==", targetUserId)
+            .get();
+        
+        const sampleWorkouts = workoutsSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Workouts",
+          collection: "workouts",
+          queryFilter: `where('clientId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: workoutsSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleWorkouts,
+        });
+        totalItemsFound += workoutsSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Workouts",
+          collection: "workouts",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 4: Client Plans
+      try {
+        const clientPlansSnapshot = await admin.firestore()
+            .collection("clientPlans")
+            .where("clientId", "==", targetUserId)
+            .get();
+        
+        const samplePlans = clientPlansSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Client Plans",
+          collection: "clientPlans",
+          queryFilter: `where('clientId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: clientPlansSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: samplePlans,
+        });
+        totalItemsFound += clientPlansSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Client Plans",
+          collection: "clientPlans",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 5: Client Stats
+      try {
+        const clientStatsDoc = await admin.firestore()
+            .collection("clientStats")
+            .doc(targetUserId)
+            .get();
+        
+        steps.push({
+          name: "Client Stats",
+          collection: "clientStats",
+          status: "complete",
+          itemsFound: clientStatsDoc.exists ? 1 : 0,
+          itemsDeleted: 0,
+          sampleItems: clientStatsDoc.exists ? [targetUserId] : [],
+        });
+        if (clientStatsDoc.exists) {
+          totalItemsFound += 1;
+        }
+      } catch (error) {
+        steps.push({
+          name: "Client Stats",
+          collection: "clientStats",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 6: Client Messages
+      try {
+        const messagesSnapshot = await admin.firestore()
+            .collection("client_messages")
+            .where("clientId", "==", targetUserId)
+            .get();
+        
+        const sampleMessages = messagesSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Client Messages",
+          collection: "client_messages",
+          queryFilter: `where('clientId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: messagesSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleMessages,
+        });
+        totalItemsFound += messagesSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Client Messages",
+          collection: "client_messages",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 6b: Notifications
+      try {
+        const notificationsSnapshot = await admin.firestore()
+            .collection("notifications")
+            .where("userId", "==", targetUserId)
+            .get();
+        
+        const sampleNotifications = notificationsSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Notifications",
+          collection: "notifications",
+          queryFilter: `where('userId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: notificationsSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleNotifications,
+        });
+        totalItemsFound += notificationsSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Notifications",
+          collection: "notifications",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 6c: Progress Photos (Firestore metadata)
+      try {
+        const progressPhotosSnapshot = await admin.firestore()
+            .collection("progressPhotos")
+            .where("userId", "==", targetUserId)
+            .get();
+        
+        const samplePhotos = progressPhotosSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Progress Photos Metadata",
+          collection: "progressPhotos",
+          queryFilter: `where('userId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: progressPhotosSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: samplePhotos,
+        });
+        totalItemsFound += progressPhotosSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Progress Photos Metadata",
+          collection: "progressPhotos",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 6d: Weekly Surveys
+      try {
+        const weeklySurveysSnapshot = await admin.firestore()
+            .collection("weeklySurveys")
+            .where("clientId", "==", targetUserId)
+            .get();
+        
+        const sampleSurveys = weeklySurveysSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Weekly Surveys",
+          collection: "weeklySurveys",
+          queryFilter: `where('clientId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: weeklySurveysSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleSurveys,
+        });
+        totalItemsFound += weeklySurveysSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Weekly Surveys",
+          collection: "weeklySurveys",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 7: Sessions
+      try {
+        const sessionsSnapshot = await admin.firestore()
+            .collection("sessions")
+            .where("userId", "==", targetUserId)
+            .get();
+        
+        const sampleSessions = sessionsSnapshot.docs.slice(0, 5).map(d => `${d.id} (${d.data().status || 'unknown'})`);
+        steps.push({
+          name: "Sessions",
+          collection: "sessions",
+          queryFilter: `where('userId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: sessionsSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleSessions,
+        });
+        totalItemsFound += sessionsSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Sessions",
+          collection: "sessions",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 8: Goals
+      try {
+        const goalsSnapshot = await admin.firestore()
+            .collection("goals")
+            .where("clientId", "==", targetUserId)
+            .get();
+        
+        const sampleGoals = goalsSnapshot.docs.slice(0, 5).map(d => `${d.id} (${d.data().title || 'untitled'})`);
+        steps.push({
+          name: "Goals",
+          collection: "goals",
+          queryFilter: `where('clientId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: goalsSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleGoals,
+        });
+        totalItemsFound += goalsSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Goals",
+          collection: "goals",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 9: Daily Activities
+      try {
+        // Daily activities use composite doc IDs: {userId}_{dateStr}
+        const activitiesSnapshot = await admin.firestore()
+            .collection("dailyActivities")
+            .where(admin.firestore.FieldPath.documentId(), ">=", targetUserId)
+            .where(admin.firestore.FieldPath.documentId(), "<", targetUserId + "\uf8ff")
+            .get();
+        
+        const sampleDailyActivities = activitiesSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Daily Activities",
+          collection: "dailyActivities",
+          queryFilter: `where(documentId, 'starts-with', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: activitiesSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleDailyActivities,
+        });
+        totalItemsFound += activitiesSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Daily Activities",
+          collection: "dailyActivities",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 10: Nutrition Logs
+      try {
+        const nutritionSnapshot = await admin.firestore()
+            .collection("nutritionLogs")
+            .doc(targetUserId)
+            .collection("mealPlans")
+            .get();
+        
+        const sampleNutrition = nutritionSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Nutrition Logs",
+          collection: `nutritionLogs/${targetUserId}/mealPlans`,
+          status: "complete",
+          itemsFound: nutritionSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleNutrition,
+        });
+        totalItemsFound += nutritionSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Nutrition Logs",
+          collection: `nutritionLogs/${targetUserId}/mealPlans`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 11: Login History
+      try {
+        const loginSnapshot = await admin.firestore()
+            .collection("login_history")
+            .where("userId", "==", targetUserId)
+            .get();
+        
+        const sampleLogins = loginSnapshot.docs.slice(0, 5).map(d => d.id);
+        steps.push({
+          name: "Login History",
+          collection: "login_history",
+          queryFilter: `where('userId', '==', '${targetUserId}')`,
+          status: "complete",
+          itemsFound: loginSnapshot.size,
+          itemsDeleted: 0,
+          sampleItems: sampleLogins,
+        });
+        totalItemsFound += loginSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Login History",
+          collection: "login_history",
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 12: Stripe Customer (would be preserved in GDPR mode, deleted in no-traces)
+      steps.push({
+        name: "Stripe Customer",
+        collection: "stripe_customers",
+        status: "complete",
+        itemsFound: stripeCustomerId ? 1 : 0,
+        itemsDeleted: 0,
+        sampleItems: stripeCustomerId ? [stripeCustomerId] : [],
+      });
+      if (stripeCustomerId) {
+        totalItemsFound += 1;
+      }
+
+      // Step 13: User Document
+      steps.push({
+        name: "User Document",
+        collection: "users",
+        status: "complete",
+        itemsFound: 1,
+        itemsDeleted: 0,
+        sampleItems: [targetUserId],
+      });
+      totalItemsFound += 1;
+
+      // Step 14: Firebase Auth
+      steps.push({
+        name: "Firebase Auth",
+        collection: "Firebase Authentication",
+        status: "complete",
+        itemsFound: 1,
+        itemsDeleted: 0,
+        sampleItems: [userData.email || targetUserId],
+      });
+      totalItemsFound += 1;
+
+      logger.info("MOCK mode discovery complete", {
         targetUserId,
-        subscriptionId: userData.subscriptionId,
+        totalItemsFound,
+        steps: steps.length,
       });
 
-      const stripe = require("stripe")(stripeKey.value(), {
-        apiVersion: "2024-09-30.acacia",
-      });
-
-      await stripe.subscriptions.update(userData.subscriptionId, {
-        cancel_at_period_end: true,
-      });
+      // Return mock mode response
+      return {
+        success: true,
+        message: "Mock deletion preview complete (no data was deleted)",
+        mode: "mock",
+        deletedUserId: targetUserId,
+        stripeCustomerId: stripeCustomerId || "",
+        steps: steps,
+        summary: {
+          totalCollectionsProcessed: steps.length,
+          totalItemsFound: totalItemsFound,
+          totalItemsDeleted: 0,
+          stripeCustomerStatus: "preserved",
+          firebaseAuthStatus: "preserved",
+        },
+      };
     }
+
+    // ============================================
+    // ACTUAL DELETION MODES (no-traces & gdpr-clean)
+    // ============================================
 
     // STEP 3: CREATE AUDIT RECORD
     logger.info("Creating deleted_accounts audit record", {targetUserId});
@@ -1622,12 +2127,12 @@ exports.deleteAccount = onCall({
       });
     }
 
-    // STEP 7: DELETE WORKOUT EXECUTIONS
-    logger.info("Deleting workout executions", {targetUserId});
+    // STEP 7: DELETE WORKOUTS (Unified Collection)
+    logger.info("Deleting workouts", {targetUserId});
     try {
       const workoutsSnapshot = await admin.firestore()
-          .collection("workoutExecutions")
-          .where("userId", "==", targetUserId)
+          .collection("workouts")
+          .where("clientId", "==", targetUserId)
           .get();
 
       const batch = admin.firestore().batch();
@@ -1640,12 +2145,12 @@ exports.deleteAccount = onCall({
         await batch.commit();
       }
 
-      logger.info("Workout executions deleted", {
+      logger.info("Workouts deleted", {
         targetUserId,
         count: deletionCounts.workouts,
       });
     } catch (error) {
-      logger.error("Failed to delete workout executions", {
+      logger.error("Failed to delete workouts", {
         error: error.message,
         targetUserId,
       });

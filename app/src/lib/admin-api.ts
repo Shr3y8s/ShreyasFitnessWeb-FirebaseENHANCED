@@ -1,13 +1,30 @@
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
 import { getAuth } from 'firebase/auth';
+import { functions } from './firebase';
 
 /**
  * Admin API utilities for administrative operations
  * These functions require admin role
  */
 
+export type DeletionMode = 'mock' | 'no-traces' | 'gdpr-clean';
+
+export type DeletionStepStatus = 'pending' | 'processing' | 'complete' | 'error' | 'skipped';
+
+export interface DeletionStep {
+  name: string;
+  collection: string;
+  queryFilter?: string;
+  status: DeletionStepStatus;
+  itemsFound: number;
+  itemsDeleted: number;
+  sampleItems?: string[];
+  error?: string;
+}
+
 export interface DeleteAccountParams {
   targetUserId: string;
+  mode: DeletionMode;
   adminOverride?: boolean;
   reason: string;
 }
@@ -15,9 +32,19 @@ export interface DeleteAccountParams {
 export interface DeleteAccountResponse {
   success: boolean;
   message: string;
+  mode: DeletionMode;
   deletedUserId: string;
   stripeCustomerId: string;
-  itemsDeleted: {
+  steps: DeletionStep[];
+  summary: {
+    totalCollectionsProcessed: number;
+    totalItemsFound: number;
+    totalItemsDeleted: number;
+    stripeCustomerStatus: 'deleted' | 'anonymized' | 'preserved';
+    firebaseAuthStatus: 'deleted' | 'preserved';
+  };
+  // Legacy fields for backward compatibility
+  itemsDeleted?: {
     photos: number;
     activities: number;
     workouts: number;
@@ -41,7 +68,6 @@ export async function deleteAccount(params: DeleteAccountParams): Promise<Delete
     throw new Error('Must be authenticated to delete accounts');
   }
 
-  const functions = getFunctions();
   const deleteAccountFn = httpsCallable<DeleteAccountParams, DeleteAccountResponse>(
     functions,
     'deleteAccount'
