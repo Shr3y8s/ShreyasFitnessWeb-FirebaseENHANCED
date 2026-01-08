@@ -222,6 +222,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     role: data.role || userType
                   } as UserData);
                 }
+                // Set loading false after first data fetch
+                setLoading(false);
               },
               (error) => {
                 console.error('[AuthContext] Firestore listener error:', error);
@@ -229,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
           } else {
             setUserData(null);
+            setLoading(false);
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
@@ -250,9 +253,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         
         setUserData(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     // Cleanup auth subscription
