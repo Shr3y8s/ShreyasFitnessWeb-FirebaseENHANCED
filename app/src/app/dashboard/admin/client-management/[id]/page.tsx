@@ -211,10 +211,8 @@ export default function ClientManagementDetailPage() {
       setResult(response);
       setIsProcessing(false);
       
-      // Navigate back to list after real deletion
-      if (deletionMode !== 'mock') {
-        setTimeout(() => router.push('/dashboard/admin/client-management'), 2000);
-      }
+      // No auto-redirect - let user manually navigate back via "Back to Client List" button
+      // This allows reviewing deletion results for all modes
     } catch (err: any) {
       console.error('Delete account error:', err);
       setError(err.message || 'Failed to delete account');

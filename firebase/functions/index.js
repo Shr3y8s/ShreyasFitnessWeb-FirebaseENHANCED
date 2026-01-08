@@ -1468,13 +1468,13 @@ exports.deleteAccount = onCall({
       try {
         const bucket = admin.storage().bucket();
         const [files] = await bucket.getFiles({
-          prefix: `progress-photos/${targetUserId}/`,
+          prefix: `progressPhotos/${targetUserId}/`,
         });
         
         const samplePhotos = files.slice(0, 5).map(f => f.name);
         steps.push({
           name: "Progress Photos",
-          collection: `storage:progress-photos/${targetUserId}/`,
+          collection: `storage:progressPhotos/${targetUserId}/`,
           status: "complete",
           itemsFound: files.length,
           itemsDeleted: 0,
@@ -1484,7 +1484,7 @@ exports.deleteAccount = onCall({
       } catch (error) {
         steps.push({
           name: "Progress Photos",
-          collection: `storage:progress-photos/${targetUserId}/`,
+          collection: `storage:progressPhotos/${targetUserId}/`,
           status: "error",
           itemsFound: 0,
           itemsDeleted: 0,
@@ -1989,20 +1989,41 @@ exports.deleteAccount = onCall({
     // ============================================
     // ACTUAL DELETION MODES (no-traces & gdpr-clean)
     // ============================================
+    
+    // Validate mode-specific requirements
+    if (mode !== 'mock') {
+      // Check for upcoming sessions only for real deletions
+      const upcomingSessionsSnapshot = await admin.firestore()
+          .collection("sessions")
+          .where("userId", "==", targetUserId)
+          .where("status", "==", "scheduled")
+          .where("scheduledTime", ">", admin.firestore.Timestamp.now())
+          .get();
+      
+      if (!upcomingSessionsSnapshot.empty && !adminOverride) {
+        throw new Error(
+          `Cannot delete account with ${upcomingSessionsSnapshot.size} upcoming scheduled sessions. ` +
+          `Please cancel sessions first or use admin override.`
+        );
+      }
+    }
 
-    // STEP 3: CREATE AUDIT RECORD
-    logger.info("Creating deleted_accounts audit record", {targetUserId});
+    // Initialize Stripe for later use
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // STEP 1: CREATE AUDIT RECORD
+    logger.info("Creating deleted_accounts audit record", {targetUserId, mode});
     const randomId = Math.random().toString(36).substring(2, 15);
     const anonymizedEmail = `deleted-user-${randomId}@privacy.local`;
 
-    // Calculate email hash for potential lookups
     const crypto = require("crypto");
     const emailHash = crypto
         .createHash("sha256")
         .update(userData.email || "")
         .digest("hex");
 
-    // Count completed sessions
     const completedSessionsSnapshot = await admin.firestore()
         .collection("sessions")
         .where("userId", "==", targetUserId)
@@ -2014,6 +2035,7 @@ exports.deleteAccount = onCall({
       anonymizedEmail: anonymizedEmail,
       originalEmailHash: emailHash,
       stripeCustomerId: stripeCustomerId || null,
+      deletionMode: mode,
       deletedAt: admin.firestore.FieldValue.serverTimestamp(),
       deletedBy: "admin",
       deletedByAdminId: adminId,
@@ -2022,7 +2044,6 @@ exports.deleteAccount = onCall({
       lastPaymentDate: userData.lastPaymentDate || null,
       totalPayments: userData.sessionBalance?.purchased || 0,
       hadActiveSubscription: !!userData.subscriptionId,
-      hadUpcomingSessions: false,
       sessionsCompleted: completedSessionsSnapshot.size,
     };
 
@@ -2031,299 +2052,603 @@ exports.deleteAccount = onCall({
         .doc(targetUserId)
         .set(deletionRecord);
 
-    logger.info("Audit record created", {targetUserId});
+    logger.info("Audit record created", {targetUserId, mode});
 
-    // STEP 4: ANONYMIZE STRIPE CUSTOMER
-    if (stripeCustomerId) {
-      logger.info("Anonymizing Stripe customer", {stripeCustomerId});
-      try {
-        const stripe = require("stripe")(stripeKey.value(), {
-          apiVersion: "2024-09-30.acacia",
-        });
+    // ============================================
+    // NO-TRACES MODE: Complete removal of everything
+    // ============================================
+    if (mode === 'no-traces') {
+      logger.info("Starting NO-TRACES deletion", {targetUserId});
+      
+      const steps = [];
+      let totalDeleted = 0;
 
-        await stripe.customers.update(stripeCustomerId, {
-          name: "Deleted User",
-          email: anonymizedEmail,
-          phone: null,
-          description: `Account deleted on ${new Date().toISOString().split("T")[0]}`,
-          metadata: {
-            userId: "deleted",
-            deletedAt: new Date().toISOString(),
-            originalUserIdHash: emailHash,
-          },
-        });
-
-        logger.info("Stripe customer anonymized", {stripeCustomerId});
-      } catch (error) {
-        logger.error("Failed to anonymize Stripe customer", {
-          error: error.message,
-          stripeCustomerId,
-        });
-        // Continue - don't block deletion on Stripe errors
-      }
-    }
-
-    // Track deletion counts
-    const deletionCounts = {
-      photos: 0,
-      activities: 0,
-      workouts: 0,
-      surveys: 0,
-      messages: 0,
-      plans: 0,
-    };
-
-    // STEP 5: DELETE PROGRESS PHOTOS (Firebase Storage)
-    logger.info("Deleting progress photos", {targetUserId});
-    try {
+      // Delete all Storage files
       const bucket = admin.storage().bucket();
-      const [files] = await bucket.getFiles({
-        prefix: `progress-photos/${targetUserId}/`,
-      });
-
-      for (const file of files) {
-        await file.delete();
-        deletionCounts.photos++;
+      
+      // Progress Photos
+      try {
+        const [progressFiles] = await bucket.getFiles({
+          prefix: `progressPhotos/${targetUserId}/`,
+        });
+        for (const file of progressFiles) {
+          await file.delete();
+        }
+        steps.push({
+          name: "Progress Photos (Storage)",
+          itemsDeleted: progressFiles.length,
+          status: "complete",
+        });
+        totalDeleted += progressFiles.length;
+      } catch (error) {
+        steps.push({
+          name: "Progress Photos (Storage)",
+          status: "error",
+          error: error.message,
+        });
       }
 
-      logger.info("Progress photos deleted", {
-        targetUserId,
-        count: deletionCounts.photos,
-      });
-    } catch (error) {
-      logger.error("Failed to delete progress photos", {
-        error: error.message,
-        targetUserId,
-      });
-    }
-
-    // STEP 6: DELETE ACTIVITY LOGS
-    logger.info("Deleting activity logs", {targetUserId});
-    try {
-      const activitiesSnapshot = await admin.firestore()
-          .collection("users")
-          .doc(targetUserId)
-          .collection("activities")
-          .get();
-
-      const batch = admin.firestore().batch();
-      activitiesSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-        deletionCounts.activities++;
-      });
-
-      if (!batch._writes.length === 0) {
-        await batch.commit();
+      // Nutrition Screenshots
+      try {
+        const [nutritionFiles] = await bucket.getFiles({
+          prefix: `nutritionScreenshots/${targetUserId}/`,
+        });
+        for (const file of nutritionFiles) {
+          await file.delete();
+        }
+        steps.push({
+          name: "Nutrition Screenshots (Storage)",
+          itemsDeleted: nutritionFiles.length,
+          status: "complete",
+        });
+        totalDeleted += nutritionFiles.length;
+      } catch (error) {
+        steps.push({
+          name: "Nutrition Screenshots (Storage)",
+          status: "error",
+          error: error.message,
+        });
       }
 
-      logger.info("Activity logs deleted", {
-        targetUserId,
-        count: deletionCounts.activities,
-      });
-    } catch (error) {
-      logger.error("Failed to delete activity logs", {
-        error: error.message,
-        targetUserId,
-      });
-    }
-
-    // STEP 7: DELETE WORKOUTS (Unified Collection)
-    logger.info("Deleting workouts", {targetUserId});
-    try {
-      const workoutsSnapshot = await admin.firestore()
-          .collection("workouts")
-          .where("clientId", "==", targetUserId)
-          .get();
-
-      const batch = admin.firestore().batch();
-      workoutsSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-        deletionCounts.workouts++;
-      });
-
-      if (batch._writes.length > 0) {
-        await batch.commit();
+      // Profile Photos
+      try {
+        const [profileFiles] = await bucket.getFiles({
+          prefix: `profile-photos/${targetUserId}/`,
+        });
+        for (const file of profileFiles) {
+          await file.delete();
+        }
+        steps.push({
+          name: "Profile Photos (Storage)",
+          itemsDeleted: profileFiles.length,
+          status: "complete",
+        });
+        totalDeleted += profileFiles.length;
+      } catch (error) {
+        steps.push({
+          name: "Profile Photos (Storage)",
+          status: "error",
+          error: error.message,
+        });
       }
 
-      logger.info("Workouts deleted", {
-        targetUserId,
-        count: deletionCounts.workouts,
-      });
-    } catch (error) {
-      logger.error("Failed to delete workouts", {
-        error: error.message,
-        targetUserId,
-      });
-    }
+      // Delete all Firestore collections
+      const deleteBatch = async (collectionName, queryFn, stepName) => {
+        try {
+          const snapshot = await queryFn();
+          if (snapshot.empty) {
+            steps.push({ name: stepName, itemsDeleted: 0, status: "complete" });
+            return;
+          }
 
-    // STEP 8: DELETE SURVEY RESPONSES
-    logger.info("Deleting survey responses", {targetUserId});
-    try {
-      const surveysSnapshot = await admin.firestore()
-          .collection("users")
-          .doc(targetUserId)
-          .collection("surveys")
-          .get();
+          const batch = admin.firestore().batch();
+          snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+          
+          steps.push({
+            name: stepName,
+            itemsDeleted: snapshot.size,
+            status: "complete",
+          });
+          totalDeleted += snapshot.size;
+        } catch (error) {
+          steps.push({
+            name: stepName,
+            status: "error",
+            error: error.message,
+          });
+        }
+      };
 
-      const batch = admin.firestore().batch();
-      surveysSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-        deletionCounts.surveys++;
-      });
+      // Activity Logs (subcollection)
+      await deleteBatch(
+        "activities",
+        () => admin.firestore().collection("users").doc(targetUserId).collection("activities").get(),
+        "Activity Logs"
+      );
 
-      if (batch._writes.length > 0) {
-        await batch.commit();
+      // Workouts
+      await deleteBatch(
+        "workouts",
+        () => admin.firestore().collection("workouts").where("clientId", "==", targetUserId).get(),
+        "Workouts"
+      );
+
+      // Client Plans
+      await deleteBatch(
+        "clientPlans",
+        () => admin.firestore().collection("clientPlans").where("clientId", "==", targetUserId).get(),
+        "Client Plans"
+      );
+
+      // Client Stats
+      try {
+        const clientStatsRef = admin.firestore().collection("clientStats").doc(targetUserId);
+        const statsDoc = await clientStatsRef.get();
+        if (statsDoc.exists) {
+          await clientStatsRef.delete();
+          steps.push({ name: "Client Stats", itemsDeleted: 1, status: "complete" });
+          totalDeleted += 1;
+        } else {
+          steps.push({ name: "Client Stats", itemsDeleted: 0, status: "complete" });
+        }
+      } catch (error) {
+        steps.push({ name: "Client Stats", status: "error", error: error.message });
       }
 
-      logger.info("Survey responses deleted", {
-        targetUserId,
-        count: deletionCounts.surveys,
-      });
-    } catch (error) {
-      logger.error("Failed to delete survey responses", {
-        error: error.message,
-        targetUserId,
-      });
-    }
+      // Client Messages
+      await deleteBatch(
+        "client_messages",
+        () => admin.firestore().collection("client_messages").where("clientId", "==", targetUserId).get(),
+        "Client Messages"
+      );
 
-    // STEP 9: DELETE MESSAGES
-    logger.info("Deleting messages", {targetUserId});
-    try {
-      const messagesSnapshot = await admin.firestore()
-          .collection("messages")
-          .where("userId", "==", targetUserId)
-          .get();
+      // Notifications
+      await deleteBatch(
+        "notifications",
+        () => admin.firestore().collection("notifications").where("userId", "==", targetUserId).get(),
+        "Notifications"
+      );
 
-      const batch = admin.firestore().batch();
-      messagesSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-        deletionCounts.messages++;
-      });
+      // Progress Photos (Firestore metadata)
+      await deleteBatch(
+        "progressPhotos",
+        () => admin.firestore().collection("progressPhotos").where("userId", "==", targetUserId).get(),
+        "Progress Photos Metadata"
+      );
 
-      if (batch._writes.length > 0) {
-        await batch.commit();
+      // Weekly Surveys
+      await deleteBatch(
+        "weeklySurveys",
+        () => admin.firestore().collection("weeklySurveys").where("clientId", "==", targetUserId).get(),
+        "Weekly Surveys"
+      );
+
+      // Sessions
+      await deleteBatch(
+        "sessions",
+        () => admin.firestore().collection("sessions").where("userId", "==", targetUserId).get(),
+        "Sessions"
+      );
+
+      // Goals
+      await deleteBatch(
+        "goals",
+        () => admin.firestore().collection("goals").where("clientId", "==", targetUserId).get(),
+        "Goals"
+      );
+
+      // Daily Activities (composite doc IDs)
+      await deleteBatch(
+        "dailyActivities",
+        () => admin.firestore()
+          .collection("dailyActivities")
+          .where(admin.firestore.FieldPath.documentId(), ">=", targetUserId)
+          .where(admin.firestore.FieldPath.documentId(), "<", targetUserId + "\uf8ff")
+          .get(),
+        "Daily Activities"
+      );
+
+      // Nutrition Logs (subcollection)
+      await deleteBatch(
+        "nutritionLogs",
+        () => admin.firestore().collection("nutritionLogs").doc(targetUserId).collection("mealPlans").get(),
+        "Nutrition Logs"
+      );
+
+      // Login History
+      await deleteBatch(
+        "login_history",
+        () => admin.firestore().collection("login_history").where("userId", "==", targetUserId).get(),
+        "Login History"
+      );
+
+      // Delete Stripe Customer from BOTH Firestore AND Stripe API
+      if (stripeCustomerId) {
+        try {
+          // Delete from Stripe's servers
+          await stripe.customers.del(stripeCustomerId);
+          logger.info("Stripe customer deleted from Stripe API", {stripeCustomerId});
+          
+          // Delete from Firestore
+          await admin.firestore().collection("stripe_customers").doc(targetUserId).delete();
+          logger.info("Stripe customer deleted from Firestore", {targetUserId});
+          
+          steps.push({
+            name: "Stripe Customer (API + Firestore)",
+            itemsDeleted: 1,
+            status: "complete",
+          });
+          totalDeleted += 1;
+        } catch (error) {
+          logger.error("Failed to delete Stripe customer", {error: error.message});
+          steps.push({
+            name: "Stripe Customer",
+            status: "error",
+            error: error.message,
+          });
+        }
       }
 
-      logger.info("Messages deleted", {
-        targetUserId,
-        count: deletionCounts.messages,
-      });
-    } catch (error) {
-      logger.error("Failed to delete messages", {
-        error: error.message,
-        targetUserId,
-      });
-    }
-
-    // STEP 10: DELETE PLAN DATA
-    logger.info("Deleting plan data", {targetUserId});
-    try {
-      const plansSnapshot = await admin.firestore()
-          .collection("users")
-          .doc(targetUserId)
-          .collection("plans")
-          .get();
-
-      const batch = admin.firestore().batch();
-      plansSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-        deletionCounts.plans++;
-      });
-
-      if (batch._writes.length > 0) {
-        await batch.commit();
+      // Remove from trainer's client list
+      if (userData.assignedTrainerId) {
+        try {
+          const trainerCollection = userData.assignedTrainerCollection || "admins";
+          await admin.firestore()
+              .collection(trainerCollection)
+              .doc(userData.assignedTrainerId)
+              .update({
+                clients: admin.firestore.FieldValue.arrayRemove(targetUserId),
+              });
+          steps.push({
+            name: "Trainer Client List",
+            itemsDeleted: 1,
+            status: "complete",
+          });
+        } catch (error) {
+          steps.push({
+            name: "Trainer Client List",
+            status: "error",
+            error: error.message,
+          });
+        }
       }
 
-      logger.info("Plan data deleted", {
-        targetUserId,
-        count: deletionCounts.plans,
+      // Delete User Document
+      await userRef.delete();
+      steps.push({
+        name: "User Document",
+        itemsDeleted: 1,
+        status: "complete",
       });
-    } catch (error) {
-      logger.error("Failed to delete plan data", {
-        error: error.message,
-        targetUserId,
+      totalDeleted += 1;
+
+      // Delete Firebase Auth
+      try {
+        await admin.auth().deleteUser(targetUserId);
+        steps.push({
+          name: "Firebase Auth",
+          itemsDeleted: 1,
+          status: "complete",
+        });
+        totalDeleted += 1;
+      } catch (error) {
+        if (error.code !== "auth/user-not-found") {
+          steps.push({
+            name: "Firebase Auth",
+            status: "error",
+            error: error.message,
+          });
+        } else {
+          steps.push({
+            name: "Firebase Auth",
+            itemsDeleted: 0,
+            status: "complete",
+          });
+        }
+      }
+
+      // Log audit
+      await admin.firestore().collection("audit_logs").add({
+        action: "account_deletion",
+        mode: "no-traces",
+        targetUserId: targetUserId,
+        performedBy: adminId,
+        performedAt: admin.firestore.FieldValue.serverTimestamp(),
+        reason: reason,
+        success: true,
+        totalDeleted: totalDeleted,
       });
+
+      logger.info("NO-TRACES deletion completed", {targetUserId, totalDeleted});
+
+      return {
+        success: true,
+        message: "Account completely removed (no traces)",
+        mode: "no-traces",
+        deletedUserId: targetUserId,
+        stripeCustomerId: stripeCustomerId || "",
+        steps: steps,
+        summary: {
+          totalCollectionsProcessed: steps.length,
+          totalItemsFound: totalDeleted,
+          totalItemsDeleted: totalDeleted,
+          stripeCustomerStatus: "deleted",
+          firebaseAuthStatus: "deleted",
+        },
+      };
     }
 
-    // STEP 11: REMOVE FROM TRAINER'S CLIENT LIST
-    if (userData.assignedTrainerId) {
-      logger.info("Removing from trainer's client list", {
-        targetUserId,
-        trainerId: userData.assignedTrainerId,
-      });
+    // ============================================
+    // GDPR-CLEAN MODE: Remove PII, preserve business records
+    // ============================================
+    if (mode === 'gdpr-clean') {
+      logger.info("Starting GDPR-CLEAN deletion", {targetUserId});
+      
+      const steps = [];
+      let totalDeleted = 0;
+
+      // Anonymize Stripe customer (don't delete)
+      if (stripeCustomerId) {
+        try {
+          await stripe.customers.update(stripeCustomerId, {
+            name: "Deleted User",
+            email: anonymizedEmail,
+            phone: null,
+            description: `GDPR deletion on ${new Date().toISOString().split("T")[0]}`,
+            metadata: {
+              userId: "anonymized",
+              deletedAt: new Date().toISOString(),
+              originalUserIdHash: emailHash,
+            },
+          });
+          steps.push({
+            name: "Stripe Customer (Anonymized)",
+            itemsDeleted: 0,
+            status: "complete",
+          });
+          logger.info("Stripe customer anonymized", {stripeCustomerId});
+        } catch (error) {
+          steps.push({
+            name: "Stripe Customer",
+            status: "error",
+            error: error.message,
+          });
+        }
+      }
+
+      // Delete Storage files (PII)
+      const bucket = admin.storage().bucket();
+      
+      try {
+        const [progressFiles] = await bucket.getFiles({
+          prefix: `progressPhotos/${targetUserId}/`,
+        });
+        for (const file of progressFiles) {
+          await file.delete();
+        }
+        steps.push({
+          name: "Progress Photos (Storage)",
+          itemsDeleted: progressFiles.length,
+          status: "complete",
+        });
+        totalDeleted += progressFiles.length;
+      } catch (error) {
+        steps.push({
+          name: "Progress Photos (Storage)",
+          status: "error",
+          error: error.message,
+        });
+      }
 
       try {
-        const trainerCollection = userData.assignedTrainerCollection || "admins";
-        const trainerRef = admin.firestore()
-            .collection(trainerCollection)
-            .doc(userData.assignedTrainerId);
-
-        await trainerRef.update({
-          clients: admin.firestore.FieldValue.arrayRemove(targetUserId),
+        const [nutritionFiles] = await bucket.getFiles({
+          prefix: `nutritionScreenshots/${targetUserId}/`,
         });
-
-        logger.info("Removed from trainer's client list", {
-          targetUserId,
-          trainerId: userData.assignedTrainerId,
+        for (const file of nutritionFiles) {
+          await file.delete();
+        }
+        steps.push({
+          name: "Nutrition Screenshots (Storage)",
+          itemsDeleted: nutritionFiles.length,
+          status: "complete",
         });
+        totalDeleted += nutritionFiles.length;
       } catch (error) {
-        logger.error("Failed to remove from trainer's client list", {
+        steps.push({
+          name: "Nutrition Screenshots (Storage)",
+          status: "error",
           error: error.message,
-          targetUserId,
         });
       }
-    }
 
-    // STEP 12: DELETE FIRESTORE USER DOCUMENT
-    logger.info("Deleting Firestore user document", {targetUserId});
-    await userRef.delete();
-
-    // STEP 13: DELETE FIREBASE AUTH
-    logger.info("Deleting Firebase Auth account", {targetUserId});
-    try {
-      await admin.auth().deleteUser(targetUserId);
-      logger.info("Firebase Auth account deleted", {targetUserId});
-    } catch (error) {
-      logger.error("Failed to delete Firebase Auth account", {
-        error: error.message,
-        targetUserId,
-      });
-      // This is critical - but don't fail if account doesn't exist
-      if (error.code !== "auth/user-not-found") {
-        throw error;
+      try {
+        const [profileFiles] = await bucket.getFiles({
+          prefix: `profile-photos/${targetUserId}/`,
+        });
+        for (const file of profileFiles) {
+          await file.delete();
+        }
+        steps.push({
+          name: "Profile Photos (Storage)",
+          itemsDeleted: profileFiles.length,
+          status: "complete",
+        });
+        totalDeleted += profileFiles.length;
+      } catch (error) {
+        steps.push({
+          name: "Profile Photos (Storage)",
+          status: "error",
+          error: error.message,
+        });
       }
+
+      // Delete Progress Photos metadata (Firestore)
+      try {
+        const progressPhotosSnapshot = await admin.firestore()
+            .collection("progressPhotos")
+            .where("userId", "==", targetUserId)
+            .get();
+        const batch = admin.firestore().batch();
+        progressPhotosSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+        if (progressPhotosSnapshot.size > 0) {
+          await batch.commit();
+        }
+        steps.push({
+          name: "Progress Photos Metadata",
+          itemsDeleted: progressPhotosSnapshot.size,
+          status: "complete",
+        });
+        totalDeleted += progressPhotosSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Progress Photos Metadata",
+          status: "error",
+          error: error.message,
+        });
+      }
+
+      // Delete Client Messages (personal communications)
+      try {
+        const messagesSnapshot = await admin.firestore()
+            .collection("client_messages")
+            .where("clientId", "==", targetUserId)
+            .get();
+        const batch = admin.firestore().batch();
+        messagesSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+        if (messagesSnapshot.size > 0) {
+          await batch.commit();
+        }
+        steps.push({
+          name: "Client Messages",
+          itemsDeleted: messagesSnapshot.size,
+          status: "complete",
+        });
+        totalDeleted += messagesSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Client Messages",
+          status: "error",
+          error: error.message,
+        });
+      }
+
+      // Delete Login History (behavioral tracking)
+      try {
+        const loginSnapshot = await admin.firestore()
+            .collection("login_history")
+            .where("userId", "==", targetUserId)
+            .get();
+        const batch = admin.firestore().batch();
+        loginSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+        if (loginSnapshot.size > 0) {
+          await batch.commit();
+        }
+        steps.push({
+          name: "Login History",
+          itemsDeleted: loginSnapshot.size,
+          status: "complete",
+        });
+        totalDeleted += loginSnapshot.size;
+      } catch (error) {
+        steps.push({
+          name: "Login History",
+          status: "error",
+          error: error.message,
+        });
+      }
+
+      // Anonymize User Document (don't delete - preserve for business records)
+      try {
+        await userRef.update({
+          name: `Deleted User ${randomId.substring(0, 8)}`,
+          email: anonymizedEmail,
+          phone: admin.firestore.FieldValue.delete(),
+          photoURL: admin.firestore.FieldValue.delete(),
+          address: admin.firestore.FieldValue.delete(),
+          gdprDeleted: true,
+          gdprDeletedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        steps.push({
+          name: "User Document (Anonymized)",
+          itemsDeleted: 0,
+          status: "complete",
+        });
+        logger.info("User document anonymized", {targetUserId});
+      } catch (error) {
+        steps.push({
+          name: "User Document",
+          status: "error",
+          error: error.message,
+        });
+      }
+
+      // Delete Firebase Auth
+      try {
+        await admin.auth().deleteUser(targetUserId);
+        steps.push({
+          name: "Firebase Auth",
+          itemsDeleted: 1,
+          status: "complete",
+        });
+        totalDeleted += 1;
+      } catch (error) {
+        if (error.code !== "auth/user-not-found") {
+          steps.push({
+            name: "Firebase Auth",
+            status: "error",
+            error: error.message,
+          });
+        } else {
+          steps.push({
+            name: "Firebase Auth",
+            itemsDeleted: 0,
+            status: "complete",
+          });
+        }
+      }
+
+      // Log audit
+      await admin.firestore().collection("audit_logs").add({
+        action: "account_deletion",
+        mode: "gdpr-clean",
+        targetUserId: targetUserId,
+        performedBy: adminId,
+        performedAt: admin.firestore.FieldValue.serverTimestamp(),
+        reason: reason,
+        success: true,
+        totalDeleted: totalDeleted,
+      });
+
+      logger.info("GDPR-CLEAN deletion completed", {targetUserId, totalDeleted});
+
+      return {
+        success: true,
+        message: "PII removed, business records preserved (GDPR-compliant)",
+        mode: "gdpr-clean",
+        deletedUserId: targetUserId,
+        stripeCustomerId: stripeCustomerId || "",
+        steps: steps,
+        summary: {
+          totalCollectionsProcessed: steps.length,
+          totalItemsFound: totalDeleted,
+          totalItemsDeleted: totalDeleted,
+          stripeCustomerStatus: "anonymized",
+          firebaseAuthStatus: "deleted",
+        },
+      };
     }
 
-    // STEP 14: LOG AUDIT
-    await admin.firestore().collection("audit_logs").add({
-      action: "account_deletion",
-      targetUserId: targetUserId,
-      performedBy: adminId,
-      performedAt: admin.firestore.FieldValue.serverTimestamp(),
-      reason: reason,
-      success: true,
-      deletionCounts: deletionCounts,
-    });
+    // This should never be reached, but handle unknown modes
+    throw new Error(`Unknown deletion mode: ${mode}`);
 
-    logger.info("Account deletion completed successfully", {
-      targetUserId,
-      adminId,
-      deletionCounts,
-    });
-
-    return {
-      success: true,
-      message: "Account deleted successfully",
-      deletedUserId: targetUserId,
-      stripeCustomerId: stripeCustomerId,
-      itemsDeleted: deletionCounts,
-    };
   } catch (error) {
     logger.error("Account deletion failed", {
       error: error.message,
       stack: error.stack,
       adminId: request.auth?.uid,
       targetUserId: request.data?.targetUserId,
+      mode: request.data?.mode,
     });
 
     // Log failed attempt
@@ -2331,6 +2656,7 @@ exports.deleteAccount = onCall({
       try {
         await admin.firestore().collection("audit_logs").add({
           action: "account_deletion",
+          mode: request.data?.mode || "unknown",
           targetUserId: request.data.targetUserId,
           performedBy: request.auth.uid,
           performedAt: admin.firestore.FieldValue.serverTimestamp(),

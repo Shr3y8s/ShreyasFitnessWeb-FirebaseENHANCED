@@ -5,9 +5,9 @@
 Based on actual database schema (as of Jan 2026):
 
 ### Storage Locations
-1. ✅ `progress-photos/{userId}/`
-2. ✅ `nutritionScreenshots/{userId}/`
-3. ✅ `profile-photos/{userId}/`
+1. ✅ `progressPhotos/{userId}/` (camelCase)
+2. ✅ `nutritionScreenshots/{userId}/` (camelCase)
+3. ✅ `profile-photos/{userId}/` (hyphenated)
 
 ### Firestore Collections (Top-Level)
 4. ✅ `clientPlans` - Query by clientId
