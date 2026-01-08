@@ -391,7 +391,7 @@ export default function TrainerNutritionViewPage() {
                   <div className="grid grid-cols-7 gap-2 mb-4">
                     {calendarData.slice(0, 7).map((_, index) => {
                       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                      const startDay = new Date(calendarData[0].date).getDay();
+                      const startDay = new Date(calendarData[0].date + 'T00:00:00').getDay();
                       const dayIndex = (startDay + index) % 7;
                       return (
                         <div key={index} className="text-center text-sm font-medium text-gray-600 py-2">
