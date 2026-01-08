@@ -616,14 +616,13 @@ export async function updateTrainingProtocol(
       await setDoc(planRef, {
         clientId,
         trainerId,
-        ...updateData,
         vision: null,
         stepGoal: null,
         lissCardio: null,
         weeklyFocus: null,
         dailyHabits: null,
-        trainingProtocol: null,
         nutritionProtocol: null,
+        ...updateData,  // ← Spread AFTER nulls so it overwrites
         createdAt: serverTimestamp()
       });
     }
