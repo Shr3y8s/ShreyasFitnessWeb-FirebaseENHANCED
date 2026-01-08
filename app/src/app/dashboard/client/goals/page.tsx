@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { signOutUser } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Card } from '@/components/ui/card';
@@ -12,7 +13,7 @@ import { getClientGoals } from '@/lib/goals-api';
 
 export default function ClientGoalsPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeGoals, setActiveGoals] = useState<Goal[]>([]);
 
@@ -40,6 +41,17 @@ export default function ClientGoalsPage() {
     loadGoals();
   }, [user, authLoading, router]);
 
+  const handleLogout = async () => {
+    try {
+      const result = await signOutUser();
+      if (result.success) {
+        router.push('/login');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
@@ -50,7 +62,12 @@ export default function ClientGoalsPage() {
 
   return (
     <SidebarProvider>
-      <ClientSidebar userName={user?.displayName || 'User'} />
+      <ClientSidebar 
+        userName={userData?.name}
+        userTier={userData?.tier}
+        userProfilePhoto={userData?.profilePhotoSmall || undefined}
+        onLogout={handleLogout}
+      />
       <SidebarInset>
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
           <div className="max-w-6xl mx-auto">
