@@ -53,7 +53,8 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
 
     const clientsQuery = query(
       collection(db, 'users'),
-      where('role', '==', 'client')
+      where('role', '==', 'client'),
+      where('gdprDeleted', '!=', true)
     );
 
     const unsubscribe = onSnapshot(

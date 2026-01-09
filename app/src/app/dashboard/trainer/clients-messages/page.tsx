@@ -145,6 +145,7 @@ export default function ClientMessagesPage() {
           collection(db, 'users'),
           where('role', '==', 'client'),
           where('assignedTrainerId', '==', user.uid),
+          where('gdprDeleted', '!=', true),
           orderBy('createdAt', 'desc')
         );
         

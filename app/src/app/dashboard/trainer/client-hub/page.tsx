@@ -103,6 +103,7 @@ export default function ClientHubPage() {
           collection(db, 'users'),
           where('role', '==', 'client'),
           where('assignedTrainerId', '==', user.uid),
+          where('gdprDeleted', '!=', true),
           orderBy('createdAt', 'desc')
         );
         

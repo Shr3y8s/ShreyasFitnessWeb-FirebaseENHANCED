@@ -47,6 +47,7 @@ export function useAssignmentsData() {
           collection(db, 'users'),
           where('role', '==', 'client'),
           where('assignedTrainerId', '==', user.uid),
+          where('gdprDeleted', '!=', true),
           orderBy('createdAt', 'desc')
         );
         const clientsSnapshot = await getDocs(clientsQuery);

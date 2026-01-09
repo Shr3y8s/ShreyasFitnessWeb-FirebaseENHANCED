@@ -262,6 +262,7 @@ export default function PaymentPage() {
           tierName: pendingSignup.tierName,
           emailVerified: pendingSignup.emailVerified || false, // Save email verification status from signup
           accountActivated: false, // Will be set to true on first payment
+          gdprDeleted: false, // Track deletion status for filtering
           role: 'client',
           recaptchaToken: recaptchaToken || null,
           recaptchaVerified: false, // Will be verified by backend

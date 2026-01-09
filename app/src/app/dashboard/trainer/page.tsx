@@ -87,10 +87,11 @@ export default function TrainerDashboardPage() {
       if (user) {
         try {
           
-          // Fetch clients
+          // Fetch clients (exclude GDPR-deleted accounts)
           const clientsQuery = query(
             collection(db, 'users'),
             where('role', '==', 'client'),
+            where('gdprDeleted', '!=', true),
             orderBy('createdAt', 'desc')
           );
           

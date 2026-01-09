@@ -42,7 +42,7 @@ export function SessionFiltersCard({ currentFilters, onFiltersChange, trainerId 
       try {
         setLoadingClients(true);
         const usersRef = collection(db, 'users');
-        const clientsQuery = query(usersRef, where('role', '==', 'client'));
+        const clientsQuery = query(usersRef, where('role', '==', 'client'), where('gdprDeleted', '!=', true));
         const snapshot = await getDocs(clientsQuery);
         
         const clientList: ClientOption[] = snapshot.docs.map(doc => ({

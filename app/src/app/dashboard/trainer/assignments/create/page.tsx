@@ -175,7 +175,8 @@ export default function CreateAssignmentPage() {
         // Load clients
         const clientsQuery = query(
           collection(db, 'users'),
-          where('role', '==', 'client')
+          where('role', '==', 'client'),
+          where('gdprDeleted', '!=', true)
         );
         const clientsSnapshot = await getDocs(clientsQuery);
         const clientsData = clientsSnapshot.docs.map(doc => ({
