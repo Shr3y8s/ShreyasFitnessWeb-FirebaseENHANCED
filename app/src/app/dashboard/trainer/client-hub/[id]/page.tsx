@@ -2485,110 +2485,25 @@ export default function ClientDetailPage() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold mb-1">💬 Support</h2>
-                  <p className="text-gray-600">Communication and check-ins</p>
+                  <p className="text-gray-600">Communication and support resources</p>
                 </div>
 
-                {/* Support Categories */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Messages */}
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-primary/10 rounded-full">
-                        <span className="text-2xl">💬</span>
-                      </div>
-                      <h3 className="text-xl font-semibold">Messages</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">Direct communication history</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
-                        className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        Send Message
-                      </button>
-                      <button
-                        onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
-                        className="text-primary hover:text-primary/80 text-sm font-medium px-4 py-2"
-                      >
-                        View All →
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Weekly Check-ins */}
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-3 bg-primary/10 rounded-full">
-                        <span className="text-2xl">📝</span>
-                      </div>
-                      <h3 className="text-xl font-semibold">Weekly Check-ins</h3>
-                    </div>
-                    
-                    {checkinsLoading ? (
-                      <p className="text-sm text-muted-foreground">Loading check-ins...</p>
-                    ) : recentCheckins.length > 0 ? (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          <div className="text-center p-2 bg-background/50 rounded">
-                            <p className="text-2xl font-bold text-foreground">{recentCheckins.length}</p>
-                            <p className="text-xs text-muted-foreground">Total</p>
-                          </div>
-                          <div className="text-center p-2 bg-background/50 rounded">
-                            <p className="text-2xl font-bold text-foreground">
-                              {recentCheckins.filter(c => c.status === 'completed').length}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Completed</p>
-                          </div>
-                        </div>
-                        
-                        {/* Most recent check-in */}
-                        {recentCheckins[0] && (
-                          <div className="p-3 bg-background/50 rounded-lg">
-                            <div className="flex items-start justify-between mb-1">
-                              <span className="text-sm font-medium text-foreground">
-                                {recentCheckins[0].status === 'scheduled' ? 'Upcoming' : 'Last Check-in'}
-                              </span>
-                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                                recentCheckins[0].status === 'completed' ? 'bg-green-100 text-green-700' :
-                                recentCheckins[0].status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                                'bg-gray-100 text-gray-700'
-                              }`}>
-                                {recentCheckins[0].status}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {recentCheckins[0].scheduledDate.toLocaleDateString('en-US', { 
-                                weekday: 'short',
-                                month: 'short', 
-                                day: 'numeric',
-                                hour: 'numeric',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                            {recentCheckins[0].duration && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {recentCheckins[0].duration} minutes
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No check-ins scheduled yet</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recent Messages Preview */}
+                {/* Consolidated Messages Card */}
                 <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                  <h3 className="text-lg font-semibold mb-3">Recent Messages</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-primary/10 rounded-full">
+                      <span className="text-2xl">💬</span>
+                    </div>
+                    <h3 className="text-xl font-semibold">Messages</h3>
+                  </div>
                   
                   {messagesLoading ? (
                     <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground">Loading messages...</p>
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
+                      <p className="text-sm text-muted-foreground mt-2">Loading messages...</p>
                     </div>
                   ) : recentMessages.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 mb-4">
                       {recentMessages.map((message) => {
                         const isFromClient = message.senderId === clientId;
                         const preview = message.content.length > 80 
@@ -2614,24 +2529,30 @@ export default function ClientDetailPage() {
                           </div>
                         );
                       })}
-                      <button
-                        onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
-                        className="w-full mt-2 text-primary hover:text-primary/80 text-sm font-medium"
-                      >
-                        View All Messages →
-                      </button>
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-muted-foreground mb-3">No messages yet</p>
-                      <button
-                        onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
-                        className="text-primary hover:text-primary/80 text-sm font-medium"
-                      >
-                        Start a Conversation →
-                      </button>
+                    <div className="text-center py-8 mb-4">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">No messages yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">Start a conversation with your client</p>
                     </div>
                   )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-4 border-t">
+                    <button
+                      onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
+                      className="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      Send Message
+                    </button>
+                    <button
+                      onClick={() => router.push(`/dashboard/trainer/clients-messages?clientId=${clientData.id}`)}
+                      className="px-4 py-2 text-primary hover:text-primary/80 text-sm font-medium hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      View All Messages
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
