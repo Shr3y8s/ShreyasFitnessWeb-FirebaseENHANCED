@@ -19,7 +19,7 @@ https://us-west1-shreyfitweb.cloudfunctions.net/calendlyWebhook
 
 **Current Webhook ID:** (changes when recreated)
 ```
-b266bcc6-ed87-4bc2-8517-f176e099a627
+7f3fa8c8-80b5-46bc-8dea-7a11853bf5d4
 ```
 
 ---
@@ -198,5 +198,6 @@ firebase deploy --only functions:calendlyWebhook
 - Function URL should never change unless you change regions
 - Organization URI is permanent for your Calendly account
 
-**Last Updated:** January 6, 2026  
-**Webhook Status:** Active ✅
+**Last Updated:** January 20, 2026  
+**Webhook Status:** Active ✅  
+**Last Recreated:** January 20, 2026 (webhook was disabled due to cancellation handling errors)
