@@ -10,6 +10,7 @@ import { doc, getDoc, collection, collectionGroup, query, where, getDocs, orderB
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { AdminOnlySection } from '@/components/dashboard/AdminOnlySection';
+import UpcomingSessionsCard from '@/components/trainer/UpcomingSessionsCard';
 import { 
   Users,
   Dumbbell,
@@ -273,6 +274,9 @@ export default function TrainerDashboardPage() {
             </h1>
             <p className="text-muted-foreground mt-2">Manage your clients, workouts, and track progress</p>
           </div>
+
+          {/* Upcoming Sessions & Meetings */}
+          {user && <UpcomingSessionsCard trainerId={user.uid} />}
 
           {/* Dashboard Stats */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
