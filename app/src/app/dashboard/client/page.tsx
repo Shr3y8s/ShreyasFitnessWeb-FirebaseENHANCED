@@ -321,7 +321,7 @@ export default function ClientDashboardPage() {
                 ) : nextSession ? (
                   <UpcomingWorkoutReminder 
                     workout={{
-                      type: '',
+                      sessionType: nextSession.sessionType as 'training' | 'checkin' | 'onboarding',
                       date: formatSessionDateTime(nextSession.scheduledDate),
                       time: '',
                       location: nextSessionLocation

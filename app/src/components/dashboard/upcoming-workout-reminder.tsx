@@ -1,9 +1,11 @@
 "use client";
 
-import { Calendar, MapPin, Info } from 'lucide-react';
+import { Calendar, MapPin, Info, CheckSquare, Target, Dumbbell } from 'lucide-react';
+
+type SessionType = 'training' | 'checkin' | 'onboarding';
 
 interface Workout {
-  type: string;
+  sessionType: SessionType;
   date: string;
   time: string;
   location: string;
@@ -13,25 +15,66 @@ interface UpcomingWorkoutReminderProps {
   workout: Workout;
 }
 
+const SESSION_CONFIG = {
+  training: {
+    title: "Upcoming In-Person Training",
+    description: "Don't forget your next session is just around the corner.",
+    icon: Dumbbell,
+    iconBg: "bg-blue-500/20",
+    iconColor: "text-blue-500",
+    reminders: [
+      "Water bottle to stay hydrated",
+      "Towel for your workout",
+      "Proper workout shoes"
+    ]
+  },
+  checkin: {
+    title: "Upcoming Weekly Check-in",
+    description: "Your weekly coaching call is coming up.",
+    icon: CheckSquare,
+    iconBg: "bg-green-500/20",
+    iconColor: "text-green-500",
+    reminders: [
+      "Stable internet connection",
+      "Quiet, private space",
+      "Questions or updates ready to discuss"
+    ]
+  },
+  onboarding: {
+    title: "Upcoming Onboarding Call",
+    description: "Your initial consultation call is scheduled.",
+    icon: Target,
+    iconBg: "bg-purple-500/20",
+    iconColor: "text-purple-500",
+    reminders: [
+      "Stable internet connection",
+      "Quiet, private space",
+      "Your fitness goals and questions ready"
+    ]
+  }
+};
+
 export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProps) {
+  const config = SESSION_CONFIG[workout.sessionType];
+  const IconComponent = config.icon;
+  
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/10 border-primary/50 flex flex-col hover:shadow-glow">
       <div className="flex p-6 flex-row gap-4 items-center">
-        <div className="p-3 bg-primary/20 rounded-full">
-          <Calendar className="text-primary w-6 h-6" />
+        <div className={`p-3 ${config.iconBg} rounded-full`}>
+          <IconComponent className={`${config.iconColor} w-6 h-6`} />
         </div>
         <div>
           <h3 className="text-xl font-semibold leading-none tracking-tight">
-            Upcoming In-Person Session
+            {config.title}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Don&apos;t forget your next session is just around the corner.
+            {config.description}
           </p>
         </div>
       </div>
       <div className="p-6 pt-0 space-y-4 pl-20 pb-4 flex-1 flex flex-col justify-center">
         <div className="space-y-2">
-          <p className="font-bold text-lg">{workout.type}</p>
           <div className="flex items-center gap-3 text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
@@ -50,9 +93,9 @@ export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProp
             Don&apos;t Forget
           </h4>
           <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
-            <li>Water bottle to stay hydrated</li>
-            <li>Towel for your workout</li>
-            <li>Proper workout shoes</li>
+            {config.reminders.map((reminder, index) => (
+              <li key={index}>{reminder}</li>
+            ))}
           </ul>
         </div>
       </div>
