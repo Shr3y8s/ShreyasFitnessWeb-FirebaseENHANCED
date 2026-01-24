@@ -108,7 +108,7 @@ export function NutritionBasicsGuide() {
                     <li>• Your scale has a unit toggle button - use it!</li>
                   </ul>
                 </div>
-                <p className="text-sm mt-3 font-medium">👉 The rule: Look for the tag in parentheses - it tells you exactly when to weigh it. I&apos;ll always include it!</p>
+                <p className="text-sm mt-3 font-medium">👉 The rule: Look for the tag in parentheses - it tells you exactly when to weigh it. I usually include it. If you don&apos;t see a tag, assume RAW/dry.</p>
               </div>
             </div>
           </div>
@@ -210,6 +210,7 @@ export function NutritionBasicsGuide() {
                   </ol>
                   <div className="mt-2 p-2 bg-purple-100 dark:bg-purple-900/50 rounded border border-purple-300">
                     <p className="text-xs font-medium">Example: Scale shows <strong>&quot;-127g&quot;</strong> = you took <strong>127g</strong></p>
+                    <p className="text-xs mt-1">Log <strong>127g of yogurt</strong> in your app (ignore the minus sign)</p>
                   </div>
                   <p className="text-xs mt-2 text-muted-foreground italic">💡 Works for: yogurt, cottage cheese, peanut butter, protein powder, any container!</p>
                 </div>
@@ -221,6 +222,7 @@ export function NutritionBasicsGuide() {
                     <li>• Not pressing <strong>TARE</strong> before adding food</li>
                     <li>• Weighing on uneven surface</li>
                     <li>• Forgetting raw vs cooked (see below!)</li>
+                    <li>• Using a &apos;raw&apos; database entry for food you weighed cooked (or vice versa)</li>
                   </ul>
                 </div>
               </AccordionContent>
@@ -248,13 +250,13 @@ export function NutritionBasicsGuide() {
                   <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border-2 border-orange-300">
                     <p className="text-sm font-medium mb-1">⚡ Quick Rule</p>
                     <p className="text-sm">
-                      <strong>RAW = default.</strong> Only use cooked weight if plan says "(cooked)."
+                      Use <strong>RAW weight</strong> unless your plan specifically says <strong>(cooked)</strong> next to the food.
                     </p>
                   </div>
 
                   {/* Conversion Table */}
                   <div>
-                    <h4 className="font-semibold mb-2 text-sm">📊 Weight Loss After Cooking</h4>
+                    <h4 className="font-semibold mb-2 text-sm">📊 Approximate changes (can vary by cooking method)</h4>
                     <div className="border rounded-lg overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-muted">
@@ -278,7 +280,7 @@ export function NutritionBasicsGuide() {
                           <tr className="border-t">
                             <td className="p-2">Rice (dry)</td>
                             <td className="p-2">1 cup dry →</td>
-                            <td className="p-2 font-medium">3 cups cooked</td>
+                            <td className="p-2 font-medium">~3 cups cooked</td>
                           </tr>
                           <tr className="border-t bg-muted/30">
                             <td className="p-2">Pasta (dry)</td>
@@ -297,11 +299,11 @@ export function NutritionBasicsGuide() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded border border-red-200">
                       <p className="text-xs font-bold text-red-700 mb-1">❌ WRONG</p>
-                      <p className="text-sm">Plan says "6oz chicken"<br/>You weigh 6oz <strong>after</strong> cooking</p>
+                      <p className="text-sm">Plan says &quot;6oz chicken&quot;<br/>You weigh 6oz <strong>after cooking (cooked)</strong> when the plan doesn&apos;t say cooked</p>
                     </div>
                     <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded border border-green-200">
                       <p className="text-xs font-bold text-green-700 mb-1">✅ RIGHT</p>
-                      <p className="text-sm">Plan says "6oz chicken"<br/>You weigh 6oz <strong>before</strong> cooking (raw)</p>
+                      <p className="text-sm">Plan says &quot;6oz chicken&quot;<br/>You weigh 6oz <strong>before cooking (raw)</strong> when the plan doesn&apos;t say cooked</p>
                     </div>
                   </div>
                 </div>
@@ -350,7 +352,7 @@ export function NutritionBasicsGuide() {
                   <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg border-l-4 border-orange-600">
                     <p className="font-medium text-sm mb-1">❓ What tracking app should I use?</p>
                     <p className="text-sm text-muted-foreground">
-                      <strong>MyFitnessPal</strong> (free, huge food database) or <strong>MacroFactor</strong> (paid, smarter tracking). Ask me if you need help setting it up!
+                      <strong>MyFitnessPal</strong> (free, huge food database) or <strong>MacroFactor</strong> (paid, smarter tracking), or any app you&apos;re already comfortable with. Ask me if you need help setting it up!
                     </p>
                   </div>
 
