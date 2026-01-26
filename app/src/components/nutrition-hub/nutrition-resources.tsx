@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChefHat, Lightbulb, Clock, Users, ExternalLink } from 'lucide-react';
 import { NutritionBasicsGuide } from './nutrition-basics-guide';
+import { MealPrepGuide } from './meal-prep-guide';
 
 interface Resource {
   id: string;
@@ -17,14 +18,6 @@ interface Resource {
 }
 
 const RESOURCES: Resource[] = [
-  {
-    id: '2',
-    type: 'guide',
-    title: 'Meal Prep Guide for Beginners',
-    description: 'Learn how to efficiently meal prep for the entire week in just 2 hours.',
-    duration: '10 min read',
-    category: 'Guides'
-  },
   {
     id: '4',
     type: 'article',
@@ -80,8 +73,9 @@ export function NutritionResources() {
         </div>
       </div>
 
-      {/* Nutrition Basics Guide - Featured at top */}
+      {/* Featured Guides */}
       <NutritionBasicsGuide />
+      <MealPrepGuide />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {RESOURCES.map((resource) => {

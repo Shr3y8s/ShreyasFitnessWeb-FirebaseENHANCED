@@ -42,7 +42,7 @@ export function NutritionBasicsGuide() {
               </Badge>
             </div>
             <CardDescription>
-              Master food tracking in 4-6 weeks. This guide teaches accurate weighing and prevents common beginner mistakes.
+              Everything you need to know about using a food scale and reading your meal plan—explained simply.
             </CardDescription>
           </div>
           <Button
