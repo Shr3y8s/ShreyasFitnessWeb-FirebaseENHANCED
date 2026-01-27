@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChefHat, Lightbulb, Clock, Users, ExternalLink } from 'lucide-react';
+import { NutritionBasicsGuide } from './nutrition-basics-guide';
+import { MealPrepGuide } from './meal-prep-guide';
 
 interface Resource {
   id: string;
@@ -17,47 +19,12 @@ interface Resource {
 
 const RESOURCES: Resource[] = [
   {
-    id: '1',
-    type: 'recipe',
-    title: 'High-Protein Breakfast Bowl',
-    description: 'Start your day with this nutrient-dense breakfast packed with 40g of protein.',
-    duration: '15 min',
-    difficulty: 'Easy',
-    category: 'Breakfast'
-  },
-  {
-    id: '2',
-    type: 'guide',
-    title: 'Meal Prep Guide for Beginners',
-    description: 'Learn how to efficiently meal prep for the entire week in just 2 hours.',
-    duration: '10 min read',
-    category: 'Guides'
-  },
-  {
-    id: '3',
-    type: 'recipe',
-    title: 'Lean Chicken & Quinoa Power Bowl',
-    description: 'A perfectly balanced meal with 45g protein, complex carbs, and healthy fats.',
-    duration: '25 min',
-    difficulty: 'Medium',
-    category: 'Lunch/Dinner'
-  },
-  {
     id: '4',
     type: 'article',
     title: 'Understanding Macronutrients',
     description: 'Complete guide to proteins, carbs, and fats - how much you need and why.',
     duration: '8 min read',
     category: 'Education'
-  },
-  {
-    id: '5',
-    type: 'recipe',
-    title: 'Post-Workout Protein Smoothie',
-    description: 'Quick and delicious smoothie with 30g protein for optimal recovery.',
-    duration: '5 min',
-    difficulty: 'Easy',
-    category: 'Snacks'
   },
   {
     id: '6',
@@ -105,6 +72,10 @@ export function NutritionResources() {
           </p>
         </div>
       </div>
+
+      {/* Featured Guides */}
+      <NutritionBasicsGuide />
+      <MealPrepGuide />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {RESOURCES.map((resource) => {

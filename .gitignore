@@ -15,6 +15,10 @@ node_modules/
 functions/.env.default
 functions/.runtimeconfig.json
 
+# Firebase service account keys
+service-account-key.json
+*-firebase-adminsdk-*.json
+
 # Scripts with sensitive information
 setup-stripe-config.cmd
 setup-stripe-webhook.cmd
