@@ -37,6 +37,21 @@ export function AssignmentsList({
   const [workoutToDelete, setWorkoutToDelete] = useState<Workout | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Helper to safely format dates (handles both Firestore Timestamps and Date objects)
+  const formatDate = (date: any): string => {
+    if (!date) return 'N/A';
+    try {
+      // Check if it's a Firestore Timestamp with toDate() method
+      if (typeof date.toDate === 'function') {
+        return date.toDate().toLocaleDateString();
+      }
+      // Otherwise treat as Date or date string
+      return new Date(date).toLocaleDateString();
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const handleDeleteClick = (workout: Workout, e: React.MouseEvent) => {
     e.stopPropagation(); // Don't select the workout
     setWorkoutToDelete(workout);
@@ -118,7 +133,7 @@ export function AssignmentsList({
                         {getStatusLabel(displayStatus)}
                       </span>
                       <span className="text-xs text-gray-600">
-                        Due: {workout.dueDate ? workout.dueDate.toLocaleDateString() : 'N/A'}
+                        Due: {formatDate(workout.dueDate)}
                       </span>
                     </div>
                   </div>
@@ -157,7 +172,7 @@ export function AssignmentsList({
                   <div className="bg-gray-50 p-3 rounded mt-2 text-sm">
                     <p><strong>Workout:</strong> {workoutToDelete.name}</p>
                     <p><strong>Client:</strong> {clients.find(c => c.id === workoutToDelete.clientId)?.name}</p>
-                    <p><strong>Scheduled:</strong> {new Date(workoutToDelete.scheduledDate).toLocaleDateString()}</p>
+                    <p><strong>Scheduled:</strong> {formatDate(workoutToDelete.scheduledDate)}</p>
                   </div>
                 )}
                 <p className="text-red-600 font-medium mt-2">

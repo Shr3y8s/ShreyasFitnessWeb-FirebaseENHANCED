@@ -106,7 +106,16 @@ export default function CreateAssignmentPage() {
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   
   // Step 4: Scheduling
-  const [scheduledDate, setScheduledDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  // Get today's date in local timezone (avoid UTC conversion issues)
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [scheduledDate, setScheduledDate] = useState<string>(getTodayDateString());
   const [dueDate, setDueDate] = useState<string>('');
   const [assignmentNotes, setAssignmentNotes] = useState<string>('');
   const [customName, setCustomName] = useState<string>('');
@@ -307,12 +316,24 @@ export default function CreateAssignmentPage() {
 
     setSaving(true);
     try {
+      // Convert date strings to ISO timestamps with timezone
+      const createMidnightTimestamp = (dateStr: string) => {
+        const [year, month, day] = dateStr.split('-');
+        const date = new Date(
+          parseInt(year), 
+          parseInt(month) - 1, 
+          parseInt(day),
+          0, 0, 0, 0  // Midnight in user's local timezone
+        );
+        return date.toISOString();  // Includes timezone offset
+      };
+
       await assignWorkout({
         workoutTemplateId: selectedTemplate.id,
         clientId: selectedClientId,
         exercises: configuredExercises,
-        scheduledDate: scheduledDate,
-        dueDate: dueDate, // Now required
+        scheduledDate: createMidnightTimestamp(scheduledDate),
+        dueDate: createMidnightTimestamp(dueDate),
         notes: assignmentNotes || undefined,
         name: customName || selectedTemplate.name,
         // Description comes from template, not stored in assignment

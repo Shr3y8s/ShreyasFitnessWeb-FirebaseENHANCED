@@ -34,6 +34,21 @@ export function AssignmentDetails({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Helper to safely format dates (handles both Firestore Timestamps and Date objects)
+  const formatDate = (date: any): string => {
+    if (!date) return 'N/A';
+    try {
+      // Check if it's a Firestore Timestamp with toDate() method
+      if (typeof date.toDate === 'function') {
+        return date.toDate().toLocaleDateString();
+      }
+      // Otherwise treat as Date or date string
+      return new Date(date).toLocaleDateString();
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const handleDelete = async () => {
     if (!selectedWorkoutData) return;
     
@@ -112,18 +127,16 @@ export function AssignmentDetails({
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-600">Scheduled Date:</span>
-              <span className="font-medium">{new Date(selectedWorkoutData.scheduledDate).toLocaleDateString()}</span>
+              <span className="font-medium">{formatDate(selectedWorkoutData.scheduledDate)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Due Date:</span>
-              <span className="font-medium">
-                {selectedWorkoutData.dueDate ? new Date(selectedWorkoutData.dueDate).toLocaleDateString() : 'N/A'}
-              </span>
+              <span className="font-medium">{formatDate(selectedWorkoutData.dueDate)}</span>
             </div>
             {selectedWorkoutData.completedAt && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Completed:</span>
-                <span className="font-medium">{new Date(selectedWorkoutData.completedAt).toLocaleDateString()}</span>
+                <span className="font-medium">{formatDate(selectedWorkoutData.completedAt)}</span>
               </div>
             )}
             {selectedWorkoutData.durationMinutes && (
@@ -198,7 +211,7 @@ export function AssignmentDetails({
                 <div className="bg-gray-50 p-3 rounded mt-2 text-sm">
                   <p><strong>Workout:</strong> {selectedWorkoutData.name}</p>
                   <p><strong>Client:</strong> {client?.name}</p>
-                  <p><strong>Scheduled:</strong> {new Date(selectedWorkoutData.scheduledDate).toLocaleDateString()}</p>
+                  <p><strong>Scheduled:</strong> {formatDate(selectedWorkoutData.scheduledDate)}</p>
                 </div>
                 <p className="text-red-600 font-medium mt-2">
                   This action cannot be undone.
