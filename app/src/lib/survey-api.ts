@@ -40,22 +40,30 @@ export interface WeeklySurveyData {
  */
 export function getCurrentWeekRange(): { startDate: string; endDate: string } {
   const today = new Date();
-  const dayOfWeek = today.getUTCDay(); // 0 (Sunday) to 6 (Saturday)
+  const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday) - LOCAL timezone
   
   // Calculate days to Sunday (start of week)
   const daysToSunday = -dayOfWeek;
   
   const sunday = new Date(today);
-  sunday.setUTCDate(today.getUTCDate() + daysToSunday);
-  sunday.setUTCHours(0, 0, 0, 0);
+  sunday.setDate(today.getDate() + daysToSunday);
+  sunday.setHours(0, 0, 0, 0);
   
   const saturday = new Date(sunday);
-  saturday.setUTCDate(sunday.getUTCDate() + 6);
-  saturday.setUTCHours(23, 59, 59, 999);
+  saturday.setDate(sunday.getDate() + 6);
+  saturday.setHours(23, 59, 59, 999);
+  
+  // Format dates in local timezone
+  const formatLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   
   return {
-    startDate: sunday.toISOString().split('T')[0],
-    endDate: saturday.toISOString().split('T')[0]
+    startDate: formatLocal(sunday),
+    endDate: formatLocal(saturday)
   };
 }
 
@@ -63,20 +71,27 @@ export function getCurrentWeekRange(): { startDate: string; endDate: string } {
  * Get week range for a specific date (Sunday to Saturday)
  */
 export function getWeekRangeForDate(date: Date): { startDate: string; endDate: string } {
-  const dayOfWeek = date.getUTCDay();
+  const dayOfWeek = date.getDay(); // LOCAL timezone
   const daysToSunday = -dayOfWeek;
   
   const sunday = new Date(date);
-  sunday.setUTCDate(date.getUTCDate() + daysToSunday);
-  sunday.setUTCHours(0, 0, 0, 0);
+  sunday.setDate(date.getDate() + daysToSunday);
+  sunday.setHours(0, 0, 0, 0);
   
   const saturday = new Date(sunday);
-  saturday.setUTCDate(sunday.getUTCDate() + 6);
-  saturday.setUTCHours(23, 59, 59, 999);
+  saturday.setDate(sunday.getDate() + 6);
+  saturday.setHours(23, 59, 59, 999);
+  
+  const formatLocal = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   
   return {
-    startDate: sunday.toISOString().split('T')[0],
-    endDate: saturday.toISOString().split('T')[0]
+    startDate: formatLocal(sunday),
+    endDate: formatLocal(saturday)
   };
 }
 
@@ -199,8 +214,9 @@ export async function getRecentSurveys(
  * e.g., "Jan 15 - Jan 21, 2024"
  */
 export function formatWeekRange(startDate: string, endDate: string): string {
-  const start = new Date(startDate + 'T00:00:00Z');
-  const end = new Date(endDate + 'T00:00:00Z');
+  // Parse in local timezone (no Z suffix)
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
   
   const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
   const startStr = start.toLocaleDateString('en-US', options);
@@ -246,14 +262,17 @@ export function getNextWeekStart(weekStartDate: string): string {
  */
 export function getFourWeeksAgo(): string {
   const today = new Date();
-  const dayOfWeek = today.getUTCDay();
+  const dayOfWeek = today.getDay(); // LOCAL timezone
   const daysToSunday = -dayOfWeek;
   
   const thisSunday = new Date(today);
-  thisSunday.setUTCDate(today.getUTCDate() + daysToSunday);
-  thisSunday.setUTCDate(thisSunday.getUTCDate() - 28); // Go back 4 weeks
+  thisSunday.setDate(today.getDate() + daysToSunday);
+  thisSunday.setDate(thisSunday.getDate() - 28); // Go back 4 weeks
   
-  return thisSunday.toISOString().split('T')[0];
+  const year = thisSunday.getFullYear();
+  const month = String(thisSunday.getMonth() + 1).padStart(2, '0');
+  const day = String(thisSunday.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 /**

@@ -24,11 +24,10 @@ import { WeightLogger } from '@/components/activity/WeightLogger';
 import type { DailyActivityData, WeightLog } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
+import { getTodayLocal, getDaysAgo } from '@/lib/date-utils';
+
 // Get today's date in YYYY-MM-DD format
-const getTodayDate = () => {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
-};
+const getTodayDate = getTodayLocal;
 
 // Format date for display
 const formatDateDisplay = (dateStr: string) => {
@@ -42,11 +41,7 @@ const formatDateDisplay = (dateStr: string) => {
 };
 
 // Get 30 days ago
-const getThirtyDaysAgo = () => {
-  const date = new Date();
-  date.setDate(date.getDate() - 30);
-  return date.toISOString().split('T')[0];
-};
+const getThirtyDaysAgo = () => getDaysAgo(30);
 
 export default function DailyActivityPage() {
   const router = useRouter();

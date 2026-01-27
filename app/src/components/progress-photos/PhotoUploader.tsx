@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { extractPhotoDate, uploadProgressPhoto } from '@/lib/progress-photo-api';
+import { getTodayLocal } from '@/lib/date-utils';
 import type { PhotoAngle } from '@/types/progress-photo';
 
 interface PhotoUploaderProps {
@@ -20,7 +21,7 @@ export function PhotoUploader({ userId, onUploadComplete }: PhotoUploaderProps) 
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayLocal());
   const [exifStatus, setExifStatus] = useState<ExifStatus>('not-detected');
   const [detectedDate, setDetectedDate] = useState<string | null>(null);
   const [selectedAngle, setSelectedAngle] = useState<PhotoAngle>('front');
@@ -106,7 +107,7 @@ export function PhotoUploader({ userId, onUploadComplete }: PhotoUploaderProps) 
     }
     setSelectedFile(null);
     setPreviewUrl(null);
-    setSelectedDate(new Date().toISOString().split('T')[0]);
+    setSelectedDate(getTodayLocal());
     setExifStatus('not-detected');
     setDetectedDate(null);
     setSelectedAngle('front');
@@ -218,7 +219,7 @@ export function PhotoUploader({ userId, onUploadComplete }: PhotoUploaderProps) 
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
+                  max={getTodayLocal()}
                   disabled={uploading || uploadSuccess}
                   className="flex-1 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
                 />
