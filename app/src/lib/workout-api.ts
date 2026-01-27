@@ -77,6 +77,16 @@ interface CompleteWorkoutResponse {
   };
 }
 
+interface DeleteWorkoutAssignmentRequest {
+  workoutId: string;
+}
+
+interface DeleteWorkoutAssignmentResponse {
+  success: boolean;
+  workoutId: string;
+  message: string;
+}
+
 // ============================================================================
 // UNIFIED WORKOUT API FUNCTIONS
 // ============================================================================
@@ -200,6 +210,41 @@ export async function completeWorkout(
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * Delete a scheduled workout assignment
+ * Only works for workouts with status === 'scheduled'
+ * Atomically decrements template usageCount
+ * 
+ * @param data - Workout ID to delete
+ * @returns Promise with success response
+ * 
+ * @example
+ * ```typescript
+ * try {
+ *   await deleteWorkoutAssignment({ workoutId: 'workout_123' });
+ *   console.log('Assignment deleted successfully');
+ * } catch (error) {
+ *   console.error('Cannot delete:', error.message);
+ * }
+ * ```
+ */
+export async function deleteWorkoutAssignment(
+  data: DeleteWorkoutAssignmentRequest
+): Promise<DeleteWorkoutAssignmentResponse> {
+  const deleteWorkoutFn = httpsCallable<
+    DeleteWorkoutAssignmentRequest,
+    DeleteWorkoutAssignmentResponse
+  >(functions, 'deleteWorkoutAssignment');
+
+  try {
+    const result = await deleteWorkoutFn(data);
+    return result.data;
+  } catch (error: any) {
+    console.error('Error deleting workout assignment:', error);
+    throw new Error(error.message || 'Failed to delete workout assignment');
+  }
+}
 
 /**
  * Format date for API calls (YYYY-MM-DD)

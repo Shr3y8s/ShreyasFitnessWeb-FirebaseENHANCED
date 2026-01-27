@@ -826,6 +826,99 @@ exports.updateWorkoutTemplate = onCall({
 });
 
 /**
+ * Delete a workout assignment (scheduled only)
+ * Uses transaction to atomically delete workout and decrement template usageCount
+ * 
+ * @param {Object} request.data
+ * @param {string} request.data.workoutId - Workout to delete
+ * @return {Object} Success response
+ */
+exports.deleteWorkoutAssignment = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Require authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const trainerId = request.auth.uid;
+    const {workoutId} = request.data;
+
+    // Validate required fields
+    if (!workoutId) {
+      throw new Error("Missing required field: workoutId");
+    }
+
+    logger.info("Deleting workout assignment", {
+      trainerId,
+      workoutId,
+    });
+
+    // Get workout document
+    const workoutRef = admin.firestore().collection("workouts").doc(workoutId);
+    const workoutDoc = await workoutRef.get();
+
+    if (!workoutDoc.exists) {
+      throw new Error("Workout not found");
+    }
+
+    const workoutData = workoutDoc.data();
+
+    // Verify trainer owns this workout
+    if (workoutData.trainerId !== trainerId) {
+      throw new Error("Unauthorized: You can only delete your own assignments");
+    }
+
+    // CRITICAL: Only allow deletion of scheduled workouts
+    if (workoutData.status !== "scheduled") {
+      throw new Error(
+          `Cannot delete: Workout is ${workoutData.status}. ` +
+          `Only scheduled workouts can be deleted.`
+      );
+    }
+
+    const now = admin.firestore.Timestamp.now();
+    const templateRef = admin.firestore()
+        .collection("workoutTemplates")
+        .doc(workoutData.workoutTemplateId);
+
+    // Use transaction to atomically delete workout and decrement template usageCount
+    await admin.firestore().runTransaction(async (transaction) => {
+      // Delete workout document
+      transaction.delete(workoutRef);
+
+      // Decrement template usageCount
+      transaction.update(templateRef, {
+        usageCount: admin.firestore.FieldValue.increment(-1),
+        updatedAt: now,
+      });
+    });
+
+    logger.info("Workout assignment deleted successfully", {
+      workoutId,
+      trainerId,
+      templateId: workoutData.workoutTemplateId,
+    });
+
+    return {
+      success: true,
+      workoutId: workoutId,
+      message: "Workout assignment deleted successfully",
+    };
+  } catch (error) {
+    logger.error("Error deleting workout assignment", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Failed to delete workout assignment: ${error.message}`);
+  }
+});
+
+/**
  * Delete a workout template with atomic exercise usage count updates
  * Checks for active assignments and decrements exercise usage counts
  * 

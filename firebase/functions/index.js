@@ -995,6 +995,7 @@ exports.completeWorkout = workoutFunctions.completeWorkout;  // NEW unified func
 exports.createWorkoutTemplate = workoutFunctions.createWorkoutTemplate;
 exports.updateWorkoutTemplate = workoutFunctions.updateWorkoutTemplate;
 exports.deleteWorkoutTemplate = workoutFunctions.deleteWorkoutTemplate;
+exports.deleteWorkoutAssignment = workoutFunctions.deleteWorkoutAssignment;  // NEW delete assignment function
 
 /**
  * Firestore trigger to sync subscription status from stripe_customers to users

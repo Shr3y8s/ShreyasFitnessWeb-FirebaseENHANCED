@@ -1,7 +1,19 @@
-import React from 'react';
-import { Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Trash2 } from 'lucide-react';
 import { Workout } from '@/types/workout';
 import { ClientData, getWorkoutDisplayStatus, getStatusBadgeClasses, getStatusLabel } from '../utils/assignmentHelpers';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { deleteWorkoutAssignment } from '@/lib/workout-api';
+import { useToast } from '@/hooks/use-toast';
 
 interface AssignmentsListProps {
   filteredWorkoutsData: Workout[];
@@ -9,6 +21,7 @@ interface AssignmentsListProps {
   selectedWorkoutData: Workout | null;
   setSelectedWorkoutData: (workout: Workout) => void;
   selectedViewClientId: string | null;
+  onWorkoutDeleted?: () => void;
 }
 
 export function AssignmentsList({
@@ -16,8 +29,52 @@ export function AssignmentsList({
   clients,
   selectedWorkoutData,
   setSelectedWorkoutData,
-  selectedViewClientId
+  selectedViewClientId,
+  onWorkoutDeleted
 }: AssignmentsListProps) {
+  const { toast } = useToast();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [workoutToDelete, setWorkoutToDelete] = useState<Workout | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = (workout: Workout, e: React.MouseEvent) => {
+    e.stopPropagation(); // Don't select the workout
+    setWorkoutToDelete(workout);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDelete = async () => {
+    if (!workoutToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteWorkoutAssignment({ 
+        workoutId: workoutToDelete.id 
+      });
+      
+      toast({
+        title: "Assignment Deleted",
+        description: "The workout assignment has been removed.",
+      });
+      
+      // Close dialog and refresh list
+      setShowDeleteDialog(false);
+      setWorkoutToDelete(null);
+      
+      // Call parent callback to reload workouts
+      if (onWorkoutDeleted) {
+        onWorkoutDeleted();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Could not delete assignment.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col bg-white rounded-xl border overflow-hidden">
       <div className="p-4 border-b flex-shrink-0">
@@ -65,6 +122,17 @@ export function AssignmentsList({
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Delete icon - only for scheduled workouts */}
+                  {workout.status === 'scheduled' && (
+                    <button
+                      onClick={(e) => handleDeleteClick(workout, e)}
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors flex-shrink-0"
+                      title="Delete assignment"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -76,6 +144,43 @@ export function AssignmentsList({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workout Assignment?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Are you sure you want to delete this assignment?</p>
+                {workoutToDelete && (
+                  <div className="bg-gray-50 p-3 rounded mt-2 text-sm">
+                    <p><strong>Workout:</strong> {workoutToDelete.name}</p>
+                    <p><strong>Client:</strong> {clients.find(c => c.id === workoutToDelete.clientId)?.name}</p>
+                    <p><strong>Scheduled:</strong> {new Date(workoutToDelete.scheduledDate).toLocaleDateString()}</p>
+                  </div>
+                )}
+                <p className="text-red-600 font-medium mt-2">
+                  This action cannot be undone.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Assignment'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

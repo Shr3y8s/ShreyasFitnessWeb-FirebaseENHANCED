@@ -146,6 +146,7 @@ export default function WorkoutAssignmentsPage() {
               selectedWorkoutData={selectedWorkoutData}
               setSelectedWorkoutData={setSelectedWorkoutData}
               selectedViewClientId={selectedViewClientId}
+              onWorkoutDeleted={reloadWorkouts}
             />
           )}
         </div>
