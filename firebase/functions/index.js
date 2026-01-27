@@ -3298,5 +3298,8 @@ exports.onNutritionLogWrite = goalFunctions.onNutritionLogWrite;
  * MIGRATION FUNCTIONS
  * One-time or administrative functions for data migrations
  */
-const migrationFunctions = require("./migrate-session-locations");
+const migrationFunctions = require('./migrate-session-locations');
 exports.migrateSessionLocations = migrationFunctions.migrateSessionLocations;
+
+const exerciseNameFixFunctions = require('./fix-exercise-names');
+exports.fixExerciseNames = exerciseNameFixFunctions.fixExerciseNames;

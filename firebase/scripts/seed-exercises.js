@@ -4,12 +4,16 @@
  * This script populates the Firestore 'exercises' collection with common exercises
  * across all major muscle groups and categories.
  * 
+ * The trainer name is automatically fetched from Firestore (admins or trainers collection).
+ * 
  * Usage:
  * 1. Make sure you're in the project root directory
- * 2. Run: node firebase/scripts/seed-exercises.js YOUR_USER_ID "Your Name"
+ * 2. Run: node firebase/scripts/seed-exercises.js YOUR_USER_ID
  * 
  * Example:
- * node firebase/scripts/seed-exercises.js abc123xyz "Shreyas Anand"
+ * node firebase/scripts/seed-exercises.js uWdwR622tkOiShVzLBjFqvsOqPZ2
+ * 
+ * Note: The script will fetch the trainer's name from Firestore automatically.
  */
 
 const admin = require('firebase-admin');
@@ -25,12 +29,12 @@ const db = admin.firestore();
 // Get command line arguments
 const args = process.argv.slice(2);
 const userId = args[0];
-const userName = args[1];
 
-if (!userId || !userName) {
-  console.error('❌ Error: Missing required arguments');
-  console.log('Usage: node firebase/scripts/seed-exercises.js YOUR_USER_ID "Your Name"');
-  console.log('Example: node firebase/scripts/seed-exercises.js abc123xyz "Shreyas Anand"');
+if (!userId) {
+  console.error('❌ Error: Missing required argument');
+  console.log('Usage: node firebase/scripts/seed-exercises.js YOUR_USER_ID');
+  console.log('Example: node firebase/scripts/seed-exercises.js abc123xyz');
+  console.log('\nNote: Trainer name will be fetched automatically from Firestore');
   process.exit(1);
 }
 
@@ -1235,6 +1239,41 @@ const exercises = [
 async function seedExercises() {
   console.log('🌱 Starting exercise library seed...\n');
   console.log(`📝 User ID: ${userId}`);
+  
+  // Fetch trainer name from Firestore (check admins first, then trainers)
+  console.log('🔍 Fetching trainer name from Firestore...');
+  let userName = null;
+  
+  try {
+    const adminDoc = await db.collection('admins').doc(userId).get();
+    if (adminDoc.exists()) {
+      userName = adminDoc.data().name;
+      console.log(`✅ Found in admins collection: ${userName}`);
+    }
+  } catch (error) {
+    console.log('⚠️  Not found in admins collection');
+  }
+  
+  // Fallback to trainers collection if not found in admins
+  if (!userName) {
+    try {
+      const trainerDoc = await db.collection('trainers').doc(userId).get();
+      if (trainerDoc.exists()) {
+        userName = trainerDoc.data().name;
+        console.log(`✅ Found in trainers collection: ${userName}`);
+      }
+    } catch (error) {
+      console.log('⚠️  Not found in trainers collection');
+    }
+  }
+  
+  // Final fallback
+  if (!userName) {
+    console.error('❌ Error: Could not find trainer with ID:', userId);
+    console.log('Make sure the user exists in either admins or trainers collection');
+    process.exit(1);
+  }
+  
   console.log(`👤 User Name: ${userName}`);
   console.log(`📊 Total exercises to add: ${exercises.length}\n`);
 
