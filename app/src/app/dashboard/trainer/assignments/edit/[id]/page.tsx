@@ -227,7 +227,7 @@ export default function EditAssignmentPage() {
               <div className="flex items-center gap-4">
                 <StepIndicator 
                   step={1} 
-                  label="Template" 
+                  label="Client" 
                   active={false} 
                   completed={true}
                   locked={true}
@@ -236,7 +236,7 @@ export default function EditAssignmentPage() {
                 <div className="h-px flex-1 bg-gray-300" />
                 <StepIndicator 
                   step={2} 
-                  label="Client" 
+                  label="Template" 
                   active={false} 
                   completed={true}
                   locked={true}

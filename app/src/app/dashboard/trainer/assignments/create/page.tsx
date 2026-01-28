@@ -85,24 +85,25 @@ export default function CreateAssignmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedTemplateId = searchParams.get('templateId');
+  const preselectedClientId = searchParams.get('clientId');
   const cloneFromId = searchParams.get('cloneFrom');
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'template' | 'client' | 'configure' | 'schedule' | 'review'>('template');
+  const [currentStep, setCurrentStep] = useState<'client' | 'template' | 'configure' | 'schedule' | 'review'>('client');
   const [isCloning, setIsCloning] = useState(false);
   const [cloneSourceName, setCloneSourceName] = useState('');
   
-  // Step 1: Template selection
+  // Step 1: Client selection
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
+  
+  // Step 2: Template selection
   const [templates, setTemplates] = useState<(WorkoutTemplate & { id: string; hasArchivedExercises?: boolean; isAssignable?: boolean })[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<(WorkoutTemplate & { id: string; hasArchivedExercises?: boolean; isAssignable?: boolean }) | null>(null);
   const [hideUnassignable, setHideUnassignable] = useState(false);
-  
-  // Step 2: Client selection
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string>('');
   
   // Step 3: Exercise configuration
   const [libraryExercises, setLibraryExercises] = useState<Record<string, Exercise>>({});
@@ -166,16 +167,6 @@ export default function CreateAssignmentPage() {
         
         setTemplates(templatesWithStatus);
 
-        // If template preselected, load it
-        if (preselectedTemplateId) {
-          const template = templatesWithStatus.find((t: any) => t.id === preselectedTemplateId);
-          if (template) {
-            setSelectedTemplate(template);
-            setCustomName(template.name);
-            setCurrentStep('client');
-          }
-        }
-
         // Load clients
         const clientsQuery = query(
           collection(db, 'users'),
@@ -189,6 +180,21 @@ export default function CreateAssignmentPage() {
           email: doc.data().email || '',
         }));
         setClients(clientsData);
+
+        // Handle pre-selection after both templates and clients are loaded
+        if (preselectedClientId) {
+          // If client preselected (from Client Hub), skip to template selection
+          setSelectedClientId(preselectedClientId);
+          setCurrentStep('template');
+        } else if (preselectedTemplateId) {
+          // If template preselected, skip to client selection
+          const template = templatesWithStatus.find((t: any) => t.id === preselectedTemplateId);
+          if (template) {
+            setSelectedTemplate(template);
+            setCustomName(template.name);
+            setCurrentStep('client');
+          }
+        }
 
         setLoading(false);
       } catch (error) {
@@ -353,14 +359,14 @@ export default function CreateAssignmentPage() {
     loadExercises();
   }, [selectedTemplate]);
 
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    setCurrentStep('template');
+  };
+
   const handleTemplateSelect = (template: WorkoutTemplate & { id: string }) => {
     setSelectedTemplate(template);
     setCustomName(template.name);
-    setCurrentStep('client');
-  };
-
-  const handleClientSelect = (clientId: string) => {
-    setSelectedClientId(clientId);
     setCurrentStep('configure');
   };
 
@@ -448,18 +454,18 @@ export default function CreateAssignmentPage() {
               <div className="flex items-center gap-4">
                 <StepIndicator 
                   step={1} 
-                  label="Template" 
-                  active={currentStep === 'template'} 
-                  completed={selectedTemplate !== null}
-                  onClick={() => setCurrentStep('template')}
+                  label="Client" 
+                  active={currentStep === 'client'} 
+                  completed={selectedClientId !== ''}
+                  onClick={() => setCurrentStep('client')}
                 />
                 <div className="h-px flex-1 bg-gray-300" />
                 <StepIndicator 
                   step={2} 
-                  label="Client" 
-                  active={currentStep === 'client'} 
-                  completed={selectedClientId !== ''}
-                  onClick={selectedTemplate ? () => setCurrentStep('client') : undefined}
+                  label="Template" 
+                  active={currentStep === 'template'} 
+                  completed={selectedTemplate !== null}
+                  onClick={selectedClientId ? () => setCurrentStep('template') : undefined}
                 />
                 <div className="h-px flex-1 bg-gray-300" />
                 <StepIndicator 
@@ -467,7 +473,7 @@ export default function CreateAssignmentPage() {
                   label="Configure" 
                   active={currentStep === 'configure'} 
                   completed={currentStep === 'schedule' || currentStep === 'review'}
-                  onClick={selectedClientId ? () => setCurrentStep('configure') : undefined}
+                  onClick={selectedTemplate ? () => setCurrentStep('configure') : undefined}
                 />
                 <div className="h-px flex-1 bg-gray-300" />
                 <StepIndicator 
@@ -491,11 +497,57 @@ export default function CreateAssignmentPage() {
 
           {/* Main Content */}
           <div className="max-w-7xl mx-auto px-6 py-8">
-            {/* Step 1: Template Selection */}
-            {currentStep === 'template' && (
+            {/* Step 1: Client Selection */}
+            {currentStep === 'client' && (
+              <div className="bg-white rounded-xl border p-6">
+                <h2 className="text-xl font-semibold mb-4">Select Client</h2>
+                <p className="text-gray-600 mb-6">Choose which client to assign a workout to</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {clients.length === 0 ? (
+                    <div className="col-span-full text-center py-12">
+                      <User className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                      <p className="text-gray-600">No clients available</p>
+                    </div>
+                  ) : (
+                    clients.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => handleClientSelect(client.id)}
+                        className={`text-left border rounded-lg p-4 hover:shadow-md hover:border-primary transition-all ${
+                          selectedClientId === client.id ? 'border-primary bg-primary/5' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{client.name}</h3>
+                            <p className="text-sm text-gray-600">{client.email}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+
+                {selectedClientId && (
+                  <div className="flex justify-end">
+                    <Button onClick={() => setCurrentStep('template')}>
+                      Next: Select Template
+                      <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Template Selection */}
+            {currentStep === 'template' && selectedClientId && (
               <div className="bg-white rounded-xl border p-6">
                 <h2 className="text-xl font-semibold mb-4">Select Workout Template</h2>
-                <p className="text-gray-600 mb-6">Choose a template to assign to your client</p>
+                <p className="text-gray-600 mb-6">Assigning to: <strong>{clients.find(c => c.id === selectedClientId)?.name}</strong></p>
                 
                 {/* Info banner if any templates are blocked */}
                 {templates.some(t => !t.isAssignable) && (
@@ -529,7 +581,7 @@ export default function CreateAssignmentPage() {
                   </div>
                 )}
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   {templates.length === 0 ? (
                     <div className="col-span-full text-center py-12">
                       <Target className="h-12 w-12 mx-auto text-gray-400 mb-2" />
@@ -604,50 +656,13 @@ export default function CreateAssignmentPage() {
                       ))
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* Step 2: Client Selection */}
-            {currentStep === 'client' && selectedTemplate && (
-              <div className="bg-white rounded-xl border p-6">
-                <h2 className="text-xl font-semibold mb-4">Select Client</h2>
-                <p className="text-gray-600 mb-6">Assigning: <strong>{selectedTemplate.name}</strong></p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {clients.length === 0 ? (
-                    <div className="col-span-full text-center py-12">
-                      <User className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                      <p className="text-gray-600">No clients available</p>
-                    </div>
-                  ) : (
-                    clients.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => handleClientSelect(client.id)}
-                        className={`text-left border rounded-lg p-4 hover:shadow-md hover:border-primary transition-all ${
-                          selectedClientId === client.id ? 'border-primary bg-primary/5' : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <User className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{client.name}</h3>
-                            <p className="text-sm text-gray-600">{client.email}</p>
-                          </div>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => setCurrentStep('template')}>
+                  <Button variant="outline" onClick={() => setCurrentStep('client')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Templates
+                    Back to Clients
                   </Button>
-                  {selectedClientId && (
+                  {selectedTemplate && (
                     <Button onClick={() => setCurrentStep('configure')}>
                       Next: Configure
                       <ArrowLeft className="h-4 w-4 ml-2 rotate-180" />
@@ -684,9 +699,9 @@ export default function CreateAssignmentPage() {
                 />
 
                 <div className="flex justify-between mt-6">
-                  <Button variant="outline" onClick={() => setCurrentStep('client')}>
+                  <Button variant="outline" onClick={() => setCurrentStep('template')}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back to Clients
+                    Back to Templates
                   </Button>
                   <Button onClick={() => setCurrentStep('schedule')}>
                     Next: Set Schedule
