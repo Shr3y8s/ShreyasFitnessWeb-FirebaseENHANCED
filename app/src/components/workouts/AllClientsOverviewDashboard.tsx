@@ -88,7 +88,7 @@ export function AllClientsOverviewDashboard({
     <div className="space-y-6">
       {/* Alerts Section */}
       {clientsWithIssues.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
+        <Card className="border-red-200 bg-red-50 transition-all duration-300 hover:shadow-glow">
           <div className="p-6">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="h-6 w-6 text-red-600" />
@@ -143,7 +143,7 @@ export function AllClientsOverviewDashboard({
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-6">
-        <Card>
+        <Card className="bg-primary/5 border border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
           <div className="p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">This Week</p>
@@ -154,7 +154,7 @@ export function AllClientsOverviewDashboard({
           </div>
         </Card>
 
-        <Card>
+        <Card className="bg-primary/5 border border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
           <div className="p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">Completion</p>
@@ -167,7 +167,7 @@ export function AllClientsOverviewDashboard({
           </div>
         </Card>
 
-        <Card>
+        <Card className="bg-primary/5 border border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
           <div className="p-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm text-gray-600">Upcoming</p>
@@ -180,7 +180,7 @@ export function AllClientsOverviewDashboard({
       </div>
 
       {/* Client Grid */}
-      <Card>
+      <Card className="bg-primary/5 border border-primary/50 transition-all duration-300 hover:shadow-glow">
         <div className="p-6">
           <h3 className="text-lg font-semibold mb-4">All Clients ({clients.length})</h3>
           <div className="grid grid-cols-3 gap-4">
@@ -191,7 +191,7 @@ export function AllClientsOverviewDashboard({
               return (
                 <div
                   key={client.id}
-                  className="border rounded-lg p-4 hover:border-primary hover:shadow-md transition-all cursor-pointer"
+                  className="bg-white/50 border border-primary/30 rounded-lg p-4 hover:border-primary hover:shadow-glow hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                   onClick={() => onSelectClient(client.id)}
                 >
                   <div className="flex items-center gap-3 mb-3">

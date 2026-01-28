@@ -33,7 +33,7 @@ export function AssignmentFilterBar({
   onNavigate
 }: AssignmentFilterBarProps) {
   return (
-    <div className="bg-white rounded-xl border p-4 mb-6">
+    <div className="bg-primary/5 border border-primary/50 rounded-xl p-4 mb-6 transition-all duration-300 hover:shadow-glow">
       <div className="flex items-end gap-4">
         {/* Client Selector */}
         <div className="w-[30%]">

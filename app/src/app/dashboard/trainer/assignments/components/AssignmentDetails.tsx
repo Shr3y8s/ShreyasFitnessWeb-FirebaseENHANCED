@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, Activity, AlertCircle, Users, Calendar, ArrowLeft, Trash2 } from 'lucide-react';
+import { Eye, Activity, AlertCircle, Users, Calendar, ArrowLeft, Trash2, Copy } from 'lucide-react';
 import { Workout } from '@/types/workout';
 import { ClientData, getWorkoutDisplayStatus, getStatusBadgeClasses, getStatusLabel } from '../utils/assignmentHelpers';
 import { WorkoutExecutionDetailView } from '@/components/workouts/WorkoutExecutionDetailView';
@@ -76,9 +76,14 @@ export function AssignmentDetails({
     }
   };
 
+  const handleClone = () => {
+    if (!selectedWorkoutData) return;
+    onNavigate(`/dashboard/trainer/assignments/create?cloneFrom=${selectedWorkoutData.id}`);
+  };
+
   if (!selectedWorkoutData) {
-    return (
-      <div className="w-full bg-white rounded-xl border overflow-hidden flex flex-col">
+  return (
+    <div className="w-full bg-primary/5 border border-primary/50 rounded-xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-glow">
         <div className="flex flex-col items-center justify-center h-full text-center p-8">
           <Eye className="h-16 w-16 text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-700 mb-2">No Workout Selected</h3>
@@ -93,66 +98,95 @@ export function AssignmentDetails({
   const hasActualData = selectedWorkoutData.exercises.some(ex => ex.actual);
 
   return (
-    <div className="w-full bg-white rounded-xl border overflow-hidden flex flex-col">
+    <div className="w-full bg-primary/5 border border-primary/50 rounded-xl overflow-hidden flex flex-col transition-all duration-300 hover:shadow-glow">
       {/* Header */}
-      <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onBack}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to List
-        </Button>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold">
-            {client?.name?.charAt(0) || '?'}
+      <div className="p-6 border-b border-primary/30 bg-gradient-to-r from-primary/10 to-primary/5 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          {/* Left: All info in single row */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+              {client?.name?.charAt(0) || '?'}
+            </div>
+            <span className="font-bold text-xl">{client?.name || 'Unknown Client'}</span>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClasses(displayStatus)}`}>
+              {getStatusLabel(displayStatus)}
+            </span>
+            <span className="text-gray-400">·</span>
+            <span className="font-semibold text-base">"{selectedWorkoutData.name}"</span>
+            <span className="text-gray-400">·</span>
+            <span className="text-base text-gray-600 flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              {formatDate(selectedWorkoutData.scheduledDate)} → {formatDate(selectedWorkoutData.dueDate)}
+            </span>
+            {selectedWorkoutData.durationMinutes && (
+              <>
+                <span className="text-gray-400">·</span>
+                <span className="text-base text-gray-600">⏱️ {selectedWorkoutData.durationMinutes} min</span>
+              </>
+            )}
+            {selectedWorkoutData.completedAt && (
+              <>
+                <span className="text-gray-400">·</span>
+                <span className="text-base text-green-600">✓ Completed</span>
+              </>
+            )}
           </div>
-          <div>
-            <h2 className="text-xl font-bold">{client?.name || 'Unknown Client'}</h2>
-            <p className="text-sm text-gray-600">{selectedWorkoutData.name}</p>
+          
+          {/* Right: Action Buttons */}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onBack}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                if (client) {
+                  onNavigate(`/dashboard/trainer/clients-messages?clientId=${client.id}`);
+                }
+              }}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Message
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleClone}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Clone
+            </Button>
+            {selectedWorkoutData.status === 'scheduled' && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
           </div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClasses(displayStatus)}`}>
-          {getStatusLabel(displayStatus)}
-        </span>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Workout Info */}
-        <div className="bg-white border rounded-xl p-6">
-          <h3 className="font-semibold mb-4">Workout Details</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Scheduled Date:</span>
-              <span className="font-medium">{formatDate(selectedWorkoutData.scheduledDate)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Due Date:</span>
-              <span className="font-medium">{formatDate(selectedWorkoutData.dueDate)}</span>
-            </div>
-            {selectedWorkoutData.completedAt && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Completed:</span>
-                <span className="font-medium">{formatDate(selectedWorkoutData.completedAt)}</span>
-              </div>
-            )}
-            {selectedWorkoutData.durationMinutes && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Duration:</span>
-                <span className="font-medium">{selectedWorkoutData.durationMinutes} minutes</span>
-              </div>
-            )}
-            {selectedWorkoutData.notes && (
-              <div className="flex justify-between items-start">
-                <span className="text-gray-600">Trainer Notes:</span>
-                <span className="font-medium text-right flex-1 ml-4">{selectedWorkoutData.notes}</span>
-              </div>
-            )}
+        {/* Trainer Notes - Only show if present */}
+        {selectedWorkoutData.notes && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm font-medium text-blue-900 mb-1">Trainer Notes:</p>
+            <p className="text-sm text-blue-800">{selectedWorkoutData.notes}</p>
           </div>
-        </div>
+        )}
 
         {/* Exercise Details - Side-by-Side View (Prescribed + Actual) */}
         {selectedWorkoutData.exercises && selectedWorkoutData.exercises.length > 0 && (
@@ -167,37 +201,6 @@ export function AssignmentDetails({
             />
           </div>
         )}
-
-        {/* Quick Actions */}
-        <div className="bg-white border rounded-xl p-6">
-          <h3 className="font-semibold mb-4">Quick Actions</h3>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="flex-1 justify-start"
-              onClick={() => {
-                if (client) {
-                  onNavigate(`/dashboard/trainer/clients-messages?clientId=${client.id}`);
-                }
-              }}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Message Client
-            </Button>
-            
-            {/* Delete button - only for scheduled workouts */}
-            {selectedWorkoutData.status === 'scheduled' && (
-              <Button 
-                variant="outline" 
-                className="flex-1 justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Assignment
-              </Button>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}

@@ -85,12 +85,15 @@ export default function CreateAssignmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedTemplateId = searchParams.get('templateId');
+  const cloneFromId = searchParams.get('cloneFrom');
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState<'template' | 'client' | 'configure' | 'schedule' | 'review'>('template');
+  const [isCloning, setIsCloning] = useState(false);
+  const [cloneSourceName, setCloneSourceName] = useState('');
   
   // Step 1: Template selection
   const [templates, setTemplates] = useState<(WorkoutTemplate & { id: string; hasArchivedExercises?: boolean; isAssignable?: boolean })[]>([]);
@@ -196,6 +199,77 @@ export default function CreateAssignmentPage() {
 
     loadData();
   }, [user, router, authLoading, preselectedTemplateId]);
+
+  // Clone detection: Load workout data if cloning
+  useEffect(() => {
+    const loadWorkoutForCloning = async () => {
+      if (!cloneFromId || !user || authLoading) return;
+
+      try {
+        console.log('Cloning from workout:', cloneFromId);
+        const workoutDoc = await getDoc(doc(db, 'workouts', cloneFromId));
+        
+        if (!workoutDoc.exists()) {
+          toast({
+            title: "Clone Failed",
+            description: "Source workout not found.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const workoutData = workoutDoc.data();
+        
+        // Set cloning flag and source name
+        setIsCloning(true);
+        setCloneSourceName(workoutData.name);
+        
+        // Find and set the template
+        const template = templates.find(t => t.id === workoutData.workoutTemplateId);
+        if (template) {
+          setSelectedTemplate(template);
+        }
+        
+        // Pre-populate client
+        setSelectedClientId(workoutData.clientId);
+        
+        // Pre-populate configured exercises from the prescribed configurations
+        const clonedExercises = workoutData.exercises.map((ex: any) => ({
+          exerciseId: ex.exerciseId,
+          exerciseName: ex.exerciseName,
+          exerciseType: ex.exerciseType,
+          configuration: ex.prescribed, // Clone the prescribed configuration
+          notes: ex.notes || ''
+        }));
+        setConfiguredExercises(clonedExercises);
+        
+        // Pre-populate assignment details
+        setCustomName(workoutData.name + ' (Copy)');
+        setScheduledDate(getTodayLocal()); // Default to today
+        setDueDate(''); // Let trainer set new due date
+        setAssignmentNotes(workoutData.notes || '');
+        
+        // Skip directly to schedule step
+        setCurrentStep('schedule');
+        
+        toast({
+          title: "Cloning Workout",
+          description: `Pre-populated from: ${workoutData.name}. Review and modify as needed.`,
+        });
+      } catch (error) {
+        console.error('Error loading workout for cloning:', error);
+        toast({
+          title: "Clone Failed",
+          description: "Could not load workout data.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    if (templates.length > 0) {
+      loadWorkoutForCloning();
+    }
+  }, [cloneFromId, user, authLoading, templates, toast]);
 
   // Load exercise details when template selected
   useEffect(() => {
@@ -626,6 +700,22 @@ export default function CreateAssignmentPage() {
             {currentStep === 'schedule' && (
               <div className="bg-white rounded-xl border p-6">
                 <h2 className="text-xl font-semibold mb-6">Schedule Workout</h2>
+                
+                {/* Clone Info Banner */}
+                {isCloning && cloneSourceName && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-blue-900">
+                        <strong>Cloning Assignment</strong>
+                        <p className="mt-1">
+                          You're creating a new assignment based on: "<strong>{cloneSourceName}</strong>". 
+                          All exercise configurations have been pre-populated. Review and modify as needed before assigning.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 <div className="space-y-6 max-w-2xl">
                   <div>

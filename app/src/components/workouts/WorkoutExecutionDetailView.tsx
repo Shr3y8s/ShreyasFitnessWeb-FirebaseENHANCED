@@ -112,69 +112,46 @@ export function WorkoutExecutionDetailView({
 
   return (
     <div className="space-y-6">
-      {/* Execution Summary */}
+      {/* Execution Summary - Compact Horizontal Layout */}
       <div className="bg-white border rounded-xl p-6">
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Clock className="h-5 w-5 text-primary" />
           Workout Summary
         </h3>
         
-        <div className="grid grid-cols-2 gap-4">
-          {workout.startedAt && (
-            <div>
-              <span className="text-sm text-gray-600">Started At</span>
-              <p className="font-medium">
-                {workout.startedAt instanceof Date 
-                  ? workout.startedAt.toLocaleString() 
-                  : new Date(workout.startedAt).toLocaleString()}
-              </p>
-            </div>
-          )}
-          
-          {workout.completedAt && (
-            <div>
-              <span className="text-sm text-gray-600">Completed At</span>
-              <p className="font-medium">
-                {workout.completedAt instanceof Date 
-                  ? workout.completedAt.toLocaleString() 
-                  : new Date(workout.completedAt).toLocaleString()}
-              </p>
-            </div>
-          )}
-          
+        <div className="grid grid-cols-4 gap-4">
           <div>
-            <span className="text-sm text-gray-600">Duration</span>
-            <p className="font-medium">{formatDuration(workout.durationMinutes)}</p>
-          </div>
-          
-          <div>
-            <span className="text-sm text-gray-600">Completion</span>
-            <p className="font-medium">{overallCompletionPercentage}%</p>
-          </div>
-          
-          {difficultyDisplay && (
-            <div>
-              <span className="text-sm text-gray-600">Difficulty Rating</span>
-              <p className={cn("font-medium px-3 py-1 rounded-full inline-block", 
-                difficultyDisplay.bg, difficultyDisplay.color)}>
-                {difficultyDisplay.label}
-              </p>
-            </div>
-          )}
-          
-          <div>
-            <span className="text-sm text-gray-600">Status</span>
-            <p className={cn("font-medium px-3 py-1 rounded-full inline-block", 
-              workout.status === 'completed' ? 'bg-green-50 text-green-600' :
-              workout.status === 'started' ? 'bg-blue-50 text-blue-600' :
-              workout.status === 'skipped' ? 'bg-gray-50 text-gray-600' :
-              'bg-yellow-50 text-yellow-600'
+            <p className="text-sm text-gray-600 mb-1">Status</p>
+            <p className={cn("font-medium", 
+              workout.status === 'completed' ? 'text-green-600' :
+              workout.status === 'started' ? 'text-blue-600' :
+              workout.status === 'skipped' ? 'text-gray-600' :
+              'text-yellow-600'
             )}>
               {workout.status === 'started' ? 'In Progress' :
                workout.status === 'completed' ? 'Completed' :
                workout.status === 'skipped' ? 'Skipped' : 'Scheduled'}
             </p>
           </div>
+          
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Duration</p>
+            <p className="font-medium">{formatDuration(workout.durationMinutes)}</p>
+          </div>
+          
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Completion</p>
+            <p className="font-medium">{overallCompletionPercentage}%</p>
+          </div>
+          
+          {difficultyDisplay && (
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Difficulty</p>
+              <p className={cn("font-medium", difficultyDisplay.color)}>
+                {difficultyDisplay.label}
+              </p>
+            </div>
+          )}
         </div>
         
         {showClientNotes && workout.overallNotes && (

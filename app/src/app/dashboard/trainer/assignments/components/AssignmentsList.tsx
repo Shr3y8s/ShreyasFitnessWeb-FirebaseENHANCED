@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trash2 } from 'lucide-react';
+import { Search, Trash2, Copy, MessageSquare } from 'lucide-react';
 import { Workout } from '@/types/workout';
 import { ClientData, getWorkoutDisplayStatus, getStatusBadgeClasses, getStatusLabel } from '../utils/assignmentHelpers';
 import {
@@ -58,6 +58,16 @@ export function AssignmentsList({
     setShowDeleteDialog(true);
   };
 
+  const handleMessageClick = (clientId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.location.href = `/dashboard/trainer/clients-messages?clientId=${clientId}`;
+  };
+
+  const handleCloneClick = (workoutId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.location.href = `/dashboard/trainer/assignments/create?cloneFrom=${workoutId}`;
+  };
+
   const handleDelete = async () => {
     if (!workoutToDelete) return;
     
@@ -91,8 +101,8 @@ export function AssignmentsList({
   };
 
   return (
-    <div className="w-full flex flex-col bg-white rounded-xl border overflow-hidden">
-      <div className="p-4 border-b flex-shrink-0">
+    <div className="w-full flex flex-col bg-primary/5 border border-primary/50 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-glow">
+      <div className="p-4 border-b border-primary/30 flex-shrink-0 bg-gradient-to-r from-primary/10 to-primary/5">
         <h3 className="font-semibold">
           {selectedViewClientId 
             ? (() => {
@@ -138,16 +148,37 @@ export function AssignmentsList({
                     </div>
                   </div>
                   
-                  {/* Delete icon - only for scheduled workouts */}
-                  {workout.status === 'scheduled' && (
+                  {/* Action icons */}
+                  <div className="flex gap-1 flex-shrink-0">
+                    {/* Message icon */}
                     <button
-                      onClick={(e) => handleDeleteClick(workout, e)}
-                      className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors flex-shrink-0"
-                      title="Delete assignment"
+                      onClick={(e) => handleMessageClick(workout.clientId, e)}
+                      className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded transition-colors"
+                      title="Message client"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <MessageSquare className="h-4 w-4" />
                     </button>
-                  )}
+                    
+                    {/* Clone icon */}
+                    <button
+                      onClick={(e) => handleCloneClick(workout.id, e)}
+                      className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded transition-colors"
+                      title="Clone assignment"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    
+                    {/* Delete icon - only for scheduled workouts */}
+                    {workout.status === 'scheduled' && (
+                      <button
+                        onClick={(e) => handleDeleteClick(workout, e)}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
+                        title="Delete assignment"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
