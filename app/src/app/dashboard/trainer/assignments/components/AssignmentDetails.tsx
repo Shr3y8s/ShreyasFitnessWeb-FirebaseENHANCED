@@ -22,13 +22,15 @@ interface AssignmentDetailsProps {
   clients: ClientData[];
   onNavigate: (path: string) => void;
   onBack: () => void;
+  onWorkoutDeleted?: () => void;
 }
 
 export function AssignmentDetails({
   selectedWorkoutData,
   clients,
   onNavigate,
-  onBack
+  onBack,
+  onWorkoutDeleted
 }: AssignmentDetailsProps) {
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -63,9 +65,16 @@ export function AssignmentDetails({
         description: "The workout assignment has been removed.",
       });
       
-      // Close dialog and navigate back
+      // Close dialog and reload data
       setShowDeleteDialog(false);
-      onBack(); // Return to list
+      
+      // Reload workouts list
+      if (onWorkoutDeleted) {
+        onWorkoutDeleted();
+      }
+      
+      // Navigate back to list
+      onBack();
     } catch (error: any) {
       toast({
         title: "Delete Failed",

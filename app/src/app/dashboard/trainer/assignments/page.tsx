@@ -137,6 +137,7 @@ export default function WorkoutAssignmentsPage() {
               clients={clients}
               onNavigate={handleNavigate}
               onBack={() => setSelectedWorkoutData(null)}
+              onWorkoutDeleted={reloadWorkouts}
             />
           ) : (
             /* CLIENT SELECTED - Workout List */
