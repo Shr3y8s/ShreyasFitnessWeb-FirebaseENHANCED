@@ -87,6 +87,26 @@ interface DeleteWorkoutAssignmentResponse {
   message: string;
 }
 
+interface UpdateWorkoutAssignmentRequest {
+  workoutId: string;
+  dueDate?: string;
+  notes?: string;
+  exercises?: Array<{
+    exerciseId: string;
+    exerciseName: string;
+    exerciseType: string;
+    configuration: any;
+    notes?: string;
+  }>;
+  name?: string;
+}
+
+interface UpdateWorkoutAssignmentResponse {
+  success: boolean;
+  workoutId: string;
+  message: string;
+}
+
 // ============================================================================
 // UNIFIED WORKOUT API FUNCTIONS
 // ============================================================================
@@ -210,6 +230,40 @@ export async function completeWorkout(
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+/**
+ * Update a scheduled workout assignment
+ * Only works for workouts with status === 'scheduled'
+ * Can update due date, notes, exercises, and name
+ * 
+ * @param data - Update data with workout ID and fields to update
+ * @returns Promise with success response
+ * 
+ * @example
+ * ```typescript
+ * await updateWorkoutAssignment({
+ *   workoutId: 'workout_123',
+ *   dueDate: '2026-02-01',
+ *   notes: 'Updated notes'
+ * });
+ * ```
+ */
+export async function updateWorkoutAssignment(
+  data: UpdateWorkoutAssignmentRequest
+): Promise<UpdateWorkoutAssignmentResponse> {
+  const updateWorkoutFn = httpsCallable<
+    UpdateWorkoutAssignmentRequest,
+    UpdateWorkoutAssignmentResponse
+  >(functions, 'updateWorkoutAssignment');
+
+  try {
+    const result = await updateWorkoutFn(data);
+    return result.data;
+  } catch (error: any) {
+    console.error('Error updating workout assignment:', error);
+    throw new Error(error.message || 'Failed to update workout assignment');
+  }
+}
 
 /**
  * Delete a scheduled workout assignment

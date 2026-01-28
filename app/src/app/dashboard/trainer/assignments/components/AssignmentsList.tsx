@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Trash2, Copy, MessageSquare } from 'lucide-react';
+import { Search, Trash2, Copy, MessageSquare, Edit } from 'lucide-react';
 import { Workout } from '@/types/workout';
 import { ClientData, getWorkoutDisplayStatus, getStatusBadgeClasses, getStatusLabel } from '../utils/assignmentHelpers';
 import {
@@ -66,6 +66,11 @@ export function AssignmentsList({
   const handleCloneClick = (workoutId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     window.location.href = `/dashboard/trainer/assignments/create?cloneFrom=${workoutId}`;
+  };
+
+  const handleEditClick = (workoutId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.location.href = `/dashboard/trainer/assignments/edit/${workoutId}`;
   };
 
   const handleDelete = async () => {
@@ -168,15 +173,24 @@ export function AssignmentsList({
                       <Copy className="h-4 w-4" />
                     </button>
                     
-                    {/* Delete icon - only for scheduled workouts */}
+                    {/* Edit and Delete icons - only for scheduled workouts */}
                     {workout.status === 'scheduled' && (
-                      <button
-                        onClick={(e) => handleDeleteClick(workout, e)}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
-                        title="Delete assignment"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => handleEditClick(workout.id, e)}
+                          className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 p-2 rounded transition-colors"
+                          title="Edit assignment"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteClick(workout, e)}
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
+                          title="Delete assignment"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

@@ -995,6 +995,7 @@ exports.completeWorkout = workoutFunctions.completeWorkout;  // NEW unified func
 exports.createWorkoutTemplate = workoutFunctions.createWorkoutTemplate;
 exports.updateWorkoutTemplate = workoutFunctions.updateWorkoutTemplate;
 exports.deleteWorkoutTemplate = workoutFunctions.deleteWorkoutTemplate;
+exports.updateWorkoutAssignment = workoutFunctions.updateWorkoutAssignment;  // NEW update assignment function
 exports.deleteWorkoutAssignment = workoutFunctions.deleteWorkoutAssignment;  // NEW delete assignment function
 
 /**

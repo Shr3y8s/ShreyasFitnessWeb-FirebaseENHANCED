@@ -826,6 +826,125 @@ exports.updateWorkoutTemplate = onCall({
 });
 
 /**
+ * Update a workout assignment (scheduled only)
+ * Allows editing due date, notes, and exercise configurations
+ * 
+ * @param {Object} request.data
+ * @param {string} request.data.workoutId - Workout to update
+ * @param {string} request.data.dueDate - Optional new due date (ISO string)
+ * @param {string} request.data.notes - Optional new notes
+ * @param {Array} request.data.exercises - Optional new exercise configurations
+ * @param {string} request.data.name - Optional new assignment name
+ * @return {Object} Success response
+ */
+exports.updateWorkoutAssignment = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  try {
+    // Require authentication
+    if (!request.auth) {
+      throw new Error("Authentication required");
+    }
+
+    const trainerId = request.auth.uid;
+    const data = request.data;
+
+    // Validate required fields
+    if (!data.workoutId) {
+      throw new Error("Missing required field: workoutId");
+    }
+
+    logger.info("Updating workout assignment", {
+      trainerId,
+      workoutId: data.workoutId,
+    });
+
+    // Get workout document
+    const workoutRef = admin.firestore().collection("workouts").doc(data.workoutId);
+    const workoutDoc = await workoutRef.get();
+
+    if (!workoutDoc.exists) {
+      throw new Error("Workout not found");
+    }
+
+    const workoutData = workoutDoc.data();
+
+    // Verify trainer owns this workout
+    if (workoutData.trainerId !== trainerId) {
+      throw new Error("Unauthorized: You can only edit your own assignments");
+    }
+
+    // CRITICAL: Only allow editing of scheduled workouts
+    if (workoutData.status !== "scheduled") {
+      throw new Error(
+          `Cannot edit: Workout is ${workoutData.status}. ` +
+          `Only scheduled workouts can be edited.`
+      );
+    }
+
+    const now = admin.firestore.Timestamp.now();
+    
+    // Prepare update object
+    const updates = {
+      updatedAt: now,
+    };
+
+    // Update due date if provided
+    if (data.dueDate) {
+      updates.dueDate = admin.firestore.Timestamp.fromDate(new Date(data.dueDate));
+    }
+
+    // Update notes if provided
+    if (data.notes !== undefined) {
+      updates.notes = data.notes;
+    }
+
+    // Update name if provided
+    if (data.name) {
+      updates.name = data.name;
+    }
+
+    // Update exercises if provided
+    if (data.exercises) {
+      // Transform exercises to workout document structure
+      updates.exercises = data.exercises.map(ex => ({
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        exerciseType: ex.exerciseType,
+        prescribed: ex.configuration,  // Transform configuration → prescribed
+        actual: ex.actual || null,
+        completionStatus: ex.completionStatus || 'not_started',
+        completionPercentage: ex.completionPercentage || 0,
+        notes: ex.notes || ''
+      }));
+    }
+
+    // Perform update
+    await workoutRef.update(updates);
+
+    logger.info("Workout assignment updated successfully", {
+      workoutId: data.workoutId,
+      trainerId,
+    });
+
+    return {
+      success: true,
+      workoutId: data.workoutId,
+      message: "Workout assignment updated successfully",
+    };
+  } catch (error) {
+    logger.error("Error updating workout assignment", {
+      error: error.message,
+      stack: error.stack,
+      userId: request.auth?.uid,
+    });
+
+    throw new Error(`Failed to update workout assignment: ${error.message}`);
+  }
+});
+
+/**
  * Delete a workout assignment (scheduled only)
  * Uses transaction to atomically delete workout and decrement template usageCount
  * 

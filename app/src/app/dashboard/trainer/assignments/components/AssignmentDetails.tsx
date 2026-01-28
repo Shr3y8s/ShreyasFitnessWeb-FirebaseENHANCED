@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, Activity, AlertCircle, Users, Calendar, ArrowLeft, Trash2, Copy } from 'lucide-react';
+import { Eye, Activity, AlertCircle, Users, Calendar, ArrowLeft, Trash2, Copy, Edit } from 'lucide-react';
 import { Workout } from '@/types/workout';
 import { ClientData, getWorkoutDisplayStatus, getStatusBadgeClasses, getStatusLabel } from '../utils/assignmentHelpers';
 import { WorkoutExecutionDetailView } from '@/components/workouts/WorkoutExecutionDetailView';
@@ -173,15 +173,26 @@ export function AssignmentDetails({
               Clone
             </Button>
             {selectedWorkoutData.status === 'scheduled' && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onNavigate(`/dashboard/trainer/assignments/edit/${selectedWorkoutData.id}`)}
+                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </>
             )}
           </div>
         </div>
