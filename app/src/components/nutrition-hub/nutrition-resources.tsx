@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { BookOpen, ChefHat, Lightbulb, Clock, Users, ExternalLink } from 'lucide-react';
 import { NutritionBasicsGuide } from './nutrition-basics-guide';
 import { MealPrepGuide } from './meal-prep-guide';
+import { MacrosTrackingGuide } from './macros-tracking-guide';
+import { NutritionLabelsGuide } from './nutrition-labels-guide';
 
 interface Resource {
   id: string;
@@ -17,24 +19,7 @@ interface Resource {
   category: string;
 }
 
-const RESOURCES: Resource[] = [
-  {
-    id: '4',
-    type: 'article',
-    title: 'Understanding Macronutrients',
-    description: 'Complete guide to proteins, carbs, and fats - how much you need and why.',
-    duration: '8 min read',
-    category: 'Education'
-  },
-  {
-    id: '6',
-    type: 'guide',
-    title: 'Reading Nutrition Labels',
-    description: 'Master the art of understanding food labels to make informed choices.',
-    duration: '6 min read',
-    category: 'Guides'
-  }
-];
+const RESOURCES: Resource[] = [];
 
 const getIcon = (type: Resource['type']) => {
   switch (type) {
@@ -76,6 +61,8 @@ export function NutritionResources() {
       {/* Featured Guides */}
       <NutritionBasicsGuide />
       <MealPrepGuide />
+      <MacrosTrackingGuide />
+      <NutritionLabelsGuide />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {RESOURCES.map((resource) => {
