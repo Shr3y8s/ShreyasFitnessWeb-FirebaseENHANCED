@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { User, Phone, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { FormData } from '../page';
+import PasswordChecklist from 'react-password-checklist';
 
 interface DetailsStepProps {
   formData: FormData;
@@ -20,6 +21,7 @@ export default function DetailsStep({ formData, updateFormData, nextStep, prevSt
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
+  const [passwordValid, setPasswordValid] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateFormData({ [e.target.name]: e.target.value });
@@ -36,8 +38,8 @@ export default function DetailsStep({ formData, updateFormData, nextStep, prevSt
       return;
     }
     
-    if (formData.password.length < 6) {
-      setValidationError('Password must be at least 6 characters');
+    if (!passwordValid) {
+      setValidationError('Please ensure your password meets all requirements');
       return;
     }
     
@@ -134,7 +136,29 @@ export default function DetailsStep({ formData, updateFormData, nextStep, prevSt
             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
         </div>
-        <p className="text-xs text-gray-500">Minimum 6 characters</p>
+        
+        {/* Password Requirements Checklist */}
+        <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <PasswordChecklist
+            rules={["minLength", "specialChar", "number", "capital", "lowercase"]}
+            minLength={8}
+            value={formData.password}
+            valueAgain={formData.confirmPassword}
+            onChange={(isValid) => setPasswordValid(isValid)}
+            messages={{
+              minLength: "At least 8 characters",
+              specialChar: "Has a special character (!@#$%^&*)",
+              number: "Has a number",
+              capital: "Has an uppercase letter",
+              lowercase: "Has a lowercase letter"
+            }}
+            iconSize={14}
+            style={{
+              fontSize: '13px'
+            }}
+            className="text-sm"
+          />
+        </div>
       </div>
       
       {/* Confirm Password */}

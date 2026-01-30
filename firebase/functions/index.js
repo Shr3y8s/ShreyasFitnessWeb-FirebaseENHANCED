@@ -10,7 +10,7 @@ admin.initializeApp();
 
 // Load shared configuration (copied from root by predeploy hook)
 const sharedConfig = require("./firebase-config.json");
-const { ONBOARDING_DEADLINE_DAYS } = require("./product-config");
+const { ONBOARDING_DEADLINE_DAYS, CHECKIN_ELIGIBLE_PRODUCTS } = require("./product-config");
 
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
@@ -748,7 +748,7 @@ exports.reactivateSubscription = onCall({
 exports.syncPaymentToUser = onDocumentWritten({
   document: "stripe_customers/{userId}/payments/{paymentId}",
   region: sharedConfig.region,
-  secrets: [stripeKey],
+  secrets: [stripeKey, resendKey],
 }, async (event) => {
   const change = event.data;
   const userId = event.params.userId;
@@ -833,6 +833,26 @@ exports.syncPaymentToUser = onDocumentWritten({
         paymentId,
         trainerAssigned: !!updateData.assignedTrainerId,
       });
+
+      // Send welcome email (non-blocking, only on first activation)
+      if (updateData.accountActivated) {
+        // Get fresh user data after update to access name and email
+        const userDocRefresh = await admin.firestore().collection("users").doc(userId).get();
+        const userDataRefresh = userDocRefresh.data();
+        
+        // Send welcome email in the background (don't await)
+        sendWelcomeEmail(
+          userDataRefresh.name,
+          userDataRefresh.email,
+          updateData.assignedTrainerName || null,
+          null // One-time payments don't have tier names typically
+        ).catch(error => {
+          // Errors already logged in sendWelcomeEmail, just ensure they don't propagate
+          logger.warn("Welcome email sending failed but continuing", {userId});
+        });
+        
+        logger.info("Welcome email triggered for one-time payment", {userId});
+      }
 
       // Check if this is a session package purchase
       const metadata = paymentData.metadata || {};
@@ -1007,6 +1027,7 @@ exports.deleteWorkoutAssignment = workoutFunctions.deleteWorkoutAssignment;  // 
 exports.syncSubscriptionToUser = onDocumentWritten({
   document: "stripe_customers/{userId}/subscriptions/{subscriptionId}",
   region: sharedConfig.region,
+  secrets: [resendKey],
 }, async (event) => {
   const change = event.data;
   const userId = event.params.userId;
@@ -1117,13 +1138,9 @@ exports.syncSubscriptionToUser = onDocumentWritten({
     if (status === "active" && trainerId) {
       const metadata = subscriptionData.metadata || {};
       
-      // Check if this is online coaching or complete transformation
-      // These tier IDs should match your Stripe product IDs
-      const isOnlineCoaching = 
-        metadata.tierId && (
-          metadata.tierId.includes('SwvHrfi1C4k4pS') ||  // Online Coaching
-          metadata.tierId.includes('SwvMU8AjAlHgQ0')     // Complete Transformation
-        );
+      // Check if this tier includes check-ins (Online Coaching or Complete Transformation)
+      // Uses centralized product config to determine eligibility
+      const isOnlineCoaching = metadata.tierId && CHECKIN_ELIGIBLE_PRODUCTS.includes(metadata.tierId);
       
       if (isOnlineCoaching) {
         logger.info("Creating setup goal for online coaching subscription", {userId, trainerId});
@@ -1208,6 +1225,26 @@ exports.syncSubscriptionToUser = onDocumentWritten({
           // Don't fail the whole subscription sync if goal creation fails
         }
       }
+    }
+
+    // Send welcome email (non-blocking, only on first activation)
+    if (status === "active" && updateData.accountActivated) {
+      // Get fresh user data to access name and email
+      const userDocRefresh = await admin.firestore().collection("users").doc(userId).get();
+      const userDataRefresh = userDocRefresh.data();
+      
+      // Send welcome email in the background (don't await)
+      sendWelcomeEmail(
+        userDataRefresh.name,
+        userDataRefresh.email,
+        updateData.assignedTrainerName || userData?.assignedTrainerName,
+        updateData.tierName || userData?.tierName
+      ).catch(error => {
+        // Errors already logged in sendWelcomeEmail, just ensure they don't propagate
+        logger.warn("Welcome email sending failed but continuing", {userId});
+      });
+      
+      logger.info("Welcome email triggered for new subscription", {userId});
     }
 
     return null;
@@ -2895,6 +2932,173 @@ exports.updateStripeCustomerEmail = onCall({
     };
   }
 });
+
+/**
+ * WELCOME EMAIL SYSTEM
+ * Send welcome email to new clients after account activation
+ */
+
+/**
+ * Send welcome email to new client
+ * Non-blocking function that sends a branded welcome email with next steps
+ * @param {string} clientName - Client's name
+ * @param {string} clientEmail - Client's email address
+ * @param {string} trainerName - Assigned trainer's name (optional)
+ * @param {string} tierName - Service tier name (optional)
+ */
+async function sendWelcomeEmail(clientName, clientEmail, trainerName = null, tierName = null) {
+  try {
+    logger.info("Sending welcome email", {
+      clientEmail,
+      clientName,
+      trainerName,
+      tierName,
+    });
+
+    const {Resend} = require("resend");
+    const resend = new Resend(resendKey.value());
+
+    // Determine greeting based on available info
+    const greeting = clientName ? clientName.split(' ')[0] : 'there';
+    const trainerInfo = trainerName 
+      ? `<p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+           You've been assigned to work with <strong>${trainerName}</strong>, who will be your dedicated coach throughout your fitness journey.
+         </p>`
+      : '';
+    
+    const tierInfo = tierName
+      ? `<p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0; padding: 15px; background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 4px;">
+           <strong>Your Plan:</strong> ${tierName}
+         </p>`
+      : '';
+
+    await resend.emails.send({
+      from: "Shrey.Fit Support <support@shrey.fit>",
+      to: clientEmail,
+      subject: "Welcome to Shrey.Fit - Let's Start Your Transformation! 🎉",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); padding: 40px 30px; text-align: center;">
+                      <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 700;">Welcome to Shrey.Fit! 🎉</h1>
+                      <p style="color: #d1fae5; margin: 0; font-size: 16px;">Your fitness journey starts now</p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <h2 style="color: #333333; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">Hi ${greeting}! 👋</h2>
+                      
+                      <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                        We're thrilled to have you join the Shrey.Fit community! You've taken the first step towards transforming your health and achieving your fitness goals.
+                      </p>
+                      
+                      ${tierInfo}
+                      ${trainerInfo}
+                      
+                      <h3 style="color: #333333; margin: 30px 0 15px 0; font-size: 20px; font-weight: 600;">What's Next? 🚀</h3>
+                      
+                      <div style="margin: 0 0 20px 0;">
+                        <div style="display: flex; align-items: start; margin-bottom: 15px;">
+                          <span style="color: #10b981; font-size: 20px; margin-right: 10px;">✓</span>
+                          <p style="color: #666666; font-size: 15px; line-height: 1.6; margin: 0;">
+                            <strong>Access Your Dashboard:</strong> Log in to view your personalized plan, track progress, and connect with your coach.
+                          </p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: start; margin-bottom: 15px;">
+                          <span style="color: #10b981; font-size: 20px; margin-right: 10px;">✓</span>
+                          <p style="color: #666666; font-size: 15px; line-height: 1.6; margin: 0;">
+                            <strong>Complete Your Profile:</strong> Add your fitness goals, preferences, and any relevant health information.
+                          </p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: start; margin-bottom: 15px;">
+                          <span style="color: #10b981; font-size: 20px; margin-right: 10px;">✓</span>
+                          <p style="color: #666666; font-size: 15px; line-height: 1.6; margin: 0;">
+                            <strong>Schedule Your First Session:</strong> Book time with your coach to discuss your goals and create your customized plan.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <!-- CTA Button -->
+                      <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                        <tr>
+                          <td align="center">
+                            <a href="https://shrey.fit/dashboard" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                              Go to Dashboard →
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin: 30px 0;">
+                        <h4 style="color: #059669; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">💡 Pro Tip</h4>
+                        <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 0;">
+                          Set aside 15 minutes today to explore your dashboard and familiarize yourself with the platform. The more engaged you are, the better your results will be!
+                        </p>
+                      </div>
+                      
+                      <p style="color: #666666; font-size: 15px; line-height: 1.6; margin: 30px 0 0 0;">
+                        Have questions? We're here to help! Reply to this email or reach out to us at <a href="mailto:support@shrey.fit" style="color: #10b981; text-decoration: none;">support@shrey.fit</a>
+                      </p>
+                      
+                      <p style="color: #666666; font-size: 15px; line-height: 1.6; margin: 20px 0 0 0;">
+                        Let's make this transformation happen together!
+                      </p>
+                      
+                      <p style="color: #666666; font-size: 15px; line-height: 1.6; margin: 10px 0 0 0; font-weight: 600;">
+                        The Shrey.Fit Team
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f8f9fa; padding: 30px; text-align: center; border-top: 1px solid #eeeeee;">
+                      <p style="color: #999999; font-size: 13px; margin: 0 0 10px 0; line-height: 1.5;">
+                        <a href="https://shrey.fit" style="color: #10b981; text-decoration: none; margin: 0 10px;">Website</a> •
+                        <a href="https://shrey.fit/about" style="color: #10b981; text-decoration: none; margin: 0 10px;">About</a> •
+                        <a href="https://shrey.fit/contact" style="color: #10b981; text-decoration: none; margin: 0 10px;">Contact</a>
+                      </p>
+                      <p style="color: #999999; font-size: 12px; margin: 10px 0 0 0; line-height: 1.5;">
+                        © ${new Date().getFullYear()} Shrey.Fit. All rights reserved.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    logger.info("Welcome email sent successfully", {clientEmail});
+    return {success: true};
+  } catch (error) {
+    // Log error but don't throw - welcome email should not block signup
+    logger.error("Failed to send welcome email (non-blocking)", {
+      error: error.message,
+      stack: error.stack,
+      clientEmail,
+    });
+    return {success: false, error: error.message};
+  }
+}
 
 /**
  * EMAIL VERIFICATION SYSTEM
