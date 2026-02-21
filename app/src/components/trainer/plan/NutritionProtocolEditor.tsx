@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy } from 'lucide-react';
+import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
 import { updateNutritionProtocol } from '@/lib/plan-api';
 import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO } from '@/types/plan';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,17 @@ const MEAL_TYPES = [
   'Lunch',
   'Dinner',
   'Snack'
+] as const;
+
+// Diet type presets for macro calculator
+const DIET_PRESETS = [
+  { id: 'balanced', name: 'Balanced Diet', carbs: 40, protein: 30, fat: 30, description: 'Well-rounded approach for general health' },
+  { id: 'high-protein', name: 'High Protein', carbs: 30, protein: 40, fat: 30, description: 'Muscle building and satiety focus' },
+  { id: 'low-carb', name: 'Low Carb', carbs: 20, protein: 40, fat: 40, description: 'Reduced carbohydrate intake' },
+  { id: 'keto', name: 'Ketogenic', carbs: 5, protein: 25, fat: 70, description: 'Very low carb, high fat' },
+  { id: 'moderate-carb', name: 'Moderate Carb', carbs: 35, protein: 30, fat: 35, description: 'Balanced with moderate carbs' },
+  { id: 'high-carb', name: 'High Carb', carbs: 50, protein: 25, fat: 25, description: 'Endurance athletes and active individuals' },
+  { id: 'zone', name: 'Zone Diet', carbs: 40, protein: 30, fat: 30, description: 'Anti-inflammatory balance' },
 ] as const;
 
 // Icon mapper for dynamic icon rendering
@@ -146,6 +157,9 @@ export function NutritionProtocolEditor({
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<NutritionApproach>(currentApproach || 'healthy_habits');
   
+  // Ref to prevent useEffect from overwriting calculator-applied values
+  const isApplyingCalculator = useRef(false);
+  
   // Healthy Habits state
   const [habits, setHabits] = useState<NutritionHabit[]>(
     currentData?.healthyHabits?.habits || []
@@ -153,6 +167,19 @@ export function NutritionProtocolEditor({
   const [newHabitTitle, setNewHabitTitle] = useState('');
   const [newHabitDescription, setNewHabitDescription] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
+
+  // Macro Calculator state
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calcCalories, setCalcCalories] = useState('');
+  const [calcDietType, setCalcDietType] = useState('');
+  const [calculatedMacros, setCalculatedMacros] = useState<{
+    protein: number;
+    proteinPct: number;
+    carbs: number;
+    carbsPct: number;
+    fats: number;
+    fatsPct: number;
+  } | null>(null);
 
   // Macro Tracking state
   const [macroCalories, setMacroCalories] = useState(currentData?.macroTracking?.calories || '');
@@ -209,6 +236,11 @@ export function NutritionProtocolEditor({
 
   // Sync with initial data when it changes
   useEffect(() => {
+    // Skip syncing if we're in the middle of applying calculator values
+    if (isApplyingCalculator.current) {
+      return;
+    }
+    
     if (currentApproach) {
       setActiveTab(currentApproach);
     }
@@ -336,6 +368,64 @@ export function NutritionProtocolEditor({
     setMacroGuidelines(macroGuidelines.filter((_, i) => i !== index));
   };
 
+  // Macro Calculator functions
+  const calculateMacros = () => {
+    const calories = parseFloat(calcCalories);
+    const preset = DIET_PRESETS.find(p => p.id === calcDietType);
+    
+    if (!calories || !preset || calories <= 0) {
+      toast({
+        title: "Invalid Input",
+        description: "Please enter valid calories and select a diet type",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Calculate grams based on percentages
+    // Protein: 4 cal/g, Carbs: 4 cal/g, Fat: 9 cal/g
+    const proteinGrams = Math.round((calories * (preset.protein / 100)) / 4);
+    const carbsGrams = Math.round((calories * (preset.carbs / 100)) / 4);
+    const fatsGrams = Math.round((calories * (preset.fat / 100)) / 9);
+
+    setCalculatedMacros({
+      protein: proteinGrams,
+      proteinPct: preset.protein,
+      carbs: carbsGrams,
+      carbsPct: preset.carbs,
+      fats: fatsGrams,
+      fatsPct: preset.fat,
+    });
+  };
+
+  const applyCalculatedMacros = () => {
+    if (!calculatedMacros) return;
+
+    // Set flag to prevent useEffect from overwriting these values
+    isApplyingCalculator.current = true;
+
+    // Batch state updates in a setTimeout to ensure they complete together
+    setTimeout(() => {
+      setMacroCalories(calcCalories);
+      setMacroProtein(String(calculatedMacros.protein));
+      setMacroProteinPct(String(calculatedMacros.proteinPct));
+      setMacroCarbs(String(calculatedMacros.carbs));
+      setMacroCarbsPct(String(calculatedMacros.carbsPct));
+      setMacroFats(String(calculatedMacros.fats));
+      setMacroFatsPct(String(calculatedMacros.fatsPct));
+
+      toast({
+        title: "✓ Macros Applied Successfully",
+        description: "Check the Daily Targets fields below - they should now show green borders with the calculated values.",
+      });
+
+      // Reset flag after a short delay to allow state updates to complete
+      setTimeout(() => {
+        isApplyingCalculator.current = false;
+      }, 200);
+    }, 0);
+  };
+
   // Convert grid back to day-first structure for saving
   const convertGridToDayPlan = () => {
     return DAYS.map(day => ({
@@ -362,14 +452,25 @@ export function NutritionProtocolEditor({
       if (activeTab === 'healthy_habits') {
         nutritionData.healthyHabits = { habits };
       } else if (activeTab === 'macro_tracking') {
+        // Validate macro tracking fields
+        if (!macroCalories || !macroProtein || !macroCarbs || !macroFats) {
+          toast({
+            title: "Missing Required Fields",
+            description: "Please fill in all macro target fields (calories, protein, carbs, and fats) before saving.",
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+
         nutritionData.macroTracking = {
           calories: macroCalories,
           protein: macroProtein,
-          proteinPercentage: macroProteinPct,
+          proteinPercentage: macroProteinPct || '0',
           carbs: macroCarbs,
-          carbsPercentage: macroCarbsPct,
+          carbsPercentage: macroCarbsPct || '0',
           fats: macroFats,
-          fatsPercentage: macroFatsPct,
+          fatsPercentage: macroFatsPct || '0',
           timing: macroTiming.filter(line => line.trim()),
           guidelines: macroGuidelines.filter(line => line.trim())
         };
@@ -596,27 +697,146 @@ export function NutritionProtocolEditor({
               </p>
             </div>
 
+            {/* Macro Calculator */}
+            <Card className="border-2 border-primary/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg">Macro Calculator</CardTitle>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCalculator(!showCalculator)}
+                  >
+                    {showCalculator ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <CardDescription>
+                  Calculate macros based on total calories and diet type
+                </CardDescription>
+              </CardHeader>
+              {showCalculator && (
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Total Daily Calories</label>
+                      <Input
+                        type="number"
+                        value={calcCalories}
+                        onChange={(e) => setCalcCalories(e.target.value)}
+                        placeholder="e.g., 2600"
+                        className="text-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Diet Type</label>
+                      <Select value={calcDietType} onValueChange={setCalcDietType}>
+                        <SelectTrigger className="text-lg">
+                          <SelectValue placeholder="Select diet type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DIET_PRESETS.map((preset) => (
+                            <SelectItem key={preset.id} value={preset.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{preset.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {preset.carbs}% C / {preset.protein}% P / {preset.fat}% F
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {calcDietType && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {DIET_PRESETS.find(p => p.id === calcDietType)?.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={calculateMacros}
+                    disabled={!calcCalories || !calcDietType}
+                    className="w-full"
+                    variant="default"
+                  >
+                    <Calculator className="mr-2 h-4 w-4" />
+                    Calculate Macros
+                  </Button>
+
+                  {calculatedMacros && (
+                    <div className="border-t pt-4 space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <h4 className="font-semibold mb-3">Calculated Daily Targets</h4>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-2xl font-bold text-primary">{calculatedMacros.protein}g</p>
+                            <p className="text-sm text-muted-foreground">Protein ({calculatedMacros.proteinPct}%)</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-primary">{calculatedMacros.carbs}g</p>
+                            <p className="text-sm text-muted-foreground">Carbs ({calculatedMacros.carbsPct}%)</p>
+                          </div>
+                          <div>
+                            <p className="text-2xl font-bold text-primary">{calculatedMacros.fats}g</p>
+                            <p className="text-sm text-muted-foreground">Fats ({calculatedMacros.fatsPct}%)</p>
+                          </div>
+                        </div>
+                        <div className="text-center mt-3 text-sm text-muted-foreground">
+                          Total: {calcCalories} calories
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={applyCalculatedMacros}
+                        className="w-full"
+                        size="lg"
+                      >
+                        Apply to Daily Targets Below
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-3">Daily Targets</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold">Daily Targets</h3>
+                  {macroCalories && macroProtein && macroCarbs && macroFats && (
+                    <Badge variant="secondary" className="text-xs">
+                      ✓ All fields filled
+                    </Badge>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Calories</label>
+                    <label className="text-sm font-medium mb-1 block">Calories *</label>
                     <Input
                       type="number"
                       value={macroCalories}
                       onChange={(e) => setMacroCalories(e.target.value)}
                       placeholder="2400"
+                      className={macroCalories ? "border-green-500" : ""}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Protein (g)</label>
+                      <label className="text-sm font-medium mb-1 block">Protein (g) *</label>
                       <Input
                         type="number"
                         value={macroProtein}
                         onChange={(e) => setMacroProtein(e.target.value)}
                         placeholder="180"
+                        className={macroProtein ? "border-green-500" : ""}
                       />
                     </div>
                     <div>
@@ -631,12 +851,13 @@ export function NutritionProtocolEditor({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Carbs (g)</label>
+                      <label className="text-sm font-medium mb-1 block">Carbs (g) *</label>
                       <Input
                         type="number"
                         value={macroCarbs}
                         onChange={(e) => setMacroCarbs(e.target.value)}
                         placeholder="240"
+                        className={macroCarbs ? "border-green-500" : ""}
                       />
                     </div>
                     <div>
@@ -651,12 +872,13 @@ export function NutritionProtocolEditor({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Fats (g)</label>
+                      <label className="text-sm font-medium mb-1 block">Fats (g) *</label>
                       <Input
                         type="number"
                         value={macroFats}
                         onChange={(e) => setMacroFats(e.target.value)}
                         placeholder="80"
+                        className={macroFats ? "border-green-500" : ""}
                       />
                     </div>
                     <div>
