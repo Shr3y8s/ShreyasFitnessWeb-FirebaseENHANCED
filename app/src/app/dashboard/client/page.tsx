@@ -23,10 +23,14 @@ import { NutritionSummary } from '@/components/dashboard/nutrition-summary';
 import { AccountSummary } from '@/components/dashboard/account-summary';
 import { CoachNotes } from '@/components/dashboard/coach-notes';
 import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
-import { TodoList } from '@/components/dashboard/todo-list';
+import { DailyHabitsChecklist } from '@/components/activity/DailyHabitsChecklist';
 import { PrimaryObjectives } from '@/components/dashboard/primary-objectives';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { hasOnlineCoaching } from '@/lib/constants';
+import { getClientPlan } from '@/lib/plan-api';
+import { getDailyActivity, toggleHabit } from '@/lib/activity-api';
+import type { DailyActivityData } from '@/types/activity';
+import type { ClientPlan } from '@/types/plan';
 
 // Mock data for calendar (will be replaced with real data in future)
 const upcomingSessions = [
@@ -51,6 +55,9 @@ export default function ClientDashboardPage() {
   const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
   const [loadingNextSession, setLoadingNextSession] = useState(true);
+  const [planData, setPlanData] = useState<ClientPlan | null>(null);
+  const [activityData, setActivityData] = useState<DailyActivityData | null>(null);
+  const [habitsRefreshKey, setHabitsRefreshKey] = useState(0);
 
   useEffect(() => {
     if (authLoading) {
@@ -199,6 +206,30 @@ export default function ClientDashboardPage() {
     };
   }, [user]);
 
+  // Fetch plan data and today's activity data for habits
+  useEffect(() => {
+    if (!user) return;
+
+    const loadHabitsData = async () => {
+      try {
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Load client plan for habits configuration
+        const plan = await getClientPlan(user.uid);
+        setPlanData(plan);
+        
+        // Load today's activity data for habit completion status
+        const activity = await getDailyActivity(user.uid, today);
+        setActivityData(activity);
+      } catch (error) {
+        console.error('Error loading habits data:', error);
+      }
+    };
+
+    loadHabitsData();
+  }, [user, habitsRefreshKey]);
+
   const handleLogout = async () => {
     try {
       const result = await signOutUser();
@@ -232,6 +263,66 @@ export default function ClientDashboardPage() {
       title: "Coming Soon",
       description: "Water tracking feature is coming soon!",
     });
+  };
+
+  const handleToggleHabit = async (habitId: string, completed: boolean) => {
+    if (!user) return;
+    
+    // Get today's date
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Optimistic update - update UI immediately
+    setActivityData(prev => {
+      if (!prev) {
+        return {
+          date: today,
+          habits: [{
+            date: today,
+            habitId,
+            completed,
+            timestamp: new Date()
+          }],
+          updatedAt: new Date()
+        };
+      }
+      
+      const existingHabits = prev.habits || [];
+      const habitIndex = existingHabits.findIndex(h => h.habitId === habitId);
+      
+      let updatedHabits;
+      if (habitIndex >= 0) {
+        // Update existing habit
+        updatedHabits = [...existingHabits];
+        updatedHabits[habitIndex] = {
+          ...updatedHabits[habitIndex],
+          completed,
+          timestamp: new Date()
+        };
+      } else {
+        // Add new habit
+        updatedHabits = [
+          ...existingHabits,
+          {
+            date: today,
+            habitId,
+            completed,
+            timestamp: new Date()
+          }
+        ];
+      }
+      
+      return {
+        ...prev,
+        habits: updatedHabits
+      };
+    });
+    
+    // Make API call in background
+    const result = await toggleHabit(user.uid, today, habitId, completed);
+    if (!result.success) {
+      // Revert on error by refreshing
+      setHabitsRefreshKey(prev => prev + 1);
+    }
   };
 
   const formatSessionDateTime = (timestamp: Timestamp) => {
@@ -404,7 +495,11 @@ export default function ClientDashboardPage() {
                   />
                 </InteractiveCard>
                 <InteractiveCard>
-                  <TodoList />
+                  <DailyHabitsChecklist
+                    habits={planData?.dailyHabits?.habits || []}
+                    completedHabits={activityData?.habits || []}
+                    onToggle={handleToggleHabit}
+                  />
                 </InteractiveCard>
               </div>
             </div>
