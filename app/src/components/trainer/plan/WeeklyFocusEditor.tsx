@@ -14,7 +14,8 @@ import {
   getWeekLabel, 
   formatWeekRange, 
   isCurrentWeek,
-  getCurrentWeekISO
+  getCurrentWeekISO,
+  isWeekInPast
 } from '@/lib/week-utils';
 
 interface WeeklyFocusEditorProps {
@@ -141,6 +142,7 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
     return !!weekData[weekISO];
   };
 
+  const isPastWeek = isWeekInPast(activeWeek);
   const current = getCurrentWeekData();
 
   return (
@@ -173,23 +175,43 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
           })}
         </TabsList>
 
-        {fourWeeks.map((weekISO) => (
-          <TabsContent key={weekISO} value={weekISO} className="space-y-6 mt-6">
-            {!hasDataForWeek(weekISO) && (
-              <Card className="bg-blue-50 border-blue-200">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <FileQuestion className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-blue-900">
-                      <strong>No plan data for this week yet</strong>
-                      <p className="mt-1">
-                        Fill in the details below and click "Save Weekly Focus" to create the plan for this week.
-                      </p>
+        {fourWeeks.map((weekISO) => {
+          const isThisWeekPast = isWeekInPast(weekISO);
+          
+          return (
+            <TabsContent key={weekISO} value={weekISO} className="space-y-6 mt-6">
+              {isThisWeekPast && (
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-yellow-900">
+                        <strong>Past Week - Read Only</strong>
+                        <p className="mt-1">
+                          This week has already passed. You can view the data but cannot save changes to past weeks.
+                          Weekly focus can only be saved for the current week or future weeks.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {!hasDataForWeek(weekISO) && !isThisWeekPast && (
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <FileQuestion className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-blue-900">
+                        <strong>No plan data for this week yet</strong>
+                        <p className="mt-1">
+                          Fill in the details below and click "Save Weekly Focus" to create the plan for this week.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             <Card>
               <CardHeader>
@@ -208,8 +230,9 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                       placeholder={`Adjustment ${index + 1} (e.g., "Increased calories by 100")`}
                       value={adjustment}
                       onChange={(e) => updateAdjustment(index, e.target.value)}
+                      disabled={isThisWeekPast}
                     />
-                    {current.adjustments.length > 1 && (
+                    {current.adjustments.length > 1 && !isThisWeekPast && (
                       <Button
                         variant="outline"
                         size="icon"
@@ -220,15 +243,17 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                     )}
                   </div>
                 ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addAdjustment}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Adjustment
-                </Button>
+                {!isThisWeekPast && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addAdjustment}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Adjustment
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -249,8 +274,9 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                       placeholder={`Priority ${index + 1} (e.g., "Hit all 4 training sessions")`}
                       value={priority}
                       onChange={(e) => updatePriority(index, e.target.value)}
+                      disabled={isThisWeekPast}
                     />
-                    {current.priorities.length > 1 && (
+                    {current.priorities.length > 1 && !isThisWeekPast && (
                       <Button
                         variant="outline"
                         size="icon"
@@ -261,15 +287,17 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                     )}
                   </div>
                 ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addPriority}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Priority
-                </Button>
+                {!isThisWeekPast && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addPriority}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Priority
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -295,6 +323,7 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                     value={current.lastCallDate}
                     onChange={(e) => updateWeekData('lastCallDate', e.target.value)}
                     className="w-full max-w-xs"
+                    disabled={isThisWeekPast}
                   />
                 </div>
                 <div className="space-y-2">
@@ -306,15 +335,21 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
                     onChange={(e) => updateWeekData('coachNotes', e.target.value)}
                     rows={4}
                     className="resize-none"
+                    disabled={isThisWeekPast}
                   />
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3 items-center">
+              {isThisWeekPast && (
+                <p className="text-sm text-muted-foreground mr-auto">
+                  Cannot save changes to past weeks
+                </p>
+              )}
               <Button
                 onClick={handleSave}
-                disabled={isSaving}
+                disabled={isSaving || isThisWeekPast}
                 size="lg"
               >
                 {isSaving ? (
@@ -331,7 +366,8 @@ export function WeeklyFocusEditor({ initialData, onSave, isSaving }: WeeklyFocus
               </Button>
             </div>
           </TabsContent>
-        ))}
+          );
+        })}
       </Tabs>
     </div>
   );
