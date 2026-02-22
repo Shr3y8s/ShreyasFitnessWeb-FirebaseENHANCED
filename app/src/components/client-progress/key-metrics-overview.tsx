@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getActivityLogsForDateRange, getRecentWeightLogs } from '@/lib/activity-api';
+import { getTodayLocal, getDaysAgo } from '@/lib/date-utils';
 import {
   Card,
   CardContent,
@@ -436,13 +437,9 @@ export function KeyMetricsOverview() {
             try {
                 setLoading(true);
                 
-                // Get date strings
-                const today = new Date();
-                const sevenDaysAgo = new Date(today);
-                sevenDaysAgo.setDate(today.getDate() - 6); // Last 7 days including today
-                
-                const todayStr = formatDate(today);
-                const sevenDaysAgoStr = formatDate(sevenDaysAgo);
+                // Get date strings (using local timezone)
+                const todayStr = getTodayLocal();
+                const sevenDaysAgoStr = getDaysAgo(6); // Last 7 days including today
                 
                 // Get today's activity and last 7 days
                 const [todayActivity, weeklyActivities] = await Promise.all([

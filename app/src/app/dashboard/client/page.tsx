@@ -14,7 +14,7 @@ import { WelcomeHeader } from '@/components/dashboard/welcome-header';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import { UpcomingWorkoutReminder } from '@/components/dashboard/upcoming-workout-reminder';
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
-import { KeyMetricsOverview } from '@/components/dashboard/key-metrics-overview';
+import { KeyMetricsOverview } from '@/components/client-progress/key-metrics-overview';
 import { CurrentPlan } from '@/components/dashboard/current-plan';
 import { ProgressCharts } from '@/components/client-progress/progress-charts';
 import { WorkoutCalendar } from '@/components/dashboard/workout-calendar';
