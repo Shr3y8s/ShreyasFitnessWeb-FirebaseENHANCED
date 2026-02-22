@@ -1,11 +1,14 @@
 "use client";
 
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { CalendarCheck } from 'lucide-react';
 
 export function WeeklyCheckin() {
+  const router = useRouter();
+  
   const handleSchedule = () => {
-    window.open('https://calendly.com/shreyas-annapureddy/30min', '_blank');
+    router.push('/dashboard/client/checkins');
   };
 
   return (
