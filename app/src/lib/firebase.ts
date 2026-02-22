@@ -62,6 +62,9 @@ import {
   signInWithPopup,
   signOut,
   GoogleAuthProvider,
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
+  confirmPasswordReset as firebaseConfirmPasswordReset,
+  verifyPasswordResetCode as firebaseVerifyPasswordResetCode,
   User
 } from 'firebase/auth';
 import { 
@@ -237,6 +240,52 @@ export async function signOutUser() {
   } catch (error) {
     console.error('Sign out error:', error);
     return { success: false, error: error as Error };
+  }
+}
+
+/**
+ * Send password reset email to user
+ * @param email - User's email address
+ * @returns Promise with success status
+ */
+export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean; error?: any }> {
+  try {
+    await firebaseSendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Verify password reset code is valid
+ * @param code - The password reset code from email link
+ * @returns Promise with success status and email if valid
+ */
+export async function verifyPasswordResetCode(code: string): Promise<{ success: boolean; email?: string; error?: any }> {
+  try {
+    const email = await firebaseVerifyPasswordResetCode(auth, code);
+    return { success: true, email };
+  } catch (error) {
+    console.error('Error verifying password reset code:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Complete password reset with new password
+ * @param code - The password reset code from email link
+ * @param newPassword - The new password to set
+ * @returns Promise with success status
+ */
+export async function confirmPasswordReset(code: string, newPassword: string): Promise<{ success: boolean; error?: any }> {
+  try {
+    await firebaseConfirmPasswordReset(auth, code, newPassword);
+    return { success: true };
+  } catch (error) {
+    console.error('Error confirming password reset:', error);
+    return { success: false, error };
   }
 }
 

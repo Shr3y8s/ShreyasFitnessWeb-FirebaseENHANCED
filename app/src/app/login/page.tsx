@@ -192,7 +192,7 @@ export default function LoginPage() {
 
                   <div className="text-center space-y-2 pt-4">
                     <div className="text-sm">
-                      <Link href="#" className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
+                      <Link href="/forgot-password" className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
                         Forgot your password?
                       </Link>
                     </div>
