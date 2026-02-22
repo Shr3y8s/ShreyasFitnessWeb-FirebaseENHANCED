@@ -484,7 +484,10 @@ export default function ClientDashboardPage() {
               {/* Right Column - Sidebar */}
               <div className="lg:col-span-1 space-y-6">
                 <InteractiveCard>
-                  <AccountSummary />
+                  <AccountSummary 
+                    userId={user?.uid || ''}
+                    accountCreatedAt={userDataFromAuth?.createdAt}
+                  />
                 </InteractiveCard>
                 <InteractiveCard>
                   <WeeklyCheckin />
