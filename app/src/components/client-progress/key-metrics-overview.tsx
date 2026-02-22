@@ -6,13 +6,14 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getActivityLogsForDateRange, getRecentWeightLogs } from '@/lib/activity-api';
 import { getTodayLocal, getDaysAgo } from '@/lib/date-utils';
+import type { DailyActivityData } from '@/types/activity';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
 } from '@/components/ui/card';
-import { TrendingUp, ArrowDown, Flame, Info, ArrowUp, Footprints, Pencil, Smartphone, Target, Dumbbell } from 'lucide-react';
+import { TrendingUp, ArrowDown, Flame, Info, ArrowUp, Footprints, Pencil, Smartphone, Target, Dumbbell, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { FaWeight } from 'react-icons/fa';
 import {
   Tooltip,
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
@@ -72,7 +74,7 @@ async function calculateHabitScore(
     userId: string,
     sevenDaysAgoStr: string,
     todayStr: string,
-    weeklyActivities: any[]
+    weeklyActivities: DailyActivityData[]
 ): Promise<number> {
     try {
         // Get nutrition approach
@@ -99,7 +101,7 @@ async function calculateHabitScore(
         ]);
 
         // Count completed habits for each of 7 days
-        let totalPossibleHabits = 7 * 4; // 7 days × 4 habits
+        const totalPossibleHabits = 7 * 4; // 7 days × 4 habits
         let completedHabits = 0;
 
         // For each day, check all 4 habits
@@ -326,6 +328,33 @@ export function KeyMetricsOverview() {
     const [habitScore, setHabitScore] = useState(88); // Default mock value
     const [weightLoading, setWeightLoading] = useState(true);
     
+    // Smart collapsible state management
+    const [isInfoExpanded, setIsInfoExpanded] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        
+        const dismissed = localStorage.getItem('metricsInfoDismissed');
+        const visitCount = parseInt(localStorage.getItem('metricsVisitCount') || '0');
+        
+        // Show for first 3 visits, or if never dismissed
+        return !dismissed && visitCount < 3;
+    });
+    
+    // Track visit count
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const visitCount = parseInt(localStorage.getItem('metricsVisitCount') || '0');
+        localStorage.setItem('metricsVisitCount', (visitCount + 1).toString());
+    }, []);
+    
+    // Handle dismiss
+    const handleDismiss = () => {
+        if (typeof window === 'undefined') return;
+        
+        localStorage.setItem('metricsInfoDismissed', 'true');
+        setIsInfoExpanded(false);
+    };
+    
     // Load weight data
     useEffect(() => {
         if (!user) {
@@ -350,7 +379,7 @@ export function KeyMetricsOverview() {
                 
                 // Convert to same unit for calculation (use current weight's unit)
                 let firstValue = firstWeight.weight;
-                let currentValue = currentWeight.weight;
+                const currentValue = currentWeight.weight;
                 const unit = currentWeight.unit;
                 
                 if (firstWeight.unit !== currentWeight.unit) {
@@ -528,42 +557,59 @@ export function KeyMetricsOverview() {
     return (
         <>
             <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 relative">
-                <CardHeader>
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
-                                <TrendingUp className="text-primary" />
-                                Key Metrics Overview
-                            </h3>
-                            <CardDescription>
-                                Your core progress highlights. Remember, consistency is key!
-                            </CardDescription>
+                <Collapsible open={isInfoExpanded} onOpenChange={setIsInfoExpanded}>
+                    <CardHeader>
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+                                    <TrendingUp className="text-primary" />
+                                    Key Metrics Overview
+                                </h3>
+                                <CardDescription>
+                                    Your core progress highlights. Remember, consistency is key!
+                                </CardDescription>
+                            </div>
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8">
+                                    <Info className="h-4 w-4 mr-1" />
+                                    {isInfoExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                </Button>
+                            </CollapsibleTrigger>
                         </div>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Badge variant="outline" className="gap-2 text-xs bg-secondary border-primary/20 text-primary whitespace-nowrap cursor-pointer">
-                                        <Smartphone className="inline-block h-3 w-3" />
-                                        Device Sync: Coming Soon
-                                    </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="max-w-xs">
-                                        Soon you&apos;ll be able to automatically sync your weight, steps, and other data from your smart devices!
+                    </CardHeader>
+                    
+                    <CollapsibleContent>
+                        <div className="px-6 pb-4">
+                            <Alert className="relative">
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>How to Update Your Metrics</AlertTitle>
+                                <AlertDescription className="space-y-2">
+                                    <p>
+                                        These metrics update when you log data in <b>Daily Activities → Today&apos;s Activity</b>:
                                     </p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </CardHeader>
+                                    <ul className="list-disc pl-5 space-y-1 text-sm">
+                                        <li><b>Weight:</b> Log your weigh-ins with optional body fat %</li>
+                                        <li><b>Steps:</b> Log daily step count</li>
+                                        <li><b>Workouts:</b> Complete assigned workouts to build your streak</li>
+                                    </ul>
+                                    <p className="text-sm pt-2 flex items-center gap-1">
+                                        🔮 <b>Coming Soon:</b> Automatic sync with Apple Watch, Fitbit, and other wearables!
+                                    </p>
+                                </AlertDescription>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleDismiss}
+                                    className="mt-3"
+                                >
+                                    Got it, don&apos;t show again
+                                </Button>
+                            </Alert>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+                
                 <CardContent className="space-y-2">
-                     <Alert className="py-2">
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>Manual Updates Required (For Now!)</AlertTitle>
-                        <AlertDescription>
-                            The wearable sync feature is coming soon! Until then, please log your metrics in <b>Today&apos;s Activity</b> under <b>Daily Activities</b>. We recommend logging your <b>weight</b> and optional <b>body fat %</b> after each weigh-in, and your <b>steps</b> daily.
-                        </AlertDescription>
-                    </Alert>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
                         {metrics.map((metric, index) => (
                             <MetricCard key={metric.id} metric={metric} onEdit={handleEdit} className="lg:col-span-1" index={index}/>
