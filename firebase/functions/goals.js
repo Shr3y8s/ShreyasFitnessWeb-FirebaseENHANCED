@@ -209,62 +209,74 @@ exports.onDailyActivityWrite = onDocumentWritten({
   });
 
 /**
- * Helper: Calculate consecutive weeks workout streak
- * Checks if each week met the workout frequency target
+ * Helper: Calculate on-time workout completion streak (incremental with gap checking)
+ * Counts consecutive workouts completed on or before their due date
+ * Checks for missed/late workouts in the gap between last and current
  */
-async function calculateWorkoutStreak(clientId, dailyTarget, maxWeeksToCheck = 12) {
-  let streak = 0;
-  const today = new Date();
-  
-  // Find most recent week with data
-  let startWeek = -1;
-  for (let weekOffset = 0; weekOffset < maxWeeksToCheck; weekOffset++) {
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - (today.getDay() + (weekOffset * 7))); // Sunday of that week
-    weekStart.setHours(0, 0, 0, 0);
+async function calculateWorkoutStreak(clientId, currentWorkout, goalData) {
+  try {
+    const currentStreak = goalData?.currentStreak || 0;
+    const lastWorkout = goalData?.lastStreakWorkout;
     
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
+    // If no previous workout, start streak
+    if (!lastWorkout) {
+      const isOnTime = currentWorkout.completedAt.toMillis() <= currentWorkout.dueDate.toMillis();
+      return {
+        streak: isOnTime ? 1 : 0,
+        lastWorkout: isOnTime ? {
+          workoutId: currentWorkout.id,
+          dueDate: currentWorkout.dueDate,
+          completedAt: currentWorkout.completedAt
+        } : null
+      };
+    }
     
-    const weekWorkouts = await db.collection('workouts')
+    // Check if current workout is on time
+    const currentIsOnTime = currentWorkout.completedAt.toMillis() <= currentWorkout.dueDate.toMillis();
+    
+    if (!currentIsOnTime) {
+      // Late completion resets streak
+      return { streak: 0, lastWorkout: null };
+    }
+    
+    // Query for workouts in the gap (dueDate between last and current)
+    const gapWorkouts = await db.collection('workouts')
       .where('clientId', '==', clientId)
-      .where('status', '==', 'completed')
-      .where('completedAt', '>=', admin.firestore.Timestamp.fromDate(weekStart))
-      .where('completedAt', '<', admin.firestore.Timestamp.fromDate(weekEnd))
+      .where('dueDate', '>', lastWorkout.dueDate)
+      .where('dueDate', '<', currentWorkout.dueDate)
       .get();
     
-    if (weekWorkouts.size >= dailyTarget) {
-      startWeek = weekOffset;
-      break;
+    // Check if any gap workouts were missed or late
+    for (const doc of gapWorkouts.docs) {
+      const workout = doc.data();
+      
+      // If not completed, streak broken
+      if (workout.status !== 'completed') {
+        return { streak: 0, lastWorkout: null };
+      }
+      
+      // If completed late, streak broken
+      if (workout.completedAt && workout.completedAt.toMillis() > workout.dueDate.toMillis()) {
+        return { streak: 0, lastWorkout: null };
+      }
     }
+    
+    // All gap workouts completed on time + current is on time
+    // Increment streak by 1 (gap workouts don't add to streak, they just don't break it)
+    const newStreak = currentStreak + 1;
+    
+    return {
+      streak: newStreak,
+      lastWorkout: {
+        workoutId: currentWorkout.id,
+        dueDate: currentWorkout.dueDate,
+        completedAt: currentWorkout.completedAt
+      }
+    };
+  } catch (error) {
+    logger.error('Error calculating workout streak:', error);
+    return { streak: 0, lastWorkout: null };
   }
-  
-  if (startWeek === -1) return 0; // No weeks meeting target
-  
-  // Count consecutive weeks from that point
-  for (let weekOffset = startWeek; weekOffset < maxWeeksToCheck; weekOffset++) {
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - (today.getDay() + (weekOffset * 7)));
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
-    
-    const weekWorkouts = await db.collection('workouts')
-      .where('clientId', '==', clientId)
-      .where('status', '==', 'completed')
-      .where('completedAt', '>=', admin.firestore.Timestamp.fromDate(weekStart))
-      .where('completedAt', '<', admin.firestore.Timestamp.fromDate(weekEnd))
-      .get();
-    
-    if (weekWorkouts.size >= dailyTarget) {
-      streak++;
-    } else {
-      break; // Streak broken
-    }
-  }
-  
-  return streak;
 }
 
 /**
@@ -299,28 +311,38 @@ exports.onWorkoutComplete = onDocumentWritten({
         for (const goalDoc of goalsSnapshot.docs) {
           const goal = goalDoc.data();
           
-          // Calculate consecutive weeks meeting workout frequency target
-          const workoutStreak = await calculateWorkoutStreak(
+          // Prepare current workout data for streak calculation
+          const currentWorkoutData = {
+            id: event.params.workoutId,
+            completedAt: after.completedAt,
+            dueDate: after.dueDate
+          };
+          
+          // Calculate on-time completion streak with gap checking
+          const streakResult = await calculateWorkoutStreak(
             clientId,
-            goal.dailyTarget || 3
+            currentWorkoutData,
+            goal
           );
           
           logger.info(`[GOALS] Workout streak calculated for ${clientId}`, {
-            streak: workoutStreak,
+            streak: streakResult.streak,
             goalId: goalDoc.id,
-            dailyTarget: goal.dailyTarget
+            hasGap: !!streakResult.lastWorkout
           });
           
-          // Prepare update data - write to currentStreak field
+          // Prepare update data with streak and metadata
           const updateData = {
-            currentStreak: workoutStreak,
+            currentStreak: streakResult.streak,
+            lastStreakWorkout: streakResult.lastWorkout || null,
+            lastStreakUpdated: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           };
           
           // Check and update milestones
           if (goal.milestones) {
             const updatedMilestones = goal.milestones.map(m => {
-              if (!m.completed && m.autoTracked && workoutStreak >= m.targetValue) {
+              if (!m.completed && m.autoTracked && streakResult.streak >= m.targetValue) {
                 return {
                   ...m,
                   completed: true,
