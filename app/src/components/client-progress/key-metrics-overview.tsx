@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getActivityLogsForDateRange, getRecentWeightLogs } from '@/lib/activity-api';
-import { getTodayLocal, getDaysAgo } from '@/lib/date-utils';
+import { getTodayLocal, getDaysAgo, formatDateISO } from '@/lib/date-utils';
 import type { DailyActivityData } from '@/types/activity';
 import {
   Card,
@@ -59,10 +59,6 @@ interface Metric {
 }
 
 // Helper functions
-function formatDate(date: Date): string {
-    return date.toISOString().split('T')[0]; // "YYYY-MM-DD"
-}
-
 function calculateAverage(numbers: number[]): number {
     if (numbers.length === 0) return 0;
     const sum = numbers.reduce((acc, num) => acc + num, 0);
@@ -79,10 +75,10 @@ async function calculateHabitScore(
     try {
         // Get nutrition approach
         const planSnap = await getDoc(doc(db, 'clientPlans', userId));
-        const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macros';
-        const nutritionSubcollection = nutritionApproach === 'macros' ? 'meals' :
-                                      nutritionApproach === 'meal-plan' ? 'mealPlans' :
-                                      'habits';
+        const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macro_tracking';
+        const nutritionSubcollection = nutritionApproach === 'macro_tracking' ? 'meals' :
+                                      nutritionApproach === 'meal_plan' ? 'mealPlans' :
+                                      'habits'; // healthy_habits
 
         // Get nutrition and workout data for the week
         const [nutritionSnap, workoutSnap] = await Promise.all([
@@ -106,9 +102,7 @@ async function calculateHabitScore(
 
         // For each day, check all 4 habits
         for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = i === 0 ? todayStr : getDaysAgo(i);
 
             // 1. Nutrition (dayComplete)
             const nutritionDay = nutritionSnap.docs.find(doc => doc.id === dateStr);
@@ -116,8 +110,8 @@ async function calculateHabitScore(
 
             // 2. Workout (any completed workout)
             const workoutDay = workoutSnap.docs.some(doc => {
-                const completedDate = doc.data().completedDate?.toDate();
-                return completedDate && completedDate.toISOString().split('T')[0] === dateStr;
+                const completedDate = doc.data().completedAt?.toDate();
+                return completedDate && formatDateISO(completedDate) === dateStr;
             });
             if (workoutDay) completedHabits++;
 

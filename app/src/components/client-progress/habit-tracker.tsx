@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getActivityLogsForDateRange } from '@/lib/activity-api';
+import { getTodayLocal, getDaysAgo, formatDateISO } from '@/lib/date-utils';
 
 type AdherencePeriod = 'today' | 'weekly' | 'monthly';
 
@@ -217,13 +218,9 @@ export function HabitTracker() {
         try {
             setLoading(true);
 
-            // Get date strings
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            
-            const todayStr = today.toISOString().split('T')[0];
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            // Get date strings (using local timezone)
+            const todayStr = getTodayLocal();
+            const yesterdayStr = getDaysAgo(1);
 
             // Parallelize independent queries for Today tab
             const [planSnap, todayActivity, yesterdayActivity] = await Promise.all([
@@ -232,10 +229,10 @@ export function HabitTracker() {
                 getDoc(doc(db, 'dailyActivities', `${user.uid}_${yesterdayStr}`))
             ]);
 
-            const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macros';
-            const nutritionSubcollection = nutritionApproach === 'macros' ? 'meals' :
-                                          nutritionApproach === 'meal-plan' ? 'mealPlans' :
-                                          'habits';
+            const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macro_tracking';
+            const nutritionSubcollection = nutritionApproach === 'macro_tracking' ? 'meals' :
+                                          nutritionApproach === 'meal_plan' ? 'mealPlans' :
+                                          'habits'; // healthy_habits
 
             // Parallelize nutrition and workout queries
             const [todayNutrition, yesterdayNutrition, workoutSnap] = await Promise.all([
@@ -259,12 +256,12 @@ export function HabitTracker() {
             const nutritionYesterday = calculateNutritionAdherence(yesterdayNutrition);
 
             const todayWorkouts = workoutSnap.docs.filter(doc => {
-                const completedDate = doc.data().completedDate?.toDate();
-                return completedDate && completedDate.toISOString().split('T')[0] === todayStr;
+                const completedDate = doc.data().completedAt?.toDate();
+                return completedDate && formatDateISO(completedDate) === todayStr;
             });
             const yesterdayWorkouts = workoutSnap.docs.filter(doc => {
-                const completedDate = doc.data().completedDate?.toDate();
-                return completedDate && completedDate.toISOString().split('T')[0] === yesterdayStr;
+                const completedDate = doc.data().completedAt?.toDate();
+                return completedDate && formatDateISO(completedDate) === yesterdayStr;
             });
 
             const workoutToday = todayWorkouts.length > 0 ? 100 : 0;
@@ -288,8 +285,8 @@ export function HabitTracker() {
             const waterToday = todayActivity.exists() ? calculateWaterProgress(todayActivity.data()) : 0;
             const waterYesterday = yesterdayActivity.exists() ? calculateWaterProgress(yesterdayActivity.data()) : 0;
 
-            const nutritionLabel = nutritionApproach === 'macros' ? 'Macro Tracking' :
-                                  nutritionApproach === 'meal-plan' ? 'Meal Plan Adherence' :
+            const nutritionLabel = nutritionApproach === 'macro_tracking' ? 'Macro Tracking' :
+                                  nutritionApproach === 'meal_plan' ? 'Meal Plan Adherence' :
                                   'Nutrition Habits';
 
             // Build habits with today/yesterday data only
@@ -363,20 +360,17 @@ export function HabitTracker() {
         try {
             setLoading(true);
 
-            const today = new Date();
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-            
-            const todayStr = today.toISOString().split('T')[0];
-            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+            // Get date strings (using local timezone)
+            const todayStr = getTodayLocal();
+            const sevenDaysAgoStr = getDaysAgo(6);
 
             // Parallelize all weekly data queries
             const [planSnap, weeklyActivities, weeklyNutritionSnap, workoutSnap] = await Promise.all([
                 getDoc(doc(db, 'clientPlans', user.uid)),
                 getActivityLogsForDateRange(user.uid, sevenDaysAgoStr, todayStr),
                 (async () => {
-                    const approach = (await getDoc(doc(db, 'clientPlans', user.uid))).data()?.nutritionProtocol?.approach || 'macros';
-                    const subcollection = approach === 'macros' ? 'meals' : approach === 'meal-plan' ? 'mealPlans' : 'habits';
+                    const approach = (await getDoc(doc(db, 'clientPlans', user.uid))).data()?.nutritionProtocol?.approach || 'macro_tracking';
+                    const subcollection = approach === 'macro_tracking' ? 'meals' : approach === 'meal_plan' ? 'mealPlans' : 'habits';
                     return getDocs(query(
                         collection(db, 'nutritionLogs', user.uid, subcollection),
                         where('__name__', '>=', sevenDaysAgoStr),
@@ -392,15 +386,15 @@ export function HabitTracker() {
                 ))
             ]);
 
-            const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macros';
+            const nutritionApproach = planSnap.data()?.nutritionProtocol?.approach || 'macro_tracking';
 
             // Calculate weekly stats
             const nutritionWeekly = Math.round((weeklyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length / 7) * 100);
             
             const weeklyWorkouts = workoutSnap.docs.filter(doc => {
-                const completedDate = doc.data().completedDate?.toDate();
+                const completedDate = doc.data().completedAt?.toDate();
                 if (!completedDate) return false;
-                const dateStr = completedDate.toISOString().split('T')[0];
+                const dateStr = formatDateISO(completedDate);
                 return dateStr >= sevenDaysAgoStr && dateStr <= todayStr;
             });
             const workoutWeekly = Math.round((weeklyWorkouts.length / 7) * 100);
@@ -421,13 +415,11 @@ export function HabitTracker() {
                 weeklyActivities.reduce((sum, a) => sum + calculateWaterProgress(a), 0) / 7
             );
 
-            // Build weekly logs
+            // Build weekly logs (using local timezone)
             const buildWeeklyLog = (checkFn: (dateStr: string) => boolean) => {
                 const log: boolean[] = [];
                 for (let i = 6; i >= 0; i--) {
-                    const date = new Date(today);
-                    date.setDate(date.getDate() - i);
-                    const dateStr = date.toISOString().split('T')[0];
+                    const dateStr = i === 0 ? todayStr : getDaysAgo(i);
                     log.push(checkFn(dateStr));
                 }
                 return log;
@@ -439,8 +431,8 @@ export function HabitTracker() {
 
             const workoutWeeklyLog = buildWeeklyLog((dateStr) => {
                 return workoutSnap.docs.some(doc => {
-                    const completedDate = doc.data().completedDate?.toDate();
-                    return completedDate && completedDate.toISOString().split('T')[0] === dateStr;
+                    const completedDate = doc.data().completedAt?.toDate();
+                    return completedDate && formatDateISO(completedDate) === dateStr;
                 });
             });
 
@@ -482,20 +474,17 @@ export function HabitTracker() {
         try {
             setLoading(true);
 
-            const today = new Date();
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-            
-            const todayStr = today.toISOString().split('T')[0];
-            const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+            // Get date strings (using local timezone)
+            const todayStr = getTodayLocal();
+            const thirtyDaysAgoStr = getDaysAgo(29);
 
             // Parallelize monthly data queries
             const [planSnap, monthlyActivities, monthlyNutritionSnap, workoutSnap] = await Promise.all([
                 getDoc(doc(db, 'clientPlans', user.uid)),
                 getActivityLogsForDateRange(user.uid, thirtyDaysAgoStr, todayStr),
                 (async () => {
-                    const approach = (await getDoc(doc(db, 'clientPlans', user.uid))).data()?.nutritionProtocol?.approach || 'macros';
-                    const subcollection = approach === 'macros' ? 'meals' : approach === 'meal-plan' ? 'mealPlans' : 'habits';
+                    const approach = (await getDoc(doc(db, 'clientPlans', user.uid))).data()?.nutritionProtocol?.approach || 'macro_tracking';
+                    const subcollection = approach === 'macro_tracking' ? 'meals' : approach === 'meal_plan' ? 'mealPlans' : 'habits';
                     return getDocs(query(
                         collection(db, 'nutritionLogs', user.uid, subcollection),
                         where('__name__', '>=', thirtyDaysAgoStr),
@@ -514,9 +503,9 @@ export function HabitTracker() {
             const nutritionMonthly = Math.round((monthlyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length / 30) * 100);
             
             const monthlyWorkouts = workoutSnap.docs.filter(doc => {
-                const completedDate = doc.data().completedDate?.toDate();
+                const completedDate = doc.data().completedAt?.toDate();
                 if (!completedDate) return false;
-                const dateStr = completedDate.toISOString().split('T')[0];
+                const dateStr = formatDateISO(completedDate);
                 return dateStr >= thirtyDaysAgoStr && dateStr <= todayStr;
             });
             const workoutMonthly = Math.round((monthlyWorkouts.length / 30) * 100);
