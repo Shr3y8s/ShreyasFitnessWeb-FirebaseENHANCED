@@ -3496,6 +3496,7 @@ exports.trackLogin = onCall({
 const goalFunctions = require("./goals");
 exports.onDailyActivityWrite = goalFunctions.onDailyActivityWrite;
 exports.onWorkoutComplete = goalFunctions.onWorkoutComplete;
+exports.onWorkoutChange = goalFunctions.onWorkoutChange;
 exports.onWeightLog = goalFunctions.onWeightLog;
 exports.onNutritionLogWrite = goalFunctions.onNutritionLogWrite;
 

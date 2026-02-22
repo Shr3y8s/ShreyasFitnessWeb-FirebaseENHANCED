@@ -51,8 +51,9 @@ const HabitRow = ({ habit, period }: { habit: Habit; period: AdherencePeriod }) 
     
     if (period === 'weekly') {
         const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-        const completedDays = habit.weeklyLog.filter(day => day).length;
-        const totalDays = habit.weeklyLog.length;
+        // For workouts, use assigned/completed counts; for others use checkbox count
+        const completedDays = habit.monthlyCompletedDays !== undefined ? habit.monthlyCompletedDays : habit.weeklyLog.filter(day => day).length;
+        const totalDays = habit.monthlyTotalDays !== undefined ? habit.monthlyTotalDays : habit.weeklyLog.length;
         
         return (
             <div className="p-4 bg-secondary/50 rounded-lg">
@@ -142,8 +143,11 @@ const HabitRow = ({ habit, period }: { habit: Habit; period: AdherencePeriod }) 
     }
 
     // Monthly view
-    // Binary habits: Show "X/30 days" format
+    // Binary habits: Show "X/Y workouts" or "X/Y days" format
     if (habit.type === 'binary' && habit.monthlyCompletedDays !== undefined) {
+        // For workouts: show "workouts", for nutrition: show "days"
+        const unitLabel = habit.id === 'workouts' ? 'workouts' : 'days';
+        
         return (
             <div className="p-4 bg-secondary/50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
@@ -153,7 +157,7 @@ const HabitRow = ({ habit, period }: { habit: Habit; period: AdherencePeriod }) 
                     </div>
                     <div className="text-right">
                         <p className="font-bold text-lg text-primary">
-                            {habit.monthlyCompletedDays}/{habit.monthlyTotalDays} days
+                            {habit.monthlyCompletedDays}/{habit.monthlyTotalDays} {unitLabel}
                         </p>
                         <p className="text-xs text-muted-foreground">
                             {adherence}% completion rate
@@ -255,6 +259,7 @@ export function HabitTracker() {
             const nutritionToday = calculateNutritionAdherence(todayNutrition);
             const nutritionYesterday = calculateNutritionAdherence(yesterdayNutrition);
 
+            // Check if workouts were completed on today/yesterday
             const todayWorkouts = workoutSnap.docs.filter(doc => {
                 const completedDate = doc.data().completedAt?.toDate();
                 return completedDate && formatDateISO(completedDate) === todayStr;
@@ -391,13 +396,15 @@ export function HabitTracker() {
             // Calculate weekly stats
             const nutritionWeekly = Math.round((weeklyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length / 7) * 100);
             
-            const weeklyWorkouts = workoutSnap.docs.filter(doc => {
-                const completedDate = doc.data().completedAt?.toDate();
-                if (!completedDate) return false;
-                const dateStr = formatDateISO(completedDate);
-                return dateStr >= sevenDaysAgoStr && dateStr <= todayStr;
-            });
-            const workoutWeekly = Math.round((weeklyWorkouts.length / 7) * 100);
+            // Get pre-calculated workout stats from goals
+            const workoutGoalDoc = await getDoc(doc(db, 'goals', `${user.uid}_workout_consistency`));
+            const workoutStats = workoutGoalDoc.exists() ? workoutGoalDoc.data()?.workoutStats : null;
+            
+            const workoutWeeklyCompleted = workoutStats?.thisWeek?.completed || 0;
+            const workoutWeeklyAssigned = workoutStats?.thisWeek?.assigned || 0;
+            const workoutWeekly = workoutWeeklyAssigned > 0 
+                ? Math.round((workoutWeeklyCompleted / workoutWeeklyAssigned) * 100)
+                : 0;
 
             const calculateStepsProgress = (activity: any) => {
                 if (!activity || !activity.steps || !activity.steps.goal) return 0;
@@ -451,7 +458,13 @@ export function HabitTracker() {
                 if (habit.id === 'nutrition') {
                     return { ...habit, adherence: { ...habit.adherence, weekly: nutritionWeekly }, weeklyLog: nutritionWeeklyLog };
                 } else if (habit.id === 'workouts') {
-                    return { ...habit, adherence: { ...habit.adherence, weekly: workoutWeekly }, weeklyLog: workoutWeeklyLog };
+                    return { 
+                        ...habit, 
+                        adherence: { ...habit.adherence, weekly: workoutWeekly }, 
+                        weeklyLog: workoutWeeklyLog,
+                        monthlyCompletedDays: workoutWeeklyCompleted,
+                        monthlyTotalDays: workoutWeeklyAssigned
+                    };
                 } else if (habit.id === 'cardio') {
                     return { ...habit, adherence: { ...habit.adherence, weekly: stepsWeekly }, weeklyLog: stepsWeeklyLog };
                 } else if (habit.id === 'water') {
@@ -502,13 +515,15 @@ export function HabitTracker() {
 
             const nutritionMonthly = Math.round((monthlyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length / 30) * 100);
             
-            const monthlyWorkouts = workoutSnap.docs.filter(doc => {
-                const completedDate = doc.data().completedAt?.toDate();
-                if (!completedDate) return false;
-                const dateStr = formatDateISO(completedDate);
-                return dateStr >= thirtyDaysAgoStr && dateStr <= todayStr;
-            });
-            const workoutMonthly = Math.round((monthlyWorkouts.length / 30) * 100);
+            // Get pre-calculated workout stats from goals
+            const workoutGoalDoc = await getDoc(doc(db, 'goals', `${user.uid}_workout_consistency`));
+            const workoutStats = workoutGoalDoc.exists() ? workoutGoalDoc.data()?.workoutStats : null;
+            
+            const workoutMonthlyCompleted = workoutStats?.thisMonth?.completed || 0;
+            const workoutMonthlyAssigned = workoutStats?.thisMonth?.assigned || 0;
+            const workoutMonthly = workoutMonthlyAssigned > 0 
+                ? Math.round((workoutMonthlyCompleted / workoutMonthlyAssigned) * 100)
+                : 0;
 
             const calculateStepsProgress = (activity: any) => {
                 if (!activity || !activity.steps || !activity.steps.goal) return 0;
@@ -539,8 +554,8 @@ export function HabitTracker() {
                     return { 
                         ...habit, 
                         adherence: { ...habit.adherence, monthly: workoutMonthly },
-                        monthlyCompletedDays: monthlyWorkouts.length,
-                        monthlyTotalDays: 30
+                        monthlyCompletedDays: workoutMonthlyCompleted,
+                        monthlyTotalDays: workoutMonthlyAssigned
                     };
                 } else if (habit.id === 'cardio') {
                     return { ...habit, adherence: { ...habit.adherence, monthly: stepsMonthly } };
@@ -629,10 +644,33 @@ export function HabitTracker() {
                                 <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
                                     <p className="font-semibold">Weekly Total</p>
                                     <p className="text-xl font-bold text-primary">
-                                        {habits.reduce((total, habit) => total + habit.weeklyLog.filter(day => day).length, 0)}/{habits.reduce((total, habit) => total + habit.weeklyLog.length, 0)}
-                                        <span className="text-sm text-muted-foreground ml-2">
-                                            ({Math.round((habits.reduce((total, habit) => total + habit.weeklyLog.filter(day => day).length, 0) / habits.reduce((total, habit) => total + habit.weeklyLog.length, 0)) * 100)}%)
-                                        </span>
+                                        {(() => {
+                                            // Hybrid calculation: workouts use assigned/completed, others use checkbox count
+                                            const totalCompleted = habits.reduce((total, habit) => {
+                                                if (habit.id === 'workouts' && habit.monthlyCompletedDays !== undefined) {
+                                                    return total + habit.monthlyCompletedDays;
+                                                }
+                                                return total + habit.weeklyLog.filter(day => day).length;
+                                            }, 0);
+                                            
+                                            const totalPossible = habits.reduce((total, habit) => {
+                                                if (habit.id === 'workouts' && habit.monthlyTotalDays !== undefined) {
+                                                    return total + habit.monthlyTotalDays;
+                                                }
+                                                return total + habit.weeklyLog.length;
+                                            }, 0);
+                                            
+                                            const percentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+                                            
+                                            return (
+                                                <>
+                                                    {totalCompleted}/{totalPossible}
+                                                    <span className="text-sm text-muted-foreground ml-2">
+                                                        ({percentage}%)
+                                                    </span>
+                                                </>
+                                            );
+                                        })()}
                                     </p>
                                 </div>
                             </div>

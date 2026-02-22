@@ -209,6 +209,35 @@ exports.onDailyActivityWrite = onDocumentWritten({
   });
 
 /**
+ * Helper: Get week start (Sunday) for a date (local timezone)
+ */
+function getWeekStart(date) {
+  const d = new Date(date.toDate ? date.toDate() : date);
+  const day = d.getDay();
+  const diff = d.getDate() - day; // Subtract days to get to Sunday
+  const sunday = new Date(d.setDate(diff));
+  sunday.setHours(0, 0, 0, 0);
+  // Use local timezone formatting to avoid UTC shift
+  const year = sunday.getFullYear();
+  const month = String(sunday.getMonth() + 1).padStart(2, '0');
+  const dayStr = String(sunday.getDate()).padStart(2, '0');
+  return `${year}-${month}-${dayStr}`; // "YYYY-MM-DD" in local timezone
+}
+
+/**
+ * Helper: Get month start (first day) for a date (local timezone)
+ */
+function getMonthStart(date) {
+  const d = new Date(date.toDate ? date.toDate() : date);
+  const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+  firstDay.setHours(0, 0, 0, 0);
+  // Use local timezone formatting to avoid UTC shift
+  const year = firstDay.getFullYear();
+  const month = String(firstDay.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`; // "YYYY-MM-DD" in local timezone
+}
+
+/**
  * Helper: Calculate on-time workout completion streak (incremental with gap checking)
  * Counts consecutive workouts completed on or before their due date
  * Checks for missed/late workouts in the gap between last and current
@@ -280,20 +309,68 @@ async function calculateWorkoutStreak(clientId, currentWorkout, goalData) {
 }
 
 /**
- * Trigger: When workout is completed
- * Updates: Workout Consistency goals
+ * Trigger: When workout is assigned or completed
+ * Updates: Workout Consistency goals and stats
  */
-exports.onWorkoutComplete = onDocumentWritten({
+exports.onWorkoutChange = onDocumentWritten({
   document: 'workouts/{workoutId}',
   region: sharedConfig.region,
 }, async (event) => {
     const change = event.data;
-    if (!change.before.exists || !change.after.exists) return null;
     try {
-      const before = change.before.data();
-      const after = change.after.data();
+      const before = change.before.exists ? change.before.data() : null;
+      const after = change.after.exists ? change.after.data() : null;
       
-      // Only trigger when workout becomes completed
+      if (!after) return null; // Deleted
+      
+      const clientId = after.clientId;
+      
+      // Handle workout assignment (new document created)
+      if (!before && after.dueDate) {
+        logger.info(`[GOALS] Workout assigned for ${clientId}`);
+        
+        const goalDoc = await db.collection('goals').doc(`${clientId}_workout_consistency`).get();
+        if (!goalDoc.exists) return null;
+        
+        const goal = goalDoc.data();
+        const currentWeek = getWeekStart(after.dueDate);
+        const currentMonth = getMonthStart(after.dueDate);
+        
+        // Initialize or get existing stats
+        let stats = goal.workoutStats || {
+          thisWeek: { weekStart: currentWeek, assigned: 0, completed: 0 },
+          thisMonth: { monthStart: currentMonth, assigned: 0, completed: 0 }
+        };
+        
+        // Check if week changed → reset
+        if (stats.thisWeek.weekStart !== currentWeek) {
+          stats.thisWeek = { weekStart: currentWeek, assigned: 0, completed: 0 };
+        }
+        
+        // Check if month changed → reset
+        if (stats.thisMonth.monthStart !== currentMonth) {
+          stats.thisMonth = { monthStart: currentMonth, assigned: 0, completed: 0 };
+        }
+        
+        // Increment assigned counts
+        stats.thisWeek.assigned++;
+        stats.thisMonth.assigned++;
+        
+        await goalDoc.ref.update({
+          workoutStats: stats,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        
+        logger.info(`[GOALS] Workout assignment counted`, {
+          clientId,
+          week: `${stats.thisWeek.assigned} assigned`,
+          month: `${stats.thisMonth.assigned} assigned`
+        });
+        
+        return null;
+      }
+      
+      // Handle workout completion (status changed to completed)
       if (before.status !== 'completed' && after.status === 'completed') {
         const clientId = after.clientId;
         
@@ -338,6 +415,34 @@ exports.onWorkoutComplete = onDocumentWritten({
             lastStreakUpdated: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           };
+          
+          // Update workout completion counts
+          if (after.dueDate) {
+            const currentWeek = getWeekStart(after.dueDate);
+            const currentMonth = getMonthStart(after.dueDate);
+            
+            let stats = goal.workoutStats || {
+              thisWeek: { weekStart: currentWeek, assigned: 0, completed: 0 },
+              thisMonth: { monthStart: currentMonth, assigned: 0, completed: 0 }
+            };
+            
+            // Check if week changed → reset
+            if (stats.thisWeek.weekStart !== currentWeek) {
+              stats.thisWeek = { weekStart: currentWeek, assigned: 0, completed: 0 };
+            }
+            
+            // Check if month changed → reset
+            if (stats.thisMonth.monthStart !== currentMonth) {
+              stats.thisMonth = { monthStart: currentMonth, assigned: 0, completed: 0 };
+            }
+            
+            // Increment completed counts
+            stats.thisWeek.completed++;
+            stats.thisMonth.completed++;
+            
+            // Add to update data
+            updateData.workoutStats = stats;
+          }
           
           // Check and update milestones
           if (goal.milestones) {
@@ -579,7 +684,7 @@ exports.onNutritionLogWrite = onDocumentWritten({
 
 module.exports = {
   onDailyActivityWrite: exports.onDailyActivityWrite,
-  onWorkoutComplete: exports.onWorkoutComplete,
+  onWorkoutChange: exports.onWorkoutChange,
   onWeightLog: exports.onWeightLog,
   onNutritionLogWrite: exports.onNutritionLogWrite
 };

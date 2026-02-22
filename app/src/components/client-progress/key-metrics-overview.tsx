@@ -65,7 +65,9 @@ function calculateAverage(numbers: number[]): number {
     return Math.round(sum / numbers.length);
 }
 
-// Calculate habit score based on 4 core habits (nutrition, workouts, steps, water)
+// Calculate habit score with hybrid approach:
+// - Nutrition, steps, water: count by days (7 max each)
+// - Workouts: use actual assigned/completed counts from workoutStats
 async function calculateHabitScore(
     userId: string,
     sevenDaysAgoStr: string,
@@ -80,54 +82,56 @@ async function calculateHabitScore(
                                       nutritionApproach === 'meal_plan' ? 'mealPlans' :
                                       'habits'; // healthy_habits
 
-        // Get nutrition and workout data for the week
-        const [nutritionSnap, workoutSnap] = await Promise.all([
+        // Get nutrition data and workout stats
+        const [nutritionSnap, workoutGoalDoc] = await Promise.all([
             getDocs(query(
                 collection(db, 'nutritionLogs', userId, nutritionSubcollection),
                 where('__name__', '>=', sevenDaysAgoStr),
                 where('__name__', '<=', todayStr),
                 limit(10)
             )),
-            getDocs(query(
-                collection(db, 'workouts'),
-                where('clientId', '==', userId),
-                where('status', '==', 'completed'),
-                limit(50)
-            ))
+            getDoc(doc(db, 'goals', `${userId}_workout_consistency`))
         ]);
 
-        // Count completed habits for each of 7 days
-        const totalPossibleHabits = 7 * 4; // 7 days × 4 habits
-        let completedHabits = 0;
+        // Get pre-calculated workout stats
+        const workoutStats = workoutGoalDoc.exists() ? workoutGoalDoc.data()?.workoutStats : null;
+        const workoutCompleted = workoutStats?.thisWeek?.completed || 0;
+        const workoutAssigned = workoutStats?.thisWeek?.assigned || 0;
 
-        // For each day, check all 4 habits
+        // Count completed habits for nutrition, steps, water (day-based)
+        let nutritionCompleted = 0;
+        let stepsCompleted = 0;
+        let waterCompleted = 0;
+
+        // For each of 7 days, check nutrition, steps, water
         for (let i = 6; i >= 0; i--) {
             const dateStr = i === 0 ? todayStr : getDaysAgo(i);
 
             // 1. Nutrition (dayComplete)
             const nutritionDay = nutritionSnap.docs.find(doc => doc.id === dateStr);
-            if (nutritionDay?.data().dayComplete) completedHabits++;
+            if (nutritionDay?.data().dayComplete) nutritionCompleted++;
 
-            // 2. Workout (any completed workout)
-            const workoutDay = workoutSnap.docs.some(doc => {
-                const completedDate = doc.data().completedAt?.toDate();
-                return completedDate && formatDateISO(completedDate) === dateStr;
-            });
-            if (workoutDay) completedHabits++;
-
-            // 3. Steps (met goal)
+            // 2. Steps (met goal)
             const activity = weeklyActivities.find(a => a.date === dateStr);
             if (activity?.steps && activity.steps.steps >= activity.steps.goal) {
-                completedHabits++;
+                stepsCompleted++;
             }
 
-            // 4. Water (met goal)
+            // 3. Water (met goal)
             if (activity?.water && activity.water.amount >= activity.water.goal) {
-                completedHabits++;
+                waterCompleted++;
             }
         }
 
-        return Math.round((completedHabits / totalPossibleHabits) * 100);
+        // Calculate score: (completed) / (possible) * 100
+        // Possible = 7 days for nutrition + 7 days for steps + 7 days for water + assigned workouts
+        const totalCompleted = nutritionCompleted + workoutCompleted + stepsCompleted + waterCompleted;
+        const totalPossible = 7 + workoutAssigned + 7 + 7; // nutrition + workouts + steps + water
+
+        // Avoid division by zero
+        if (totalPossible === 0) return 0;
+
+        return Math.round((totalCompleted / totalPossible) * 100);
     } catch (error) {
         console.error('Error calculating habit score:', error);
         return 0;
