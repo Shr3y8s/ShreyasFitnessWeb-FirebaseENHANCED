@@ -103,9 +103,20 @@ async function calculateHabitScore(
         let stepsCompleted = 0;
         let waterCompleted = 0;
 
-        // For each of 7 days, check nutrition, steps, water
-        for (let i = 6; i >= 0; i--) {
-            const dateStr = i === 0 ? todayStr : getDaysAgo(i);
+        // Iterate through Sun-Sat calendar week (sevenDaysAgoStr to todayStr already represents Sun-Sat)
+        // Build date array for the week
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday
+        const sunday = new Date(today);
+        sunday.setDate(today.getDate() - dayOfWeek);
+        
+        for (let i = 0; i <= 6; i++) {
+            const checkDate = new Date(sunday);
+            checkDate.setDate(sunday.getDate() + i);
+            const year = checkDate.getFullYear();
+            const month = String(checkDate.getMonth() + 1).padStart(2, '0');
+            const day = String(checkDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
 
             // 1. Nutrition (dayComplete)
             const nutritionDay = nutritionSnap.docs.find(doc => doc.id === dateStr);
@@ -464,14 +475,19 @@ export function KeyMetricsOverview() {
             try {
                 setLoading(true);
                 
-                // Get date strings (using local timezone)
-                const todayStr = getTodayLocal();
-                const sevenDaysAgoStr = getDaysAgo(6); // Last 7 days including today
+                // Calculate Sun-Sat week range
+                const today = new Date();
+                const dayOfWeek = today.getDay(); // 0 = Sunday
+                const sunday = new Date(today);
+                sunday.setDate(today.getDate() - dayOfWeek);
                 
-                // Get today's activity and last 7 days
+                const sundayStr = formatDateISO(sunday);
+                const todayStr = getTodayLocal();
+                
+                // Get today's activity and current week's activities (Sun-Sat)
                 const [todayActivity, weeklyActivities] = await Promise.all([
                     getDoc(doc(db, 'dailyActivities', `${user.uid}_${todayStr}`)),
-                    getActivityLogsForDateRange(user.uid, sevenDaysAgoStr, todayStr)
+                    getActivityLogsForDateRange(user.uid, sundayStr, todayStr)
                 ]);
                 
                 // Extract steps data from nested structure
@@ -491,10 +507,10 @@ export function KeyMetricsOverview() {
                 
                 const change = todaySteps - avgSteps;
                 
-                // Calculate habit score from real data (4 habits × 7 days)
+                // Calculate habit score from real data (Sun-Sat calendar week)
                 const score = await calculateHabitScore(
                     user.uid,
-                    sevenDaysAgoStr,
+                    sundayStr,
                     todayStr,
                     weeklyActivities
                 );

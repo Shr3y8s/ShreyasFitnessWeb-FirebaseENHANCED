@@ -50,7 +50,7 @@ const HabitRow = ({ habit, period }: { habit: Habit; period: AdherencePeriod }) 
     const TrendIcon = trend === 'up' ? ArrowUp : trend === 'down' ? ArrowDown : ArrowRight;
     
     if (period === 'weekly') {
-        const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // Sun-Sat (US standard)
         // For workouts, use assigned/completed counts; for others use checkbox count
         const completedDays = habit.monthlyCompletedDays !== undefined ? habit.monthlyCompletedDays : habit.weeklyLog.filter(day => day).length;
         const totalDays = habit.monthlyTotalDays !== undefined ? habit.monthlyTotalDays : habit.weeklyLog.length;
@@ -365,20 +365,25 @@ export function HabitTracker() {
         try {
             setLoading(true);
 
-            // Get date strings (using local timezone)
+            // Calculate Sun-Sat week range
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = Sunday
+            const sunday = new Date(today);
+            sunday.setDate(today.getDate() - dayOfWeek);
+            
+            const sundayStr = formatDateISO(sunday);
             const todayStr = getTodayLocal();
-            const sevenDaysAgoStr = getDaysAgo(6);
 
             // Parallelize all weekly data queries
             const [planSnap, weeklyActivities, weeklyNutritionSnap, workoutSnap] = await Promise.all([
                 getDoc(doc(db, 'clientPlans', user.uid)),
-                getActivityLogsForDateRange(user.uid, sevenDaysAgoStr, todayStr),
+                getActivityLogsForDateRange(user.uid, sundayStr, todayStr),
                 (async () => {
                     const approach = (await getDoc(doc(db, 'clientPlans', user.uid))).data()?.nutritionProtocol?.approach || 'macro_tracking';
                     const subcollection = approach === 'macro_tracking' ? 'meals' : approach === 'meal_plan' ? 'mealPlans' : 'habits';
                     return getDocs(query(
                         collection(db, 'nutritionLogs', user.uid, subcollection),
-                        where('__name__', '>=', sevenDaysAgoStr),
+                        where('__name__', '>=', sundayStr),
                         where('__name__', '<=', todayStr),
                         limit(10)
                     ));
@@ -422,11 +427,24 @@ export function HabitTracker() {
                 weeklyActivities.reduce((sum, a) => sum + calculateWaterProgress(a), 0) / 7
             );
 
-            // Build weekly logs (using local timezone)
+            // Build weekly logs for current Sun-Sat calendar week
             const buildWeeklyLog = (checkFn: (dateStr: string) => boolean) => {
                 const log: boolean[] = [];
-                for (let i = 6; i >= 0; i--) {
-                    const dateStr = i === 0 ? todayStr : getDaysAgo(i);
+                const today = new Date();
+                const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+                
+                // Calculate this week's Sunday
+                const sunday = new Date(today);
+                sunday.setDate(today.getDate() - dayOfWeek);
+                
+                // Build log for Sun(0) through Sat(6)
+                for (let i = 0; i <= 6; i++) {
+                    const checkDate = new Date(sunday);
+                    checkDate.setDate(sunday.getDate() + i);
+                    const year = checkDate.getFullYear();
+                    const month = String(checkDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(checkDate.getDate()).padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
                     log.push(checkFn(dateStr));
                 }
                 return log;
@@ -487,20 +505,36 @@ export function HabitTracker() {
         try {
             setLoading(true);
 
-            // Get date strings (using local timezone)
+            // Get user join date
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            const joinDate = userDoc.exists() && userDoc.data().createdAt 
+                ? userDoc.data().createdAt.toDate() 
+                : new Date();
+
+            // Calculate effective start date (later of month start or join date)
+            const today = new Date();
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const effectiveStartDate = joinDate > monthStart ? joinDate : monthStart;
+            
+            const startDateStr = formatDateISO(effectiveStartDate);
             const todayStr = getTodayLocal();
-            const thirtyDaysAgoStr = getDaysAgo(29);
+            
+            // Calculate days elapsed: normalize both dates to midnight for accurate day count
+            const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const startMidnight = new Date(effectiveStartDate.getFullYear(), effectiveStartDate.getMonth(), effectiveStartDate.getDate());
+            const timeDiff = todayMidnight.getTime() - startMidnight.getTime();
+            const daysElapsed = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include today
 
             // Parallelize monthly data queries
             const [planSnap, monthlyActivities, monthlyNutritionSnap, workoutSnap] = await Promise.all([
                 getDoc(doc(db, 'clientPlans', user.uid)),
-                getActivityLogsForDateRange(user.uid, thirtyDaysAgoStr, todayStr),
+                getActivityLogsForDateRange(user.uid, startDateStr, todayStr),
                 (async () => {
                     const approach = (await getDoc(doc(db, 'clientPlans', user.uid))).data()?.nutritionProtocol?.approach || 'macro_tracking';
                     const subcollection = approach === 'macro_tracking' ? 'meals' : approach === 'meal_plan' ? 'mealPlans' : 'habits';
                     return getDocs(query(
                         collection(db, 'nutritionLogs', user.uid, subcollection),
-                        where('__name__', '>=', thirtyDaysAgoStr),
+                        where('__name__', '>=', startDateStr),
                         where('__name__', '<=', todayStr),
                         limit(35)
                     ));
@@ -513,7 +547,10 @@ export function HabitTracker() {
                 ))
             ]);
 
-            const nutritionMonthly = Math.round((monthlyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length / 30) * 100);
+            const nutritionCompletedDays = monthlyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length;
+            const nutritionMonthly = daysElapsed > 0 
+                ? Math.round((nutritionCompletedDays / daysElapsed) * 100)
+                : 0;
             
             // Get pre-calculated workout stats from goals
             const workoutGoalDoc = await getDoc(doc(db, 'goals', `${user.uid}_workout_consistency`));
@@ -529,17 +566,17 @@ export function HabitTracker() {
                 if (!activity || !activity.steps || !activity.steps.goal) return 0;
                 return Math.min(Math.round((activity.steps.steps / activity.steps.goal) * 100), 100);
             };
-            const stepsMonthly = Math.round(
-                monthlyActivities.reduce((sum, a) => sum + calculateStepsProgress(a), 0) / 30
-            );
+            const stepsMonthly = daysElapsed > 0
+                ? Math.round(monthlyActivities.reduce((sum, a) => sum + calculateStepsProgress(a), 0) / daysElapsed)
+                : 0;
 
             const calculateWaterProgress = (activity: any) => {
                 if (!activity || !activity.water || !activity.water.goal) return 0;
                 return Math.min(Math.round((activity.water.amount / activity.water.goal) * 100), 100);
             };
-            const waterMonthly = Math.round(
-                monthlyActivities.reduce((sum, a) => sum + calculateWaterProgress(a), 0) / 30
-            );
+            const waterMonthly = daysElapsed > 0
+                ? Math.round(monthlyActivities.reduce((sum, a) => sum + calculateWaterProgress(a), 0) / daysElapsed)
+                : 0;
 
             // Update habits with monthly data
             setHabits(prev => prev.map(habit => {
@@ -547,8 +584,8 @@ export function HabitTracker() {
                     return { 
                         ...habit, 
                         adherence: { ...habit.adherence, monthly: nutritionMonthly },
-                        monthlyCompletedDays: monthlyNutritionSnap.docs.filter(doc => doc.data().dayComplete).length,
-                        monthlyTotalDays: 30
+                        monthlyCompletedDays: nutritionCompletedDays,
+                        monthlyTotalDays: daysElapsed
                     };
                 } else if (habit.id === 'workouts') {
                     return { 
