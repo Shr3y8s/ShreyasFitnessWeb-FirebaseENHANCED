@@ -423,17 +423,38 @@ exports.onWeightLog = onDocumentWritten({
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
-        // Check milestones (weight milestones are progressive)
+        // Check milestones (weight milestones reflect current state, not historical)
         if (goal.milestones) {
           const updatedMilestones = goal.milestones.map(m => {
-            // For weight loss: milestone completed if current weight <= milestone weight
-            if (!m.completed && m.autoTracked && latestWeight <= m.targetValue) {
-              return {
-                ...m,
-                completed: true,
-                completedAt: admin.firestore.Timestamp.now(),
-                updatedAt: admin.firestore.Timestamp.now()
-              };
+            // For weight loss: Always update based on current weight
+            // Milestone is checked if current weight <= target, unchecked if above
+            if (m.autoTracked) {
+              const shouldBeCompleted = latestWeight <= m.targetValue;
+              
+              // Update milestone based on current weight
+              if (shouldBeCompleted && !m.completed) {
+                // Complete milestone
+                return {
+                  ...m,
+                  completed: true,
+                  completedAt: admin.firestore.Timestamp.now(),
+                  updatedAt: admin.firestore.Timestamp.now()
+                };
+              } else if (!shouldBeCompleted && m.completed) {
+                // Uncomplete milestone (weight went back up)
+                return {
+                  ...m,
+                  completed: false,
+                  completedAt: null,
+                  updatedAt: admin.firestore.Timestamp.now()
+                };
+              } else if (shouldBeCompleted && m.completed) {
+                // Already completed and still valid - update timestamp
+                return {
+                  ...m,
+                  updatedAt: admin.firestore.Timestamp.now()
+                };
+              }
             }
             return m;
           });
