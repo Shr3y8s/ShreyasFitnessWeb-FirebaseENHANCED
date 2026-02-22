@@ -16,7 +16,7 @@ import { UpcomingWorkoutReminder } from '@/components/dashboard/upcoming-workout
 import { OnboardingChecklist } from '@/components/dashboard/onboarding-checklist';
 import { KeyMetricsOverview } from '@/components/dashboard/key-metrics-overview';
 import { CurrentPlan } from '@/components/dashboard/current-plan';
-import { ProgressCharts } from '@/components/dashboard/progress-charts';
+import { ProgressCharts } from '@/components/client-progress/progress-charts';
 import { WorkoutCalendar } from '@/components/dashboard/workout-calendar';
 import { PersonalRecords } from '@/components/dashboard/personal-records';
 import { NutritionSummary } from '@/components/dashboard/nutrition-summary';

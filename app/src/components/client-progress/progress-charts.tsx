@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getRecentWeightLogs } from '@/lib/activity-api';
 import { getUserProgressPhotos } from '@/lib/progress-photo-api';
-import { Area, AreaChart, Brush, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Brush, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import {
   Card,
   CardContent,
@@ -79,7 +79,8 @@ export function ProgressCharts() {
   const { user } = useAuth();
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [monthlyAvg, setMonthlyAvg] = useState<number | null>(null);
+  const [totalChange, setTotalChange] = useState<{ diff: number; percent: number } | null>(null);
+  const [recentChange, setRecentChange] = useState<{ diff: number; percent: number } | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<{
@@ -104,7 +105,8 @@ export function ProgressCharts() {
         
         if (weights.length === 0) {
           setChartData([]);
-          setMonthlyAvg(null);
+          setTotalChange(null);
+          setRecentChange(null);
           setLoading(false);
           return;
         }
@@ -141,7 +143,7 @@ export function ProgressCharts() {
             year: year.toString(),
             date: `${monthNames[month - 1]} ${day}, ${year}`,
             weight: Math.round(weightInLbs * 10) / 10, // Round to 1 decimal
-            bodyFat: null, // Can be added later if needed
+            bodyFat: log.bodyFat || null, // Use actual body fat from API
             hasPhoto: !!photoData,  // NEW: Boolean flag
             photoData: photoData  // NEW: Photo data reference
           };
@@ -149,43 +151,37 @@ export function ProgressCharts() {
 
         setChartData(transformed);
 
-        // Calculate monthly average (last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
+        // Calculate total change (from start to latest)
+        if (transformed.length >= 2) {
+          const firstWeight = transformed[0].weight;
+          const lastWeight = transformed[transformed.length - 1].weight;
+          const totalDiff = lastWeight - firstWeight;
+          const totalPercent = ((lastWeight - firstWeight) / firstWeight) * 100;
+          
+          setTotalChange({
+            diff: Math.round(totalDiff * 10) / 10,
+            percent: Math.round(totalPercent * 10) / 10
+          });
 
-        const recentWeights = sorted.filter(log => log.date >= thirtyDaysAgoStr);
-        
-        if (recentWeights.length >= 7) {
-          // Calculate average weekly weight loss/gain (requires at least 7 days of data)
-          const oldestInMonth = recentWeights[0];
-          const latestInMonth = recentWeights[recentWeights.length - 1];
+          // Calculate recent change (from second-to-last to last)
+          const secondLastWeight = transformed[transformed.length - 2].weight;
+          const recentDiff = lastWeight - secondLastWeight;
+          const recentPercent = ((lastWeight - secondLastWeight) / secondLastWeight) * 100;
           
-          // Convert to lbs for calculation
-          let oldestWeight = oldestInMonth.weight;
-          let latestWeight = latestInMonth.weight;
-          
-          if (oldestInMonth.unit === 'kg') {
-            oldestWeight *= 2.20462;
-          }
-          if (latestInMonth.unit === 'kg') {
-            latestWeight *= 2.20462;
-          }
-
-          const weightChange = latestWeight - oldestWeight;
-          const daysDiff = Math.max(1, (new Date(latestInMonth.date).getTime() - new Date(oldestInMonth.date).getTime()) / (1000 * 60 * 60 * 24));
-          const weeksInPeriod = daysDiff / 7;
-          const avgPerWeek = weeksInPeriod > 0 ? weightChange / weeksInPeriod : 0;
-          
-          setMonthlyAvg(avgPerWeek);
+          setRecentChange({
+            diff: Math.round(recentDiff * 10) / 10,
+            percent: Math.round(recentPercent * 10) / 10
+          });
         } else {
-          setMonthlyAvg(null);
+          setTotalChange(null);
+          setRecentChange(null);
         }
 
       } catch (error) {
         console.error('Error loading weight data:', error);
         setChartData([]);
-        setMonthlyAvg(null);
+        setTotalChange(null);
+        setRecentChange(null);
       } finally {
         setLoading(false);
       }
@@ -276,13 +272,66 @@ export function ProgressCharts() {
             Your body composition changes over {chartData.length > 30 ? 'the last several months' : 'time'}.
           </CardDescription>
         </div>
-        {/* Callout Box */}
-        {monthlyAvg !== null && (
-          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 shadow-lg border border-border/50">
-            <p className="text-2xl font-bold text-green-600 dark:text-green-500">
-              {monthlyAvg > 0 ? '+' : ''}{monthlyAvg.toFixed(1)} lbs/week
-            </p>
-            <p className="text-xs text-muted-foreground">On avg. this month</p>
+        {/* Callout Boxes - Side by Side */}
+        {totalChange && recentChange && (
+          <div className="flex gap-2">
+            {/* From Start */}
+            <div className={`${
+              totalChange.diff < 0 
+                ? 'bg-green-50 dark:bg-green-950/20' 
+                : totalChange.diff > 0 
+                ? 'bg-amber-50 dark:bg-amber-950/20'
+                : 'bg-gray-50 dark:bg-gray-950/20'
+            } rounded-lg p-2.5 shadow-lg border border-border/50 min-w-[110px]`}>
+              <p className={`text-lg font-bold ${
+                totalChange.diff < 0 
+                  ? 'text-green-600 dark:text-green-500' 
+                  : totalChange.diff > 0 
+                  ? 'text-amber-600 dark:text-amber-500'
+                  : 'text-gray-600 dark:text-gray-500'
+              }`}>
+                {totalChange.diff > 0 ? '+' : ''}{totalChange.diff} lbs
+              </p>
+              <p className={`text-xs font-semibold ${
+                totalChange.diff < 0 
+                  ? 'text-green-600 dark:text-green-500' 
+                  : totalChange.diff > 0 
+                  ? 'text-amber-600 dark:text-amber-500'
+                  : 'text-gray-600 dark:text-gray-500'
+              }`}>
+                ({totalChange.percent > 0 ? '+' : ''}{totalChange.percent}%)
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">From Start</p>
+            </div>
+            
+            {/* Recent Change */}
+            <div className={`${
+              recentChange.diff < 0 
+                ? 'bg-green-50 dark:bg-green-950/20' 
+                : recentChange.diff > 0 
+                ? 'bg-amber-50 dark:bg-amber-950/20'
+                : 'bg-gray-50 dark:bg-gray-950/20'
+            } rounded-lg p-2.5 shadow-lg border border-border/50 min-w-[110px]`}>
+              <p className={`text-lg font-bold ${
+                recentChange.diff < 0 
+                  ? 'text-green-600 dark:text-green-500' 
+                  : recentChange.diff > 0 
+                  ? 'text-amber-600 dark:text-amber-500'
+                  : 'text-gray-600 dark:text-gray-500'
+              }`}>
+                {recentChange.diff > 0 ? '+' : ''}{recentChange.diff} lbs
+              </p>
+              <p className={`text-xs font-semibold ${
+                recentChange.diff < 0 
+                  ? 'text-green-600 dark:text-green-500' 
+                  : recentChange.diff > 0 
+                  ? 'text-amber-600 dark:text-amber-500'
+                  : 'text-gray-600 dark:text-gray-500'
+              }`}>
+                ({recentChange.percent > 0 ? '+' : ''}{recentChange.percent}%)
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Since Last Log</p>
+            </div>
           </div>
         )}
       </CardHeader>
@@ -523,23 +572,13 @@ export function ProgressCharts() {
 
       {/* Fullscreen Chart Dialog */}
       <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-6">
-          <div className="flex items-center justify-between mb-4">
-            <DialogTitle className="text-2xl font-semibold flex items-center gap-2">
-              <Activity className="h-6 w-6 text-primary" />
-              Progress Overview
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFullscreenOpen(false)}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex-1 overflow-auto">
-            <ChartContainer config={chartConfig}>
+        <DialogContent className="!max-w-none w-[95vw] h-[95vh] !p-4">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2 mb-3">
+            <Activity className="h-5 w-5 text-primary" />
+            Progress Overview
+          </DialogTitle>
+          <div className="w-full" style={{ height: 'calc(95vh - 80px)' }}>
+            <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 accessibilityLayer
                 data={chartData}
@@ -548,7 +587,6 @@ export function ProgressCharts() {
                   right: 10,
                   bottom: 5
                 }}
-                height={600}
               >
                 <defs>
                   <linearGradient id="colorWeightFS" x1="0" y1="0" x2="0" y2="1">
@@ -748,7 +786,7 @@ export function ProgressCharts() {
                   />
                 )}
               </AreaChart>
-            </ChartContainer>
+            </ResponsiveContainer>
           </div>
         </DialogContent>
       </Dialog>
