@@ -29,6 +29,7 @@ import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { hasOnlineCoaching } from '@/lib/constants';
 import { getClientPlan } from '@/lib/plan-api';
 import { getDailyActivity, toggleHabit } from '@/lib/activity-api';
+import { getTodayLocal } from '@/lib/date-utils';
 import type { DailyActivityData } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
@@ -212,8 +213,8 @@ export default function ClientDashboardPage() {
 
     const loadHabitsData = async () => {
       try {
-        // Get today's date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0];
+        // Get today's date in YYYY-MM-DD format (local timezone)
+        const today = getTodayLocal();
         
         // Load client plan for habits configuration
         const plan = await getClientPlan(user.uid);
@@ -268,8 +269,8 @@ export default function ClientDashboardPage() {
   const handleToggleHabit = async (habitId: string, completed: boolean) => {
     if (!user) return;
     
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
+    // Get today's date (local timezone)
+    const today = getTodayLocal();
     
     // Optimistic update - update UI immediately
     setActivityData(prev => {
