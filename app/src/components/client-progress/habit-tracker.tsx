@@ -92,7 +92,7 @@ const HabitRow = ({ habit, period }: { habit: Habit; period: AdherencePeriod }) 
                                     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                                     : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                             )}>
-                                {yesterdayComplete ? "✓ Complete" : "Incomplete"}
+                                {yesterdayComplete ? "✓ Complete" : (habit.id === 'workouts' ? "Skipped" : "Incomplete")}
                             </span>
                             <p className="text-xs text-muted-foreground">Yesterday</p>
                         </div>
@@ -107,7 +107,7 @@ const HabitRow = ({ habit, period }: { habit: Habit; period: AdherencePeriod }) 
                                     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                                     : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                             )}>
-                                {todayComplete ? "✓ Complete" : "Incomplete"}
+                                {todayComplete ? "✓ Complete" : (habit.id === 'workouts' ? "Skipped" : "Incomplete")}
                             </span>
                             <p className="text-xs text-muted-foreground">Today</p>
                         </div>
