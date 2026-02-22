@@ -33,18 +33,13 @@ import { getTodayLocal } from '@/lib/date-utils';
 import type { DailyActivityData } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
-// Mock data for calendar (will be replaced with real data in future)
-const upcomingSessions = [
-  { id: 1, type: 'Full Body Strength', date: '2024-08-15', time: '09:00 AM' },
-  { id: 2, type: 'Cardio & Core', date: '2024-08-17', time: '10:00 AM' },
-  { id: 3, type: 'Upper Body Focus', date: '2024-08-19', time: '09:00 AM' },
-];
-
-const completedSessions = [
-  { id: 1, type: 'Lower Body Power', date: '2024-08-12', duration: '60 min' },
-  { id: 2, type: 'HIIT Cardio Session', date: '2024-08-10', duration: '45 min' },
-  { id: 3, type: 'Push Day Workout', date: '2024-08-08', duration: '55 min' },
-];
+interface WorkoutSession {
+  id: string;
+  type: string;
+  date: string;
+  time?: string;
+  duration?: string;
+}
 
 export default function ClientDashboardPage() {
   const router = useRouter();
@@ -59,6 +54,8 @@ export default function ClientDashboardPage() {
   const [planData, setPlanData] = useState<ClientPlan | null>(null);
   const [activityData, setActivityData] = useState<DailyActivityData | null>(null);
   const [habitsRefreshKey, setHabitsRefreshKey] = useState(0);
+  const [upcomingWorkouts, setUpcomingWorkouts] = useState<WorkoutSession[]>([]);
+  const [completedWorkouts, setCompletedWorkouts] = useState<WorkoutSession[]>([]);
 
   useEffect(() => {
     if (authLoading) {
@@ -230,6 +227,115 @@ export default function ClientDashboardPage() {
 
     loadHabitsData();
   }, [user, habitsRefreshKey]);
+
+  // Fetch upcoming and completed workouts
+  useEffect(() => {
+    if (!user) return;
+
+    // Query for upcoming (assigned) workouts
+    const upcomingQuery = query(
+      collection(db, 'workouts'),
+      where('clientId', '==', user.uid),
+      where('status', '==', 'assigned'),
+      orderBy('dueDate', 'asc'),
+      limit(5)
+    );
+
+    // Query for completed workouts
+    const completedQuery = query(
+      collection(db, 'workouts'),
+      where('clientId', '==', user.uid),
+      where('status', '==', 'completed'),
+      orderBy('completedAt', 'desc'),
+      limit(5)
+    );
+
+    // Listen to upcoming workouts
+    const unsubUpcoming = onSnapshot(upcomingQuery, async (snapshot) => {
+      const workouts: WorkoutSession[] = [];
+      
+      for (const workoutDoc of snapshot.docs) {
+        const data = workoutDoc.data();
+        
+        // Get workout template to get the name
+        let workoutName = 'Workout';
+        if (data.templateId) {
+          try {
+            const templateRef = doc(db, 'workoutTemplates', data.templateId);
+            const templateDoc = await getDoc(templateRef);
+            if (templateDoc.exists()) {
+              workoutName = templateDoc.data()?.name || 'Workout';
+            }
+          } catch (error) {
+            console.error('Error fetching template:', error);
+          }
+        }
+
+        const dueDate = data.dueDate?.toDate();
+        workouts.push({
+          id: workoutDoc.id,
+          type: workoutName,
+          date: dueDate ? dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'TBD',
+          time: dueDate ? dueDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : undefined,
+        });
+      }
+      
+      setUpcomingWorkouts(workouts);
+    });
+
+    // Listen to completed workouts
+    const unsubCompleted = onSnapshot(completedQuery, async (snapshot) => {
+      const workouts: WorkoutSession[] = [];
+      
+      for (const workoutDoc of snapshot.docs) {
+        const data = workoutDoc.data();
+        
+        // Get workout template to get the name
+        let workoutName = 'Workout';
+        if (data.templateId) {
+          try {
+            const templateRef = doc(db, 'workoutTemplates', data.templateId);
+            const templateDoc = await getDoc(templateRef);
+            if (templateDoc.exists()) {
+              workoutName = templateDoc.data()?.name || 'Workout';
+            }
+          } catch (error) {
+            console.error('Error fetching template:', error);
+          }
+        }
+
+        const completedDate = data.completedAt?.toDate();
+        const assignedDate = data.assignedDate?.toDate();
+        
+        // Calculate duration if both dates exist
+        let duration = 'N/A';
+        if (completedDate && assignedDate) {
+          const diffMs = completedDate.getTime() - assignedDate.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          duration = diffDays === 0 ? 'Same day' : `${diffDays} day${diffDays > 1 ? 's' : ''}`;
+        }
+
+        workouts.push({
+          id: workoutDoc.id,
+          type: workoutName,
+          date: completedDate ? completedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Unknown',
+          duration: duration,
+        });
+      }
+      
+      setCompletedWorkouts(workouts);
+    });
+
+    registerListener(unsubUpcoming);
+    registerListener(unsubCompleted);
+
+    return () => {
+      unregisterListener(unsubUpcoming);
+      unregisterListener(unsubCompleted);
+      unsubUpcoming();
+      unsubCompleted();
+    };
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -494,8 +600,8 @@ export default function ClientDashboardPage() {
                 </InteractiveCard>
                 <InteractiveCard>
                   <WorkoutCalendar
-                    upcomingSessions={upcomingSessions}
-                    completedSessions={completedSessions}
+                    upcomingSessions={upcomingWorkouts}
+                    completedSessions={completedWorkouts}
                   />
                 </InteractiveCard>
                 <InteractiveCard>

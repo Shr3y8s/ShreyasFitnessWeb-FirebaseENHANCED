@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, CircleCheckBig, MoreHorizontal } from 'lucide-react';
 
 interface Session {
-  id: number;
+  id: string;
   type: string;
   date: string;
   time?: string;
@@ -19,7 +19,7 @@ interface WorkoutCalendarProps {
 
 export function WorkoutCalendar({ upcomingSessions, completedSessions }: WorkoutCalendarProps) {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,19 +33,19 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleReschedule = (sessionId: number) => {
+  const handleReschedule = (sessionId: string) => {
     console.log('Reschedule session:', sessionId);
     setOpenDropdown(null);
     // Add reschedule logic here
   };
 
-  const handleCancel = (sessionId: number) => {
+  const handleCancel = (sessionId: string) => {
     console.log('Cancel session:', sessionId);
     setOpenDropdown(null);
     // Add cancel logic here
   };
 
-  const handleDetails = (sessionId: number) => {
+  const handleDetails = (sessionId: string) => {
     console.log('View details for session:', sessionId);
     // Add details view logic here
   };
@@ -86,7 +86,14 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
         <ul className="space-y-3">
           {activeTab === 'upcoming' ? (
             <>
-              {upcomingSessions.map((session) => (
+              {upcomingSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium mb-1">No Upcoming Workouts</p>
+                  <p className="text-sm">Your trainer will assign workouts soon</p>
+                </div>
+              ) : (
+                upcomingSessions.map((session) => (
                 <li
                   key={session.id}
                   className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5 relative"
@@ -124,11 +131,19 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
                     )}
                   </div>
                 </li>
-              ))}
+                ))
+              )}
             </>
           ) : (
             <>
-              {completedSessions.map((session) => (
+              {completedSessions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CircleCheckBig className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="font-medium mb-1">No Completed Workouts Yet</p>
+                  <p className="text-sm">Complete your first workout to see it here!</p>
+                </div>
+              ) : (
+                completedSessions.map((session) => (
                 <li
                   key={session.id}
                   className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5"
@@ -150,7 +165,8 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
                     Details
                   </Button>
                 </li>
-              ))}
+                ))
+              )}
             </>
           )}
         </ul>
