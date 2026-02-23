@@ -273,11 +273,8 @@ export function OnboardingMilestoneManager({ clientId, clientName, clientTier }:
                     "font-semibold mb-1",
                     milestone.completed && "text-muted-foreground line-through"
                   )}>
-                    {milestone.title}
+                    {milestone.text || milestone.title}
                   </h4>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {milestone.description}
-                  </p>
                   
                   {milestone.completed && milestone.completedAt && (
                     <p className="text-xs text-green-700">
