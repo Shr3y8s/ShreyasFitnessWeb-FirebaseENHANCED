@@ -59,7 +59,7 @@ export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProp
   const IconComponent = config.icon;
   
   return (
-    <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/10 border-primary/50 flex flex-col hover:shadow-glow">
+    <>
       <div className="flex p-6 flex-row gap-4 items-center">
         <div className={`p-3 ${config.iconBg} rounded-full`}>
           <IconComponent className={`${config.iconColor} w-6 h-6`} />
@@ -99,6 +99,6 @@ export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProp
           </ul>
         </div>
       </div>
-    </div>
+    </>
   );
 }

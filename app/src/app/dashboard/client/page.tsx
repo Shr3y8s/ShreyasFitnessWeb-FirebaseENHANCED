@@ -10,6 +10,7 @@ import { TrainingLocation } from '@/types/location';
 import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
+import { Card, CardContent } from '@/components/ui/card';
 import { WelcomeHeader } from '@/components/dashboard/welcome-header';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import { UpcomingWorkoutReminder } from '@/components/dashboard/upcoming-workout-reminder';
@@ -505,39 +506,41 @@ export default function ClientDashboardPage() {
               onToggleTheme={toggleTheme}
             />
 
-            {/* First Row - Upcoming Session & Onboarding/(Coach Notes + Current Goals) */}
+            {/* First Row - Upcoming Session & Onboarding/(Coach Notes) */}
             <div
               className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               style={{ perspective: '1000px' }}
             >
               <InteractiveCard>
-                {loadingNextSession ? (
-                  <div className="text-center py-12">
-                    <div className="text-4xl mb-3">⏳</div>
-                    <p className="text-muted-foreground">Loading session...</p>
-                  </div>
-                ) : nextSession ? (
-                  <UpcomingWorkoutReminder 
-                    workout={{
-                      sessionType: nextSession.sessionType as 'training' | 'checkin' | 'onboarding',
-                      date: formatSessionDateTime(nextSession.scheduledDate),
-                      time: '',
-                      location: nextSessionLocation
-                    }} 
-                  />
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-4xl mb-3">📅</div>
-                    <h3 className="text-lg font-semibold mb-2">No Upcoming Sessions</h3>
-                    <p className="text-muted-foreground mb-4">Schedule your next training session</p>
-                    <a 
-                      href="/dashboard/client/sessions/schedule"
-                      className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-                    >
-                      Book Session
-                    </a>
-                  </div>
-                )}
+                <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm hover:shadow-glow transition-shadow">
+                  {loadingNextSession ? (
+                    <CardContent className="text-center py-12">
+                      <div className="text-4xl mb-3">⏳</div>
+                      <p className="text-muted-foreground">Loading session...</p>
+                    </CardContent>
+                  ) : nextSession ? (
+                    <UpcomingWorkoutReminder 
+                      workout={{
+                        sessionType: nextSession.sessionType as 'training' | 'checkin' | 'onboarding',
+                        date: formatSessionDateTime(nextSession.scheduledDate),
+                        time: '',
+                        location: nextSessionLocation
+                      }} 
+                    />
+                  ) : (
+                    <CardContent className="text-center py-12">
+                      <div className="text-4xl mb-3">📅</div>
+                      <h3 className="text-lg font-semibold mb-2">No Upcoming Sessions</h3>
+                      <p className="text-muted-foreground mb-4">Schedule your next training session</p>
+                      <a 
+                        href="/dashboard/client/sessions/schedule"
+                        className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                      >
+                        Book Session
+                      </a>
+                    </CardContent>
+                  )}
+                </Card>
               </InteractiveCard>
               {showOnboarding ? (
                 <InteractiveCard>
