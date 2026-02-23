@@ -9,6 +9,7 @@ import { signOutUser } from '@/lib/firebase';
 import { ClipboardList } from 'lucide-react';
 import { PlanSummary } from '@/components/plan/plan-summary';
 import { YourVision } from '@/components/plan/your-vision';
+import { CurrentPlan } from '@/components/dashboard/current-plan';
 import { CurrentFocus } from '@/components/plan/current-focus';
 import { TrainingProtocol } from '@/components/plan/training-protocol';
 import { NutritionProtocol } from '@/components/plan/nutrition-protocol';
@@ -82,34 +83,14 @@ export default function MyPlanPage() {
               </p>
             </div>
 
-            {/* Status Badges & Metric Cards */}
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full text-sm font-semibold">
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  Active
-                </div>
-                <div className="inline-flex items-center px-3 py-1.5 border border-green-500/50 rounded-full text-sm font-medium text-green-600 dark:text-green-400">
-                  Updated 7 days ago
-                </div>
+            {/* Status Badges */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 rounded-full text-sm font-semibold">
+                <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                Active
               </div>
-              <div className="hidden md:flex items-center gap-2">
-                <div className="text-center px-4 py-2 bg-card border border-green-500/50 rounded-lg transition-all hover:shadow-md hover:-translate-y-0.5">
-                  <p className="font-bold text-lg">2,400 cal</p>
-                  <p className="text-xs font-medium text-muted-foreground">Calories</p>
-                </div>
-                <div className="text-center px-4 py-2 bg-card border border-green-500/50 rounded-lg transition-all hover:shadow-md hover:-translate-y-0.5">
-                  <p className="font-bold text-lg">180g</p>
-                  <p className="text-xs font-medium text-muted-foreground">Protein</p>
-                </div>
-                <div className="text-center px-4 py-2 bg-card border border-green-500/50 rounded-lg transition-all hover:shadow-md hover:-translate-y-0.5">
-                  <p className="font-bold text-lg">4x</p>
-                  <p className="text-xs font-medium text-muted-foreground">Workouts</p>
-                </div>
-                <div className="text-center px-4 py-2 bg-card border border-green-500/50 rounded-lg transition-all hover:shadow-md hover:-translate-y-0.5">
-                  <p className="font-bold text-lg">3x</p>
-                  <p className="text-xs font-medium text-muted-foreground">Cardio</p>
-                </div>
+              <div className="inline-flex items-center px-3 py-1.5 border border-green-500/50 rounded-full text-sm font-medium text-green-600 dark:text-green-400">
+                Updated 7 days ago
               </div>
             </div>
 
@@ -147,8 +128,11 @@ export default function MyPlanPage() {
                 <NutritionProtocol />
               </div>
 
-              {/* Right Column: Vision, Focus, Step Goal & Cardio (1/3 width) */}
+              {/* Right Column: Current Plan, Vision, Focus, Step Goal & Cardio (1/3 width) */}
               <div className="space-y-6 lg:col-span-1">
+                {/* Current Plan Card */}
+                <CurrentPlan />
+
                 {/* Your Vision Card */}
                 <YourVision 
                   goals={[

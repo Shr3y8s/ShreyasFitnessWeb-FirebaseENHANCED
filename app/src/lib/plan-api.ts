@@ -13,7 +13,7 @@ import {
   serverTimestamp,
   Timestamp
 } from 'firebase/firestore';
-import { ClientPlan, VisionData, StepGoalData, LissCardioData, WeeklyFocusData, WeeklyFocusHistory } from '@/types/plan';
+import { ClientPlan, VisionData, StepGoalData, LissCardioData, WeeklyFocusData, WeeklyFocusHistory, TrainingPhase, TrainingFocus, CardioType } from '@/types/plan';
 
 // Collection reference
 const PLANS_COLLECTION = 'clientPlans';
@@ -95,6 +95,14 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
     } : null,
     trainingProtocol: data.trainingProtocol ? {
       keyPriorities: data.trainingProtocol.keyPriorities || [],
+      trainingPhase: data.trainingProtocol.trainingPhase || undefined,
+      trainingFocus: data.trainingProtocol.trainingFocus || undefined,
+      assignedDate: data.trainingProtocol.assignedDate || undefined,
+      planDurationWeeks: data.trainingProtocol.planDurationWeeks || undefined,
+      workoutFrequency: data.trainingProtocol.workoutFrequency || undefined,
+      cardioType: data.trainingProtocol.cardioType || undefined,
+      cardioFrequency: data.trainingProtocol.cardioFrequency || undefined,
+      stepsPerDay: data.trainingProtocol.stepsPerDay || undefined,
       lastUpdated: timestampToDate(data.trainingProtocol.lastUpdated)
     } : null,
     nutritionProtocol: data.nutritionProtocol ? {
@@ -630,6 +638,78 @@ export async function updateTrainingProtocol(
     return { success: true };
   } catch (error) {
     console.error('Error updating training protocol:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update the training phase fields of a client's plan
+ * (trainingPhase, trainingFocus, assignedDate, workoutFrequency, cardioType, cardioFrequency, stepsPerDay)
+ * Merges into the existing trainingProtocol sub-document.
+ */
+export async function updateTrainingPhase(
+  clientId: string,
+  trainerId: string,
+  data: {
+    trainingPhase?: TrainingPhase;
+    trainingFocus?: TrainingFocus;
+    assignedDate?: string;
+    planDurationWeeks?: number;
+    workoutFrequency?: number;
+    cardioType?: CardioType;
+    cardioFrequency?: string;
+    stepsPerDay?: string;
+  }
+): Promise<{ success: boolean; error?: any }> {
+  try {
+    const planRef = doc(db, PLANS_COLLECTION, clientId);
+    const existingPlan = await getClientPlan(clientId);
+
+    // Build a clean object — only include defined values
+    const phaseFields: any = { lastUpdated: serverTimestamp() };
+    if (data.trainingPhase !== undefined) phaseFields.trainingPhase = data.trainingPhase;
+    if (data.trainingFocus !== undefined) phaseFields.trainingFocus = data.trainingFocus;
+    if (data.assignedDate !== undefined) phaseFields.assignedDate = data.assignedDate;
+    if (data.planDurationWeeks !== undefined) phaseFields.planDurationWeeks = data.planDurationWeeks;
+    if (data.workoutFrequency !== undefined) phaseFields.workoutFrequency = data.workoutFrequency;
+    if (data.cardioType !== undefined) phaseFields.cardioType = data.cardioType;
+    if (data.cardioFrequency !== undefined) phaseFields.cardioFrequency = data.cardioFrequency;
+    if (data.stepsPerDay !== undefined) phaseFields.stepsPerDay = data.stepsPerDay;
+
+    if (existingPlan) {
+      // Merge phase fields into existing trainingProtocol, then strip undefined values
+      // (Firestore rejects undefined — optional fields on the TypeScript object may be undefined)
+      const merged = { ...(existingPlan.trainingProtocol || {}), ...phaseFields };
+      const cleanMerged = Object.fromEntries(
+        Object.entries(merged).filter(([, v]) => v !== undefined)
+      );
+      await updateDoc(planRef, {
+        trainingProtocol: cleanMerged,
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      // Create new plan document
+      await setDoc(planRef, {
+        clientId,
+        trainerId,
+        trainingProtocol: {
+          keyPriorities: [],
+          ...phaseFields,
+        },
+        vision: null,
+        stepGoal: null,
+        lissCardio: null,
+        weeklyFocus: null,
+        dailyHabits: null,
+        nutritionProtocol: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating training phase:', error);
     return { success: false, error };
   }
 }

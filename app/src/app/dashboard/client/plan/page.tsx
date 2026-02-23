@@ -7,6 +7,7 @@ import { signOutUser } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { ClipboardList, Loader2, Calendar, TrendingUp, Dumbbell, Apple } from 'lucide-react';
+import { CurrentPlan } from '@/components/dashboard/current-plan';
 import { YourVision } from '@/components/plan/your-vision';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
@@ -189,8 +190,11 @@ export default function PlanPage() {
                     )}
                   </div>
 
-                  {/* Right Column: Vision, Daily Habits, Step Goal & Cardio (1/3 width) */}
+                  {/* Right Column: Current Phase, Vision, Daily Habits, Step Goal & Cardio (1/3 width) */}
                   <div className="space-y-6 lg:col-span-1">
+                    {/* Current Phase Card */}
+                    <CurrentPlan trainingProtocol={plan?.trainingProtocol} />
+
                     {/* Your Vision Card */}
                     {plan?.vision && <YourVision goals={plan.vision.goals} />}
 

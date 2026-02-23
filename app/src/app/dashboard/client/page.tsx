@@ -569,7 +569,7 @@ export default function ClientDashboardPage() {
                   <KeyMetricsOverview />
                 </InteractiveCard>
                 <InteractiveCard>
-                  <CurrentPlan />
+                  <CurrentPlan trainingProtocol={planData?.trainingProtocol} />
                 </InteractiveCard>
                 <InteractiveCard>
                   <ProgressCharts />

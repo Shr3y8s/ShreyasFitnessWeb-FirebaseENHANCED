@@ -59,8 +59,20 @@ export interface DailyHabitsData {
   lastUpdated: Date | null;
 }
 
+export type TrainingPhase = 'strength' | 'weight_loss' | 'muscle_building';
+export type TrainingFocus = 'weekly_split' | 'daily_split' | 'push' | 'pull' | 'legs';
+export type CardioType = 'cardio' | 'steps';
+
 export interface TrainingProtocolData {
   keyPriorities: string[];
+  trainingPhase?: TrainingPhase;
+  trainingFocus?: TrainingFocus;
+  assignedDate?: string;        // ISO date string (past or today only)
+  planDurationWeeks?: number;   // e.g. 12 — trainer-specified duration
+  workoutFrequency?: number;    // e.g. 4 (per week)
+  cardioType?: CardioType;
+  cardioFrequency?: string;     // e.g. "3" — used when cardioType === 'cardio'
+  stepsPerDay?: string;         // e.g. "10000" — used when cardioType === 'steps'
   lastUpdated: Date | null;
 }
 

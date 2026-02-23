@@ -44,6 +44,7 @@ import { WaterGoalEditor } from '@/components/trainer/plan/WaterGoalEditor';
 import { LissCardioEditor } from '@/components/trainer/plan/LissCardioEditor';
 import { WeeklyFocusEditor } from '@/components/trainer/plan/WeeklyFocusEditor';
 import { DailyHabitsEditor } from '@/components/trainer/plan/DailyHabitsEditor';
+import { TrainingPhaseEditor } from '@/components/trainer/plan/TrainingPhaseEditor';
 import { TrainingProtocolEditor } from '@/components/trainer/plan/TrainingProtocolEditor';
 import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProtocolEditor';
 import { GoalsManagementPanel } from '@/components/trainer/goals/GoalsManagementPanel';
@@ -1614,15 +1615,35 @@ export default function ClientDetailPage() {
 
                     <TabsContent value="trainingprotocol">
                       {user && (
-                        <TrainingProtocolEditor
-                          clientId={clientId}
-                          trainerId={user.uid}
-                          keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
-                          onUpdate={async () => {
-                            const updatedPlan = await getClientPlan(clientId);
-                            setPlan(updatedPlan);
-                          }}
-                        />
+                        <div className="space-y-6">
+                          <TrainingPhaseEditor
+                            clientId={clientId}
+                            trainerId={user.uid}
+                            currentData={{
+                              trainingPhase: plan?.trainingProtocol?.trainingPhase,
+                              trainingFocus: plan?.trainingProtocol?.trainingFocus,
+                              assignedDate: plan?.trainingProtocol?.assignedDate,
+                              planDurationWeeks: plan?.trainingProtocol?.planDurationWeeks,
+                              workoutFrequency: plan?.trainingProtocol?.workoutFrequency,
+                              cardioType: plan?.trainingProtocol?.cardioType,
+                              cardioFrequency: plan?.trainingProtocol?.cardioFrequency,
+                              stepsPerDay: plan?.trainingProtocol?.stepsPerDay,
+                            }}
+                            onUpdate={async () => {
+                              const updatedPlan = await getClientPlan(clientId);
+                              setPlan(updatedPlan);
+                            }}
+                          />
+                          <TrainingProtocolEditor
+                            clientId={clientId}
+                            trainerId={user.uid}
+                            keyPriorities={plan?.trainingProtocol?.keyPriorities || []}
+                            onUpdate={async () => {
+                              const updatedPlan = await getClientPlan(clientId);
+                              setPlan(updatedPlan);
+                            }}
+                          />
+                        </div>
                       )}
                     </TabsContent>
 
