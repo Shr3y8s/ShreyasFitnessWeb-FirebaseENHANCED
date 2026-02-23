@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Goal, GOAL_CATEGORIES, getCategoryMetadata, calculateGoalCompletion } from '@/types/goals';
+import { Goal, GoalTerm, GOAL_CATEGORIES, getCategoryMetadata, calculateGoalCompletion } from '@/types/goals';
 import { GoalFormDialog } from '@/components/trainer/goals/GoalFormDialog';
 import { getClientGoals, saveGoalConfig, toggleGoalActive } from '@/lib/goals-api';
 
@@ -30,7 +30,7 @@ interface GoalsManagementPanelProps {
   clientName: string;
 }
 
-// Initialize 7 goal slots (one per category)
+// Initialize 8 goal slots (one per category)
 const initializeGoalSlots = (): Map<string, Goal | null> => {
   const slots = new Map<string, Goal | null>();
   GOAL_CATEGORIES.forEach(cat => {
@@ -47,6 +47,8 @@ export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPa
   const [goalsLoading, setGoalsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [configureSubTab, setConfigureSubTab] = useState<GoalTerm>('short-term');
+  const [progressSubTab, setProgressSubTab] = useState<GoalTerm>('short-term');
 
   // Fetch goals from Firestore
   useEffect(() => {
@@ -177,6 +179,17 @@ export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPa
   const activeGoals = Array.from(goalSlots.values()).filter(g => g?.isActive && g?.isConfigured);
   const configuredCount = Array.from(goalSlots.values()).filter(g => g?.isConfigured).length;
 
+  // Calculate statistics by term
+  const shortTermConfigured = Array.from(goalSlots.values())
+    .filter(g => g?.isConfigured && g?.term === 'short-term').length;
+  const longTermConfigured = Array.from(goalSlots.values())
+    .filter(g => g?.isConfigured && g?.term === 'long-term').length;
+  
+  const shortTermActive = Array.from(goalSlots.values())
+    .filter(g => g?.isActive && g?.isConfigured && g?.term === 'short-term').length;
+  const longTermActive = Array.from(goalSlots.values())
+    .filter(g => g?.isActive && g?.isConfigured && g?.term === 'long-term').length;
+
   if (goalsLoading) {
     return (
       <div className="text-center py-12">
@@ -191,11 +204,13 @@ export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPa
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold mb-1">Goals & Milestones - {clientName}</h2>
-          <p className="text-gray-600">Configure goal tracking system with 7 category slots</p>
+          <p className="text-gray-600">Configure goal tracking system with 8 category slots</p>
         </div>
         <div className="text-right">
           <p className="text-sm text-gray-600">Configured</p>
-          <p className="text-2xl font-bold">{configuredCount}/7</p>
+          <p className="text-lg font-bold">
+            Short: {shortTermConfigured}/8 | Long: {longTermConfigured}/8
+          </p>
         </div>
       </div>
 
@@ -214,49 +229,138 @@ export function GoalsManagementPanel({ clientId, clientName }: GoalsManagementPa
 
         {/* Tab 1: Configure Goals */}
         <TabsContent value="configure">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {GOAL_CATEGORIES.map(category => {
-              const goal = goalSlots.get(category.value);
-              const isConfigured = goal?.isConfigured || false;
-              const isActive = goal?.isActive || false;
+          <Tabs value={configureSubTab} onValueChange={(v) => setConfigureSubTab(v as GoalTerm)}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="short-term">
+                Short-term ({shortTermConfigured} configured)
+              </TabsTrigger>
+              <TabsTrigger value="long-term">
+                Long-term ({longTermConfigured} configured)
+              </TabsTrigger>
+            </TabsList>
 
-              return (
-                <GoalSlotCard
-                  key={category.value}
-                  category={category}
-                  goal={goal}
-                  isConfigured={isConfigured}
-                  isActive={isActive}
-                  onConfigure={() => handleConfigureGoal(category.value)}
-                  onToggleActive={() => handleToggleActive(category.value)}
-                />
-              );
-            })}
-          </div>
+            <TabsContent value="short-term">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {GOAL_CATEGORIES
+                  .filter(category => {
+                    const goal = goalSlots.get(category.value);
+                    // Only show if goal is configured as short-term, or not configured yet
+                    return !goal?.isConfigured || goal?.term === 'short-term';
+                  })
+                  .map(category => {
+                    const goal = goalSlots.get(category.value);
+                    const isConfigured = goal?.isConfigured || false;
+                    const isActive = goal?.isActive || false;
+
+                    return (
+                      <GoalSlotCard
+                        key={category.value}
+                        category={category}
+                        goal={goal || null}
+                        isConfigured={isConfigured}
+                        isActive={isActive}
+                        onConfigure={() => handleConfigureGoal(category.value)}
+                        onToggleActive={() => handleToggleActive(category.value)}
+                      />
+                    );
+                  })}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="long-term">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {GOAL_CATEGORIES
+                  .filter(category => {
+                    const goal = goalSlots.get(category.value);
+                    // Only show if goal is configured as long-term, or not configured yet
+                    return !goal?.isConfigured || goal?.term === 'long-term';
+                  })
+                  .map(category => {
+                    const goal = goalSlots.get(category.value);
+                    const isConfigured = goal?.isConfigured || false;
+                    const isActive = goal?.isActive || false;
+
+                    return (
+                      <GoalSlotCard
+                        key={category.value}
+                        category={category}
+                        goal={goal || null}
+                        isConfigured={isConfigured}
+                        isActive={isActive}
+                        onConfigure={() => handleConfigureGoal(category.value)}
+                        onToggleActive={() => handleToggleActive(category.value)}
+                      />
+                    );
+                  })}
+              </div>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Tab 2: Progress & Tracking */}
         <TabsContent value="progress">
-          {activeGoals.length === 0 ? (
-            <Card className="p-12 text-center">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No Active Goals</h3>
-              <p className="text-gray-500 mb-4">Configure and activate goals in the "Configure Goals" tab to track progress</p>
-              <Button onClick={() => document.querySelector('[value="configure"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
-                Go to Configure Goals
-              </Button>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Showing {activeGoals.length} active goal{activeGoals.length !== 1 ? 's' : ''} with live tracking
-              </p>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {activeGoals.map(goal => goal && (
-                  <GoalProgressCard key={goal.id} goal={goal} />
-                ))}
-              </div>
-            </div>
-          )}
+          <Tabs value={progressSubTab} onValueChange={(v) => setProgressSubTab(v as GoalTerm)}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="short-term">
+                Short-term ({shortTermActive} active)
+              </TabsTrigger>
+              <TabsTrigger value="long-term">
+                Long-term ({longTermActive} active)
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="short-term">
+              {(() => {
+                const filteredGoals = activeGoals.filter(g => g?.term === 'short-term');
+                return filteredGoals.length === 0 ? (
+                  <Card className="p-12 text-center">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Active Short-term Goals</h3>
+                    <p className="text-gray-500 mb-4">Configure and activate short-term goals in the "Configure Goals" tab to track progress</p>
+                    <Button onClick={() => document.querySelector('[value="configure"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
+                      Go to Configure Goals
+                    </Button>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Showing {filteredGoals.length} active short-term goal{filteredGoals.length !== 1 ? 's' : ''} with live tracking
+                    </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {filteredGoals.map(goal => goal && (
+                        <GoalProgressCard key={goal.id} goal={goal} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+
+            <TabsContent value="long-term">
+              {(() => {
+                const filteredGoals = activeGoals.filter(g => g?.term === 'long-term');
+                return filteredGoals.length === 0 ? (
+                  <Card className="p-12 text-center">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Active Long-term Goals</h3>
+                    <p className="text-gray-500 mb-4">Configure and activate long-term goals in the "Configure Goals" tab to track progress</p>
+                    <Button onClick={() => document.querySelector('[value="configure"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))}>
+                      Go to Configure Goals
+                    </Button>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Showing {filteredGoals.length} active long-term goal{filteredGoals.length !== 1 ? 's' : ''} with live tracking
+                    </p>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {filteredGoals.map(goal => goal && (
+                        <GoalProgressCard key={goal.id} goal={goal} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 

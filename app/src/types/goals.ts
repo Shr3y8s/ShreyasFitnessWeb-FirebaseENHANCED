@@ -6,6 +6,7 @@ export type GoalCategory =
   | 'nutrition'
   | 'workout_consistency'
   | 'weight_loss'
+  | 'weight_loss_st'
   | 'strength'
   | 'setup';
 
@@ -79,7 +80,8 @@ export const GOAL_CATEGORIES = [
     icon: '👟',
     description: 'Track daily step goals and activity consistency',
     defaultUnit: 'consecutive days',
-    autoTracked: true
+    autoTracked: true,
+    fixedTerm: undefined as GoalTerm | undefined
   },
   { 
     value: 'water' as GoalCategory, 
@@ -87,7 +89,8 @@ export const GOAL_CATEGORIES = [
     icon: '💧',
     description: 'Monitor daily water intake goals',
     defaultUnit: 'consecutive days',
-    autoTracked: true
+    autoTracked: true,
+    fixedTerm: undefined as GoalTerm | undefined
   },
   { 
     value: 'nutrition' as GoalCategory, 
@@ -95,7 +98,8 @@ export const GOAL_CATEGORIES = [
     icon: '🥗',
     description: 'Track meal plan adherence and consistency',
     defaultUnit: 'days per week',
-    autoTracked: true
+    autoTracked: true,
+    fixedTerm: undefined as GoalTerm | undefined
   },
   { 
     value: 'workout_consistency' as GoalCategory, 
@@ -103,15 +107,26 @@ export const GOAL_CATEGORIES = [
     icon: '💪',
     description: 'Monitor workout completion and frequency',
     defaultUnit: 'consecutive weeks',
-    autoTracked: true
+    autoTracked: true,
+    fixedTerm: undefined as GoalTerm | undefined
   },
   { 
     value: 'weight_loss' as GoalCategory, 
-    label: 'Weight Loss',
+    label: 'Weight Loss (Long-term)',
     icon: '⚖️',
     description: 'Track progress toward target weight',
     defaultUnit: 'lbs',
-    autoTracked: true
+    autoTracked: true,
+    fixedTerm: 'long-term' as GoalTerm
+  },
+  { 
+    value: 'weight_loss_st' as GoalCategory, 
+    label: 'Weight Loss (Short-term)',
+    icon: '🎯',
+    description: 'Track short-term weight loss milestones',
+    defaultUnit: 'lbs',
+    autoTracked: true,
+    fixedTerm: 'short-term' as GoalTerm
   },
   { 
     value: 'strength' as GoalCategory, 
@@ -119,7 +134,8 @@ export const GOAL_CATEGORIES = [
     icon: '🏋️',
     description: 'Track strength progression for specific exercise',
     defaultUnit: 'lbs',
-    autoTracked: false // Manually updated by trainer
+    autoTracked: false, // Manually updated by trainer
+    fixedTerm: undefined as GoalTerm | undefined
   },
   { 
     value: 'setup' as GoalCategory, 
@@ -127,7 +143,8 @@ export const GOAL_CATEGORIES = [
     icon: '📋',
     description: 'Initial setup and onboarding tasks',
     defaultUnit: 'task',
-    autoTracked: false
+    autoTracked: false,
+    fixedTerm: undefined as GoalTerm | undefined
   },
 ] as const;
 

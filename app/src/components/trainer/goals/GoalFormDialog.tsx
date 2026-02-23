@@ -79,6 +79,7 @@ export function GoalFormDialog({
   const [nutritionConfig, setNutritionConfig] = useState({ daysPerWeek: 7, weeks: [2, 3, 4] });
   const [workoutConfig, setWorkoutConfig] = useState({ workoutsPerWeek: 3, weeks: [2, 3, 4] });
   const [weightConfig, setWeightConfig] = useState({ current: 212, target: 180, milestones: [205, 195, 185] });
+  const [weightMilestoneConfig, setWeightMilestoneConfig] = useState({ current: 212, incrementalPounds: [2, 3, 5] });
   const [strengthConfig, setStrengthConfig] = useState({ exerciseId: '', exerciseName: '', current: 185, target: 225, milestones: [200, 215, 225] });
   const [strengthExercises, setStrengthExercises] = useState<Array<{ id: string; name: string }>>([]);
   
@@ -118,6 +119,12 @@ export function GoalFormDialog({
       if (preselectedCategory) {
         setSelectedCategory(preselectedCategory);
         setStep('config');
+        
+        // Auto-set term if category has fixedTerm
+        const categoryMeta = getCategoryMetadata(preselectedCategory);
+        if (categoryMeta.fixedTerm) {
+          setTerm(categoryMeta.fixedTerm);
+        }
       } else if (editingGoal) {
         setSelectedCategory(editingGoal.category);
         setStep('config');
@@ -263,6 +270,41 @@ export function GoalFormDialog({
     };
   };
 
+  const generateWeightMilestoneGoal = () => {
+    // weightMilestoneConfig.incrementalPounds contains incremental pounds to lose
+    const milestones: MilestoneData[] = weightMilestoneConfig.incrementalPounds.map((lbsToLose, idx) => {
+      const targetWeight = weightMilestoneConfig.current - lbsToLose;
+      const isLastMilestone = idx === weightMilestoneConfig.incrementalPounds.length - 1;
+      
+      return {
+        tempId: `m-${idx}`,
+        text: isLastMilestone 
+          ? `Reach the ${lbsToLose}-pound loss milestone`
+          : `Lose the first ${lbsToLose} pounds`,
+        targetValue: targetWeight,
+        autoTracked: true
+      };
+    });
+
+    const totalLossTarget = Math.max(...weightMilestoneConfig.incrementalPounds);
+    const targetWeight = weightMilestoneConfig.current - totalLossTarget;
+
+    return {
+      title: `Lose First ${totalLossTarget} Pounds`,
+      category: 'weight_loss_st' as GoalCategory,
+      term,
+      priority,
+      targetValue: targetWeight,
+      currentValue: weightMilestoneConfig.current,
+      unit: 'lbs',
+      deadline,
+      exerciseId: '',
+      exerciseName: '',
+      lowerIsBetter: true,
+      milestones
+    };
+  };
+
   const generateStrengthGoal = () => {
     const milestones: MilestoneData[] = strengthConfig.milestones.map((weight, idx) => ({
       tempId: `m-${idx}`,
@@ -351,6 +393,9 @@ export function GoalFormDialog({
         break;
       case 'weight_loss':
         goalData = generateWeightGoal();
+        break;
+      case 'weight_loss_st':
+        goalData = generateWeightMilestoneGoal();
         break;
       case 'strength':
         if (!strengthConfig.exerciseId || !strengthConfig.exerciseName) {
@@ -655,7 +700,7 @@ export function GoalFormDialog({
               </div>
             )}
 
-            {/* WEIGHT LOSS GOAL */}
+            {/* WEIGHT LOSS GOAL (Long-term) */}
             {selectedCategory === 'weight_loss' && (
               <div className="space-y-4">
                 <h4 className="font-semibold">Goal Configuration</h4>
@@ -711,6 +756,68 @@ export function GoalFormDialog({
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* WEIGHT LOSS MILESTONE GOAL (Short-term) */}
+            {selectedCategory === 'weight_loss_st' && (
+              <div className="space-y-4">
+                <h4 className="font-semibold">Short-term Weight Loss Milestone</h4>
+                <div className="space-y-2">
+                  <Label htmlFor="current-weight-st">Current Weight *</Label>
+                  <Input
+                    id="current-weight-st"
+                    type="number"
+                    value={weightMilestoneConfig.current}
+                    onChange={(e) => setWeightMilestoneConfig(prev => ({ ...prev, current: parseInt(e.target.value) || 0 }))}
+                    placeholder="212"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Milestone Increments (pounds to lose) *</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {weightMilestoneConfig.incrementalPounds.map((lbsToLose, idx) => (
+                      <Input
+                        key={idx}
+                        type="number"
+                        value={lbsToLose}
+                        onChange={(e) => {
+                          const newIncrements = [...weightMilestoneConfig.incrementalPounds];
+                          newIncrements[idx] = parseInt(e.target.value) || 0;
+                          setWeightMilestoneConfig(prev => ({ ...prev, incrementalPounds: newIncrements }));
+                        }}
+                        placeholder={idx === 0 ? "2" : idx === 1 ? "3" : "5"}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">Enter 3 incremental pounds to lose (e.g., 2, 3, 5 lbs)</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <Label className="text-sm font-semibold mb-2 block">Generated Milestones:</Label>
+                  <div className="space-y-1">
+                    {weightMilestoneConfig.incrementalPounds.map((lbsToLose, idx) => {
+                      const targetWeight = weightMilestoneConfig.current - lbsToLose;
+                      const isLastMilestone = idx === weightMilestoneConfig.incrementalPounds.length - 1;
+                      return (
+                        <div key={idx} className="text-sm flex items-start gap-2">
+                          <Check className="h-4 w-4 text-green-600 mt-0.5" />
+                          <span>
+                            {isLastMilestone 
+                              ? `Reach the ${lbsToLose}-pound loss milestone (to ${targetWeight} lbs)`
+                              : `Lose the first ${lbsToLose} pounds (to ${targetWeight} lbs)`
+                            }
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Goal: Lose {Math.max(...weightMilestoneConfig.incrementalPounds)} lbs total 
+                    (from {weightMilestoneConfig.current} to {weightMilestoneConfig.current - Math.max(...weightMilestoneConfig.incrementalPounds)} lbs)
+                  </p>
                 </div>
               </div>
             )}
@@ -844,16 +951,34 @@ export function GoalFormDialog({
             <div className="grid grid-cols-2 gap-4 pt-4 border-t">
               <div className="space-y-2">
                 <Label>Term *</Label>
-                <RadioGroup value={term} onValueChange={(value: GoalTerm) => setTerm(value)}>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="short-term" id="term-short" />
-                    <Label htmlFor="term-short" className="font-normal cursor-pointer">Short-term</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="long-term" id="term-long" />
-                    <Label htmlFor="term-long" className="font-normal cursor-pointer">Long-term</Label>
-                  </div>
-                </RadioGroup>
+                {(() => {
+                  const categoryMeta = getCategoryMetadata(selectedCategory);
+                  const isTermLocked = categoryMeta.fixedTerm !== undefined;
+                  
+                  return (
+                    <>
+                      <RadioGroup 
+                        value={term} 
+                        onValueChange={(value: GoalTerm) => setTerm(value)}
+                        disabled={isTermLocked}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="short-term" id="term-short" disabled={isTermLocked} />
+                          <Label htmlFor="term-short" className={`font-normal ${isTermLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>Short-term</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="long-term" id="term-long" disabled={isTermLocked} />
+                          <Label htmlFor="term-long" className={`font-normal ${isTermLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>Long-term</Label>
+                        </div>
+                      </RadioGroup>
+                      {isTermLocked && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          🔒 This category is designed for {categoryMeta.fixedTerm} goals
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="space-y-2">
