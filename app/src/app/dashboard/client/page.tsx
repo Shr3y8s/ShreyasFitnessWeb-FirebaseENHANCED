@@ -544,17 +544,12 @@ export default function ClientDashboardPage() {
                   <OnboardingChecklist />
                 </InteractiveCard>
               ) : (
-                <div className="space-y-6">
-                  <InteractiveCard>
-                    <CoachNotes
-                      coachName={coachNote.coachName}
-                      message={coachNote.message}
-                    />
-                  </InteractiveCard>
-                  <InteractiveCard>
-                    <PrimaryObjectives />
-                  </InteractiveCard>
-                </div>
+                <InteractiveCard>
+                  <CoachNotes
+                    coachName={coachNote.coachName}
+                    message={coachNote.message}
+                  />
+                </InteractiveCard>
               )}
             </div>
 
