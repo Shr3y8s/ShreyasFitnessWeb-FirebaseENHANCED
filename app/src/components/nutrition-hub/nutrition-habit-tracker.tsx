@@ -55,9 +55,10 @@ const iconColorMap: Record<string, string> = {
 
 interface NutritionHabitTrackerProps {
   selectedDate: string; // YYYY-MM-DD format
+  compact?: boolean; // When true, shows only the habits list (no streak/weekly sidebar)
 }
 
-export function NutritionHabitTracker({ selectedDate }: NutritionHabitTrackerProps) {
+export function NutritionHabitTracker({ selectedDate, compact = false }: NutritionHabitTrackerProps) {
   const [habits, setHabits] = useState<NutritionHabit[]>([]);
   const [todayCompletions, setTodayCompletions] = useState<HabitCompletions>({});
   const [weeklyData, setWeeklyData] = useState<DailyCompletion[]>([]);
@@ -264,6 +265,89 @@ export function NutritionHabitTracker({ selectedDate }: NutritionHabitTrackerPro
   const completedToday = habits.filter(h => todayCompletions[h.id] === true).length;
   const progressPercent = habits.length > 0 ? (completedToday / habits.length) * 100 : 0;
   const weeklyProgress = getWeeklyProgress();
+
+  // Compact mode: only the habits card
+  if (compact) {
+    return (
+      <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 bg-primary/5">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Daily Habits
+              </CardTitle>
+              <CardDescription>
+                {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </CardDescription>
+            </div>
+            {completedToday === habits.length && habits.length > 0 && (
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                All Complete! 🎉
+              </Badge>
+            )}
+          </div>
+          <div className="pt-4">
+            <Progress value={progressPercent} className="h-2" />
+            <p className="text-right text-xs text-muted-foreground mt-1">
+              {completedToday} of {habits.length} completed
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {habits.map((habit) => {
+            const isCompleted = todayCompletions[habit.id] === true;
+            return (
+              <div
+                key={habit.id}
+                className={cn(
+                  "flex items-start gap-3 p-4 rounded-lg border transition-all duration-300",
+                  isCompleted
+                    ? "bg-background/50 border-muted opacity-75"
+                    : "bg-secondary/50 border-secondary hover:bg-secondary hover:shadow-sm"
+                )}
+              >
+                <Checkbox
+                  id={`compact-${habit.id}`}
+                  checked={isCompleted}
+                  onCheckedChange={(checked) => handleHabitToggle(habit.id, !!checked)}
+                  className="mt-0.5 transition-transform duration-200 data-[state=checked]:scale-110"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <HabitIcon
+                      iconName={habit.icon}
+                      className={`h-4 w-4 ${iconColorMap[habit.category] || 'text-gray-500'}`}
+                    />
+                    <label
+                      htmlFor={`compact-${habit.id}`}
+                      className={cn(
+                        "font-semibold text-sm cursor-pointer transition-all duration-300",
+                        isCompleted && "line-through text-muted-foreground"
+                      )}
+                    >
+                      {habit.title}
+                    </label>
+                  </div>
+                  <p className={cn(
+                    "text-xs text-muted-foreground",
+                    isCompleted && "line-through"
+                  )}>
+                    {habit.description}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          <div className="pt-2">
+            <a href="/dashboard/client/nutrition" className="text-sm text-primary hover:underline flex items-center gap-1 justify-end">
+              View Nutrition Hub →
+            </a>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

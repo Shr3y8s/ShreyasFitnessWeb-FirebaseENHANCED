@@ -574,17 +574,9 @@ export default function ClientDashboardPage() {
                 <InteractiveCard>
                   <ProgressCharts />
                 </InteractiveCard>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <InteractiveCard>
-                    <PersonalRecords />
-                  </InteractiveCard>
-                  <InteractiveCard>
-                    <NutritionSummary
-                      onLogMeal={handleLogMeal}
-                      onAddWater={handleAddWater}
-                    />
-                  </InteractiveCard>
-                </div>
+                <InteractiveCard>
+                  <NutritionSummary />
+                </InteractiveCard>
               </div>
 
               {/* Right Column - Sidebar */}
@@ -610,6 +602,9 @@ export default function ClientDashboardPage() {
                     completedHabits={activityData?.habits || []}
                     onToggle={handleToggleHabit}
                   />
+                </InteractiveCard>
+                <InteractiveCard>
+                  <PersonalRecords />
                 </InteractiveCard>
               </div>
             </div>

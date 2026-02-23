@@ -32,9 +32,10 @@ interface CheckedMeals {
 interface TodayMealPlanProps {
   weeklyMealPlan: DayMealPlan[];
   selectedDate: string;
+  compact?: boolean; // When true, hides coach notes footer (for dashboard)
 }
 
-export function TodayMealPlan({ weeklyMealPlan, selectedDate }: TodayMealPlanProps) {
+export function TodayMealPlan({ weeklyMealPlan, selectedDate, compact = false }: TodayMealPlanProps) {
   const [checkedMeals, setCheckedMeals] = useState<CheckedMeals>({});
   const [currentDay, setCurrentDay] = useState<string>('');
   const [todayDate, setTodayDate] = useState<string>('');
@@ -255,28 +256,36 @@ export function TodayMealPlan({ weeklyMealPlan, selectedDate }: TodayMealPlanPro
           })}
         </div>
       </CardContent>
-      <CardFooter className="bg-secondary/50 p-4 border-t mt-auto">
-        <div className="w-full space-y-3">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Utensils className="h-4 w-4" />
-            Notes for your coach
-          </h4>
-          <Textarea 
-            placeholder="e.g., 'Can I swap the chicken for fish in this meal?'" 
-            value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
-            disabled={sending}
-          />
-          <Button 
-            className="w-full"
-            onClick={handleSendNote}
-            disabled={!noteContent.trim() || sending}
-          >
-            <Send className="mr-2 h-4 w-4" />
-            {sending ? 'Sending...' : 'Send Note to Coach'}
-          </Button>
-        </div>
-      </CardFooter>
+      {compact ? (
+        <CardFooter className="bg-secondary/50 p-4 border-t mt-auto">
+          <a href="/dashboard/client/nutrition" className="text-sm text-primary hover:underline flex items-center gap-1 ml-auto">
+            View Full Plan →
+          </a>
+        </CardFooter>
+      ) : (
+        <CardFooter className="bg-secondary/50 p-4 border-t mt-auto">
+          <div className="w-full space-y-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Utensils className="h-4 w-4" />
+              Notes for your coach
+            </h4>
+            <Textarea 
+              placeholder="e.g., 'Can I swap the chicken for fish in this meal?'" 
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              disabled={sending}
+            />
+            <Button 
+              className="w-full"
+              onClick={handleSendNote}
+              disabled={!noteContent.trim() || sending}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {sending ? 'Sending...' : 'Send Note to Coach'}
+            </Button>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }
