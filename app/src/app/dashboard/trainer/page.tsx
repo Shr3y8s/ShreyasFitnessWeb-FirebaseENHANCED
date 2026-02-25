@@ -11,6 +11,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { AdminOnlySection } from '@/components/dashboard/AdminOnlySection';
 import UpcomingSessionsCard from '@/components/trainer/UpcomingSessionsCard';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   Users,
   Dumbbell,
@@ -491,24 +492,36 @@ export default function TrainerDashboardPage() {
                 </Link>
               </div>
               <div className="space-y-4">
-                {clients.slice(0, 5).map((client) => (
-                  <div key={client.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                      {client.name.charAt(0)}
+                {(() => {
+                  const activeClients = clients
+                    .filter(client => client.lastWorkout) // Only clients with completed workouts
+                    .sort((a, b) => (b.lastWorkout?.getTime() || 0) - (a.lastWorkout?.getTime() || 0)) // Sort by most recent
+                    .slice(0, 5); // Show top 5
+
+                  if (activeClients.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-500">
+                        <CheckCircle2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>No recent workout activity</p>
+                      </div>
+                    );
+                  }
+
+                  return activeClients.map((client) => (
+                    <div key={client.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
+                        {client.name.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium">{client.name}</p>
+                        <p className="text-sm text-gray-600">
+                          Completed workout {formatDistanceToNow(client.lastWorkout!, { addSuffix: true })}
+                        </p>
+                      </div>
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{client.name}</p>
-                      <p className="text-sm text-gray-600">Completed workout 2 hours ago</p>
-                    </div>
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  </div>
-                ))}
-                {clients.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>No clients yet</p>
-                  </div>
-                )}
+                  ));
+                })()}
               </div>
             </div>
 
