@@ -530,12 +530,12 @@ exports.onWeightLog = onDocumentWritten({
         weight: latestWeight
       });
       
-      // Query weight loss goals
+      // Query weight loss goals (both long-term and short-term)
       const goalsSnapshot = await db.collection('goals')
         .where('clientId', '==', clientId)
         .where('isActive', '==', true)
         .where('isConfigured', '==', true)
-        .where('category', '==', 'weight_loss')
+        .where('category', 'in', ['weight_loss', 'weight_loss_st'])
         .get();
       
       if (goalsSnapshot.empty) return null;
