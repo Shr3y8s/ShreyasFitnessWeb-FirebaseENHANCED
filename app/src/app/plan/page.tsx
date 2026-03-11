@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -16,11 +16,16 @@ import { NutritionProtocol } from '@/components/plan/nutrition-protocol';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
 import { CardioProtocol } from '@/components/plan/cardio-protocol';
 import { getCurrentWeekISO } from '@/lib/week-utils';
+import { getClientPlan } from '@/lib/plan-api';
+import { NutritionHabit, HealthyHabitsPreset } from '@/types/plan';
 
 export default function MyPlanPage() {
   const router = useRouter();
   const { userData, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [nutritionHabits, setNutritionHabits] = useState<NutritionHabit[]>([]);
+  const [nutritionPreset, setNutritionPreset] = useState<HealthyHabitsPreset>(null);
+  const [nutritionApproach, setNutritionApproach] = useState<string>('healthy_habits');
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -42,6 +47,24 @@ export default function MyPlanPage() {
 
     setLoading(false);
   }, [userData, authLoading, router]);
+
+  // Fetch nutrition protocol data from Firestore
+  useEffect(() => {
+    if (!userData?.uid) return;
+    getClientPlan(userData.uid).then((plan) => {
+      if (plan?.nutritionProtocol) {
+        const np = plan.nutritionProtocol;
+        setNutritionApproach(np.approach || 'healthy_habits');
+        if (np.healthyHabits?.habits) {
+          setNutritionHabits(np.healthyHabits.habits);
+        }
+        const preset = (np.healthyHabits as { habits: NutritionHabit[]; preset?: HealthyHabitsPreset })?.preset;
+        if (preset) {
+          setNutritionPreset(preset);
+        }
+      }
+    }).catch((err) => console.error('Failed to load plan:', err));
+  }, [userData?.uid]);
 
   const handleLogout = async () => {
     try {
@@ -125,7 +148,11 @@ export default function MyPlanPage() {
                 <TrainingProtocol />
 
                 {/* Nutrition Protocol Card */}
-                <NutritionProtocol />
+                <NutritionProtocol
+                  habits={nutritionHabits}
+                  preset={nutritionPreset}
+                  approach={nutritionApproach}
+                />
               </div>
 
               {/* Right Column: Current Plan, Vision, Focus, Step Goal & Cardio (1/3 width) */}

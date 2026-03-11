@@ -282,8 +282,11 @@ export const HABIT_CATEGORY_INFO = {
   quality: { label: 'Food Quality', color: 'bg-emerald-500', icon: 'Leaf' }
 };
 
+export type HealthyHabitsPreset = 'cut_food_in_half' | null;
+
 export interface HealthyHabitsData {
   habits: NutritionHabit[];
+  preset?: HealthyHabitsPreset;
 }
 
 export interface MacroTrackingData {

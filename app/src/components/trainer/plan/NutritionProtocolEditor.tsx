@@ -8,9 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
+import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy, Calculator, ChevronDown, ChevronUp, Scissors, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { updateNutritionProtocol } from '@/lib/plan-api';
-import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO } from '@/types/plan';
+import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO, HealthyHabitsPreset } from '@/types/plan';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -52,8 +52,19 @@ const DIET_PRESETS = [
   { id: 'zone', name: 'Zone Diet', carbs: 40, protein: 30, fat: 30, description: 'Anti-inflammatory balance' },
 ] as const;
 
+// Cut Food in Half preset habits — only 1 pre-filled habit; coach can add more manually
+const CUT_FOOD_IN_HALF_HABITS: NutritionHabit[] = [
+  {
+    id: 'cfih-1',
+    title: '✂️ Cut Every Portion in Half',
+    description: 'Whatever you would normally serve yourself \u2014 cut it in half. No weighing, no apps, no math. Just take half of what you\u2019d normally put on your plate.',
+    icon: 'CircleDot',
+    category: 'meals'
+  }
+];
+
 // Icon mapper for dynamic icon rendering
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Utensils,
   Drumstick,
   Salad,
@@ -105,7 +116,7 @@ function SortableHabitItem({
           {...listeners}
           className="cursor-grab active:cursor-grabbing mt-2"
         >
-          <GripVertical className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          <GripVertical className="h-5 w-5 text-muted-foreground shrink-0" />
         </div>
         <div className="flex-1 space-y-2">
           <Input
@@ -125,7 +136,7 @@ function SortableHabitItem({
           variant="ghost"
           size="icon"
           onClick={() => onRemove(habit.id)}
-          className="text-destructive hover:text-destructive flex-shrink-0"
+          className="text-destructive hover:text-destructive shrink-0"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -134,14 +145,31 @@ function SortableHabitItem({
   );
 }
 
+interface MacroTrackingData {
+  calories?: string;
+  protein?: string;
+  proteinPercentage?: string;
+  carbs?: string;
+  carbsPercentage?: string;
+  fats?: string;
+  fatsPercentage?: string;
+  timing?: string[];
+  guidelines?: string[];
+}
+
+interface MealPlanDay {
+  day: string;
+  meals: { name: string; items: string[] }[];
+}
+
 interface NutritionProtocolEditorProps {
   clientId: string;
   trainerId: string;
   currentApproach?: NutritionApproach;
   currentData?: {
     healthyHabits?: { habits: NutritionHabit[] };
-    macroTracking?: any;
-    mealPlan?: any;
+    macroTracking?: MacroTrackingData;
+    mealPlan?: { weeklyPlan?: MealPlanDay[] };
   };
   onUpdate: () => void;
 }
@@ -159,11 +187,17 @@ export function NutritionProtocolEditor({
   
   // Ref to prevent useEffect from overwriting calculator-applied values
   const isApplyingCalculator = useRef(false);
+  // Ref to prevent useEffect from overwriting manually applied/cleared preset
+  const isManuallyEditingHabits = useRef(false);
   
   // Healthy Habits state
   const [habits, setHabits] = useState<NutritionHabit[]>(
     currentData?.healthyHabits?.habits || []
   );
+  const [activePreset, setActivePreset] = useState<HealthyHabitsPreset>(
+    (currentData?.healthyHabits as { habits: NutritionHabit[]; preset?: HealthyHabitsPreset })?.preset ?? null
+  );
+  const [showPresetConfirm, setShowPresetConfirm] = useState(false);
   const [newHabitTitle, setNewHabitTitle] = useState('');
   const [newHabitDescription, setNewHabitDescription] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
@@ -212,8 +246,8 @@ export function NutritionProtocolEditor({
 
     // Load existing data if available
     if (currentData?.mealPlan?.weeklyPlan) {
-      currentData.mealPlan.weeklyPlan.forEach((dayPlan: any) => {
-        dayPlan.meals.forEach((meal: any) => {
+      currentData.mealPlan.weeklyPlan.forEach((dayPlan: MealPlanDay) => {
+        dayPlan.meals.forEach((meal: { name: string; items: string[] }) => {
           if (grid[meal.name]) {
             grid[meal.name][dayPlan.day] = meal.items.join('\n');
           }
@@ -240,6 +274,10 @@ export function NutritionProtocolEditor({
     if (isApplyingCalculator.current) {
       return;
     }
+    // Skip syncing habits if the coach has manually applied/cleared preset
+    if (isManuallyEditingHabits.current) {
+      return;
+    }
     
     if (currentApproach) {
       setActiveTab(currentApproach);
@@ -261,6 +299,7 @@ export function NutritionProtocolEditor({
     if (currentData?.mealPlan?.weeklyPlan) {
       setMealGrid(initializeMealGrid());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentApproach, currentData]);
 
   const handleAddHabit = () => {
@@ -368,6 +407,30 @@ export function NutritionProtocolEditor({
     setMacroGuidelines(macroGuidelines.filter((_, i) => i !== index));
   };
 
+  // Apply "Cut Food in Half" preset
+  const applyPreset = (preset: 'cut_food_in_half') => {
+    // Lock out useEffect from overwriting our manual preset state
+    isManuallyEditingHabits.current = true;
+    setHabits(CUT_FOOD_IN_HALF_HABITS);
+    setActivePreset(preset);
+    setShowPresetConfirm(false);
+    toast({
+      title: '✂️ Preset Applied',
+      description: 'Cut Food in Half habits have been loaded. Remember to save!',
+    });
+  };
+
+  const clearPreset = () => {
+    // Lock out useEffect from overwriting our manual preset state
+    isManuallyEditingHabits.current = true;
+    setActivePreset(null);
+    setHabits([]);
+    toast({
+      title: 'Preset Cleared',
+      description: 'Preset removed. You can now build custom habits.',
+    });
+  };
+
   // Macro Calculator functions
   const calculateMacros = () => {
     const calories = parseFloat(calcCalories);
@@ -444,13 +507,18 @@ export function NutritionProtocolEditor({
     try {
       setSaving(true);
       
-      const nutritionData: any = {
+      const nutritionData: {
+        approach: NutritionApproach;
+        healthyHabits?: { habits: NutritionHabit[]; preset?: string };
+        macroTracking?: MacroTrackingData & { proteinPercentage?: string; carbsPercentage?: string; fatsPercentage?: string };
+        mealPlan?: { weeklyPlan: MealPlanDay[] };
+      } = {
         approach: activeTab
       };
 
       // Save configuration based on active tab
       if (activeTab === 'healthy_habits') {
-        nutritionData.healthyHabits = { habits };
+        nutritionData.healthyHabits = { habits, preset: activePreset ?? undefined };
       } else if (activeTab === 'macro_tracking') {
         // Validate macro tracking fields
         if (!macroCalories || !macroProtein || !macroCarbs || !macroFats) {
@@ -531,7 +599,7 @@ export function NutritionProtocolEditor({
           Nutrition Protocol
         </CardTitle>
         <CardDescription>
-          Configure your client's nutrition approach. Switch tabs to change the approach and configure its details.
+          Configure your client&apos;s nutrition approach. Switch tabs to change the approach and configure its details.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -557,6 +625,115 @@ export function NutritionProtocolEditor({
               <p className="text-sm text-blue-800">
                 <strong>💡 Beginner-Friendly:</strong> Create a list of daily nutrition habits 
                 for your client to follow. These will appear in their plan.
+              </p>
+            </div>
+
+            {/* Quick Start Preset Section */}
+            <div className="border-2 border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Scissors className="h-5 w-5 text-orange-600" />
+                  <h4 className="font-bold text-orange-900">Quick Start Preset</h4>
+                  <Badge className="bg-orange-600 text-white text-xs">New Client</Badge>
+                </div>
+                {activePreset === 'cut_food_in_half' && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <span className="text-xs font-semibold text-green-700">Preset Active</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cut Food in Half Preset Card */}
+              <div className={`rounded-lg border-2 p-4 transition-all ${activePreset === 'cut_food_in_half' ? 'border-orange-400 bg-orange-100' : 'border-orange-200 bg-white hover:border-orange-300'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">✂️</span>
+                      <p className="font-bold text-orange-900">Cut Food in Half</p>
+                      {activePreset === 'cut_food_in_half' && (
+                        <Badge variant="outline" className="text-xs border-green-500 text-green-700">Active</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-orange-800 leading-relaxed">
+                      <strong>Best for complete beginners.</strong> Client eats whatever they normally eat — just cuts every portion in half. No tracking, no meal plans, no counting calories. Immediate results that build trust and momentum while the client naturally learns portion awareness.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge variant="secondary" className="text-xs">No Tracking</Badge>
+                      <Badge variant="secondary" className="text-xs">No Meal Plans</Badge>
+                      <Badge variant="secondary" className="text-xs">Immediate Results</Badge>
+                      <Badge variant="secondary" className="text-xs">Sustainable</Badge>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 shrink-0">
+                    {activePreset === 'cut_food_in_half' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearPreset}
+                        className="border-red-300 text-red-600 hover:bg-red-50 whitespace-nowrap"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Clear
+                      </Button>
+                    ) : (
+                      <>
+                        {habits.length > 0 ? (
+                          <Button
+                            size="sm"
+                            onClick={() => setShowPresetConfirm(true)}
+                            className="bg-orange-600 hover:bg-orange-700 text-white whitespace-nowrap"
+                          >
+                            <Scissors className="h-3 w-3 mr-1" />
+                            Apply Preset
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => applyPreset('cut_food_in_half')}
+                            className="bg-orange-600 hover:bg-orange-700 text-white whitespace-nowrap"
+                          >
+                            <Scissors className="h-3 w-3 mr-1" />
+                            Apply Preset
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation prompt when habits already exist */}
+              {showPresetConfirm && (
+                <div className="border-2 border-amber-300 bg-amber-50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <p className="text-sm font-semibold text-amber-800">Replace existing habits?</p>
+                  </div>
+                  <p className="text-xs text-amber-700">
+                    This will replace the {habits.length} existing habit{habits.length !== 1 ? 's' : ''} with the &ldquo;Cut Food in Half&rdquo; preset habits. This cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => applyPreset('cut_food_in_half')}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      Yes, Replace
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowPresetConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-orange-700">
+                Applying this preset loads 1 habit card below (the core rule). You can add more habits manually after applying.
               </p>
             </div>
 
@@ -646,7 +823,7 @@ export function NutritionProtocolEditor({
                               <div className="flex items-start gap-3">
                                 <HabitIcon 
                                   iconName={template.icon} 
-                                  className={`h-5 w-5 mt-0.5 flex-shrink-0 ${iconColorMap[category]}`}
+                                  className={`h-5 w-5 mt-0.5 shrink-0 ${iconColorMap[category]}`}
                                 />
                                 <div>
                                   <p className="font-medium">{template.title}</p>
@@ -669,12 +846,12 @@ export function NutritionProtocolEditor({
               <Input
                 value={newHabitTitle}
                 onChange={(e) => setNewHabitTitle(e.target.value)}
-                placeholder="Habit title (e.g., 'Drink Water Before Meals')"
+                placeholder="Habit title (e.g., &apos;Drink Water Before Meals&apos;)"
               />
               <Textarea
                 value={newHabitDescription}
                 onChange={(e) => setNewHabitDescription(e.target.value)}
-                placeholder="Habit description (e.g., 'Drink 16oz of water 10-15 minutes before each meal...')"
+                placeholder="Habit description (e.g., &apos;Drink 16oz of water 10-15 minutes before each meal...&apos;)"
                 rows={3}
               />
               <Button
@@ -909,7 +1086,7 @@ export function NutritionProtocolEditor({
                 </div>
                 {macroTiming.length === 0 ? (
                   <div className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
-                    No timing guidelines yet. Click "Add Guideline" to create one.
+                    No timing guidelines yet. Click &ldquo;Add Guideline&rdquo; to create one.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -927,7 +1104,7 @@ export function NutritionProtocolEditor({
                           variant="ghost"
                           size="icon"
                           onClick={() => removeTimingGuideline(index)}
-                          className="flex-shrink-0"
+                          className="shrink-0"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -952,7 +1129,7 @@ export function NutritionProtocolEditor({
                 </div>
                 {macroGuidelines.length === 0 ? (
                   <div className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
-                    No general guidelines yet. Click "Add Guideline" to create one.
+                    No general guidelines yet. Click &ldquo;Add Guideline&rdquo; to create one.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -970,7 +1147,7 @@ export function NutritionProtocolEditor({
                           variant="ghost"
                           size="icon"
                           onClick={() => removeGeneralGuideline(index)}
-                          className="flex-shrink-0"
+                          className="shrink-0"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -996,7 +1173,7 @@ export function NutritionProtocolEditor({
                   <TableRow>
                     <TableHead className="w-32 font-semibold">Meal Type</TableHead>
                     {DAYS_SHORT.map(day => (
-                      <TableHead key={day} className="text-center font-semibold min-w-[140px]">
+                      <TableHead key={day} className="text-center font-semibold min-w-35">
                         {day}
                       </TableHead>
                     ))}
@@ -1015,7 +1192,7 @@ export function NutritionProtocolEditor({
                             value={mealGrid[mealType][day]}
                             onChange={(e) => updateMealCell(mealType, day, e.target.value)}
                             placeholder="Enter foods&#10;(one per line)"
-                            className="min-h-[100px] text-sm resize-none"
+                            className="min-h-25 text-sm resize-none"
                             rows={4}
                           />
                         </TableCell>
@@ -1039,7 +1216,7 @@ export function NutritionProtocolEditor({
             </div>
 
             <div className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg">
-              <p><strong>💡 Tip:</strong> Fill in Monday's meals, then use the "Copy" button to replicate across the week. Modify individual days as needed.</p>
+              <p><strong>💡 Tip:</strong> Fill in Monday&apos;s meals, then use the &ldquo;Copy&rdquo; button to replicate across the week. Modify individual days as needed.</p>
             </div>
           </TabsContent>
         </Tabs>

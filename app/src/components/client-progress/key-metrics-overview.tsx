@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getActivityLogsForDateRange, getRecentWeightLogs } from '@/lib/activity-api';
-import { getTodayLocal, getDaysAgo, formatDateISO } from '@/lib/date-utils';
+import { getTodayLocal, formatDateISO } from '@/lib/date-utils';
 import type { DailyActivityData } from '@/types/activity';
 import {
   Card,
@@ -13,7 +13,7 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card';
-import { TrendingUp, ArrowDown, Flame, Info, ArrowUp, Footprints, Pencil, Smartphone, Target, Dumbbell, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { TrendingUp, ArrowDown, Flame, Info, ArrowUp, Footprints, Target, Dumbbell, ChevronDown, ChevronUp } from 'lucide-react';
 import { FaWeight } from 'react-icons/fa';
 import {
   Tooltip,
@@ -234,7 +234,7 @@ const HabitConsistencyCard = ({ index, score, loading }: { index?: number, score
 };
 
 
-const MetricCard = ({ metric, onEdit, className, index }: { metric: Metric, onEdit: (metric: Metric) => void, className?: string, index?: number }) => {
+const MetricCard = ({ metric, className, index }: { metric: Metric, onEdit?: (metric: Metric) => void, className?: string, index?: number }) => {
     const TrendIcon = metric.trend === 'up' ? ArrowUp : ArrowDown;
     const isWeightCard = metric.id === 'weight';
     const isStrengthCard = metric.id === 'strength-gain';
@@ -335,7 +335,6 @@ export function KeyMetricsOverview() {
     const [newValue, setNewValue] = useState('');
     const [loading, setLoading] = useState(true);
     const [habitScore, setHabitScore] = useState(88); // Default mock value
-    const [weightLoading, setWeightLoading] = useState(true);
     
     // Smart collapsible state management
     const [isInfoExpanded, setIsInfoExpanded] = useState(() => {
@@ -367,7 +366,7 @@ export function KeyMetricsOverview() {
     // Load weight data
     useEffect(() => {
         if (!user) {
-            setWeightLoading(false);
+            
             return;
         }
 
@@ -376,7 +375,7 @@ export function KeyMetricsOverview() {
                 const weights = await getRecentWeightLogs(user.uid, 100);
                 
                 if (weights.length === 0) {
-                    setWeightLoading(false);
+                    
                     return;
                 }
 
@@ -422,10 +421,10 @@ export function KeyMetricsOverview() {
                     })
                 );
                 
-                setWeightLoading(false);
+                
             } catch (error) {
                 console.error('Error loading weight data:', error);
-                setWeightLoading(false);
+                
             }
         };
 

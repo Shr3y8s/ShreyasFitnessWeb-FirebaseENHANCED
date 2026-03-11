@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Flame, Calendar, TrendingUp, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot } from "lucide-react";
+import { Flame, Calendar, TrendingUp, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Scissors, Shield, ChevronDown, ChevronUp, Refrigerator, Share2, Trash2 } from "lucide-react";
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 interface NutritionHabit {
@@ -29,7 +29,7 @@ interface DailyCompletion {
 }
 
 // Icon mapper
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Drumstick,
   Salad,
   Droplet,
@@ -60,6 +60,8 @@ interface NutritionHabitTrackerProps {
 
 export function NutritionHabitTracker({ selectedDate, compact = false }: NutritionHabitTrackerProps) {
   const [habits, setHabits] = useState<NutritionHabit[]>([]);
+  const [preset, setPreset] = useState<string | null>(null);
+  const [showExplainer, setShowExplainer] = useState(true);
   const [todayCompletions, setTodayCompletions] = useState<HabitCompletions>({});
   const [weeklyData, setWeeklyData] = useState<DailyCompletion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,9 @@ export function NutritionHabitTracker({ selectedDate, compact = false }: Nutriti
         if (planSnap.exists()) {
           const data = planSnap.data();
           const assignedHabits = data.nutritionProtocol?.healthyHabits?.habits || [];
+          const assignedPreset = data.nutritionProtocol?.healthyHabits?.preset || null;
           setHabits(assignedHabits);
+          setPreset(assignedPreset);
         }
       } catch (error) {
         console.error('Error loading habits:', error);
@@ -147,6 +151,7 @@ export function NutritionHabitTracker({ selectedDate, compact = false }: Nutriti
     };
 
     loadCompletions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, habits, selectedDate]);
 
   const calculateStreak = (weekData: DailyCompletion[]) => {
@@ -207,7 +212,7 @@ export function NutritionHabitTracker({ selectedDate, compact = false }: Nutriti
   const getWeeklyProgress = () => {
     if (habits.length === 0) return 0;
     
-    let totalPossible = habits.length * weeklyData.length;
+    const totalPossible = habits.length * weeklyData.length;
     let totalCompleted = 0;
 
     weeklyData.forEach(day => {
@@ -349,9 +354,289 @@ export function NutritionHabitTracker({ selectedDate, compact = false }: Nutriti
     );
   }
 
+  // Habit checkboxes (shared between layouts)
+  const habitCheckboxes = (
+    <div className="space-y-2">
+      {completedToday === habits.length && (
+        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 w-full justify-center py-1.5 mb-2">
+          All Complete! 🎉
+        </Badge>
+      )}
+      <Progress value={progressPercent} className="h-2 mb-1" />
+      <p className="text-right text-xs text-muted-foreground mb-3">
+        {completedToday} of {habits.length} completed
+      </p>
+      {habits.map((habit) => {
+        const isCompleted = todayCompletions[habit.id] === true;
+        return (
+          <div
+            key={habit.id}
+            className={cn(
+              "flex items-start gap-3 p-3 rounded-lg border transition-all duration-300",
+              isCompleted
+                ? "bg-background/50 border-muted opacity-75"
+                : "bg-secondary/50 border-secondary hover:bg-secondary hover:shadow-sm"
+            )}
+          >
+            <Checkbox
+              id={`main-${habit.id}`}
+              checked={isCompleted}
+              onCheckedChange={(checked) => handleHabitToggle(habit.id, !!checked)}
+              className="mt-0.5 transition-transform duration-200 data-[state=checked]:scale-110"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <HabitIcon
+                  iconName={habit.icon}
+                  className={`h-4 w-4 ${iconColorMap[habit.category] || 'text-gray-500'}`}
+                />
+                <label
+                  htmlFor={`main-${habit.id}`}
+                  className={cn(
+                    "font-semibold text-sm cursor-pointer transition-all duration-300",
+                    isCompleted && "line-through text-muted-foreground"
+                  )}
+                >
+                  {habit.title}
+                </label>
+              </div>
+              <p className={cn(
+                "text-xs text-muted-foreground",
+                isCompleted && "line-through"
+              )}>
+                {habit.description}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // Stats sidebar content (streak + weekly)
+  const statsSidebar = (
+    <>
+      {/* Streak Card */}
+      <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-500" />
+            Current Streak
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center">
+            <div className="text-4xl font-bold text-orange-500">
+              {streak} {streak === 1 ? 'day' : 'days'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {streak > 0 ? 'Keep it going!' : 'Start your streak today!'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Weekly Progress */}
+      <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            This Week
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Completion Rate</span>
+              <span className="font-bold">{weeklyProgress}%</span>
+            </div>
+            <Progress value={weeklyProgress} className="h-2" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Last 7 Days</p>
+            <div className="grid grid-cols-7 gap-1">
+              {weeklyData.map((day) => {
+                const allCompleted = habits.every(h => day.completions[h.id] === true);
+                return (
+                  <div key={day.date} className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">
+                      {getDayLabel(day.date)}
+                    </div>
+                    <div
+                      className={cn(
+                        "h-10 rounded flex items-center justify-center text-xs font-medium",
+                        day.date === selectedDate && "ring-2 ring-primary ring-offset-1",
+                        allCompleted ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {allCompleted ? '✓' : '-'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  );
+
+  // ── PRESET LAYOUT: explainer left, checkboxes in sidebar ──
+  if (preset === 'cut_food_in_half') {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Explainer only */}
+        <div className="lg:col-span-2">
+          <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 bg-primary/5">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-6 w-6 text-primary" />
+                    {isToday ? "Today's Habits" : "Daily Habits"}
+                  </CardTitle>
+                  <CardDescription>
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Toggle bar */}
+              <div className="rounded-xl border-2 border-primary/40 overflow-hidden">
+                <button
+                  onClick={() => setShowExplainer(!showExplainer)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <Scissors className="h-4 w-4 text-primary-foreground/80" />
+                    <span className="font-bold text-sm">✂️ Your Nutrition Approach: Cut Food in Half</span>
+                  </div>
+                  {showExplainer ? (
+                    <ChevronUp className="h-4 w-4 text-primary-foreground/80" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-primary-foreground/80" />
+                  )}
+                </button>
+
+                {showExplainer && (
+                  <div className="bg-white space-y-4 p-4">
+                    {/* The One Rule */}
+                    <div className="bg-primary text-primary-foreground rounded-lg p-4 text-center">
+                      <p className="text-xs font-medium text-primary-foreground/70 mb-1">Your Coach&apos;s One Rule</p>
+                      <p className="text-lg font-extrabold leading-tight">
+                        Whatever You&apos;re About to Eat or Drink — <span className="text-primary-foreground/70">Cut It in Half.</span>
+                      </p>
+                      <p className="text-xs text-primary-foreground/60 mt-1">That&apos;s it. That&apos;s the whole plan.</p>
+                    </div>
+
+                    {/* Food & Drinks */}
+                    <div className="space-y-2">
+                      <div className="border border-primary/20 rounded-lg p-3 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🍔</span>
+                          <p className="font-bold text-base">Food — Every Meal, Every Plate</p>
+                        </div>
+                        <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                          Whatever you would normally put on your plate — take half of that amount. Burger, pasta, rice, salad, fast food, home cooked — anything. Just half the portion. No weighing. No measuring. Just eyeball it and take half.
+                        </p>
+                      </div>
+                      <div className="border border-primary/20 rounded-lg p-3 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">☕</span>
+                          <p className="font-bold text-base">Caloric Drinks — Cut the Size in Half</p>
+                        </div>
+                        <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                          Coffee with cream or sugar, smoothies, juice, non-diet soda, energy drinks, sweet tea — cut the size in half. Water, black coffee, and zero-calorie drinks are fine as-is. Drink as much of those as you want.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* What to do with other half */}
+                    <div className="border-2 border-primary/30 rounded-lg p-3 bg-primary/5 space-y-2">
+                      <p className="font-bold text-base text-primary">✂️ What To Do With the Other Half</p>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-3 bg-white rounded-lg p-3 border border-primary/20">
+                          <Refrigerator className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-bold text-sm">Save it for later</p>
+                            <p className="text-sm font-medium text-foreground/70">Eating the same food in two sittings = fewer total calories than eating it all now and reaching for something else later.</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white rounded-lg p-3 border border-primary/20">
+                          <Share2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-bold text-sm">Share it</p>
+                            <p className="text-sm font-medium text-foreground/70">Give the other half to someone at the table. Win for you, win for them.</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white rounded-lg p-3 border border-primary/20">
+                          <Trash2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-bold text-sm">Throw it away — guilt-free</p>
+                            <p className="text-sm font-medium text-foreground/70">You have full permission to toss it. The results you&apos;ll see on the scale are worth it.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Why this works */}
+                    <div className="bg-primary/5 border border-primary/30 rounded-lg p-4">
+                      <p className="font-bold text-primary text-sm mb-2">Why Your Coach Set You Up With This Approach</p>
+                      <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                        Going from eating the way you&apos;ve always eaten to suddenly following a strict meal plan or counting every calorie is a massive change — and for most people, it doesn&apos;t stick. This approach lets you keep eating the foods you love while naturally cutting your intake in half. Over time, you&apos;ll start noticing your portions without even thinking about it, the scale will move, and that builds trust in the process.
+                      </p>
+                    </div>
+
+                    {/* Guarantee */}
+                    <div className="border-2 border-amber-400 bg-amber-50 rounded-lg p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-6 w-6 text-amber-600" />
+                        <p className="font-bold text-amber-900 text-base">My Personal Guarantee to You</p>
+                      </div>
+                      <p className="text-sm font-medium text-amber-900 leading-relaxed italic">
+                        &ldquo;I put my money where my mouth is. If you follow this approach consistently for 2 weeks and the scale doesn&apos;t move — I will refund your money. No questions asked. I&apos;m putting my reputation and years of experience on the line for this because I know it works.&rdquo;
+                      </p>
+                      <p className="text-sm font-bold text-amber-900">— Your Coach</p>
+                    </div>
+
+                    <div className="bg-primary rounded-lg p-4 text-center">
+                      <p className="font-bold text-primary-foreground text-base">Focus on <span className="text-primary-foreground/70">CONSISTENCY</span> over perfection.</p>
+                      <p className="text-sm text-primary-foreground/70 font-medium mt-1">Every meal, every day. That&apos;s the whole job.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Streak + This Week + Habit Checkboxes */}
+        <div className="space-y-6">
+          {statsSidebar}
+          {/* Habit Checkboxes in sidebar */}
+          <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Habit Check
+              </CardTitle>
+              <CardDescription>
+                {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {habitCheckboxes}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // ── DEFAULT LAYOUT: full-width habits card + stats sidebar ──
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Today's Habits */}
       <div className="lg:col-span-2">
         <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50 bg-primary/5">
           <CardHeader>
@@ -426,77 +711,8 @@ export function NutritionHabitTracker({ selectedDate, compact = false }: Nutriti
           </CardContent>
         </Card>
       </div>
-
-      {/* Stats Sidebar */}
       <div className="space-y-6">
-        {/* Streak Card */}
-        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Flame className="h-5 w-5 text-orange-500" />
-              Current Streak
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-orange-500">
-                {streak} {streak === 1 ? 'day' : 'days'}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {streak > 0 ? 'Keep it going!' : 'Start your streak today!'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Weekly Progress */}
-        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-muted-foreground">Completion Rate</span>
-                <span className="font-bold">{weeklyProgress}%</span>
-              </div>
-              <Progress value={weeklyProgress} className="h-2" />
-            </div>
-
-            {/* 7-Day Grid */}
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">Last 7 Days</p>
-              <div className="grid grid-cols-7 gap-1">
-                {weeklyData.map((day, index) => {
-                  const allCompleted = habits.every(h => day.completions[h.id] === true);
-                  const isToday = day.date === todayDate;
-                  
-                  return (
-                    <div key={day.date} className="text-center">
-                      <div className="text-xs text-muted-foreground mb-1">
-                        {getDayLabel(day.date)}
-                      </div>
-                      <div
-                        className={cn(
-                          "h-10 rounded flex items-center justify-center text-xs font-medium",
-                          day.date === selectedDate && "ring-2 ring-primary ring-offset-1",
-                          allCompleted
-                            ? "bg-green-500 text-white"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {allCompleted ? '✓' : '-'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {statsSidebar}
       </div>
     </div>
   );
