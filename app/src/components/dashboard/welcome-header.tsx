@@ -2,16 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Leaf } from 'lucide-react';
 import { CoachUpdates } from '@/components/dashboard/coach-updates';
+
+type Theme = 'light' | 'dark' | 'forest';
 
 interface WelcomeHeaderProps {
   name: string;
+  theme?: Theme;
+  onCycleTheme?: () => void;
+  // Legacy props kept for backward compatibility
   isDarkMode?: boolean;
   onToggleTheme?: () => void;
 }
 
-export function WelcomeHeader({ name, isDarkMode = false, onToggleTheme }: WelcomeHeaderProps) {
+export function WelcomeHeader({ name, theme, onCycleTheme, isDarkMode = false, onToggleTheme }: WelcomeHeaderProps) {
+  // Resolve active theme — new 3-way prop takes priority
+  const activeTheme: Theme = theme ?? (isDarkMode ? 'dark' : 'light');
+  const handleThemeClick = onCycleTheme ?? onToggleTheme;
   const [greeting, setGreeting] = useState('');
   const [subtext, setSubtext] = useState('');
   const [mounted, setMounted] = useState(false);
@@ -41,6 +49,15 @@ export function WelcomeHeader({ name, isDarkMode = false, onToggleTheme }: Welco
     updateGreetingAndSubtext();
   }, []);
 
+  // Determine icon for current theme
+  const themeIcon = activeTheme === 'dark'
+    ? <Moon className="h-[1.2rem] w-[1.2rem] transition-all" />
+    : activeTheme === 'forest'
+    ? <Leaf className="h-[1.2rem] w-[1.2rem] transition-all" />
+    : <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />;
+
+  const themeLabel = activeTheme === 'dark' ? 'Dark mode' : activeTheme === 'forest' ? 'Forest mode' : 'Light mode';
+
   // Prevent hydration mismatch by not rendering dynamic content until mounted
   if (!mounted) {
     return (
@@ -54,20 +71,16 @@ export function WelcomeHeader({ name, isDarkMode = false, onToggleTheme }: Welco
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {onToggleTheme && (
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onToggleTheme}
-            className="cursor-pointer text-primary hover:bg-primary/10 hover:text-primary border-primary/50"
-          >
-            {isDarkMode ? (
-              <Moon className="h-[1.2rem] w-[1.2rem] transition-all" />
-            ) : (
-              <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />
-            )}
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+          {handleThemeClick && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleThemeClick}
+              className="cursor-pointer text-primary hover:bg-primary/10 hover:text-primary border-primary/50"
+            >
+              <Sun className="h-[1.2rem] w-[1.2rem]" />
+              <span className="sr-only">Cycle theme</span>
+            </Button>
           )}
           <CoachUpdates />
         </div>
@@ -91,19 +104,16 @@ export function WelcomeHeader({ name, isDarkMode = false, onToggleTheme }: Welco
         </div>
       </div>
       <div className="flex items-center gap-4">
-        {onToggleTheme && (
+        {handleThemeClick && (
           <Button
             variant="outline"
             size="icon"
-            onClick={onToggleTheme}
+            onClick={handleThemeClick}
+            title={themeLabel}
             className="cursor-pointer text-primary hover:bg-primary/10 hover:text-primary border-primary/50"
           >
-            {isDarkMode ? (
-              <Moon className="h-[1.2rem] w-[1.2rem] transition-all" />
-            ) : (
-              <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />
-            )}
-            <span className="sr-only">Toggle theme</span>
+            {themeIcon}
+            <span className="sr-only">{themeLabel}</span>
           </Button>
         )}
         <CoachUpdates />

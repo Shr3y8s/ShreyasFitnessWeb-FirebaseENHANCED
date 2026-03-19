@@ -61,9 +61,10 @@ interface ClientSidebarProps {
   userProfilePhoto?: string;
   onLogout?: () => void;
   onShowWelcome?: () => void;
+  theme?: 'light' | 'dark' | 'forest';
 }
 
-export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogout, onShowWelcome }: ClientSidebarProps) {
+export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogout, onShowWelcome, theme }: ClientSidebarProps) {
   
   const pathname = usePathname();
   const { coachUpdates } = useCoachUpdates();
@@ -192,9 +193,6 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
   }, [user]);
   
   // Filter notifications by type to get counts for each section (keeping for other features)
-  const workoutUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'workout'
-  ).length;
   const progressUpdatesCount = coachUpdates.filter(
     (update) => update.type === 'progress'
   ).length;
@@ -215,7 +213,7 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
   ).length;
   
   return (
-    <Sidebar variant="floating">
+    <Sidebar variant="floating" className={theme === 'forest' ? 'forest-sidebar' : ''}>
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">

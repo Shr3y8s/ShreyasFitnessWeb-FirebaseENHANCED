@@ -44,7 +44,12 @@ export default function ClientDashboardPage() {
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [setupGoal, setSetupGoal] = useState<Record<string, unknown> | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'forest'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('dashboardTheme') as 'light' | 'dark' | 'forest') || 'forest';
+    }
+    return 'light';
+  });
   const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
   const [loadingNextSession, setLoadingNextSession] = useState(true);
@@ -347,9 +352,18 @@ export default function ClientDashboardPage() {
     }
   };
 
-  const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    document.documentElement.classList.toggle('dark');
+  const cycleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'light' ? 'dark' : prev === 'dark' ? 'forest' : 'light';
+      localStorage.setItem('dashboardTheme', next);
+      if (next === 'dark' || prev === 'forest') {
+        document.documentElement.classList.add('dark');
+      }
+      if (next === 'light' || next === 'forest') {
+        document.documentElement.classList.remove('dark');
+      }
+      return next;
+    });
   };
 
   const handleToggleHabit = async (habitId: string, completed: boolean) => {
@@ -475,15 +489,16 @@ export default function ClientDashboardPage() {
         userTier={userDataFromAuth?.tier}
         userProfilePhoto={userDataFromAuth?.profilePhotoSmall || undefined}
         onLogout={handleLogout}
+        theme={theme}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
+        <div className={`${theme === 'forest' ? 'client-dashboard' : 'min-h-screen bg-background text-foreground'} p-4 sm:p-6 lg:p-8`}>
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <WelcomeHeader
               name={userDataFromAuth?.name || 'Alex'}
-              isDarkMode={isDarkMode}
-              onToggleTheme={toggleTheme}
+              theme={theme}
+              onCycleTheme={cycleTheme}
             />
 
             {/* First Row - Upcoming Session & Daily Habits (or Onboarding for new clients) */}

@@ -329,3 +329,160 @@
 .animate-pulse-green {
   animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* ── Client Dashboard: Forest Green Glassmorphism ───────────────────────── */
+
+.client-dashboard {
+  background: linear-gradient(135deg, #1a3520 0%, #264d28 40%, #1e4020 70%, #162e18 100%);
+  min-height: 100vh;
+  color: white;
+}
+
+.dark .client-dashboard {
+  background: linear-gradient(135deg, #102010 0%, #1a3520 40%, #152a18 70%, #0c1e0e 100%);
+}
+
+/* Glass card effect — applies to all Card components inside .client-dashboard */
+.client-dashboard [class*="rounded-xl"] {
+  background: rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.dark .client-dashboard [class*="rounded-xl"] {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* All text inside glass cards is white by default */
+.client-dashboard [class*="rounded-xl"],
+.client-dashboard [class*="rounded-xl"] p,
+.client-dashboard [class*="rounded-xl"] span,
+.client-dashboard [class*="rounded-xl"] label,
+.client-dashboard [class*="rounded-xl"] h1,
+.client-dashboard [class*="rounded-xl"] h2,
+.client-dashboard [class*="rounded-xl"] h3,
+.client-dashboard [class*="rounded-xl"] h4 {
+  color: white;
+}
+
+/* Muted text in glass cards */
+.client-dashboard .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.60) !important;
+}
+
+/* Secondary backgrounds inside glass cards — make them semi-transparent, not opaque */
+.client-dashboard .bg-secondary\/50,
+.client-dashboard .bg-secondary\/30,
+.client-dashboard .bg-muted,
+.client-dashboard .bg-background\/50,
+.client-dashboard .bg-background {
+  background: rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Primary tint inside glass cards */
+.client-dashboard .bg-primary\/5,
+.client-dashboard .bg-primary\/10 {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Tab active state */
+.client-dashboard .bg-primary {
+  background: rgba(74, 168, 74, 0.85) !important;
+}
+
+/* ── Badge overrides — preserve dark text on colored badges ── */
+/* Green badges */
+.client-dashboard .bg-green-100,
+.client-dashboard .bg-green-50 {
+  background: rgba(34, 197, 94, 0.25) !important;
+  color: rgb(187, 247, 208) !important;
+}
+.client-dashboard .bg-green-100 *,
+.client-dashboard .bg-green-50 * {
+  color: rgb(187, 247, 208) !important;
+}
+
+/* Red/destructive badges */
+.client-dashboard .bg-red-100 {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: rgb(254, 202, 202) !important;
+}
+.client-dashboard .bg-red-100 * {
+  color: rgb(254, 202, 202) !important;
+}
+
+/* Dark badge text overrides (text-green-800, text-red-800 etc) */
+.client-dashboard .text-green-800,
+.client-dashboard .text-green-900 {
+  color: rgb(187, 247, 208) !important;
+}
+.client-dashboard .text-red-800,
+.client-dashboard .text-red-900 {
+  color: rgb(254, 202, 202) !important;
+}
+
+/* Strikethrough text in habits */
+.client-dashboard .line-through {
+  color: rgba(255, 255, 255, 0.40) !important;
+}
+
+/* ── Forest Sidebar ─────────────────────────────────────────────────────── */
+
+/* Fill the outer sidebar wrapper gap area with forest green */
+.forest-sidebar {
+  background: linear-gradient(180deg, #1a3520 0%, #264d28 100%);
+}
+
+/* Frosted glass sidebar panel — matches dashboard card style */
+.forest-sidebar [data-sidebar="sidebar"] {
+  background: rgba(255, 255, 255, 0.10) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* All text inside sidebar becomes white */
+.forest-sidebar [data-sidebar="sidebar"] span,
+.forest-sidebar [data-sidebar="sidebar"] a,
+.forest-sidebar [data-sidebar="sidebar"] button,
+.forest-sidebar [data-sidebar="sidebar"] p {
+  color: white !important;
+}
+
+/* Section group labels */
+.forest-sidebar [data-sidebar="group-label"] {
+  color: rgba(255, 255, 255, 0.50) !important;
+}
+
+/* Nav item hover */
+.forest-sidebar [data-sidebar="menu-button"]:hover {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: white !important;
+}
+
+/* Sign out — soft red */
+.forest-sidebar .text-red-600 {
+  color: rgba(255, 150, 150, 0.90) !important;
+}
+
+/* Border separators in footer */
+.forest-sidebar .border-t {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Footer muted text */
+.forest-sidebar .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Hover states inside glass cards */
+.client-dashboard [class*="rounded-xl"]:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.30), 0 0 0 1px rgba(255, 255, 255, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
