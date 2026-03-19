@@ -16,6 +16,7 @@ import {
   UtensilsCrossed,
   Loader2,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
@@ -51,7 +52,7 @@ export function NutritionSummary() {
   const [waterGoal, setWaterGoal] = useState(128);
 
   // Meal plan data
-  const [weeklyMealPlan, setWeeklyMealPlan] = useState<any[]>([]);
+  const [weeklyMealPlan, setWeeklyMealPlan] = useState<{ day: string; meals: { name: string; items: string[] }[] }[]>([]);
 
   // Load plan (approach + macro targets + meal plan)
   useEffect(() => {
@@ -155,6 +156,14 @@ export function NutritionSummary() {
   const waterProgress = waterGoal > 0 ? Math.min((waterAmount / waterGoal) * 100, 100) : 0;
   const todayStr = getTodayLocal();
 
+  // Approach badge label
+  const approachLabelMap: Record<string, string> = {
+    macro_tracking: 'Macro Tracking',
+    meal_plan: 'Meal Plan',
+    healthy_habits: 'Healthy Habits',
+  };
+  const approachBadge = approachLabelMap[approach] || '';
+
   if (loading) {
     return (
       <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
@@ -171,6 +180,8 @@ export function NutritionSummary() {
       <NutritionHabitTracker
         selectedDate={todayStr}
         compact={true}
+        cardTitle="Nutrition Summary"
+        approachBadge={approachBadge}
       />
     );
   }
@@ -179,12 +190,17 @@ export function NutritionSummary() {
   if (approach === 'meal_plan') {
     if (weeklyMealPlan.length === 0) {
       return (
-        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+        <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
           <CardHeader className="flex flex-row items-start justify-between pb-3">
             <div>
-              <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+              <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2 flex-wrap">
                 <Flame className="h-5 w-5 text-primary" />
                 Nutrition Summary
+                {approachBadge && (
+                  <Badge className="bg-primary/10 text-primary border border-primary/30 text-xs font-semibold ml-1">
+                    {approachBadge}
+                  </Badge>
+                )}
               </h3>
             </div>
             <Link href="/dashboard/client/nutrition">
@@ -207,18 +223,25 @@ export function NutritionSummary() {
         weeklyMealPlan={weeklyMealPlan}
         selectedDate={todayStr}
         compact={true}
+        cardTitle="Nutrition Summary"
+        approachBadge={approachBadge}
       />
     );
   }
 
   // ── Macro Tracking approach (default) ───────────────────────────────────
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader className="flex flex-row items-start justify-between pb-3">
         <div>
-          <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+          <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2 flex-wrap">
             <Flame className="h-5 w-5 text-primary" />
             Nutrition Summary
+            {approachBadge && (
+              <Badge className="bg-primary/10 text-primary border border-primary/30 text-xs font-semibold ml-1">
+                {approachBadge}
+              </Badge>
+            )}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
             Your daily intake at a glance.
@@ -271,7 +294,7 @@ export function NutritionSummary() {
             </Button>
           </Link>
           <Link href="/dashboard/client/activity">
-            <Button className="w-full bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 border border-blue-500 transition-all hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(59,130,246,0.15),_2px_0_20px_rgba(59,130,246,0.25),_4px_0_25px_rgba(59,130,246,0.15)] cursor-pointer gap-2">
+            <Button className="w-full bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 border border-blue-500 transition-all hover:-translate-y-1 hover:shadow-[0_0_15px_rgba(59,130,246,0.15),2px_0_20px_rgba(59,130,246,0.25),4px_0_25px_rgba(59,130,246,0.15)] cursor-pointer gap-2">
               <Plus className="h-4 w-4" />
               Add Water
             </Button>

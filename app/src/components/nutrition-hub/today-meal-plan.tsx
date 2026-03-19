@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Calendar, Send, Utensils } from "lucide-react";
+import { CheckCircle2, Send, Utensils, Flame } from "lucide-react";
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,9 +33,11 @@ interface TodayMealPlanProps {
   weeklyMealPlan: DayMealPlan[];
   selectedDate: string;
   compact?: boolean; // When true, hides coach notes footer (for dashboard)
+  cardTitle?: string; // Optional override for the card title
+  approachBadge?: string; // Optional approach label shown as a badge next to the title
 }
 
-export function TodayMealPlan({ weeklyMealPlan, selectedDate, compact = false }: TodayMealPlanProps) {
+export function TodayMealPlan({ weeklyMealPlan, selectedDate, compact = false, cardTitle, approachBadge }: TodayMealPlanProps) {
   const [checkedMeals, setCheckedMeals] = useState<CheckedMeals>({});
   const [currentDay, setCurrentDay] = useState<string>('');
   const [todayDate, setTodayDate] = useState<string>('');
@@ -188,9 +190,14 @@ export function TodayMealPlan({ weeklyMealPlan, selectedDate, compact = false }:
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Today&apos;s Plan: {dayPlan.day}
+            <CardTitle className="flex items-center gap-2 flex-wrap">
+              <Flame className="h-5 w-5 text-primary" />
+              {cardTitle ? cardTitle : `Today's Plan: ${dayPlan.day}`}
+              {approachBadge && (
+                <Badge className="bg-primary/10 text-primary border border-primary/30 text-xs font-semibold ml-1">
+                  {approachBadge}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>Check off your meals as you complete them.</CardDescription>
           </div>

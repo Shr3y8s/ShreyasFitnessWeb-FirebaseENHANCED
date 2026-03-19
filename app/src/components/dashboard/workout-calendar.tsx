@@ -96,7 +96,7 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
                 upcomingSessions.map((session) => (
                 <li
                   key={session.id}
-                  className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-primary/10 to-primary/5 relative"
+                  className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-linear-to-r from-primary/10 to-primary/5 relative"
                 >
                   <div>
                     <p className="font-semibold">{session.type}</p>
@@ -146,7 +146,7 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
                 completedSessions.map((session) => (
                 <li
                   key={session.id}
-                  className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-gradient-to-r from-green-500/10 to-green-500/5"
+                  className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg transition-colors hover:bg-linear-to-r from-green-500/10 to-green-500/5"
                 >
                   <div>
                     <p className="font-semibold flex items-center gap-2">

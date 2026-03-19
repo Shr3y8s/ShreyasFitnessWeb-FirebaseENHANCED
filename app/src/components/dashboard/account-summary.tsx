@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { User, Calendar, CreditCard, CircleCheckBig, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 
 interface AccountSummaryProps {
   userId: string;
-  accountCreatedAt?: any;
+  accountCreatedAt?: { toDate: () => Date } | Date | string | null;
 }
 
 export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps) {
@@ -19,7 +19,14 @@ export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps
   // Calculate weeks active
   useEffect(() => {
     if (accountCreatedAt) {
-      const createdDate = accountCreatedAt.toDate ? accountCreatedAt.toDate() : new Date(accountCreatedAt);
+      let createdDate: Date;
+      if (typeof accountCreatedAt === 'object' && 'toDate' in accountCreatedAt) {
+        createdDate = accountCreatedAt.toDate();
+      } else if (accountCreatedAt instanceof Date) {
+        createdDate = accountCreatedAt;
+      } else {
+        createdDate = new Date(accountCreatedAt);
+      }
       const now = new Date();
       const diffTime = Math.abs(now.getTime() - createdDate.getTime());
       const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));

@@ -7,7 +7,6 @@ import { signOutUser, db } from '@/lib/firebase';
 import { doc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
 import { Session, TrainingSession } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
-import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,9 +24,7 @@ import { AccountSummary } from '@/components/dashboard/account-summary';
 import { CoachNotes } from '@/components/dashboard/coach-notes';
 import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { DailyHabitsChecklist } from '@/components/activity/DailyHabitsChecklist';
-import { PrimaryObjectives } from '@/components/dashboard/primary-objectives';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
-import { hasOnlineCoaching } from '@/lib/constants';
 import { getClientPlan } from '@/lib/plan-api';
 import { getDailyActivity, toggleHabit } from '@/lib/activity-api';
 import { getTodayLocal } from '@/lib/date-utils';
@@ -45,9 +42,8 @@ interface WorkoutSession {
 export default function ClientDashboardPage() {
   const router = useRouter();
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [setupGoal, setSetupGoal] = useState<any>(null);
+  const [setupGoal, setSetupGoal] = useState<Record<string, unknown> | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
@@ -113,7 +109,7 @@ export default function ClientDashboardPage() {
       unregisterListener(unsubscribe);
       unsubscribe();
     };
-  }, [user]);
+  }, [user, userDataFromAuth]);
 
   // Fetch next upcoming session
   useEffect(() => {
@@ -356,23 +352,6 @@ export default function ClientDashboardPage() {
     document.documentElement.classList.toggle('dark');
   };
 
-  // Button handlers
-  const handleLogMeal = () => {
-    console.log('Log Meal clicked');
-    toast({
-      title: "Coming Soon",
-      description: "Meal logging feature is coming soon!",
-    });
-  };
-
-  const handleAddWater = () => {
-    console.log('Add Water clicked');
-    toast({
-      title: "Coming Soon",
-      description: "Water tracking feature is coming soon!",
-    });
-  };
-
   const handleToggleHabit = async (habitId: string, completed: boolean) => {
     if (!user) return;
     
@@ -482,7 +461,8 @@ export default function ClientDashboardPage() {
   };
 
   // Show onboarding if setup goal exists, is active, and not complete
-  const allMilestonesComplete = setupGoal?.milestones?.every((m: any) => m.completed) ?? false;
+  const milestones = setupGoal?.milestones as { completed: boolean }[] | undefined;
+  const allMilestonesComplete = milestones?.every((m) => m.completed) ?? false;
   const showOnboarding = 
     setupGoal !== null && 
     setupGoal.isActive && 
@@ -506,7 +486,7 @@ export default function ClientDashboardPage() {
               onToggleTheme={toggleTheme}
             />
 
-            {/* First Row - Upcoming Session & Onboarding/(Coach Notes) */}
+            {/* First Row - Upcoming Session & Daily Habits (or Onboarding for new clients) */}
             <div
               className="grid grid-cols-1 lg:grid-cols-2 gap-6"
               style={{ perspective: '1000px' }}
@@ -548,9 +528,10 @@ export default function ClientDashboardPage() {
                 </InteractiveCard>
               ) : (
                 <InteractiveCard>
-                  <CoachNotes
-                    coachName={coachNote.coachName}
-                    message={coachNote.message}
+                  <DailyHabitsChecklist
+                    habits={planData?.dailyHabits?.habits || []}
+                    completedHabits={activityData?.habits || []}
+                    onToggle={handleToggleHabit}
                   />
                 </InteractiveCard>
               )}
@@ -567,26 +548,23 @@ export default function ClientDashboardPage() {
                   <KeyMetricsOverview />
                 </InteractiveCard>
                 <InteractiveCard>
+                  <NutritionSummary />
+                </InteractiveCard>
+                <InteractiveCard>
                   <CurrentPlan trainingProtocol={planData?.trainingProtocol} />
                 </InteractiveCard>
                 <InteractiveCard>
                   <ProgressCharts />
-                </InteractiveCard>
-                <InteractiveCard>
-                  <NutritionSummary />
                 </InteractiveCard>
               </div>
 
               {/* Right Column - Sidebar */}
               <div className="lg:col-span-1 space-y-6">
                 <InteractiveCard>
-                  <AccountSummary 
-                    userId={user?.uid || ''}
-                    accountCreatedAt={userDataFromAuth?.createdAt}
+                  <CoachNotes
+                    coachName={coachNote.coachName}
+                    message={coachNote.message}
                   />
-                </InteractiveCard>
-                <InteractiveCard>
-                  <WeeklyCheckin />
                 </InteractiveCard>
                 <InteractiveCard>
                   <WorkoutCalendar
@@ -595,14 +573,16 @@ export default function ClientDashboardPage() {
                   />
                 </InteractiveCard>
                 <InteractiveCard>
-                  <DailyHabitsChecklist
-                    habits={planData?.dailyHabits?.habits || []}
-                    completedHabits={activityData?.habits || []}
-                    onToggle={handleToggleHabit}
-                  />
+                  <WeeklyCheckin />
                 </InteractiveCard>
                 <InteractiveCard>
                   <PersonalRecords />
+                </InteractiveCard>
+                <InteractiveCard>
+                  <AccountSummary 
+                    userId={user?.uid || ''}
+                    accountCreatedAt={userDataFromAuth?.createdAt}
+                  />
                 </InteractiveCard>
               </div>
             </div>
@@ -612,3 +592,4 @@ export default function ClientDashboardPage() {
     </SidebarProvider>
   );
 }
+

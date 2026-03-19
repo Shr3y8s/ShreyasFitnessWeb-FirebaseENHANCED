@@ -56,9 +56,11 @@ const iconColorMap: Record<string, string> = {
 interface NutritionHabitTrackerProps {
   selectedDate: string; // YYYY-MM-DD format
   compact?: boolean; // When true, shows only the habits list (no streak/weekly sidebar)
+  cardTitle?: string; // Optional override for the card title
+  approachBadge?: string; // Optional approach label shown as a badge next to the title
 }
 
-export function NutritionHabitTracker({ selectedDate, compact = false }: NutritionHabitTrackerProps) {
+export function NutritionHabitTracker({ selectedDate, compact = false, cardTitle, approachBadge }: NutritionHabitTrackerProps) {
   const [habits, setHabits] = useState<NutritionHabit[]>([]);
   const [preset, setPreset] = useState<string | null>(null);
   const [showExplainer, setShowExplainer] = useState(true);
@@ -278,9 +280,14 @@ export function NutritionHabitTracker({ selectedDate, compact = false }: Nutriti
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                Daily Habits
+              <CardTitle className="flex items-center gap-2 flex-wrap">
+                <Flame className="h-5 w-5 text-primary" />
+                {cardTitle || 'Daily Habits'}
+                {approachBadge && (
+                  <Badge className="bg-primary/10 text-primary border border-primary/30 text-xs font-semibold ml-1">
+                    {approachBadge}
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
