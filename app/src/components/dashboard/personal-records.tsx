@@ -4,7 +4,7 @@ import { Trophy, Award, Star } from 'lucide-react';
 
 export function PersonalRecords() {
   return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-glow">
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <div className="flex flex-col space-y-1.5 p-6">
         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <Trophy className="text-primary" />
