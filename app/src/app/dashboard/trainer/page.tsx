@@ -23,8 +23,11 @@ import {
   CheckCircle2,
   AlertCircle,
   DollarSign,
-  CreditCard
+  CreditCard,
+  Activity
 } from 'lucide-react';
+import { SUBSCRIPTION_TIERS } from '@/lib/constants';
+import { formatDateISO } from '@/lib/date-utils';
 
 interface ClientData {
   id: string;
@@ -256,12 +259,45 @@ export default function TrainerDashboardPage() {
     );
   }
 
-  const dashboardStats = {
-    totalClients: clients.length,
-    activeWorkouts: 12,
-    completedToday: 8,
-    pendingAssignments: 3
+  // Compute real client metrics from loaded data
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgoStr = formatDateISO(sevenDaysAgo);
+
+  // Tier breakdown
+  const tierCounts = {
+    inPerson: clients.filter(c => c.tier === SUBSCRIPTION_TIERS.IN_PERSON_4PACK).length,
+    online: clients.filter(c => c.tier === SUBSCRIPTION_TIERS.ONLINE_COACHING).length,
+    complete: clients.filter(c => c.tier === SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION).length,
+    noTier: clients.filter(c => !c.tier).length,
   };
+
+  // Active this week: clients with at least 1 completed workout in last 7 days
+  const activeThisWeek = new Set<string>();
+  assignments.forEach(a => {
+    if (a.status === 'completed' && a.completedAt) {
+      const completedStr = formatDateISO(a.completedAt instanceof Date ? a.completedAt : new Date(a.completedAt));
+      if (completedStr >= sevenDaysAgoStr) {
+        activeThisWeek.add(a.clientId);
+      }
+    }
+  });
+
+  // Workouts completed this week
+  const workoutsCompletedThisWeek = assignments.filter(a => {
+    if (a.status !== 'completed' || !a.completedAt) return false;
+    const completedStr = formatDateISO(a.completedAt instanceof Date ? a.completedAt : new Date(a.completedAt));
+    return completedStr >= sevenDaysAgoStr;
+  }).length;
+
+  // Needs attention: clients with assignments but no activity in 7+ days
+  const needsAttention = clients.filter(c => {
+    if (c.status === 'pending') return false; // No assignments yet — not "needs attention"
+    const clientAssignments = assignments.filter(a => a.clientId === c.id);
+    if (clientAssignments.length === 0) return false;
+    // Check if client had any completed workout in last 7 days
+    return !activeThisWeek.has(c.id);
+  });
 
   return (
     <SidebarProvider>
@@ -291,50 +327,79 @@ export default function TrainerDashboardPage() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Clients with tier breakdown */}
               <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Users className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Total Clients</p>
-                    <p className="text-xl font-bold text-gray-900">{dashboardStats.totalClients}</p>
+                    <p className="text-xl font-bold text-gray-900">{clients.length}</p>
                   </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                    {tierCounts.inPerson} IPT
+                  </span>
+                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                    {tierCounts.online} OC
+                  </span>
+                  <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+                    {tierCounts.complete} CT
+                  </span>
                 </div>
               </div>
 
+              {/* Card 2: Active This Week */}
               <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-100 rounded-lg">
-                    <Dumbbell className="h-5 w-5 text-green-600" />
+                    <Activity className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Active Workouts</p>
-                    <p className="text-xl font-bold text-gray-900">{dashboardStats.activeWorkouts}</p>
+                    <p className="text-xs text-gray-600">Active This Week</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {activeThisWeek.size}
+                      <span className="text-sm font-normal text-gray-500"> / {clients.length}</span>
+                    </p>
                   </div>
                 </div>
               </div>
 
+              {/* Card 3: Workouts Completed This Week */}
               <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-emerald-100 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <Dumbbell className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Completed Today</p>
-                    <p className="text-xl font-bold text-gray-900">{dashboardStats.completedToday}</p>
+                    <p className="text-xs text-gray-600">Workouts Completed</p>
+                    <p className="text-xl font-bold text-gray-900">{workoutsCompletedThisWeek}</p>
+                    <p className="text-xs text-gray-500">this week</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+              {/* Card 4: Needs Attention */}
+              <div className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow ${
+                needsAttention.length > 0 ? 'border-orange-300 bg-orange-50' : ''
+              }`}>
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Clock className="h-5 w-5 text-orange-600" />
+                  <div className={`p-2 rounded-lg ${
+                    needsAttention.length > 0 ? 'bg-orange-100' : 'bg-gray-100'
+                  }`}>
+                    <AlertCircle className={`h-5 w-5 ${
+                      needsAttention.length > 0 ? 'text-orange-600' : 'text-gray-400'
+                    }`} />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Pending Assignments</p>
-                    <p className="text-xl font-bold text-gray-900">{dashboardStats.pendingAssignments}</p>
+                    <p className="text-xs text-gray-600">Needs Attention</p>
+                    <p className="text-xl font-bold text-gray-900">
+                      {needsAttention.length}
+                      {needsAttention.length > 0 && <span className="text-orange-600"> ⚠️</span>}
+                    </p>
+                    <p className="text-xs text-gray-500">no activity 7+ days</p>
                   </div>
                 </div>
               </div>
