@@ -114,7 +114,11 @@ export default function ClientDashboardPage() {
       unregisterListener(unsubscribe);
       unsubscribe();
     };
-  }, [user, userDataFromAuth]);
+  // NOTE: Only depend on `user` — adding `userDataFromAuth` causes re-render
+  // loops because the auth context creates a new object reference each render.
+  // The guard `if (!user || !userDataFromAuth) return;` is sufficient.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Fetch next upcoming session
   useEffect(() => {
@@ -234,11 +238,11 @@ export default function ClientDashboardPage() {
   useEffect(() => {
     if (!user) return;
 
-    // Query for upcoming (assigned) workouts
+    // Query for upcoming (scheduled) workouts
     const upcomingQuery = query(
       collection(db, 'workouts'),
       where('clientId', '==', user.uid),
-      where('status', '==', 'assigned'),
+      where('status', '==', 'scheduled'),
       orderBy('dueDate', 'asc'),
       limit(5)
     );
@@ -259,19 +263,8 @@ export default function ClientDashboardPage() {
       for (const workoutDoc of snapshot.docs) {
         const data = workoutDoc.data();
         
-        // Get workout template to get the name
-        let workoutName = 'Workout';
-        if (data.templateId) {
-          try {
-            const templateRef = doc(db, 'workoutTemplates', data.templateId);
-            const templateDoc = await getDoc(templateRef);
-            if (templateDoc.exists()) {
-              workoutName = templateDoc.data()?.name || 'Workout';
-            }
-          } catch (error) {
-            console.error('Error fetching template:', error);
-          }
-        }
+        // Get workout name from the document itself (name is stored on assignment)
+        const workoutName = data.name || 'Workout';
 
         const dueDate = data.dueDate?.toDate();
         workouts.push({
@@ -283,6 +276,8 @@ export default function ClientDashboardPage() {
       }
       
       setUpcomingWorkouts(workouts);
+    }, (error) => {
+      console.error('[WorkoutCalendar] Error fetching upcoming workouts:', error);
     });
 
     // Listen to completed workouts
@@ -292,19 +287,8 @@ export default function ClientDashboardPage() {
       for (const workoutDoc of snapshot.docs) {
         const data = workoutDoc.data();
         
-        // Get workout template to get the name
-        let workoutName = 'Workout';
-        if (data.templateId) {
-          try {
-            const templateRef = doc(db, 'workoutTemplates', data.templateId);
-            const templateDoc = await getDoc(templateRef);
-            if (templateDoc.exists()) {
-              workoutName = templateDoc.data()?.name || 'Workout';
-            }
-          } catch (error) {
-            console.error('Error fetching template:', error);
-          }
-        }
+        // Get workout name from the document itself (name is stored on assignment)
+        const workoutName = data.name || 'Workout';
 
         const completedDate = data.completedAt?.toDate();
         const assignedDate = data.assignedDate?.toDate();
@@ -326,6 +310,8 @@ export default function ClientDashboardPage() {
       }
       
       setCompletedWorkouts(workouts);
+    }, (error) => {
+      console.error('[WorkoutCalendar] Error fetching completed workouts:', error);
     });
 
     registerListener(unsubUpcoming);

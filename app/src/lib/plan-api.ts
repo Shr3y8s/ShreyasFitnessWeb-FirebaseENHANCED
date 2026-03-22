@@ -609,16 +609,22 @@ export async function updateTrainingProtocol(
     const planRef = doc(db, PLANS_COLLECTION, clientId);
     const existingPlan = await getClientPlan(clientId);
     
-    const updateData: any = {
-      trainingProtocol: {
+    if (existingPlan) {
+      // CRITICAL: Merge with existing trainingProtocol to preserve phase fields
+      // (trainingPhase, trainingFocus, workoutFrequency, cardioType, etc.)
+      const merged = {
+        ...(existingPlan.trainingProtocol || {}),
         keyPriorities: trainingProtocolData.keyPriorities,
         lastUpdated: serverTimestamp()
-      },
-      updatedAt: serverTimestamp()
-    };
-    
-    if (existingPlan) {
-      await updateDoc(planRef, updateData);
+      };
+      // Strip undefined values (Firestore rejects them)
+      const cleanMerged = Object.fromEntries(
+        Object.entries(merged).filter(([, v]) => v !== undefined)
+      );
+      await updateDoc(planRef, {
+        trainingProtocol: cleanMerged,
+        updatedAt: serverTimestamp()
+      });
     } else {
       // Create new plan with just training protocol, using clientId as document ID
       await setDoc(planRef, {
@@ -630,8 +636,12 @@ export async function updateTrainingProtocol(
         weeklyFocus: null,
         dailyHabits: null,
         nutritionProtocol: null,
-        ...updateData,  // ← Spread AFTER nulls so it overwrites
-        createdAt: serverTimestamp()
+        trainingProtocol: {
+          keyPriorities: trainingProtocolData.keyPriorities,
+          lastUpdated: serverTimestamp()
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
     }
     

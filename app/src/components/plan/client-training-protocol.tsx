@@ -10,10 +10,10 @@ import {
 } from '@/components/ui/card';
 import { CircularProgress } from '@/components/ui/circular-progress';
 import { Dumbbell, Calendar, Check, Loader2 } from 'lucide-react';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Workout } from '@/types/workout';
-import { getCurrentWeekISO, formatWeekRange } from '@/lib/week-utils';
+import { formatWeekRange, getWeekStartDate, getCurrentWeekISO } from '@/lib/week-utils';
 
 interface ClientTrainingProtocolProps {
   clientId: string;
@@ -25,61 +25,40 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchWeeklyAssignments = async () => {
+    const fetchScheduledWorkouts = async () => {
       try {
         setLoading(true);
         
-        // Get current week's Sunday and Saturday dates
-        const currentWeekISO = getCurrentWeekISO();
-        const weekStart = new Date(currentWeekISO);
-        weekStart.setHours(0, 0, 0, 0);
-        
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-        
-        // Convert to Firestore Timestamps for comparison
-        const startTimestamp = Timestamp.fromDate(weekStart);
-        const endTimestamp = Timestamp.fromDate(weekEnd);
-        
-        // Query assignments with dueDate in current week
+        // Query all scheduled workouts for this client (same pattern as dashboard WorkoutCalendar)
         const assignmentsRef = collection(db, 'workouts');
         const q = query(
           assignmentsRef,
           where('clientId', '==', clientId),
-          where('dueDate', '>=', startTimestamp),
-          where('dueDate', '<=', endTimestamp)
+          where('status', '==', 'scheduled'),
+          orderBy('dueDate', 'asc'),
+          limit(10)
         );
         
         const querySnapshot = await getDocs(q);
         const fetchedAssignments: Workout[] = [];
         
-        querySnapshot.forEach((doc) => {
+        querySnapshot.forEach((docSnap) => {
           fetchedAssignments.push({
-            id: doc.id,
-            ...doc.data()
+            id: docSnap.id,
+            ...docSnap.data()
           } as any as Workout);
-        });
-        
-        // Sort by due date (handle Timestamp objects)
-        fetchedAssignments.sort((a, b) => {
-          const aDate = a.dueDate as any;
-          const bDate = b.dueDate as any;
-          const aTime = aDate?.toDate ? aDate.toDate().getTime() : 0;
-          const bTime = bDate?.toDate ? bDate.toDate().getTime() : 0;
-          return aTime - bTime;
         });
         
         setAssignments(fetchedAssignments);
       } catch (error) {
-        console.error('Error fetching weekly assignments:', error);
+        console.error('Error fetching scheduled workouts:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (clientId) {
-      fetchWeeklyAssignments();
+      fetchScheduledWorkouts();
     }
   }, [clientId]);
 
@@ -159,7 +138,7 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         {assignments.length > 0 ? (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="font-bold">This Week&apos;s Workouts:</h3>
+              <h3 className="font-bold">Scheduled Workouts:</h3>
               <span className="text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1.5">
                 <Calendar className="h-3 w-3" />
                 {formatWeekRange(new Date(getCurrentWeekISO()))}
@@ -191,7 +170,7 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Dumbbell className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">No workouts scheduled this week</p>
+            <p className="font-medium">No workouts scheduled</p>
             <p className="text-sm mt-1">Check back later or reach out to your trainer</p>
           </div>
         )}

@@ -113,8 +113,9 @@ export default function TrainerDashboardPage() {
               ...data,
               completedAt: data.completedAt?.toDate(),
               assignedAt: data.assignedAt?.toDate(),
-              scheduledDate: data.scheduledDate, // String: "YYYY-MM-DD"
-              dueDate: data.dueDate // String: "YYYY-MM-DD" or undefined
+              scheduledDate: data.scheduledDate?.toDate ? data.scheduledDate.toDate() : data.scheduledDate,
+              dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate,
+              name: data.name || 'Workout',
             });
           });
           
@@ -560,8 +561,8 @@ export default function TrainerDashboardPage() {
 
                   return upcomingAssignments.map((assignment) => {
                     const client = clients.find(c => c.id === assignment.clientId);
-                    const workout = workoutTemplates.find(w => w.id === assignment.templateId);
-                    const dueDate = assignment.dueDate ? new Date(assignment.dueDate) : null;
+                    const dueDate = assignment.dueDate instanceof Date ? assignment.dueDate : 
+                                   (assignment.dueDate ? new Date(assignment.dueDate) : null);
                     const now = new Date();
                     
                     // Calculate days until due
@@ -616,7 +617,7 @@ export default function TrainerDashboardPage() {
                         <UrgencyIcon className={`h-5 w-5 ${iconColor}`} />
                         <div className="flex-1">
                           <p className="font-medium">
-                            {workout?.name || 'Unknown Workout'} - {client?.name || 'Unknown Client'}
+                            {assignment.name || 'Workout'} - {client?.name || 'Unknown Client'}
                           </p>
                           <p className="text-sm text-gray-600">{dueDateText}</p>
                         </div>
