@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { formatDateISO, getTodayLocal, getDaysAgo } from '@/lib/date-utils';
 
 interface MarkCompleteDialogProps {
   open: boolean;
@@ -65,18 +66,9 @@ export function MarkCompleteDialog({
     }
   };
 
-  // Format date for input (YYYY-MM-DD)
-  const formatDateForInput = (date: Date) => {
-    return date.toISOString().split('T')[0];
-  };
-
-  // Get today's date for max constraint
-  const today = formatDateForInput(new Date());
-  
-  // Get 30 days ago for min constraint
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const minDate = formatDateForInput(thirtyDaysAgo);
+  // Use local-timezone date formatting (avoids UTC bug where evening PST shows next day)
+  const today = getTodayLocal();
+  const minDate = getDaysAgo(30);
 
   const difficultyOptions = [
     { value: 'easy', label: 'Easy', emoji: '😊', description: 'Felt comfortable throughout' },
@@ -144,8 +136,8 @@ export function MarkCompleteDialog({
                 <input
                   type="date"
                   id="completion-date"
-                  value={formatDateForInput(completionDate)}
-                  onChange={(e) => setCompletionDate(new Date(e.target.value))}
+                  value={formatDateISO(completionDate)}
+                  onChange={(e) => setCompletionDate(new Date(e.target.value + 'T00:00:00'))}
                   min={minDate}
                   max={today}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
