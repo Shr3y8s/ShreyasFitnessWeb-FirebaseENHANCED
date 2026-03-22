@@ -1,7 +1,7 @@
 # Terms of Service
 
 **Effective Date:** January 1, 2026  
-**Last Updated:** October 29, 2025
+**Last Updated:** March 21, 2026
 
 ---
 
@@ -148,18 +148,15 @@ You may cancel your subscription at any time:
 You may permanently delete your account:
 
 **Terms:**
-- Immediate cancellation of subscription
-- ALL data permanently deleted
+- Immediate cancellation of any active subscription
+- Personal data removed per GDPR guidelines; financial records preserved for legal compliance
 - Cannot be undone
-- NO REFUNDS for any unused time or sessions
-- You forfeit all remaining session pack credits
+- NO REFUND for unused subscription time in current billing period
+- **Session credit refund:** Up to 2 unused session credits may be refunded upon account deletion, calculated at the per-session rate you actually paid (including any discounts). Credits beyond 2 are forfeited. Your trainer may approve refund of additional credits at their discretion.
 
 **How to Delete:**
-- Visit your profile page
-- Navigate to "Account & Data Management"
-- Click "Delete Account"
-- Type "DELETE" to confirm
-- Enter password to verify
+- Contact your trainer to initiate account deletion, OR
+- Visit your profile page → "Account & Data Management" → "Delete Account" (when available)
 
 ---
 

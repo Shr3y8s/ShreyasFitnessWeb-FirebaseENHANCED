@@ -27,6 +27,7 @@ export interface DeleteAccountParams {
   mode: DeletionMode;
   adminOverride?: boolean;
   reason: string;
+  creditsToRefund?: number; // 0 to available; omit for default cap (MAX_CLIENT_REFUND_CREDITS=2)
 }
 
 export interface DeleteAccountResponse {
@@ -52,6 +53,38 @@ export interface DeleteAccountResponse {
     messages: number;
     plans: number;
   };
+}
+
+/**
+ * Cancel a client's subscription (admin only)
+ * Cancels at period end - client keeps access until billing period ends
+ * @param params - Cancel parameters
+ * @returns Cancel result with access end date
+ */
+export async function adminCancelSubscription(params: {
+  targetUserId: string;
+  reason: string;
+}): Promise<{ success: boolean; message: string; accessUntil?: string }> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error('Must be authenticated to cancel subscriptions');
+  }
+
+  const cancelFn = httpsCallable<typeof params, { success: boolean; message: string; accessUntil?: string }>(
+    functions,
+    'adminCancelSubscription'
+  );
+
+  try {
+    const result = await cancelFn(params);
+    return result.data;
+  } catch (error: any) {
+    console.error('Error canceling subscription:', error);
+    const message = error.message || 'Failed to cancel subscription';
+    throw new Error(message);
+  }
 }
 
 /**

@@ -27,7 +27,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
-import { deleteAccount, DeletionMode, DeletionStep, DeleteAccountResponse } from '@/lib/admin-api';
+import { deleteAccount, adminCancelSubscription, DeletionMode, DeletionStep, DeleteAccountResponse } from '@/lib/admin-api';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import Link from 'next/link';
 
@@ -39,6 +39,12 @@ interface Client {
   subscriptionStatus?: string;
   subscriptionId?: string;
   cancelAtPeriodEnd?: boolean;
+  sessionBalance?: {
+    available: number;
+    purchased: number;
+    used: number;
+    expired: number;
+  };
 }
 
 const MODE_DESCRIPTIONS: Record<DeletionMode, { title: string; description: string; warning: string }> = {
@@ -150,6 +156,13 @@ export default function ClientManagementDetailPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DeleteAccountResponse | null>(null);
+  
+  // Subscription cancel state
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
+  
+  // Session credit refund state
+  const [creditsToRefund, setCreditsToRefund] = useState(0);
 
   useEffect(() => {
     fetchClient();
@@ -161,10 +174,16 @@ export default function ClientManagementDetailPage() {
       const clientDoc = await getDoc(doc(db, 'users', clientId));
       
       if (clientDoc.exists()) {
+        const data = clientDoc.data();
         setClient({
           uid: clientDoc.id,
-          ...clientDoc.data(),
+          ...data,
         } as Client);
+        // Initialize creditsToRefund to min(2, available) as default
+        const available = data.sessionBalance?.available || 0;
+        if (available > 0) {
+          setCreditsToRefund(Math.min(2, available));
+        }
       } else {
         setError('Client not found');
       }
@@ -206,6 +225,9 @@ export default function ClientManagementDetailPage() {
         mode: deletionMode,
         adminOverride: false,
         reason: reason.trim(),
+        ...(deletionMode === 'gdpr-clean' && (client.sessionBalance?.available ?? 0) > 0
+          ? { creditsToRefund }
+          : {}),
       });
 
       setResult(response);
@@ -360,6 +382,120 @@ export default function ClientManagementDetailPage() {
                             })}
                           </RadioGroup>
                         </div>
+
+                        {/* Subscription & Session Credit Warnings */}
+                        {cancelSuccess && (
+                          <Alert className="border-green-300 bg-green-50">
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-green-900">
+                              {cancelSuccess}
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {client.subscriptionStatus === 'active' && !client.cancelAtPeriodEnd && (
+                          <Alert className="border-amber-300 bg-amber-50">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <AlertDescription className="text-amber-900">
+                              <p className="font-semibold">⚠️ Active Subscription</p>
+                              <p className="text-sm mt-1">
+                                This client has an active Stripe subscription ({client.subscriptionId}).
+                                {deletionMode === 'gdpr-clean' && ' Deletion will auto-cancel it immediately. Or you can cancel it separately first:'}
+                                {deletionMode === 'no-traces' && ' No-Traces mode will auto-cancel this subscription during deletion.'}
+                                {deletionMode === 'mock' && ' This will be reported in the preview.'}
+                              </p>
+                              {deletionMode === 'gdpr-clean' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-2 border-amber-400 text-amber-900 hover:bg-amber-100"
+                                  disabled={isCanceling}
+                                  onClick={async () => {
+                                    if (!confirm(`Cancel ${client.name}'s subscription? They'll keep access until the end of their billing period.`)) return;
+                                    setIsCanceling(true);
+                                    setError(null);
+                                    setCancelSuccess(null);
+                                    try {
+                                      const result = await adminCancelSubscription({
+                                        targetUserId: client.uid,
+                                        reason: 'Admin-initiated cancellation from client management',
+                                      });
+                                      setCancelSuccess(`Subscription canceled. Access until: ${new Date(result.accessUntil!).toLocaleDateString()}`);
+                                      // Refresh client data
+                                      await fetchClient();
+                                    } catch (err: any) {
+                                      setError(err.message || 'Failed to cancel subscription');
+                                    } finally {
+                                      setIsCanceling(false);
+                                    }
+                                  }}
+                                >
+                                  {isCanceling ? (
+                                    <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Canceling...</>
+                                  ) : (
+                                    'Cancel Subscription at Period End'
+                                  )}
+                                </Button>
+                              )}
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {client.subscriptionStatus === 'active' && client.cancelAtPeriodEnd && (
+                          <Alert className="border-amber-300 bg-amber-50">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <AlertDescription className="text-amber-900">
+                              <p className="font-semibold">Subscription Canceling at Period End</p>
+                              <p className="text-sm mt-1">
+                                This subscription is set to cancel at the end of the billing period. Deletion will immediately cancel it.
+                              </p>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {(client.sessionBalance?.available ?? 0) > 0 && (
+                          <Alert className="border-amber-300 bg-amber-50">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <AlertDescription className="text-amber-900">
+                              <p className="font-semibold">
+                                💳 {client.sessionBalance!.available} Unused Session Credit{client.sessionBalance!.available !== 1 ? 's' : ''}
+                              </p>
+                              <p className="text-sm mt-1">
+                                This client has {client.sessionBalance!.available} remaining session credit(s) 
+                                (purchased: {client.sessionBalance!.purchased}, used: {client.sessionBalance!.used}).
+                              </p>
+                              {deletionMode === 'gdpr-clean' && (
+                                <div className="mt-2 p-2 bg-white/60 rounded border border-amber-200">
+                                  <Label htmlFor="creditsToRefund" className="text-sm font-medium text-amber-900">
+                                    Credits to refund (0 = forfeit all, {client.sessionBalance!.available} = refund all):
+                                  </Label>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Input
+                                      id="creditsToRefund"
+                                      type="number"
+                                      min={0}
+                                      max={client.sessionBalance!.available}
+                                      value={creditsToRefund}
+                                      onChange={(e) => setCreditsToRefund(Math.min(Math.max(0, parseInt(e.target.value) || 0), client.sessionBalance!.available))}
+                                      className="w-20 h-8 text-sm"
+                                    />
+                                    <span className="text-sm text-amber-800">
+                                      of {client.sessionBalance!.available} • {creditsToRefund === 0 ? 'No refund' : `Refund ${creditsToRefund} credit${creditsToRefund !== 1 ? 's' : ''}`}
+                                      {creditsToRefund < client.sessionBalance!.available && creditsToRefund > 0 && (
+                                        <span className="text-amber-600"> ({client.sessionBalance!.available - creditsToRefund} forfeited)</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                              {deletionMode === 'no-traces' && (
+                                <p className="text-sm mt-1">
+                                  No-Traces mode will zero out these credits (no refund — test accounts only).
+                                </p>
+                              )}
+                            </AlertDescription>
+                          </Alert>
+                        )}
 
                         {/* Email Confirmation */}
                         {deletionMode !== 'mock' && (

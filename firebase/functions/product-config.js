@@ -32,8 +32,16 @@ function isEligibleForCheckins(productId) {
  */
 const ONBOARDING_DEADLINE_DAYS = 15;
 
+/**
+ * Maximum number of session credits auto-refunded during client-initiated account deletion.
+ * Trainer-initiated deletion allows the trainer to choose any number (0 to all).
+ * This cap prevents abuse (e.g., buying a 4-pack, using 1, deleting for 3 refunded).
+ */
+const MAX_CLIENT_REFUND_CREDITS = 2;
+
 module.exports = {
   CHECKIN_ELIGIBLE_PRODUCTS,
   isEligibleForCheckins,
   ONBOARDING_DEADLINE_DAYS,
+  MAX_CLIENT_REFUND_CREDITS,
 };

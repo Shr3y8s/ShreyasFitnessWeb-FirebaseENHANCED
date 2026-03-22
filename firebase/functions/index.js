@@ -10,7 +10,7 @@ admin.initializeApp();
 
 // Load shared configuration (copied from root by predeploy hook)
 const sharedConfig = require("./firebase-config.json");
-const { ONBOARDING_DEADLINE_DAYS, CHECKIN_ELIGIBLE_PRODUCTS } = require("./product-config");
+const { ONBOARDING_DEADLINE_DAYS, CHECKIN_ELIGIBLE_PRODUCTS, MAX_CLIENT_REFUND_CREDITS } = require("./product-config");
 
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
@@ -737,6 +737,131 @@ exports.reactivateSubscription = onCall({
     });
 
     throw new Error(`Subscription reactivation failed: ${error.message}`);
+  }
+});
+
+/**
+ * Admin-initiated subscription cancellation for a client
+ * Cancels subscription at period end (client keeps access until billing period ends)
+ * Requires admin role verification
+ * @param {Object} request - The callable function request
+ * @param {string} request.data.targetUserId - The client's user ID
+ * @param {string} request.data.reason - Reason for cancellation
+ * @return {Object} Success response with access end date
+ */
+exports.adminCancelSubscription = onCall({
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+  cors: true,
+}, async (request) => {
+  try {
+    // Verify authentication
+    if (!request.auth) {
+      throw new Error("The function must be called while authenticated.");
+    }
+
+    const adminId = request.auth.uid;
+    const targetUserId = request.data?.targetUserId;
+    const reason = request.data?.reason || "Admin-initiated cancellation";
+
+    if (!targetUserId) {
+      throw new Error("Missing required parameter: targetUserId");
+    }
+
+    // Verify admin role
+    const adminDoc = await admin.firestore().collection("admins").doc(adminId).get();
+    if (!adminDoc.exists) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    logger.info("Admin cancel subscription request", {
+      adminId,
+      targetUserId,
+      reason,
+    });
+
+    // Get target user document
+    const userRef = admin.firestore().collection("users").doc(targetUserId);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      throw new Error("User not found");
+    }
+
+    const userData = userDoc.data();
+    const subscriptionId = userData.subscriptionId;
+
+    if (!subscriptionId) {
+      throw new Error("No active subscription found for this client");
+    }
+
+    if (userData.cancelAtPeriodEnd) {
+      throw new Error("Subscription is already set to cancel at period end");
+    }
+
+    // Initialize Stripe
+    const stripe = require("stripe")(stripeKey.value(), {
+      apiVersion: "2024-09-30.acacia",
+    });
+
+    // Cancel subscription at period end
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true,
+    });
+
+    logger.info("Subscription canceled by admin in Stripe", {
+      adminId,
+      targetUserId,
+      subscriptionId,
+      currentPeriodEnd: subscription.current_period_end,
+    });
+
+    // Update Firestore
+    await userRef.update({
+      cancelAtPeriodEnd: true,
+      canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+      canceledBy: "admin",
+      canceledByAdminId: adminId,
+      cancelReason: reason,
+      currentPeriodEnd: admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Log audit
+    await admin.firestore().collection("audit_logs").add({
+      action: "admin_cancel_subscription",
+      targetUserId: targetUserId,
+      performedBy: adminId,
+      performedAt: admin.firestore.FieldValue.serverTimestamp(),
+      reason: reason,
+      subscriptionId: subscriptionId,
+      accessUntil: new Date(subscription.current_period_end * 1000).toISOString(),
+    });
+
+    const accessUntil = new Date(subscription.current_period_end * 1000);
+
+    logger.info("Admin subscription cancellation completed", {
+      adminId,
+      targetUserId,
+      subscriptionId,
+      accessUntil: accessUntil.toISOString(),
+    });
+
+    return {
+      success: true,
+      message: "Subscription canceled at period end",
+      accessUntil: accessUntil.toISOString(),
+      currentPeriodEnd: subscription.current_period_end,
+    };
+  } catch (error) {
+    logger.error("Error in admin cancel subscription", {
+      error: error.message,
+      stack: error.stack,
+      adminId: request.auth?.uid,
+      targetUserId: request.data?.targetUserId,
+    });
+
+    throw new Error(`Admin subscription cancellation failed: ${error.message}`);
   }
 });
 
@@ -2001,11 +2126,93 @@ exports.deleteAccount = onCall({
       });
       totalItemsFound += 1;
 
+      // Step 15: Stripe Customer Subcollections
+      try {
+        const stripeSubcollections = ['subscriptions', 'payments', 'checkout_sessions'];
+        for (const subName of stripeSubcollections) {
+          const subSnapshot = await admin.firestore()
+              .collection("stripe_customers")
+              .doc(targetUserId)
+              .collection(subName)
+              .get();
+          
+          const sampleItems = subSnapshot.docs.slice(0, 5).map(d => d.id);
+          steps.push({
+            name: `Stripe ${subName}`,
+            collection: `stripe_customers/${targetUserId}/${subName}`,
+            status: "complete",
+            itemsFound: subSnapshot.size,
+            itemsDeleted: 0,
+            sampleItems: sampleItems,
+          });
+          totalItemsFound += subSnapshot.size;
+        }
+      } catch (error) {
+        steps.push({
+          name: "Stripe Customer Subcollections",
+          collection: `stripe_customers/${targetUserId}/*`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
+      // Step 16: Nutrition Logs Parent Document
+      try {
+        const nutritionParentDoc = await admin.firestore()
+            .collection("nutritionLogs")
+            .doc(targetUserId)
+            .get();
+        
+        steps.push({
+          name: "Nutrition Logs Parent Doc",
+          collection: `nutritionLogs/${targetUserId}`,
+          status: "complete",
+          itemsFound: nutritionParentDoc.exists ? 1 : 0,
+          itemsDeleted: 0,
+          sampleItems: nutritionParentDoc.exists ? [targetUserId] : [],
+        });
+        if (nutritionParentDoc.exists) {
+          totalItemsFound += 1;
+        }
+      } catch (error) {
+        steps.push({
+          name: "Nutrition Logs Parent Doc",
+          collection: `nutritionLogs/${targetUserId}`,
+          status: "error",
+          itemsFound: 0,
+          itemsDeleted: 0,
+          error: error.message,
+        });
+      }
+
       logger.info("MOCK mode discovery complete", {
         targetUserId,
         totalItemsFound,
         steps: steps.length,
       });
+
+      // Gather subscription and session credit info for admin warnings
+      const subscriptionInfo = {
+        subscriptionId: userData.subscriptionId || null,
+        subscriptionStatus: userData.subscriptionStatus || null,
+        cancelAtPeriodEnd: userData.cancelAtPeriodEnd || false,
+      };
+
+      const sessionCreditInfo = {
+        available: userData.sessionBalance?.available || 0,
+        purchased: userData.sessionBalance?.purchased || 0,
+        used: userData.sessionBalance?.used || 0,
+        expired: userData.sessionBalance?.expired || 0,
+        activePackages: (userData.sessionPackages || [])
+          .filter(pkg => !pkg.expired && pkg.remaining > 0)
+          .map(pkg => ({
+            id: pkg.id,
+            remaining: pkg.remaining,
+            quantity: pkg.quantity,
+          })),
+      };
 
       // Return mock mode response
       return {
@@ -2015,6 +2222,8 @@ exports.deleteAccount = onCall({
         deletedUserId: targetUserId,
         stripeCustomerId: stripeCustomerId || "",
         steps: steps,
+        subscriptionInfo: subscriptionInfo,
+        sessionCreditInfo: sessionCreditInfo,
         summary: {
           totalCollectionsProcessed: steps.length,
           totalItemsFound: totalItemsFound,
@@ -2051,6 +2260,120 @@ exports.deleteAccount = onCall({
     const stripe = require("stripe")(stripeKey.value(), {
       apiVersion: "2024-09-30.acacia",
     });
+
+    // ============================================
+    // PRE-DELETION: Handle active subscriptions & session credits
+    // ============================================
+    const subscriptionId = userData.subscriptionId;
+    const subscriptionStatus = userData.subscriptionStatus;
+    const sessionBalance = userData.sessionBalance || {};
+    const availableCredits = sessionBalance.available || 0;
+
+    if (mode === 'gdpr-clean') {
+      // GDPR-CLEAN: Auto-cancel any active subscription (immediate cancellation for account deletion)
+      if (subscriptionId && (subscriptionStatus === 'active' || userData.cancelAtPeriodEnd)) {
+        try {
+          await stripe.subscriptions.cancel(subscriptionId);
+          logger.info("Auto-canceled subscription for GDPR deletion", {
+            targetUserId,
+            subscriptionId,
+            previousStatus: subscriptionStatus,
+            wasCancelAtPeriodEnd: userData.cancelAtPeriodEnd || false,
+          });
+        } catch (error) {
+          logger.warn("Failed to cancel subscription during GDPR deletion (may already be canceled)", {
+            error: error.message,
+            subscriptionId,
+          });
+          // Continue - subscription may already be fully canceled
+        }
+      }
+
+      // GDPR-CLEAN: Refund session credits based on creditsToRefund parameter
+      // Admin can specify exact number (0 to all); client self-service uses MAX_CLIENT_REFUND_CREDITS cap
+      const requestedCreditsToRefund = request.data?.creditsToRefund;
+      const creditsToRefund = (typeof requestedCreditsToRefund === 'number')
+        ? Math.min(Math.max(0, requestedCreditsToRefund), availableCredits) // Admin: clamp to 0..available
+        : Math.min(availableCredits, MAX_CLIENT_REFUND_CREDITS); // Client (future): use default cap
+
+      if (creditsToRefund > 0 && availableCredits > 0) {
+        let remainingToRefund = creditsToRefund;
+        const activePackages = (userData.sessionPackages || []).filter(pkg => !pkg.expired && pkg.remaining > 0);
+        
+        for (const pkg of activePackages) {
+          if (remainingToRefund <= 0) break;
+          if (pkg.stripePaymentIntentId && pkg.amount && pkg.quantity) {
+            const creditsFromThisPkg = Math.min(pkg.remaining, remainingToRefund);
+            const refundAmount = Math.round((creditsFromThisPkg / pkg.quantity) * pkg.amount);
+            if (refundAmount > 0) {
+              try {
+                await stripe.refunds.create({
+                  payment_intent: pkg.stripePaymentIntentId,
+                  amount: refundAmount,
+                  reason: 'requested_by_customer',
+                  metadata: {
+                    type: 'account_deletion_refund',
+                    userId: targetUserId,
+                    packageId: pkg.id,
+                    creditsRefunded: creditsFromThisPkg,
+                    totalCredits: pkg.quantity,
+                  },
+                });
+                logger.info("Refunded session credits for GDPR deletion", {
+                  targetUserId,
+                  packageId: pkg.id,
+                  refundAmount,
+                  creditsRefunded: creditsFromThisPkg,
+                });
+                remainingToRefund -= creditsFromThisPkg;
+              } catch (error) {
+                logger.warn("Failed to refund session package (may already be refunded)", {
+                  error: error.message,
+                  packageId: pkg.id,
+                  paymentIntentId: pkg.stripePaymentIntentId,
+                });
+                // Continue - don't block deletion over refund failure
+              }
+            }
+          }
+        }
+        
+        logger.info("Session credit refund summary", {
+          targetUserId,
+          requested: creditsToRefund,
+          totalAvailable: availableCredits,
+          forfeited: availableCredits - creditsToRefund,
+        });
+      }
+    }
+
+    if (mode === 'no-traces') {
+      // NO-TRACES: Auto-cancel any active subscription in Stripe
+      if (subscriptionId) {
+        try {
+          await stripe.subscriptions.cancel(subscriptionId);
+          logger.info("Auto-canceled subscription for no-traces deletion", {
+            targetUserId,
+            subscriptionId,
+            previousStatus: subscriptionStatus,
+          });
+        } catch (error) {
+          logger.warn("Failed to cancel subscription during no-traces deletion (may already be canceled)", {
+            error: error.message,
+            subscriptionId,
+          });
+          // Continue - subscription may already be canceled or invalid
+        }
+      }
+
+      // NO-TRACES: Log zeroing out session credits
+      if (availableCredits > 0) {
+        logger.info("Zeroing out session credits for no-traces deletion", {
+          targetUserId,
+          creditsZeroed: availableCredits,
+        });
+      }
+    }
 
     // STEP 1: CREATE AUDIT RECORD
     logger.info("Creating deleted_accounts audit record", {targetUserId, mode});
@@ -2302,23 +2625,73 @@ exports.deleteAccount = onCall({
         "Login History"
       );
 
-      // Delete Stripe Customer from BOTH Firestore AND Stripe API
+      // Nutrition Logs Parent Document
+      try {
+        const nutritionParentRef = admin.firestore().collection("nutritionLogs").doc(targetUserId);
+        const nutritionParentDoc = await nutritionParentRef.get();
+        if (nutritionParentDoc.exists) {
+          await nutritionParentRef.delete();
+          steps.push({ name: "Nutrition Logs Parent Doc", itemsDeleted: 1, status: "complete" });
+          totalDeleted += 1;
+        } else {
+          steps.push({ name: "Nutrition Logs Parent Doc", itemsDeleted: 0, status: "complete" });
+        }
+      } catch (error) {
+        steps.push({ name: "Nutrition Logs Parent Doc", status: "error", error: error.message });
+      }
+
+      // Report subscription cancellation (already done in pre-deletion step)
+      if (subscriptionId) {
+        steps.push({
+          name: "Stripe Subscription (Canceled)",
+          itemsDeleted: 1,
+          status: "complete",
+        });
+      }
+
+      // Report session credits zeroed out
+      if (availableCredits > 0) {
+        steps.push({
+          name: `Session Credits (Zeroed ${availableCredits} remaining)`,
+          itemsDeleted: availableCredits,
+          status: "complete",
+        });
+      }
+
+      // Delete Stripe Customer subcollections, parent doc, AND from Stripe API
       if (stripeCustomerId) {
         try {
+          // Delete subcollections first (Firestore doesn't cascade-delete)
+          const stripeSubcollections = ['subscriptions', 'payments', 'checkout_sessions'];
+          let subItemsDeleted = 0;
+          for (const subName of stripeSubcollections) {
+            const subSnapshot = await admin.firestore()
+                .collection("stripe_customers")
+                .doc(targetUserId)
+                .collection(subName)
+                .get();
+            if (!subSnapshot.empty) {
+              const subBatch = admin.firestore().batch();
+              subSnapshot.docs.forEach((doc) => subBatch.delete(doc.ref));
+              await subBatch.commit();
+              subItemsDeleted += subSnapshot.size;
+            }
+          }
+
           // Delete from Stripe's servers
           await stripe.customers.del(stripeCustomerId);
           logger.info("Stripe customer deleted from Stripe API", {stripeCustomerId});
           
-          // Delete from Firestore
+          // Delete parent doc from Firestore
           await admin.firestore().collection("stripe_customers").doc(targetUserId).delete();
           logger.info("Stripe customer deleted from Firestore", {targetUserId});
           
           steps.push({
-            name: "Stripe Customer (API + Firestore)",
-            itemsDeleted: 1,
+            name: "Stripe Customer (API + Firestore + Subcollections)",
+            itemsDeleted: 1 + subItemsDeleted,
             status: "complete",
           });
-          totalDeleted += 1;
+          totalDeleted += 1 + subItemsDeleted;
         } catch (error) {
           logger.error("Failed to delete Stripe customer", {error: error.message});
           steps.push({
@@ -2592,6 +2965,39 @@ exports.deleteAccount = onCall({
       } catch (error) {
         steps.push({
           name: "Login History",
+          status: "error",
+          error: error.message,
+        });
+      }
+
+      // Delete Nutrition Logs (subcollection + parent doc)
+      try {
+        const nutritionSubSnapshot = await admin.firestore()
+            .collection("nutritionLogs")
+            .doc(targetUserId)
+            .collection("mealPlans")
+            .get();
+        if (!nutritionSubSnapshot.empty) {
+          const nlBatch = admin.firestore().batch();
+          nutritionSubSnapshot.docs.forEach((doc) => nlBatch.delete(doc.ref));
+          await nlBatch.commit();
+        }
+        // Delete parent document too
+        const nutritionParentRef = admin.firestore().collection("nutritionLogs").doc(targetUserId);
+        const nutritionParentDoc = await nutritionParentRef.get();
+        if (nutritionParentDoc.exists) {
+          await nutritionParentRef.delete();
+        }
+        const nlTotal = nutritionSubSnapshot.size + (nutritionParentDoc.exists ? 1 : 0);
+        steps.push({
+          name: "Nutrition Logs (Subcollection + Parent)",
+          itemsDeleted: nlTotal,
+          status: "complete",
+        });
+        totalDeleted += nlTotal;
+      } catch (error) {
+        steps.push({
+          name: "Nutrition Logs",
           status: "error",
           error: error.message,
         });
