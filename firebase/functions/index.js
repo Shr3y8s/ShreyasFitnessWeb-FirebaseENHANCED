@@ -3874,6 +3874,16 @@ exports.trackLogin = onCall({
     // Save to Firestore
     await admin.firestore().collection('login_history').add(loginRecord);
 
+    // Also update lastLoginAt on user document (for trainer dashboard metrics)
+    if (loginRecord.success && loginRecord.userId) {
+      await admin.firestore().collection('users').doc(loginRecord.userId).update({
+        lastLoginAt: admin.firestore.Timestamp.now(),
+      }).catch((err) => {
+        // Don't fail the login recording if user doc update fails
+        logger.warn('Failed to update lastLoginAt on user document', { userId: loginRecord.userId, error: err.message });
+      });
+    }
+
     logger.info("Login tracked successfully", { userId });
 
     return {

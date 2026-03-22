@@ -39,6 +39,8 @@ interface ClientData {
   status: 'active' | 'inactive' | 'pending';
   accountActivated?: boolean;
   subscriptionStatus?: string;
+  createdAt?: Date;
+  lastLoginAt?: Date;
 }
 
 export default function TrainerDashboardPage() {
@@ -154,7 +156,9 @@ export default function TrainerDashboardPage() {
               tier: clientInfo.tier,
               lastWorkout: lastCompletedWorkout?.completedAt || null,
               workoutsCompleted: completedAssignments.length,
-              status: status
+              status: status,
+              createdAt: clientInfo.createdAt?.toDate ? clientInfo.createdAt.toDate() : (clientInfo.createdAt ? new Date(clientInfo.createdAt) : undefined),
+              lastLoginAt: clientInfo.lastLoginAt?.toDate ? clientInfo.lastLoginAt.toDate() : (clientInfo.lastLoginAt ? new Date(clientInfo.lastLoginAt) : undefined),
             });
           });
           
@@ -272,32 +276,23 @@ export default function TrainerDashboardPage() {
     noTier: clients.filter(c => !c.tier).length,
   };
 
-  // Active this week: clients with at least 1 completed workout in last 7 days
-  const activeThisWeek = new Set<string>();
-  assignments.forEach(a => {
-    if (a.status === 'completed' && a.completedAt) {
-      const completedStr = formatDateISO(a.completedAt instanceof Date ? a.completedAt : new Date(a.completedAt));
-      if (completedStr >= sevenDaysAgoStr) {
-        activeThisWeek.add(a.clientId);
-      }
-    }
-  });
+  // New clients: added last week and last month
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const newClientsLastWeek = clients.filter(c => c.createdAt && c.createdAt >= sevenDaysAgo).length;
+  const newClientsLastMonth = clients.filter(c => c.createdAt && c.createdAt >= thirtyDaysAgo).length;
 
-  // Workouts completed this week
-  const workoutsCompletedThisWeek = assignments.filter(a => {
-    if (a.status !== 'completed' || !a.completedAt) return false;
-    const completedStr = formatDateISO(a.completedAt instanceof Date ? a.completedAt : new Date(a.completedAt));
-    return completedStr >= sevenDaysAgoStr;
-  }).length;
+  // Logged in last 7 days: clients with lastLoginAt within 7 days
+  const loggedInLast7Days = clients.filter(c => c.lastLoginAt && c.lastLoginAt >= sevenDaysAgo).length;
 
-  // Needs attention: clients with assignments but no activity in 7+ days
-  const needsAttention = clients.filter(c => {
-    if (c.status === 'pending') return false; // No assignments yet — not "needs attention"
-    const clientAssignments = assignments.filter(a => a.clientId === c.id);
-    if (clientAssignments.length === 0) return false;
-    // Check if client had any completed workout in last 7 days
-    return !activeThisWeek.has(c.id);
+  // Needs attention: clients with overdue workouts (dueDate < now && status still 'scheduled')
+  const overdueWorkouts = assignments.filter(a => {
+    if (a.status !== 'scheduled') return false;
+    if (!a.dueDate) return false;
+    const dueDate = a.dueDate instanceof Date ? a.dueDate : new Date(a.dueDate);
+    return dueDate < now;
   });
+  // Get unique clients with overdue workouts
+  const clientsWithOverdueWorkouts = new Set(overdueWorkouts.map(a => a.clientId));
 
   return (
     <SidebarProvider>
@@ -351,55 +346,64 @@ export default function TrainerDashboardPage() {
                 </div>
               </div>
 
-              {/* Card 2: Active This Week */}
+              {/* Card 2: New Clients */}
               <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-100 rounded-lg">
-                    <Activity className="h-5 w-5 text-green-600" />
+                    <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Active This Week</p>
+                    <p className="text-xs text-gray-600">New Clients</p>
+                    <p className="text-xl font-bold text-gray-900">+{newClientsLastMonth}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-1">
+                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">
+                    {newClientsLastWeek} this week
+                  </span>
+                  <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">
+                    {newClientsLastMonth} this month
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: Logged In (7d) */}
+              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-600">Logged In (7d)</p>
                     <p className="text-xl font-bold text-gray-900">
-                      {activeThisWeek.size}
+                      {loggedInLast7Days}
                       <span className="text-sm font-normal text-gray-500"> / {clients.length}</span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {clients.length > 0 ? Math.round((loggedInLast7Days / clients.length) * 100) : 0}% engagement
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Card 3: Workouts Completed This Week */}
-              <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <Dumbbell className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Workouts Completed</p>
-                    <p className="text-xl font-bold text-gray-900">{workoutsCompletedThisWeek}</p>
-                    <p className="text-xs text-gray-500">this week</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 4: Needs Attention */}
+              {/* Card 4: Needs Attention (overdue workouts) */}
               <div className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow ${
-                needsAttention.length > 0 ? 'border-orange-300 bg-orange-50' : ''
+                clientsWithOverdueWorkouts.size > 0 ? 'border-orange-300 bg-orange-50' : ''
               }`}>
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${
-                    needsAttention.length > 0 ? 'bg-orange-100' : 'bg-gray-100'
+                    clientsWithOverdueWorkouts.size > 0 ? 'bg-orange-100' : 'bg-gray-100'
                   }`}>
                     <AlertCircle className={`h-5 w-5 ${
-                      needsAttention.length > 0 ? 'text-orange-600' : 'text-gray-400'
+                      clientsWithOverdueWorkouts.size > 0 ? 'text-orange-600' : 'text-gray-400'
                     }`} />
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Needs Attention</p>
                     <p className="text-xl font-bold text-gray-900">
-                      {needsAttention.length}
-                      {needsAttention.length > 0 && <span className="text-orange-600"> ⚠️</span>}
+                      {clientsWithOverdueWorkouts.size} {clientsWithOverdueWorkouts.size === 1 ? 'client' : 'clients'}
                     </p>
-                    <p className="text-xs text-gray-500">no activity 7+ days</p>
+                    <p className="text-xs text-gray-500">behind on workouts</p>
                   </div>
                 </div>
               </div>
