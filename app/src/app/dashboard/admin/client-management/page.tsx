@@ -197,15 +197,16 @@ export default function ClientManagementPage() {
           </p>
         </div>
 
-        {/* Search Bar */}
+        {/* Search & Filters */}
         <Card className="bg-white rounded-xl border shadow-sm">
           <CardHeader>
-            <CardTitle>Search Clients</CardTitle>
+            <CardTitle>Search & Filter Clients</CardTitle>
             <CardDescription>
-              Find clients by name or email address
+              Find and filter clients by name, email, status, or tier
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
@@ -216,62 +217,76 @@ export default function ClientManagementPage() {
                 className="pl-10"
               />
             </div>
+
+            {/* Filter Dropdowns — 2-row layout: label above dropdown */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">✅ Active</option>
+                  <option value="canceling">⏳ Canceling</option>
+                  <option value="canceled">❌ Canceled</option>
+                  <option value="paused">⏸️ Paused</option>
+                  <option value="past_due">🔴 Past Due</option>
+                  <option value="deleted">🗑️ Deleted</option>
+                  <option value="pending">🟡 Pending</option>
+                  <option value="no_subscription">⚪ No Subscription</option>
+                </select>
+              </div>
+
+              {/* Tier Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Subscription Tier</label>
+                <select
+                  value={tierFilter}
+                  onChange={(e) => setTierFilter(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+                >
+                  <option value="all">All Tiers</option>
+                  <option value="ipt">🏋️ In-Person (IPT)</option>
+                  <option value="oc">💻 Online (OC)</option>
+                  <option value="ct">⭐ Complete (CT)</option>
+                  <option value="none">— No Tier</option>
+                </select>
+              </div>
+
+              {/* Sort */}
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name_az">Name A→Z</option>
+                  <option value="name_za">Name Z→A</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(statusFilter !== 'all' || tierFilter !== 'all' || searchTerm.trim()) && (
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setStatusFilter('all'); setTierFilter('all'); setSearchTerm(''); }}
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear all filters
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Filters:</span>
-          </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 border border-primary/30 rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="all">All Status</option>
-            <option value="active">✅ Active</option>
-            <option value="canceling">⏳ Canceling</option>
-            <option value="canceled">❌ Canceled</option>
-            <option value="paused">⏸️ Paused</option>
-            <option value="past_due">🔴 Past Due</option>
-            <option value="deleted">🗑️ Deleted</option>
-            <option value="pending">🟡 Pending</option>
-            <option value="no_subscription">⚪ No Subscription</option>
-          </select>
-          <select
-            value={tierFilter}
-            onChange={(e) => setTierFilter(e.target.value)}
-            className="px-3 py-1.5 border border-primary/30 rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="all">All Tiers</option>
-            <option value="ipt">🏋️ In-Person (IPT)</option>
-            <option value="oc">💻 Online (OC)</option>
-            <option value="ct">⭐ Complete (CT)</option>
-            <option value="none">— No Tier</option>
-          </select>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-1.5 border border-primary/30 rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="newest">Sort: Newest First</option>
-            <option value="oldest">Sort: Oldest First</option>
-            <option value="name_az">Sort: Name A→Z</option>
-            <option value="name_za">Sort: Name Z→A</option>
-          </select>
-          {(statusFilter !== 'all' || tierFilter !== 'all') && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setStatusFilter('all'); setTierFilter('all'); }}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Clear filters
-            </Button>
-          )}
-        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
