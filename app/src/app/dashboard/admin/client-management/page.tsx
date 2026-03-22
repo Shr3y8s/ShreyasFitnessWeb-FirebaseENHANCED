@@ -24,6 +24,9 @@ interface Client {
   subscriptionId?: string;
   cancelAtPeriodEnd?: boolean;
   assignedTrainerName?: string;
+  gdprDeleted?: boolean;
+  gdprDeletedAt?: any;
+  subscriptionPaused?: boolean;
 }
 
 export default function ClientManagementPage() {
@@ -86,11 +89,19 @@ export default function ClientManagementPage() {
   };
 
   const getSubscriptionBadge = (client: Client) => {
+    // GDPR-deleted accounts take highest priority
+    if (client.gdprDeleted) {
+      return <Badge className="bg-red-600 text-white">Deleted</Badge>;
+    }
+
     if (!client.subscriptionStatus) {
       return <Badge variant="secondary">No Subscription</Badge>;
     }
 
     if (client.subscriptionStatus === 'active') {
+      if (client.subscriptionPaused) {
+        return <Badge variant="outline" className="border-blue-500 text-blue-700">Paused</Badge>;
+      }
       if (client.cancelAtPeriodEnd) {
         return <Badge variant="outline" className="border-amber-500 text-amber-700">Canceling</Badge>;
       }
@@ -217,55 +228,47 @@ export default function ClientManagementPage() {
             ) : (
               <div className="space-y-3">
                 {filteredClients.map((client) => (
-                  <div
+                  <Link
                     key={client.uid}
-                    className="border border-stone-200 rounded-lg hover:bg-emerald-50/50 hover:border-emerald-200 transition-all duration-200"
+                    href={`/dashboard/admin/client-management/${client.uid}`}
+                    className="block border border-primary/50 rounded-lg hover:bg-primary/10 cursor-pointer transition-all duration-300 hover:shadow-glow hover:-translate-y-1"
                   >
                     <div className="p-3">
-                      {/* Line 1: Name, Email, Badges, Manage Button */}
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-base">{client.name}</h3>
-                              <span className="text-sm text-muted-foreground">•</span>
-                              <p className="text-sm text-muted-foreground truncate">{client.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {getSubscriptionBadge(client)}
-                            {!client.accountActivated && (
-                              <Badge variant="outline" className="border-amber-500 text-amber-700">
-                                Pending
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <Link href={`/dashboard/admin/client-management/${client.uid}`}>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="gap-2"
-                          >
-                            <UserCog className="w-4 h-4" />
-                            Manage
-                          </Button>
-                        </Link>
+                      {/* Line 1: Name • Email • Badge */}
+                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                        <h3 className="font-semibold text-base">{client.name}</h3>
+                        <span className="text-sm text-muted-foreground">•</span>
+                        <p className="text-sm text-muted-foreground">{client.email}</p>
+                        <span className="text-sm text-muted-foreground">•</span>
+                        {getSubscriptionBadge(client)}
+                        {!client.accountActivated && (
+                          <Badge variant="outline" className="border-amber-500 text-amber-700">
+                            Pending
+                          </Badge>
+                        )}
                       </div>
 
-                      {/* Line 2: Member since and Trainer */}
+                      {/* Line 2: Dates and Trainer */}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div>
-                          Member since:{' '}
-                          {client.createdAt?.toDate
-                            ? client.createdAt.toDate().toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })
-                            : 'Unknown'}
-                        </div>
+                        {client.gdprDeleted ? (
+                          <div>
+                            Joined:{' '}
+                            {client.createdAt?.toDate
+                              ? client.createdAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : '?'}
+                            {' — Deleted: '}
+                            {client.gdprDeletedAt?.toDate
+                              ? client.gdprDeletedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                              : '?'}
+                          </div>
+                        ) : (
+                          <div>
+                            Member since:{' '}
+                            {client.createdAt?.toDate
+                              ? client.createdAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                              : 'Unknown'}
+                          </div>
+                        )}
                         {client.assignedTrainerName && (
                           <>
                             <span>•</span>
@@ -274,7 +277,7 @@ export default function ClientManagementPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
