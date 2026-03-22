@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Loader2, Users as UsersIcon, AlertCircle, UserCog } from 'lucide-react';
+import { Search, Loader2, Users as UsersIcon, AlertCircle, UserCog, Filter } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import Link from 'next/link';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
+import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 
 interface Client {
   uid: string;
@@ -23,6 +24,7 @@ interface Client {
   subscriptionStatus?: string;
   subscriptionId?: string;
   cancelAtPeriodEnd?: boolean;
+  tier?: string;
   assignedTrainerName?: string;
   gdprDeleted?: boolean;
   gdprDeletedAt?: any;
@@ -33,6 +35,9 @@ export default function ClientManagementPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [tierFilter, setTierFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,19 +45,69 @@ export default function ClientManagementPage() {
   }, []);
 
   useEffect(() => {
-    // Filter clients based on search term
-    if (!searchTerm.trim()) {
-      setFilteredClients(clients);
-    } else {
+    let filtered = [...clients];
+
+    // Search filter
+    if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      const filtered = clients.filter(
+      filtered = filtered.filter(
         (client) =>
           client.name.toLowerCase().includes(term) ||
           client.email.toLowerCase().includes(term)
       );
-      setFilteredClients(filtered);
     }
-  }, [searchTerm, clients]);
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((client) => {
+        switch (statusFilter) {
+          case 'active': return client.subscriptionStatus === 'active' && !client.cancelAtPeriodEnd && !client.subscriptionPaused;
+          case 'canceling': return client.subscriptionStatus === 'active' && client.cancelAtPeriodEnd;
+          case 'canceled': return client.subscriptionStatus === 'canceled' && !client.gdprDeleted;
+          case 'paused': return client.subscriptionPaused;
+          case 'past_due': return client.subscriptionStatus === 'past_due';
+          case 'deleted': return client.gdprDeleted;
+          case 'pending': return !client.accountActivated;
+          case 'no_subscription': return !client.subscriptionStatus && !client.gdprDeleted;
+          default: return true;
+        }
+      });
+    }
+
+    // Tier filter
+    if (tierFilter !== 'all') {
+      filtered = filtered.filter((client) => {
+        switch (tierFilter) {
+          case 'ipt': return client.tier === SUBSCRIPTION_TIERS.IN_PERSON_4PACK;
+          case 'oc': return client.tier === SUBSCRIPTION_TIERS.ONLINE_COACHING;
+          case 'ct': return client.tier === SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION;
+          case 'none': return !client.tier;
+          default: return true;
+        }
+      });
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest': {
+          const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return bTime - aTime;
+        }
+        case 'oldest': {
+          const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return aTime - bTime;
+        }
+        case 'name_az': return a.name.localeCompare(b.name);
+        case 'name_za': return b.name.localeCompare(a.name);
+        default: return 0;
+      }
+    });
+
+    setFilteredClients(filtered);
+  }, [searchTerm, clients, statusFilter, tierFilter, sortBy]);
 
   const fetchClients = async () => {
     try {
@@ -163,6 +218,60 @@ export default function ClientManagementPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Filters:</span>
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1.5 border border-primary/30 rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">All Status</option>
+            <option value="active">✅ Active</option>
+            <option value="canceling">⏳ Canceling</option>
+            <option value="canceled">❌ Canceled</option>
+            <option value="paused">⏸️ Paused</option>
+            <option value="past_due">🔴 Past Due</option>
+            <option value="deleted">🗑️ Deleted</option>
+            <option value="pending">🟡 Pending</option>
+            <option value="no_subscription">⚪ No Subscription</option>
+          </select>
+          <select
+            value={tierFilter}
+            onChange={(e) => setTierFilter(e.target.value)}
+            className="px-3 py-1.5 border border-primary/30 rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">All Tiers</option>
+            <option value="ipt">🏋️ In-Person (IPT)</option>
+            <option value="oc">💻 Online (OC)</option>
+            <option value="ct">⭐ Complete (CT)</option>
+            <option value="none">— No Tier</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-1.5 border border-primary/30 rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="newest">Sort: Newest First</option>
+            <option value="oldest">Sort: Oldest First</option>
+            <option value="name_az">Sort: Name A→Z</option>
+            <option value="name_za">Sort: Name Z→A</option>
+          </select>
+          {(statusFilter !== 'all' || tierFilter !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setStatusFilter('all'); setTierFilter('all'); }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
