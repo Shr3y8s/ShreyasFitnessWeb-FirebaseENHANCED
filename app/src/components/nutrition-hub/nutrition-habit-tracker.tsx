@@ -184,11 +184,20 @@ export function NutritionHabitTracker({ selectedDate, compact = false, cardTitle
       [habitId]: checked
     };
 
+    // Calculate if ALL habits are now complete
+    const allComplete = habits.every(h => 
+      h.id === habitId ? checked : updatedCompletions[h.id] === true
+    );
+
     setTodayCompletions(updatedCompletions);
 
     try {
       const selectedDateRef = doc(db, 'nutritionLogs', user.uid, 'habits', selectedDate);
-      await setDoc(selectedDateRef, updatedCompletions);
+      // Save completions AND dayComplete flag for habit adherence tracking
+      await setDoc(selectedDateRef, {
+        ...updatedCompletions,
+        dayComplete: allComplete,
+      });
 
       // Reload weekly data to update streak
       const weeklyPromises = [];

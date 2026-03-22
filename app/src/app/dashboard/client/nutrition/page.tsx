@@ -618,17 +618,16 @@ export default function NutritionPage() {
       // Get download URL
       const downloadUrl = await getDownloadURL(storageRef);
       
-      // Save URL to Firestore and mark day complete
+      // Save URL to Firestore (screenshot upload no longer auto-marks dayComplete —
+      // the client uses the separate checkbox for that)
       const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', selectedDate);
       await setDoc(logRef, {
         screenshotUrl: downloadUrl,
         screenshotUploadedAt: Timestamp.now(),
-        dayComplete: true, // Screenshot upload = day complete
         lastUpdated: Timestamp.now(),
       }, { merge: true });
 
       setScreenshotUrl(downloadUrl);
-      setDayComplete(true);
       
       toast({
         title: "Screenshot Uploaded!",
@@ -876,7 +875,7 @@ export default function NutritionPage() {
                             value="screenshot"
                             className="data-[state=active]:bg-green-200/50 dark:data-[state=active]:bg-green-800/50 data-[state=active]:text-green-900 dark:data-[state=active]:text-green-100 rounded-md px-3 py-1 text-sm"
                           >
-                            Upload Screenshot
+                            Log in Another App
                           </TabsTrigger>
                         </TabsList>
                       </div>
@@ -892,64 +891,129 @@ export default function NutritionPage() {
                             />
                           ))}
                         </Accordion>
+
+                        {/* Mark Day Complete button — shown when any data is entered */}
+                        {(() => {
+                          const hasAnyData = mealCategories.some(meal => dailyLog[meal].length > 0);
+                          if (!hasAnyData && !dayComplete) return null;
+
+                          return (
+                            <div className="mt-6 p-4 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 text-center space-y-2">
+                              {dayComplete ? (
+                                <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300 font-semibold">
+                                  <CheckCircle2 className="h-5 w-5" />
+                                  <span>Day Marked Complete ✓</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-sm text-muted-foreground">
+                                    Done logging for today? Mark your day as complete.
+                                  </p>
+                                  <Button
+                                    onClick={async () => {
+                                      if (!user || !selectedDate) return;
+                                      const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', selectedDate);
+                                      await setDoc(logRef, { dayComplete: true, lastUpdated: Timestamp.now() }, { merge: true });
+                                      setDayComplete(true);
+                                      toast({ title: "Day Complete!", description: "Your nutrition logging is marked as done for today." });
+                                    }}
+                                    className="gap-2"
+                                  >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Mark Day Complete
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TabsContent>
 
                       <TabsContent value="screenshot">
-                        <div className="p-6 bg-secondary/50 border-dashed border-2 rounded-lg text-center space-y-4">
-                          <p className="text-sm text-muted-foreground">
-                            Using another app like MyFitnessPal? Upload a screenshot of your daily log here for your coach to review.
+                        <div className="p-6 bg-secondary/50 border-dashed border-2 rounded-lg space-y-5">
+                          <p className="text-sm text-muted-foreground text-center">
+                            Tracking your nutrition in another app like MyFitnessPal? Mark your day as complete here, and optionally upload a screenshot for your coach to review.
                           </p>
-                          
-                          {/* Show completion status if already complete */}
-                          {dayComplete && screenshotUrl && (
-                            <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/30">
-                              <div className="flex items-center justify-center gap-2 text-green-800 dark:text-green-200 font-semibold mb-2">
-                                <CheckCircle2 className="h-5 w-5" />
-                                <span>Day Complete - Screenshot Uploaded</span>
-                              </div>
-                              <p className="text-xs text-green-700 dark:text-green-300">
-                                Your screenshot has been uploaded and your trainer can review it.
+
+                          {/* Day Complete Checkbox */}
+                          <div 
+                            className={cn(
+                              "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                              dayComplete 
+                                ? "bg-green-500/10 border-green-500/30" 
+                                : "bg-secondary/50 border-border hover:border-primary/30"
+                            )}
+                            onClick={async () => {
+                              if (!user || !selectedDate) return;
+                              const newValue = !dayComplete;
+                              const logRef = doc(db, 'nutritionLogs', user.uid, 'meals', selectedDate);
+                              await setDoc(logRef, { dayComplete: newValue, lastUpdated: Timestamp.now() }, { merge: true });
+                              setDayComplete(newValue);
+                              if (newValue) {
+                                toast({ title: "Day Complete!", description: "Your nutrition is marked as done for today." });
+                              }
+                            }}
+                          >
+                            <div className={cn(
+                              "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all",
+                              dayComplete ? "bg-green-500 border-green-500" : "border-muted-foreground/40"
+                            )}>
+                              {dayComplete && <CheckCircle2 className="h-4 w-4 text-white" />}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {dayComplete ? "✓ Day marked as complete" : "Mark day as complete"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {dayComplete ? "Click to undo" : "I've logged my nutrition in another app today"}
                               </p>
                             </div>
-                          )}
-                          
-                          <div className="flex flex-col items-center gap-4">
-                            <Input 
-                              id="screenshot" 
-                              type="file" 
-                              className="hidden" 
-                              onChange={handleScreenshotUpload} 
-                              accept="image/*" 
-                              ref={fileInputRef}
-                              disabled={uploading}
-                            />
-                            <Label 
-                              htmlFor="screenshot" 
-                              className={cn(
-                                "w-full max-w-sm",
-                                uploading ? "cursor-not-allowed opacity-50" : "cursor-pointer",
-                                buttonVariants({ variant: dayComplete && screenshotUrl ? "outline" : "default" })
-                              )}
-                            >
-                              {uploading ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                                  Uploading...
-                                </>
-                              ) : (
-                                <>
-                                  <UploadCloud className="mr-2 h-4 w-4" />
-                                  {dayComplete && screenshotUrl 
-                                    ? "Upload New Screenshot" 
-                                    : "Upload Screenshot & Mark Complete"}
-                                </>
-                              )}
-                            </Label>
-                            <p className="text-xs text-muted-foreground max-w-sm">
-                              {dayComplete && screenshotUrl 
-                                ? "Replace your existing screenshot by uploading a new one." 
-                                : "Uploading will automatically mark your day as complete."}
+                          </div>
+
+                          {/* Screenshot Upload (Optional) */}
+                          <div className="space-y-3">
+                            <p className="text-sm font-medium text-muted-foreground">
+                              📷 Upload screenshot <span className="text-xs">(optional — for your coach to review)</span>
                             </p>
+
+                            {screenshotUrl && (
+                              <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/30 flex items-center gap-2 text-blue-800 dark:text-blue-200 text-sm">
+                                <UploadCloud className="h-4 w-4" />
+                                <span>Screenshot uploaded ✓</span>
+                              </div>
+                            )}
+
+                            <div className="flex flex-col items-center gap-3">
+                              <Input 
+                                id="screenshot" 
+                                type="file" 
+                                className="hidden" 
+                                onChange={handleScreenshotUpload} 
+                                accept="image/*" 
+                                ref={fileInputRef}
+                                disabled={uploading}
+                              />
+                              <Label 
+                                htmlFor="screenshot" 
+                                className={cn(
+                                  "w-full max-w-sm",
+                                  uploading ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                                  buttonVariants({ variant: "outline" })
+                                )}
+                              >
+                                {uploading ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                                    Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <UploadCloud className="mr-2 h-4 w-4" />
+                                    {screenshotUrl ? "Replace Screenshot" : "Upload Screenshot"}
+                                  </>
+                                )}
+                              </Label>
+                            </div>
                           </div>
                         </div>
                       </TabsContent>
