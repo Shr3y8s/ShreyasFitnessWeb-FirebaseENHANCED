@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Loader2, Users as UsersIcon, AlertCircle, UserCog, Filter } from 'lucide-react';
+import { Search, Loader2, Users as UsersIcon, AlertCircle, UserCog, Filter, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import Link from 'next/link';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Client {
   uid: string;
@@ -168,7 +169,7 @@ export default function ClientManagementPage() {
     }
 
     if (client.subscriptionStatus === 'past_due') {
-      return <Badge variant="destructive">Past Due</Badge>;
+      return <Badge variant="outline" className="border-red-500 text-red-700">Past Due</Badge>;
     }
 
     return <Badge variant="secondary">{client.subscriptionStatus}</Badge>;
@@ -287,6 +288,55 @@ export default function ClientManagementPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Status Guide — Collapsible */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+              <Info className="h-4 w-4" />
+              <span className="font-medium">Status Guide</span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2 p-4 bg-gray-50 rounded-lg border text-sm space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="bg-green-600 text-xs">Active</Badge>
+                  <span className="text-muted-foreground">Subscription is current, billing normally</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-amber-500 text-amber-700 text-xs">Canceling</Badge>
+                  <span className="text-muted-foreground">Will cancel at end of billing period</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">Canceled</Badge>
+                  <span className="text-muted-foreground">Subscription ended, account still exists</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-blue-500 text-blue-700 text-xs">Paused</Badge>
+                  <span className="text-muted-foreground">Subscription temporarily paused</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-red-500 text-red-700 text-xs">Past Due</Badge>
+                  <span className="text-muted-foreground">Payment failed, needs attention</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-red-600 text-white text-xs">Deleted</Badge>
+                  <span className="text-muted-foreground">Account GDPR-deleted, data anonymized</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-amber-500 text-amber-700 text-xs">Pending</Badge>
+                  <span className="text-muted-foreground">Signed up but hasn&apos;t completed payment</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">No Subscription</Badge>
+                  <span className="text-muted-foreground">Active account, no recurring subscription</span>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
