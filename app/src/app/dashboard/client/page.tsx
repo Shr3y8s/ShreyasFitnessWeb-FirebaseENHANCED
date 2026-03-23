@@ -44,6 +44,7 @@ export default function ClientDashboardPage() {
   const { user, userData: userDataFromAuth, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [setupGoal, setSetupGoal] = useState<Record<string, unknown> | null>(null);
+  const [setupGoalLoading, setSetupGoalLoading] = useState(true);
   const [theme, setTheme] = useState<'light' | 'dark' | 'forest'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('dashboardTheme') as 'light' | 'dark' | 'forest') || 'forest';
@@ -93,7 +94,10 @@ export default function ClientDashboardPage() {
 
   // Subscribe to setup goal to control onboarding checklist visibility
   useEffect(() => {
-    if (!user || !userDataFromAuth) return;
+    if (!user) {
+      setSetupGoalLoading(false);
+      return;
+    }
 
     const setupGoalRef = doc(db, 'goals', `${user.uid}_setup`);
     
@@ -103,9 +107,11 @@ export default function ClientDashboardPage() {
       } else {
         setSetupGoal(null);
       }
+      setSetupGoalLoading(false);
     }, (error) => {
       console.error('Error fetching setup goal:', error);
       setSetupGoal(null);
+      setSetupGoalLoading(false);
     });
 
     registerListener(unsubscribe);
@@ -523,7 +529,16 @@ export default function ClientDashboardPage() {
                   )}
                 </Card>
               </InteractiveCard>
-              {showOnboarding ? (
+              {setupGoalLoading ? (
+                <InteractiveCard>
+                  <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm">
+                    <CardContent className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="text-muted-foreground mt-3 text-sm">Loading...</p>
+                    </CardContent>
+                  </Card>
+                </InteractiveCard>
+              ) : showOnboarding ? (
                 <InteractiveCard>
                   <OnboardingChecklist />
                 </InteractiveCard>

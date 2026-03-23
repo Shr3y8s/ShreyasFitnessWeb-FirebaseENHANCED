@@ -98,8 +98,15 @@ export function OnboardingMilestoneManager({ clientId, clientName, clientTier }:
         };
       }
       
+      // Update milestones + goal-level summary fields
+      const completedCount = milestones.filter((m: any) => m.completed).length;
+      const allDone = completedCount === milestones.length;
+
       await updateDoc(setupGoalRef, {
         milestones: milestones,
+        currentValue: completedCount,
+        status: allDone ? 'completed' : 'active',
+        completedAt: allDone ? Timestamp.now() : null,
         updatedAt: Timestamp.now()
       });
       

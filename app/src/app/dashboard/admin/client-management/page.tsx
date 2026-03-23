@@ -40,10 +40,31 @@ export default function ClientManagementPage() {
   const [tierFilter, setTierFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
+  const [onboardingClients, setOnboardingClients] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchClients();
+    fetchOnboardingStatus();
   }, []);
+
+  const fetchOnboardingStatus = async () => {
+    try {
+      const goalsQuery = query(
+        collection(db, 'goals'),
+        where('category', '==', 'setup'),
+        where('status', '==', 'active')
+      );
+      const snapshot = await getDocs(goalsQuery);
+      const onboarding = new Set<string>();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.clientId) onboarding.add(data.clientId);
+      });
+      setOnboardingClients(onboarding);
+    } catch (error) {
+      console.error('Error fetching onboarding status:', error);
+    }
+  };
 
   useEffect(() => {
     let filtered = [...clients];
@@ -70,6 +91,7 @@ export default function ClientManagementPage() {
           case 'deleted': return client.gdprDeleted;
           case 'pending': return !client.accountActivated;
           case 'no_subscription': return !client.subscriptionStatus && !client.gdprDeleted;
+          case 'onboarding': return client.accountActivated && onboardingClients.has(client.uid);
           default: return true;
         }
       });
@@ -238,6 +260,7 @@ export default function ClientManagementPage() {
                   <option value="deleted">🗑️ Deleted</option>
                   <option value="pending">🟡 Pending</option>
                   <option value="no_subscription">⚪ No Subscription</option>
+                  <option value="onboarding">🔷 Onboarding</option>
                 </select>
               </div>
 
@@ -333,6 +356,10 @@ export default function ClientManagementPage() {
                   <Badge variant="secondary" className="text-xs">No Subscription</Badge>
                   <span className="text-muted-foreground">Active account, no recurring subscription</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-cyan-500 text-cyan-700 text-xs">Onboarding</Badge>
+                  <span className="text-muted-foreground">Paid but hasn&apos;t completed onboarding steps</span>
+                </div>
               </div>
             </div>
           </CollapsibleContent>
@@ -418,6 +445,11 @@ export default function ClientManagementPage() {
                         {!client.accountActivated && (
                           <Badge variant="outline" className="border-amber-500 text-amber-700">
                             Pending
+                          </Badge>
+                        )}
+                        {client.accountActivated && onboardingClients.has(client.uid) && (
+                          <Badge variant="outline" className="border-cyan-500 text-cyan-700">
+                            Onboarding
                           </Badge>
                         )}
                       </div>
