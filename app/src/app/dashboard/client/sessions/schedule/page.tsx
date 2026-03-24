@@ -325,47 +325,10 @@ export default function ScheduleSessionsPage() {
     );
   }
 
-  // No sessions available state
-  if (sessionBalance.available === 0) {
-    return (
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold text-foreground mb-2">Schedule Training Sessions</h1>
-                <p className="text-muted-foreground">
-                  Book your one-on-one training sessions with your coach
-                </p>
-              </div>
+  const hasUpcomingSessions = upcomingSessions.length > 0;
+  const hasAvailableCredits = sessionBalance.available > 0;
 
-              <div className="bg-card rounded-lg shadow-md p-12 text-center border border-border">
-                <div className="text-6xl mb-4">📅</div>
-                <h2 className="text-2xl font-bold text-foreground mb-3">No Sessions Available</h2>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  You need to purchase session credits before you can schedule appointments with your trainer.
-                </p>
-                <Link
-                  href="/dashboard/client/sessions/buy"
-                  className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
-                >
-                  Buy Session Packages
-                </Link>
-              </div>
-            </div>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    );
-  }
-
-  // Has sessions available state
+  // Main page — always shows upcoming sessions, conditionally shows Calendly widget
   return (
     <>
       <Script 
@@ -406,37 +369,54 @@ export default function ScheduleSessionsPage() {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Calendly Widget */}
-              <div className="bg-card rounded-lg shadow-md p-6 border border-border">
-                <h2 className="text-xl font-semibold text-foreground mb-4">Book a Session</h2>
-                
-                {/* Calendly Inline Widget */}
-                <div className="calendly-container">
-                  <div 
-                    className="calendly-inline-widget"
-                    data-url={`https://calendly.com/shreyas-annapureddy/1-1-training-session?hide_gdpr_banner=1&primary_color=4caf50${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${userData?.email ? `&email=${encodeURIComponent(userData.email)}` : ''}${nextExpirationDate ? `&date_range_end=${nextExpirationDate.toISOString().split('T')[0]}` : ''}`}
-                    style={{ minWidth: '320px', height: '700px' }}
-                  ></div>
-                </div>
+            <div className={`grid gap-8 ${hasAvailableCredits ? 'lg:grid-cols-2' : ''}`}>
+              {/* Calendly Widget — only shown when credits available */}
+              {hasAvailableCredits ? (
+                <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Book a Session</h2>
+                  
+                  {/* Calendly Inline Widget */}
+                  <div className="calendly-container">
+                    <div 
+                      className="calendly-inline-widget"
+                      data-url={`https://calendly.com/shreyas-annapureddy/1-1-training-session?hide_gdpr_banner=1&primary_color=4caf50${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${userData?.email ? `&email=${encodeURIComponent(userData.email)}` : ''}${nextExpirationDate ? `&date_range_end=${nextExpirationDate.toISOString().split('T')[0]}` : ''}`}
+                      style={{ minWidth: '320px', height: '700px' }}
+                    ></div>
+                  </div>
 
-                <div className="mt-6 space-y-3 text-sm text-muted-foreground">
-                  <div className="flex items-start">
-                    <span className="text-green-600 mr-2">✓</span>
-                    <span>One session credit will be deducted when you book</span>
-                  </div>
-                  <div className="flex items-start">
-                    <span className="text-green-600 mr-2">✓</span>
-                    <span>Cancel 24+ hours before for a full credit refund</span>
-                  </div>
-                  <div className="flex items-start">
-                    <span className="text-green-600 mr-2">✓</span>
-                    <span>Receive email confirmation after booking</span>
+                  <div className="mt-6 space-y-3 text-sm text-muted-foreground">
+                    <div className="flex items-start">
+                      <span className="text-green-600 mr-2">✓</span>
+                      <span>One session credit will be deducted when you book</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-green-600 mr-2">✓</span>
+                      <span>Cancel 24+ hours before for a full credit refund</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-green-600 mr-2">✓</span>
+                      <span>Receive email confirmation after booking</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : !hasUpcomingSessions ? (
+                /* No credits AND no upcoming sessions — show buy prompt */
+                <div className="bg-card rounded-lg shadow-md p-12 text-center border border-border">
+                  <div className="text-6xl mb-4">📅</div>
+                  <h2 className="text-2xl font-bold text-foreground mb-3">No Sessions Available</h2>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    You need to purchase session credits before you can schedule appointments with your trainer.
+                  </p>
+                  <Link
+                    href="/dashboard/client/sessions/buy"
+                    className="inline-block bg-primary text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                  >
+                    Buy Session Packages
+                  </Link>
+                </div>
+              ) : null}
 
-              {/* Upcoming Sessions */}
+              {/* Upcoming Sessions — always visible when there are sessions */}
               <div className="bg-card rounded-lg shadow-md p-6 border border-border">
                 <h2 className="text-xl font-semibold text-foreground mb-4">Upcoming Sessions</h2>
                 
@@ -565,7 +545,7 @@ export default function ScheduleSessionsPage() {
                     )}
                     
                     <div className="text-muted-foreground">
-                      Need to reschedule? Use the "Reschedule" button instead to pick a new time without losing your credit.
+                      Need to reschedule? Cancel with 24+ hours notice to get your credit back, then book a new time.
                     </div>
                   </div>
 

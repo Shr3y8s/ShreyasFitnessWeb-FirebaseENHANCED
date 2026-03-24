@@ -19,6 +19,9 @@ const { isEligibleForCheckins } = require("./product-config");
 
 const db = admin.firestore();
 
+// Activity Feed helper
+const { writeActivityEvent, getClientInfoForActivityFeed } = require("./activity-feed");
+
 // Define secrets
 const stripeKey = defineSecret("STRIPE_KEY");
 const calendlyPat = defineSecret("CALENDLY_PAT");
@@ -219,14 +222,25 @@ async function handleCalendlyCancellation(calendlyEventId) {
   const now = admin.firestore.Timestamp.now();
   
   await db.runTransaction(async (transaction) => {
+    // IDEMPOTENCY GUARD: Re-read session inside transaction to check current status.
+    // This prevents double credit return when cancelSession() Cloud Function
+    // and this webhook handler race against each other.
+    const freshSessionDoc = await transaction.get(sessionRef);
+    const freshSessionData = freshSessionDoc.data();
+    
+    if (freshSessionData.status !== "scheduled") {
+      console.log(`Session ${sessionDoc.id} already has status "${freshSessionData.status}" — skipping webhook credit return (likely already handled by cancelSession Cloud Function)`);
+      return;
+    }
+    
     // For training sessions, return credit
-    if (sessionData.sessionType === "training" && sessionData.packageId) {
-      const clientRef = db.collection("users").doc(sessionData.clientId);
+    if (freshSessionData.sessionType === "training" && freshSessionData.packageId) {
+      const clientRef = db.collection("users").doc(freshSessionData.clientId);
       const clientDoc = await transaction.get(clientRef);
       const clientData = clientDoc.data();
       
       const packages = clientData.sessionPackages || [];
-      const packageIndex = packages.findIndex(pkg => pkg.id === sessionData.packageId);
+      const packageIndex = packages.findIndex(pkg => pkg.id === freshSessionData.packageId);
       
       if (packageIndex >= 0) {
         packages[packageIndex].remaining += 1;
@@ -254,7 +268,7 @@ async function handleCalendlyCancellation(calendlyEventId) {
       canceledBy: "client",
       canceledAt: now,
       cancelReason: "Rescheduled or canceled via Calendly",
-      creditReturned: sessionData.sessionType === "training", // Check-ins have no credit
+      creditReturned: freshSessionData.sessionType === "training", // Check-ins have no credit
       updatedAt: now,
     });
   });
@@ -513,6 +527,22 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, calendly
 
     console.log(`Session scheduled for user ${userId}, location: ${locationInfo.locationType}, deducted from package ${packageToUse.id}`);
   });
+
+  // ACTIVITY FEED: Write session_scheduled event
+  const sessionDateStr = eventDetails.scheduledDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  writeActivityEvent({
+    type: 'session_scheduled',
+    clientId: userId,
+    clientName: userData.name || 'Client',
+    trainerId: userData.assignedTrainerId || '',
+    message: `${userData.name || 'Client'} scheduled training session for ${sessionDateStr}`,
+    metadata: {
+      sessionDate: eventDetails.scheduledDate.toDate().toISOString(),
+      sessionType: 'training',
+    },
+  }).catch(err => {
+    console.warn("[ActivityFeed] Failed to write session_scheduled event", { userId, error: err.message });
+  });
 }
 
 /**
@@ -653,6 +683,21 @@ async function scheduleCheckin({ userId, calendlyEventId, eventDetails, calendly
   
   await db.collection("sessions").doc().set(sessionData);
   console.log(`Check-in scheduled: ${userId}, week: ${sessionData.weekIdentifier}`);
+
+  // ACTIVITY FEED: Write checkin_scheduled event
+  const checkinDateStr = eventDetails.scheduledDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  writeActivityEvent({
+    type: 'checkin_scheduled',
+    clientId: userId,
+    clientName: userData.name || 'Client',
+    trainerId: userData.assignedTrainerId || '',
+    message: `${userData.name || 'Client'} scheduled weekly check-in for ${checkinDateStr}`,
+    metadata: {
+      checkinDate: eventDetails.scheduledDate.toDate().toISOString(),
+    },
+  }).catch(err => {
+    console.warn("[ActivityFeed] Failed to write checkin_scheduled event", { userId, error: err.message });
+  });
 }
 
 /**
@@ -920,6 +965,25 @@ exports.cancelSession = onCall({
     });
 
     console.log(`Session ${sessionId} canceled by ${canceledBy}, credit returned: ${creditReturned}`);
+
+    // ACTIVITY FEED: Write session_canceled event
+    getClientInfoForActivityFeed(sessionData.clientId).then(clientInfo => {
+      const sessionDateStr = sessionData.scheduledDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      writeActivityEvent({
+        type: 'session_canceled',
+        clientId: sessionData.clientId,
+        clientName: clientInfo.clientName,
+        trainerId: clientInfo.trainerId,
+        message: `${clientInfo.clientName} canceled ${sessionData.sessionType || 'training'} session on ${sessionDateStr}`,
+        metadata: {
+          sessionId: sessionId,
+          sessionDate: sessionData.scheduledDate.toDate().toISOString(),
+          cancelReason: reason || '',
+        },
+      }).catch(err => {
+        console.warn("[ActivityFeed] Failed to write session_canceled event", { sessionId, error: err.message });
+      });
+    });
 
     return {
       success: true,
