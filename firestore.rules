@@ -818,6 +818,21 @@ service cloud.firestore {
                     request.auth.uid == getUserIdFromPhotoId();
     }
     
+    // CLIENT ACTIVITY FEED — Real-time activity log for trainers
+    // Write-once, append-only events. Auto-expires after 7 days.
+    // Only Cloud Functions can create/delete (via admin SDK).
+    match /activityFeed/{eventId} {
+      // Trainers and admins can read activity feed events
+      allow read: if isTrainerOrAdmin();
+      
+      // Only Cloud Functions write (via admin SDK, bypasses rules)
+      allow create, delete: if false;
+      
+      // Trainers can mark events as read (only the 'read' field)
+      allow update: if isTrainerOrAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+    
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

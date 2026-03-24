@@ -20,6 +20,9 @@ const admin = require("firebase-admin");
 // Load shared configuration
 const sharedConfig = require("./firebase-config.json");
 
+// Activity Feed helper
+const { writeActivityEvent, getClientInfoForActivityFeed } = require("./activity-feed");
+
 /**
  * Assign a workout template to a client with configured parameters
  * Creates a unified Workout document with prescribed configuration
@@ -497,6 +500,24 @@ exports.completeWorkout = onCall({
       clientId,
       completedExercises: completedCount,
       totalExercises,
+    });
+
+    // ACTIVITY FEED: Write workout_completed event
+    const workoutName = workoutData.name || 'Workout';
+    getClientInfoForActivityFeed(clientId).then(clientInfo => {
+      writeActivityEvent({
+        type: 'workout_completed',
+        clientId: clientId,
+        clientName: clientInfo.clientName,
+        trainerId: clientInfo.trainerId || workoutData.trainerId || '',
+        message: `${clientInfo.clientName} completed ${workoutName}`,
+        metadata: {
+          workoutId: data.workoutId,
+          workoutName: workoutName,
+        },
+      }).catch(err => {
+        logger.warn("[ActivityFeed] Failed to write workout_completed event", { clientId, error: err.message });
+      });
     });
 
     return {

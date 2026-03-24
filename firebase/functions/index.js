@@ -4015,6 +4015,92 @@ const exerciseNameFixFunctions = require('./fix-exercise-names');
 exports.fixExerciseNames = exerciseNameFixFunctions.fixExerciseNames;
 
 /**
+ * ACTIVITY FEED: Nutrition habits day completed trigger
+ * Fires when a client completes all nutrition habits for the day (Healthy Habits approach)
+ * The meal plan approach is handled by onNutritionLogWrite in goals.js
+ */
+exports.onNutritionHabitsWrite = onDocumentWritten({
+  document: "nutritionLogs/{userId}/habits/{date}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const after = event.data.after.exists ? event.data.after.data() : null;
+    if (!after) return null;
+    
+    const userId = event.params.userId;
+    const date = event.params.date;
+    
+    // Check if dayComplete is true
+    if (after.dayComplete !== true) return null;
+    
+    // Check if it just flipped to true (not a re-save)
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    if (before && before.dayComplete === true) return null;
+    
+    // Get client info and write event
+    const { getClientInfoForActivityFeed } = require("./activity-feed");
+    const clientInfo = await getClientInfoForActivityFeed(userId);
+    
+    writeActivityEvent({
+      type: 'nutrition_day_completed',
+      clientId: userId,
+      clientName: clientInfo.clientName,
+      trainerId: clientInfo.trainerId,
+      message: `${clientInfo.clientName} completed all nutrition habits for today`,
+      metadata: { date: date },
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write nutrition habits completed event", { userId, error: err.message });
+    });
+    
+    return null;
+  } catch (error) {
+    logger.error("[ActivityFeed] Error in onNutritionHabitsWrite trigger:", error);
+    return null;
+  }
+});
+
+/**
+ * ACTIVITY FEED: Nutrition macro tracking day completed trigger
+ * Fires when a client completes all macros for the day (Macro Tracking approach)
+ */
+exports.onNutritionMealsWrite = onDocumentWritten({
+  document: "nutritionLogs/{userId}/meals/{date}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const after = event.data.after.exists ? event.data.after.data() : null;
+    if (!after) return null;
+    
+    const userId = event.params.userId;
+    const date = event.params.date;
+    
+    if (after.dayComplete !== true) return null;
+    
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    if (before && before.dayComplete === true) return null;
+    
+    const { getClientInfoForActivityFeed } = require("./activity-feed");
+    const clientInfo = await getClientInfoForActivityFeed(userId);
+    
+    writeActivityEvent({
+      type: 'nutrition_day_completed',
+      clientId: userId,
+      clientName: clientInfo.clientName,
+      trainerId: clientInfo.trainerId,
+      message: `${clientInfo.clientName} completed macro tracking for today`,
+      metadata: { date: date },
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write nutrition meals completed event", { userId, error: err.message });
+    });
+    
+    return null;
+  } catch (error) {
+    logger.error("[ActivityFeed] Error in onNutritionMealsWrite trigger:", error);
+    return null;
+  }
+});
+
+/**
  * ACTIVITY FEED: Weekly survey submitted trigger
  * Fires when a client submits a weekly check-in survey
  */

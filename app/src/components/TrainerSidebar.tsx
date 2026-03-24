@@ -19,6 +19,7 @@ import {
   Shield,
   UserCircle,
   Calendar,
+  Activity,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -33,6 +34,7 @@ import {
   SidebarMenuItem,
   SidebarMenuBadge,
 } from '@/components/ui/sidebar';
+import NotificationBell from '@/components/trainer/activity-feed/NotificationBell';
 
 interface TrainerSidebarProps {
   currentPage?: string;
@@ -105,15 +107,18 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
   return (
     <Sidebar variant="floating">
       <SidebarHeader>
-        <Link href="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity">
-          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-            SF
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
-            <span className="text-xs text-muted-foreground">Trainer Portal</span>
-          </div>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+              SF
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+              <span className="text-xs text-muted-foreground">Trainer Portal</span>
+            </div>
+          </Link>
+          <NotificationBell />
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
@@ -167,6 +172,17 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                   <Link href="/dashboard/trainer/clients-messages">
                     <Mail className="w-4 h-4" />
                     <span className="font-medium">Client Inbox</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/activity' || currentPage === 'activity' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/activity">
+                    <Activity className="w-4 h-4" />
+                    <span className="font-medium">Activity Feed</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

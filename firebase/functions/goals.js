@@ -6,6 +6,9 @@ const db = admin.firestore();
 // Load shared configuration (copied from root by predeploy hook)
 const sharedConfig = require("./firebase-config.json");
 
+// Activity Feed helper
+const { writeActivityEvent, getClientInfoForActivityFeed } = require("./activity-feed");
+
 /**
  * PHASE 3: CLOUD FUNCTIONS FOR AUTO-TRACKING GOALS
  * 
@@ -595,6 +598,42 @@ exports.onWeightLog = onDocumentWritten({
       await batch.commit();
       logger.info(`[GOALS] Weight loss goal updated for ${clientId}`);
       console.log(`Updated weight loss goal for ${clientId}`);
+
+      // ACTIVITY FEED: Write weight_logged event
+      const beforeData = change.before.exists ? change.before.data() : null;
+      const isNewWeightEntry = !beforeData?.weight?.weight || 
+        beforeData.weight.weight !== activityData.weight.weight;
+      
+      if (isNewWeightEntry) {
+        getClientInfoForActivityFeed(clientId).then(clientInfo => {
+          const weightVal = activityData.weight.weight;
+          const weightUnit = activityData.weight.unit || 'lbs';
+          const prevWeight = beforeData?.weight?.weight;
+          const changeAmt = prevWeight ? Math.round((weightVal - prevWeight) * 10) / 10 : null;
+          const changeStr = changeAmt !== null 
+            ? (changeAmt > 0 ? `+${changeAmt}` : `${changeAmt}`)
+            : '';
+          
+          writeActivityEvent({
+            type: 'weight_logged',
+            clientId: clientId,
+            clientName: clientInfo.clientName,
+            trainerId: clientInfo.trainerId,
+            message: changeStr
+              ? `${clientInfo.clientName} logged weight: ${weightVal} ${weightUnit} (${changeStr} ${weightUnit})`
+              : `${clientInfo.clientName} logged weight: ${weightVal} ${weightUnit}`,
+            metadata: {
+              weight: weightVal,
+              unit: weightUnit,
+              previousWeight: prevWeight || null,
+              changeAmount: changeAmt,
+            },
+          }).catch(err => {
+            logger.warn("[ActivityFeed] Failed to write weight_logged event", { clientId, error: err.message });
+          });
+        });
+      }
+
       return null;
     } catch (error) {
       console.error('Error updating weight loss goal:', error);
@@ -616,7 +655,28 @@ exports.onNutritionLogWrite = onDocumentWritten({
       if (!mealPlanData) return null;
 
       const userId = event.params.userId;
-      
+
+      // ACTIVITY FEED: Write nutrition_day_completed event when dayComplete is true
+      // This runs BEFORE goals processing so it fires even if no nutrition goals are configured
+      if (mealPlanData.dayComplete === true) {
+        const beforeData = change.before.exists ? change.before.data() : null;
+        // Only fire if dayComplete just flipped to true (not on re-saves)
+        if (!beforeData || beforeData.dayComplete !== true) {
+          getClientInfoForActivityFeed(userId).then(clientInfo => {
+            writeActivityEvent({
+              type: 'nutrition_day_completed',
+              clientId: userId,
+              clientName: clientInfo.clientName,
+              trainerId: clientInfo.trainerId,
+              message: `${clientInfo.clientName} completed nutrition plan for today`,
+              metadata: { date: event.params.date },
+            }).catch(err => {
+              logger.warn("[ActivityFeed] Failed to write nutrition_day_completed event", { userId, error: err.message });
+            });
+          });
+        }
+      }
+
       // Query nutrition goals for this client
       const goalsSnapshot = await db.collection('goals')
         .where('clientId', '==', userId)
@@ -675,6 +735,7 @@ exports.onNutritionLogWrite = onDocumentWritten({
       await batch.commit();
       logger.info(`[GOALS] Nutrition goals updated for user ${userId}`);
       console.log(`Updated nutrition goals for user ${userId}`);
+
       return null;
     } catch (error) {
       console.error('Error updating nutrition goals:', error);
@@ -682,9 +743,83 @@ exports.onNutritionLogWrite = onDocumentWritten({
     }
   });
 
+/**
+ * Trigger: When a goal document is written
+ * Detects: goal_completed (status → completed) and milestone_completed (milestone flips to true)
+ * Writes activity feed events for both.
+ */
+exports.onGoalWrite = onDocumentWritten({
+  document: 'goals/{goalId}',
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data.after.exists ? event.data.after.data() : null;
+    
+    if (!after || !before) return null; // Only handle updates (not creates/deletes)
+    
+    const clientId = after.clientId;
+    const trainerId = after.trainerId;
+
+    // DETECT: Goal status changed to 'completed'
+    if (before.status !== 'completed' && after.status === 'completed') {
+      getClientInfoForActivityFeed(clientId).then(clientInfo => {
+        writeActivityEvent({
+          type: 'goal_completed',
+          clientId: clientId,
+          clientName: clientInfo.clientName,
+          trainerId: clientInfo.trainerId || trainerId || '',
+          message: `${clientInfo.clientName} reached goal: ${after.title || 'Goal'} 🏆`,
+          metadata: {
+            goalId: event.params.goalId,
+            goalTitle: after.title || '',
+            goalCategory: after.category || '',
+          },
+        }).catch(err => {
+          logger.warn("[ActivityFeed] Failed to write goal_completed event", { clientId, error: err.message });
+        });
+      });
+    }
+
+    // DETECT: Milestone(s) newly completed
+    if (before.milestones && after.milestones) {
+      for (let i = 0; i < after.milestones.length; i++) {
+        const beforeM = before.milestones[i];
+        const afterM = after.milestones[i];
+        
+        if (beforeM && afterM && !beforeM.completed && afterM.completed) {
+          // This milestone just flipped to completed
+          getClientInfoForActivityFeed(clientId).then(clientInfo => {
+            writeActivityEvent({
+              type: 'milestone_completed',
+              clientId: clientId,
+              clientName: clientInfo.clientName,
+              trainerId: clientInfo.trainerId || trainerId || '',
+              message: `${clientInfo.clientName} reached milestone: ${afterM.text || 'Milestone'} 🎯`,
+              metadata: {
+                goalId: event.params.goalId,
+                goalTitle: after.title || '',
+                milestoneText: afterM.text || '',
+              },
+            }).catch(err => {
+              logger.warn("[ActivityFeed] Failed to write milestone_completed event", { clientId, error: err.message });
+            });
+          });
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('[ActivityFeed] Error in onGoalWrite trigger:', error);
+    return null;
+  }
+});
+
 module.exports = {
   onDailyActivityWrite: exports.onDailyActivityWrite,
   onWorkoutChange: exports.onWorkoutChange,
   onWeightLog: exports.onWeightLog,
-  onNutritionLogWrite: exports.onNutritionLogWrite
+  onNutritionLogWrite: exports.onNutritionLogWrite,
+  onGoalWrite: exports.onGoalWrite,
 };

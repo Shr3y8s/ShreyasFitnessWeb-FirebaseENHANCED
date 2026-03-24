@@ -66,6 +66,7 @@ Based on actual database schema (as of Mar 2026):
 - Includes subscription and session credit info for admin review
 
 ## Collections NOT Deleted (by design)
+- `activityFeed` - **Auto-expires (7-day TTL via scheduled cleanup). No cleanup action required during account deletion.**
 - `admins` - Admin/trainer accounts
 - `trainers` - Trainer accounts
 - `exercises` - Shared exercise library
