@@ -86,11 +86,12 @@ export default function MembershipPage() {
     if (userData.subscriptionId) {
       let status = 'active';  // Default status
       
-      // CRITICAL: Check OUR flags, not Stripe's subscriptionStatus
-      // Stripe keeps status as "active" for both paused and canceled subscriptions
+      // Check OUR flags first, then fall back to Stripe's subscriptionStatus
+      // Our flags handle "cancel at period end" and "paused" states
+      // Stripe's subscriptionStatus handles immediate cancellations (e.g., from Stripe dashboard)
       if (userData.subscriptionPaused === true) {
         status = 'paused';
-      } else if (userData.cancelAtPeriodEnd === true) {
+      } else if (userData.cancelAtPeriodEnd === true || userData.subscriptionStatus === 'canceled') {
         status = 'canceled';
       }
       
@@ -371,7 +372,7 @@ export default function MembershipPage() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Member Since</p>
-                        <p className="text-lg font-semibold">{formatDate(userData?.lastPaymentDate)}</p>
+                        <p className="text-lg font-semibold">{formatDate(userData?.createdAt)}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Status</p>
