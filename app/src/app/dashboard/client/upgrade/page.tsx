@@ -54,8 +54,9 @@ export default function UpgradePage() {
       return;
     }
 
-    // If already has subscription, redirect to membership
-    if (userData.subscriptionId) {
+    // If already has an active subscription, redirect to membership
+    // Allow canceled subscribers to access this page to re-subscribe
+    if (userData.subscriptionId && userData.subscriptionStatus !== 'canceled') {
       router.push('/dashboard/client/membership');
       return;
     }

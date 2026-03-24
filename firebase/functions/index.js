@@ -12,6 +12,9 @@ admin.initializeApp();
 const sharedConfig = require("./firebase-config.json");
 const { ONBOARDING_DEADLINE_DAYS, CHECKIN_ELIGIBLE_PRODUCTS, MAX_CLIENT_REFUND_CREDITS } = require("./product-config");
 
+// Activity Feed helper for writing client activity events
+const { writeActivityEvent } = require("./activity-feed");
+
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
 const resendKey = defineSecret("RESEND_API_KEY");
@@ -443,6 +446,21 @@ exports.cancelSubscription = onCall({
 
     // Return success with access end date
     const accessUntil = new Date(subscription.current_period_end * 1000);
+
+    // ACTIVITY FEED: Write subscription_canceled event
+    writeActivityEvent({
+      type: 'subscription_canceled',
+      clientId: userId,
+      clientName: userData.name || 'Client',
+      trainerId: userData.assignedTrainerId || '',
+      message: `${userData.name || 'Client'} canceled subscription`,
+      metadata: {
+        subscriptionId: subscriptionId,
+        accessUntil: accessUntil.toISOString(),
+      },
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write subscription_canceled event", { userId, error: err.message });
+    });
 
     return {
       success: true,
@@ -977,6 +995,21 @@ exports.syncPaymentToUser = onDocumentWritten({
         });
         
         logger.info("Welcome email triggered for one-time payment", {userId});
+
+        // ACTIVITY FEED: Write new_client_signup event on first activation (one-time payment path)
+        const clientName = userDataRefresh?.name || userData?.name || 'New Client';
+        const assignedTrainerId = updateData.assignedTrainerId || userData?.assignedTrainerId || '';
+        
+        writeActivityEvent({
+          type: 'new_client_signup',
+          clientId: userId,
+          clientName: clientName,
+          trainerId: assignedTrainerId,
+          message: `${clientName} signed up`,
+          metadata: {},
+        }).catch(err => {
+          logger.warn("[ActivityFeed] Failed to write new_client_signup event (payment path)", { userId, error: err.message });
+        });
       }
 
       // Check if this is a session package purchase
@@ -1186,10 +1219,24 @@ exports.syncSubscriptionToUser = onDocumentWritten({
 
     // Prepare update object
     const updateData = {
-      subscriptionId: subscriptionId,
       subscriptionStatus: status,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
+
+    // When subscription is fully canceled (immediate cancellation, not cancel-at-period-end),
+    // clean up subscriptionId so the user can re-subscribe via the upgrade page.
+    // For active/trialing/past_due subscriptions, keep the subscriptionId.
+    if (status === "canceled") {
+      updateData.subscriptionId = admin.firestore.FieldValue.delete();
+      updateData.subscriptionEndedAt = admin.firestore.FieldValue.serverTimestamp();
+      
+      logger.info("Subscription fully canceled, cleaning up subscriptionId from user doc", {
+        userId,
+        subscriptionId,
+      });
+    } else {
+      updateData.subscriptionId = subscriptionId;
+    }
 
     // Extract tier info from subscription metadata (set during checkout)
     const metadata = subscriptionData.metadata || {};
@@ -1370,6 +1417,28 @@ exports.syncSubscriptionToUser = onDocumentWritten({
       });
       
       logger.info("Welcome email triggered for new subscription", {userId});
+    }
+
+    // ACTIVITY FEED: Write new_client_signup event on first activation
+    if (status === "active" && updateData.accountActivated) {
+      const clientName = userData?.name || 'New Client';
+      const assignedTrainerId = updateData.assignedTrainerId || userData?.assignedTrainerId || '';
+      const tierDisplayName = updateData.tierName || userData?.tierName || '';
+      
+      writeActivityEvent({
+        type: 'new_client_signup',
+        clientId: userId,
+        clientName: clientName,
+        trainerId: assignedTrainerId,
+        message: tierDisplayName
+          ? `${clientName} signed up (${tierDisplayName})`
+          : `${clientName} signed up`,
+        metadata: {
+          tierName: tierDisplayName,
+        },
+      }).catch(err => {
+        logger.warn("[ActivityFeed] Failed to write new_client_signup event", { userId, error: err.message });
+      });
     }
 
     return null;
@@ -3886,6 +3955,24 @@ exports.trackLogin = onCall({
 
     logger.info("Login tracked successfully", { userId });
 
+    // ACTIVITY FEED: Write client_login event (only for client-role users)
+    if (loginRecord.success) {
+      const userDocForFeed = await admin.firestore().collection('users').doc(userId).get();
+      if (userDocForFeed.exists && userDocForFeed.data().role === 'client') {
+        const feedUserData = userDocForFeed.data();
+        writeActivityEvent({
+          type: 'client_login',
+          clientId: userId,
+          clientName: feedUserData.name || 'Client',
+          trainerId: feedUserData.assignedTrainerId || '',
+          message: `${feedUserData.name || 'Client'} logged in`,
+          metadata: {},
+        }).catch(err => {
+          logger.warn("[ActivityFeed] Failed to write client_login event", { userId, error: err.message });
+        });
+      }
+    }
+
     return {
       success: true,
       message: "Login tracked successfully",
@@ -3915,6 +4002,7 @@ exports.onWorkoutComplete = goalFunctions.onWorkoutComplete;
 exports.onWorkoutChange = goalFunctions.onWorkoutChange;
 exports.onWeightLog = goalFunctions.onWeightLog;
 exports.onNutritionLogWrite = goalFunctions.onNutritionLogWrite;
+exports.onGoalWrite = goalFunctions.onGoalWrite;  // Activity Feed: goal_completed + milestone_completed
 
 /**
  * MIGRATION FUNCTIONS
@@ -3925,3 +4013,106 @@ exports.migrateSessionLocations = migrationFunctions.migrateSessionLocations;
 
 const exerciseNameFixFunctions = require('./fix-exercise-names');
 exports.fixExerciseNames = exerciseNameFixFunctions.fixExerciseNames;
+
+/**
+ * ACTIVITY FEED: Weekly survey submitted trigger
+ * Fires when a client submits a weekly check-in survey
+ */
+exports.onWeeklySurveySubmit = onDocumentWritten({
+  document: "weeklySurveys/{userId}/responses/{weekStartDate}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const before = event.data.before.exists;
+    const after = event.data.after.exists ? event.data.after.data() : null;
+    
+    // Only fire on document creation (not updates)
+    if (before || !after) return null;
+    
+    const userId = event.params.userId;
+    const weekStartDate = event.params.weekStartDate;
+    
+    // Get client info
+    const { getClientInfoForActivityFeed } = require("./activity-feed");
+    const clientInfo = await getClientInfoForActivityFeed(userId);
+    
+    writeActivityEvent({
+      type: 'weekly_survey_submitted',
+      clientId: userId,
+      clientName: clientInfo.clientName,
+      trainerId: clientInfo.trainerId,
+      message: `${clientInfo.clientName} submitted weekly check-in survey`,
+      metadata: {
+        weekStartDate: weekStartDate,
+      },
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write weekly_survey_submitted event", { userId, error: err.message });
+    });
+    
+    return null;
+  } catch (error) {
+    logger.error("[ActivityFeed] Error in onWeeklySurveySubmit trigger:", error);
+    return null;
+  }
+});
+
+/**
+ * CLIENT ACTIVITY FEED SYSTEM
+ * Real-time activity log for trainers — auto-expires after 7 days.
+ * See: docs/02-implementation/client-activity-feed-architecture.md
+ */
+
+/**
+ * Scheduled function to clean up expired activity feed events.
+ * Runs daily at 3 AM UTC. Deletes events where expiresAt < now.
+ * Events have a 7-day TTL set at write time by writeActivityEvent().
+ */
+exports.cleanupExpiredActivityFeed = onSchedule({
+  schedule: "0 3 * * *", // Daily at 3 AM UTC
+  timeZone: "UTC",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    logger.info("[ActivityFeed] Starting expired event cleanup");
+
+    const now = admin.firestore.Timestamp.now();
+    let totalDeleted = 0;
+
+    // Process in batches of 500 (Firestore batch limit)
+    // Loop in case there are more than 500 expired events
+    let hasMore = true;
+    while (hasMore) {
+      const snapshot = await admin.firestore()
+        .collection("activityFeed")
+        .where("expiresAt", "<", now)
+        .limit(500)
+        .get();
+
+      if (snapshot.empty) {
+        hasMore = false;
+        break;
+      }
+
+      const batch = admin.firestore().batch();
+      snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+
+      totalDeleted += snapshot.size;
+      logger.info(`[ActivityFeed] Deleted batch of ${snapshot.size} expired events`);
+
+      // If we got fewer than 500, we're done
+      if (snapshot.size < 500) {
+        hasMore = false;
+      }
+    }
+
+    logger.info("[ActivityFeed] Cleanup completed", { totalDeleted });
+    return { success: true, totalDeleted };
+  } catch (error) {
+    logger.error("[ActivityFeed] Cleanup failed", {
+      error: error.message,
+      stack: error.stack,
+    });
+    return null;
+  }
+});
