@@ -446,23 +446,61 @@ export default function WeeklyCheckinsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {upcomingCheckins.map((checkin) => (
-                <div
-                  key={checkin.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-background/50 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/60 hover:-translate-y-0.5"
-                >
-                  <div className="flex items-center gap-3">
-                    <PhoneCall className="h-5 w-5 text-blue-500" />
-                    <div>
-                      <p className="font-medium">{formatDateTime(checkin.scheduledDate)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Week of {formatWeekRange(checkin.weekIdentifier)}
-                      </p>
+              {upcomingCheckins.map((checkin) => {
+                // Calculate grace period for cancel/reschedule
+                const sessionDate = checkin.scheduledDate.toDate();
+                const gracePeriodMinutes = Math.ceil(checkin.duration / 4);
+                const gracePeriodMs = gracePeriodMinutes * 60 * 1000;
+                const cancelCutoffTime = new Date(sessionDate.getTime() + gracePeriodMs);
+                const canStillModify = new Date() < cancelCutoffTime;
+
+                return (
+                  <div
+                    key={checkin.id}
+                    className="p-3 rounded-lg border border-primary/30 bg-background/50 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/60 hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <PhoneCall className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <p className="font-medium">{formatDateTime(checkin.scheduledDate)}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Week of {formatWeekRange(checkin.weekIdentifier)}
+                          </p>
+                        </div>
+                      </div>
+                      {getStatusBadge(checkin.status)}
                     </div>
+                    {/* Reschedule/Cancel buttons for upcoming check-ins */}
+                    {checkin.status === 'scheduled' && canStillModify && (checkin.cancelUrl || checkin.rescheduleUrl) && (
+                      <div className="flex gap-2 mt-2 ml-8">
+                        {checkin.rescheduleUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(checkin.rescheduleUrl, '_blank')}
+                            className="flex items-center gap-2"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Reschedule
+                          </Button>
+                        )}
+                        {checkin.cancelUrl && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(checkin.cancelUrl, '_blank')}
+                            className="flex items-center gap-2"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {getStatusBadge(checkin.status)}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
