@@ -333,13 +333,13 @@
 /* ── Client Dashboard: Forest Green Glassmorphism ───────────────────────── */
 
 .client-dashboard {
-  background: linear-gradient(135deg, #1a3520 0%, #264d28 40%, #1e4020 70%, #162e18 100%);
+  background: linear-gradient(135deg, #0d3d20 0%, #1a5e2e 40%, #124a22 70%, #0a3318 100%);
   min-height: 100vh;
   color: white;
 }
 
 .dark .client-dashboard {
-  background: linear-gradient(135deg, #102010 0%, #1a3520 40%, #152a18 70%, #0c1e0e 100%);
+  background: linear-gradient(135deg, #082a15 0%, #0d3d20 40%, #0a2e18 70%, #061f10 100%);
 }
 
 /* Glass card effect — applies to all Card components inside .client-dashboard */
@@ -433,9 +433,9 @@
 
 /* ── Forest Sidebar ─────────────────────────────────────────────────────── */
 
-/* Fill the outer sidebar wrapper gap area with forest green */
+/* Fill the outer sidebar wrapper gap area with emerald green */
 .forest-sidebar {
-  background: linear-gradient(180deg, #1a3520 0%, #264d28 100%);
+  background: linear-gradient(180deg, #0d3d20 0%, #1a5e2e 100%);
 }
 
 /* Frosted glass sidebar panel — matches dashboard card style */
