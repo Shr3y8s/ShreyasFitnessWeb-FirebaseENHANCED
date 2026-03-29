@@ -92,7 +92,12 @@ export default function WorkoutAssignmentsPage() {
           {/* New Assignment Button */}
           <div className="flex justify-end mb-6">
             <Button
-              onClick={() => router.push('/dashboard/trainer/assignments/create')}
+              onClick={() => {
+                const createUrl = selectedViewClientId
+                  ? `/dashboard/trainer/assignments/create?clientId=${selectedViewClientId}`
+                  : '/dashboard/trainer/assignments/create';
+                router.push(createUrl);
+              }}
               className="bg-primary text-white"
             >
               <Dumbbell className="h-4 w-4 mr-2" />
