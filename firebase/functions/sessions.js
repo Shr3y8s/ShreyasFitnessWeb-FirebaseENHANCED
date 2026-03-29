@@ -274,6 +274,29 @@ async function handleCalendlyCancellation(calendlyEventId) {
   });
   
   console.log(`Session ${sessionDoc.id} marked as canceled`);
+
+  // ACTIVITY FEED: Write session_canceled event for Calendly cancellations (training + check-in)
+  const sessionType = sessionData.sessionType || 'training';
+  const typeLabel = sessionType === 'checkin' ? 'check-in' : 'training session';
+  const sessionDateStr = sessionData.scheduledDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  
+  getClientInfoForActivityFeed(sessionData.clientId).then(clientInfo => {
+    writeActivityEvent({
+      type: 'session_canceled',
+      clientId: sessionData.clientId,
+      clientName: clientInfo.clientName,
+      trainerId: clientInfo.trainerId,
+      message: `${clientInfo.clientName} canceled ${typeLabel} on ${sessionDateStr}`,
+      metadata: {
+        sessionId: sessionDoc.id,
+        sessionDate: sessionData.scheduledDate.toDate().toISOString(),
+        sessionType: sessionType,
+        cancelReason: 'Canceled via Calendly',
+      },
+    }).catch(err => {
+      console.warn("[ActivityFeed] Failed to write Calendly session_canceled event", { clientId: sessionData.clientId, error: err.message });
+    });
+  });
 }
 
 /**

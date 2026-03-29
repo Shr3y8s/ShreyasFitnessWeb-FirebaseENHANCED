@@ -1021,6 +1021,31 @@ exports.syncPaymentToUser = onDocumentWritten({
           priceId: paymentData.price,
         });
         
+        // ACTIVITY FEED: Write session_purchased event
+        const { getClientInfoForActivityFeed } = require("./activity-feed");
+        getClientInfoForActivityFeed(userId).then(clientInfo => {
+          // Try to get product name from payment data for a descriptive message
+          const productName = paymentData.items?.[0]?.price?.product?.name || 
+                             paymentData.items?.[0]?.description || 
+                             'training sessions';
+          const amount = paymentData.amount ? `$${(paymentData.amount / 100).toFixed(0)}` : '';
+          
+          writeActivityEvent({
+            type: 'session_purchased',
+            clientId: userId,
+            clientName: clientInfo.clientName,
+            trainerId: clientInfo.trainerId,
+            message: amount 
+              ? `${clientInfo.clientName} purchased ${productName} (${amount})`
+              : `${clientInfo.clientName} purchased ${productName}`,
+            metadata: {
+              amount: paymentData.amount || 0,
+            },
+          }).catch(err => {
+            logger.warn("[ActivityFeed] Failed to write session_purchased event", { userId, error: err.message });
+          });
+        });
+        
         try {
           await createSessionPackageFromPayment(userId, paymentData);
         } catch (error) {
