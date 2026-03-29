@@ -45,6 +45,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
   const router = useRouter();
   const { user, userData, canAccessAdminDashboard } = useAuth();
   const [clientCount, setClientCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Listen for real-time client count updates
   useEffect(() => {
@@ -67,6 +68,43 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
       (error) => {
         console.error('Error listening to client count:', error);
         setClientCount(0);
+      }
+    );
+
+    // Register with centralized registry
+    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
+    registerListener(unsubscribe);
+
+    return () => {
+      unregisterListener(unsubscribe);
+      unsubscribe();
+    };
+  }, [user]);
+
+  // Listen for real-time unread message count (messages from clients to this trainer)
+  useEffect(() => {
+    if (!user) {
+      setUnreadMessageCount(0);
+      return;
+    }
+
+    // Query all messages where the trainer is the recipient and not yet read
+    const unreadQuery = query(
+      collection(db, 'client_messages'),
+      where('recipientId', '==', user.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(
+      unreadQuery,
+      (snapshot) => {
+        setUnreadMessageCount(snapshot.size);
+      },
+      (error) => {
+        console.log('Unread messages listener error:', error.code);
+        if (error.code === 'permission-denied') {
+          setUnreadMessageCount(0);
+        }
       }
     );
 
@@ -172,6 +210,11 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                   <Link href="/dashboard/trainer/clients-messages">
                     <Mail className="w-4 h-4" />
                     <span className="font-medium">Client Inbox</span>
+                    {unreadMessageCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-red-500 text-white flex items-center justify-center w-5 h-5 p-0">
+                        {unreadMessageCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -182,9 +182,8 @@ export default function DailyActivityPage() {
     
     // Optimistic update - update UI immediately
     setActivityData(prev => {
-      if (!prev) return prev;
-      
-      const existingHabits = prev.habits || [];
+      const base = prev || { date: selectedDate, habits: [], updatedAt: new Date() };
+      const existingHabits = base.habits || [];
       const habitIndex = existingHabits.findIndex(h => h.habitId === habitId);
       
       let updatedHabits;
@@ -210,8 +209,9 @@ export default function DailyActivityPage() {
       }
       
       return {
-        ...prev,
-        habits: updatedHabits
+        ...base,
+        habits: updatedHabits,
+        updatedAt: new Date()
       };
     });
     

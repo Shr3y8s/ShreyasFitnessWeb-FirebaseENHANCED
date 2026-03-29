@@ -92,12 +92,18 @@ exports.onDailyActivityWrite = onDocumentWritten({
       // ACTIVITY FEED: Check if all daily habits are completed
       const habits = activityData.habits || [];
       if (habits.length > 0) {
-        const allCompleted = habits.every(h => h.completed === true || h.completed === 1);
+        const completedHabits = habits.filter(h => h.completed === true || h.completed === 1);
+        // Look up client plan to know total assigned habits — don't fire notification
+        // unless ALL assigned habits are completed (not just all habits in the document)
+        const planDoc = await db.collection('clientPlans').doc(clientId).get();
+        const totalAssignedHabits = planDoc.exists ? (planDoc.data()?.dailyHabits?.habits?.length || 0) : 0;
+        const allCompleted = totalAssignedHabits > 0 && completedHabits.length >= totalAssignedHabits;
         if (allCompleted) {
           // Check if it just became all-completed (wasn't before)
           const beforeData = change.before.exists ? change.before.data() : null;
           const beforeHabits = beforeData?.habits || [];
-          const wasAllCompleted = beforeHabits.length > 0 && beforeHabits.every(h => h.completed === true || h.completed === 1);
+          const beforeCompletedCount = beforeHabits.filter(h => h.completed === true || h.completed === 1).length;
+          const wasAllCompleted = totalAssignedHabits > 0 && beforeCompletedCount >= totalAssignedHabits;
           
           if (!wasAllCompleted) {
             const date = activityData.date || activityId.split('_')[1] || '';
