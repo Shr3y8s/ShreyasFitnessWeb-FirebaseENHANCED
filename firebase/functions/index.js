@@ -4134,11 +4134,16 @@ exports.onWeeklySurveySubmit = onDocumentWritten({
   region: sharedConfig.region,
 }, async (event) => {
   try {
-    const before = event.data.before.exists;
     const after = event.data.after.exists ? event.data.after.data() : null;
+    if (!after) return null;
     
-    // Only fire on document creation (not updates)
-    if (before || !after) return null;
+    // Fire on create OR when lastUpdated changes (re-submissions preserve submittedAt, so use lastUpdated)
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    const afterUpdated = after.lastUpdated?.toMillis ? after.lastUpdated.toMillis() : null;
+    const beforeUpdated = before?.lastUpdated?.toMillis ? before.lastUpdated.toMillis() : null;
+    
+    // Skip if lastUpdated didn't change (not a real submission)
+    if (before && afterUpdated === beforeUpdated) return null;
     
     const userId = event.params.userId;
     const weekStartDate = event.params.weekStartDate;
@@ -4163,6 +4168,85 @@ exports.onWeeklySurveySubmit = onDocumentWritten({
     return null;
   } catch (error) {
     logger.error("[ActivityFeed] Error in onWeeklySurveySubmit trigger:", error);
+    return null;
+  }
+});
+
+/**
+ * ACTIVITY FEED: Progress photo uploaded trigger
+ * Fires when a client uploads a new progress photo
+ */
+exports.onProgressPhotoWrite = onDocumentWritten({
+  document: "progressPhotos/{photoDocId}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    // Only fire on document creation (not updates)
+    if (event.data.before.exists) return null;
+    const after = event.data.after.exists ? event.data.after.data() : null;
+    if (!after) return null;
+    
+    const userId = after.userId;
+    if (!userId) return null;
+    
+    const { getClientInfoForActivityFeed } = require("./activity-feed");
+    const clientInfo = await getClientInfoForActivityFeed(userId);
+    
+    writeActivityEvent({
+      type: 'progress_photo_uploaded',
+      clientId: userId,
+      clientName: clientInfo.clientName,
+      trainerId: clientInfo.trainerId,
+      message: `${clientInfo.clientName} uploaded progress photos`,
+      metadata: { date: after.date || '' },
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write progress_photo_uploaded event", { userId, error: err.message });
+    });
+    
+    return null;
+  } catch (error) {
+    logger.error("[ActivityFeed] Error in onProgressPhotoWrite trigger:", error);
+    return null;
+  }
+});
+
+/**
+ * ACTIVITY FEED: Client message received trigger
+ * Fires when a new message is sent by a client (not by trainer)
+ */
+exports.onClientMessageWrite = onDocumentWritten({
+  document: "client_messages/{messageId}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    // Only fire on document creation (not updates like marking as read)
+    if (event.data.before.exists) return null;
+    const after = event.data.after.exists ? event.data.after.data() : null;
+    if (!after) return null;
+    
+    const senderId = after.senderId;
+    if (!senderId) return null;
+    
+    // Check if sender is a client (not trainer/admin)
+    const senderDoc = await admin.firestore().collection('users').doc(senderId).get();
+    if (!senderDoc.exists || senderDoc.data().role !== 'client') return null;
+    
+    const senderData = senderDoc.data();
+    
+    writeActivityEvent({
+      type: 'client_message_received',
+      clientId: senderId,
+      clientName: senderData.name || 'Client',
+      trainerId: senderData.assignedTrainerId || after.recipientId || '',
+      message: `${senderData.name || 'Client'} sent you a message`,
+      metadata: {},
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write client_message_received event", { senderId, error: err.message });
+    });
+    
+    return null;
+  } catch (error) {
+    logger.error("[ActivityFeed] Error in onClientMessageWrite trigger:", error);
     return null;
   }
 });

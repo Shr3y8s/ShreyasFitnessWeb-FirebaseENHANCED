@@ -88,7 +88,35 @@ exports.onDailyActivityWrite = onDocumentWritten({
       // Extract clientId from document ID: {clientId}_{date}
       const activityId = event.params.activityId;
       const clientId = activityId.split('_')[0];
-      
+
+      // ACTIVITY FEED: Check if all daily habits are completed
+      const habits = activityData.habits || [];
+      if (habits.length > 0) {
+        const allCompleted = habits.every(h => h.completed === true || h.completed === 1);
+        if (allCompleted) {
+          // Check if it just became all-completed (wasn't before)
+          const beforeData = change.before.exists ? change.before.data() : null;
+          const beforeHabits = beforeData?.habits || [];
+          const wasAllCompleted = beforeHabits.length > 0 && beforeHabits.every(h => h.completed === true || h.completed === 1);
+          
+          if (!wasAllCompleted) {
+            const date = activityData.date || activityId.split('_')[1] || '';
+            getClientInfoForActivityFeed(clientId).then(clientInfo => {
+              writeActivityEvent({
+                type: 'daily_habits_completed',
+                clientId: clientId,
+                clientName: clientInfo.clientName,
+                trainerId: clientInfo.trainerId,
+                message: `${clientInfo.clientName} completed all daily habits`,
+                metadata: { date: date, habitsCompleted: habits.length },
+              }).catch(err => {
+                logger.warn("[ActivityFeed] Failed to write daily_habits_completed event", { clientId, error: err.message });
+              });
+            });
+          }
+        }
+      }
+
       // Query all active goals for this client (steps + water categories)
       const goalsSnapshot = await db.collection('goals')
         .where('clientId', '==', clientId)

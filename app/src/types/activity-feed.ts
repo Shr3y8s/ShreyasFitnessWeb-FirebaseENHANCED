@@ -22,7 +22,10 @@ export type ActivityEventType =
   | 'subscription_canceled'
   | 'session_purchased'
   | 'session_canceled'
-  | 'session_rescheduled';
+  | 'session_rescheduled'
+  | 'progress_photo_uploaded'
+  | 'client_message_received'
+  | 'daily_habits_completed';
 
 // ============================================================
 // Core Activity Feed Event
@@ -182,6 +185,9 @@ export const ACTIVITY_EVENT_ICONS: Record<ActivityEventType, string> = {
   session_purchased: '💳',
   session_canceled: '🚫',
   session_rescheduled: '🔄',
+  progress_photo_uploaded: '📸',
+  client_message_received: '💬',
+  daily_habits_completed: '✅',
 };
 
 export const ACTIVITY_EVENT_LABELS: Record<ActivityEventType, string> = {
@@ -200,6 +206,9 @@ export const ACTIVITY_EVENT_LABELS: Record<ActivityEventType, string> = {
   session_purchased: 'Purchased Session Pack',
   session_canceled: 'Canceled Session',
   session_rescheduled: 'Rescheduled Session',
+  progress_photo_uploaded: 'Uploaded Progress Photo',
+  client_message_received: 'Sent Message',
+  daily_habits_completed: 'Completed Daily Habits',
 };
 
 // Filter categories for the UI filter pills
