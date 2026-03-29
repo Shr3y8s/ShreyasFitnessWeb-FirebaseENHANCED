@@ -731,8 +731,12 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "expiresAt",
+          "fieldPath": "clientId",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
         }
       ]
     }

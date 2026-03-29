@@ -49,6 +49,7 @@ import { TrainingProtocolEditor } from '@/components/trainer/plan/TrainingProtoc
 import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProtocolEditor';
 import { GoalsManagementPanel } from '@/components/trainer/goals/GoalsManagementPanel';
 import { OnboardingMilestoneManager } from '@/components/trainer/onboarding/OnboardingMilestoneManager';
+import ClientActivityFeed from '@/components/trainer/activity-feed/ClientActivityFeed';
 import {
   fetchClientBillingData, 
   formatCurrency, 
@@ -1502,9 +1503,8 @@ export default function ClientDetailPage() {
                 {/* Recent Activity Feed */}
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Recent Activity</h3>
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 text-center transition-all duration-300 hover:shadow-glow">
-                    <p className="text-foreground">Activity feed will show recent client actions</p>
-                    <p className="text-sm text-muted-foreground mt-2">(Workout completions, weight logs, surveys, photos, messages)</p>
+                  <div className="bg-primary/5 border border-primary/50 rounded-lg transition-all duration-300 hover:shadow-glow">
+                    <ClientActivityFeed clientId={clientId} maxEvents={10} />
                   </div>
                 </div>
               </div>

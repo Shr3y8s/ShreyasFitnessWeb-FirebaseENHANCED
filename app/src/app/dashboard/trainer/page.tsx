@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 import { formatDateISO } from '@/lib/date-utils';
+import DashboardActivityFeed from '@/components/trainer/activity-feed/DashboardActivityFeed';
 
 interface ClientData {
   id: string;
@@ -557,42 +558,11 @@ export default function TrainerDashboardPage() {
             <div className="bg-white rounded-xl border p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Recent Client Activity</h3>
-                <Link href="/dashboard/trainer/client-hub">
+                <Link href="/dashboard/trainer/activity">
                   <Button variant="ghost" size="sm">View All</Button>
                 </Link>
               </div>
-              <div className="space-y-4">
-                {(() => {
-                  const activeClients = clients
-                    .filter(client => client.lastWorkout) // Only clients with completed workouts
-                    .sort((a, b) => (b.lastWorkout?.getTime() || 0) - (a.lastWorkout?.getTime() || 0)) // Sort by most recent
-                    .slice(0, 5); // Show top 5
-
-                  if (activeClients.length === 0) {
-                    return (
-                      <div className="text-center py-8 text-gray-500">
-                        <CheckCircle2 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No recent workout activity</p>
-                      </div>
-                    );
-                  }
-
-                  return activeClients.map((client) => (
-                    <div key={client.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-semibold">
-                        {client.name.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{client.name}</p>
-                        <p className="text-sm text-gray-600">
-                          Completed workout {formatDistanceToNow(client.lastWorkout!, { addSuffix: true })}
-                        </p>
-                      </div>
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    </div>
-                  ));
-                })()}
-              </div>
+              <DashboardActivityFeed />
             </div>
 
             {/* Upcoming Deadlines */}
