@@ -50,6 +50,7 @@ import { NutritionProtocolEditor } from '@/components/trainer/plan/NutritionProt
 import { GoalsManagementPanel } from '@/components/trainer/goals/GoalsManagementPanel';
 import { OnboardingMilestoneManager } from '@/components/trainer/onboarding/OnboardingMilestoneManager';
 import ClientActivityFeed from '@/components/trainer/activity-feed/ClientActivityFeed';
+import { ClientProgressDashboard } from '@/components/trainer/client-progress/ClientProgressDashboard';
 import {
   fetchClientBillingData, 
   formatCurrency, 
@@ -57,9 +58,6 @@ import {
   getPaymentMethodDisplay,
   type BillingData 
 } from '@/lib/billing-utils';
-import type { ProgressPhotoWithId } from '@/types/progress-photo';
-import type { WeeklySurveyData } from '@/lib/survey-api';
-import type { DailyActivityData } from '@/types/activity';
 import {
   subscribeToSessionBalance,
   subscribeToUpcomingSessions,
@@ -117,16 +115,6 @@ export default function ClientDetailPage() {
   // Check-ins state for Support tab
   const [recentCheckins, setRecentCheckins] = useState<any[]>([]);
   const [checkinsLoading, setCheckinsLoading] = useState(false);
-
-  // Progress state for Progress tab
-  const [latestWeight, setLatestWeight] = useState<any>(null);
-  const [progressPhotos, setProgressPhotos] = useState<ProgressPhotoWithId[]>([]);
-  const [progressPhotosCount, setProgressPhotosCount] = useState(0);
-  const [clientActivityLogs, setClientActivityLogs] = useState<DailyActivityData[]>([]);
-  const [clientSurveys, setClientSurveys] = useState<WeeklySurveyData[]>([]);
-  const [progressLoading, setProgressLoading] = useState(false);
-  // Lightbox state for photo viewer
-  const [lightboxPhoto, setLightboxPhoto] = useState<{ url: string; date: string; angle: string } | null>(null);
 
   // Training state for Training tab
   const [workoutAssignments, setWorkoutAssignments] = useState<any[]>([]);
@@ -342,54 +330,6 @@ export default function ClientDetailPage() {
       unsubscribe();
     };
   }, [activeTab, clientId, user]);
-
-  // Fetch progress data when on Progress tab
-  useEffect(() => {
-    if (!clientId || activeTab !== 'progress') {
-      return;
-    }
-
-    const fetchProgressData = async () => {
-      setProgressLoading(true);
-      
-      try {
-        // Import functions dynamically
-        const { getRecentWeightLogs, getActivityLogsForDateRange } = await import('@/lib/activity-api');
-        const { getUserProgressPhotos } = await import('@/lib/progress-photo-api');
-        const { getRecentSurveys } = await import('@/lib/survey-api');
-
-        // Compute date range: last 14 days for activity
-        const today = new Date();
-        const endDate = today.toISOString().split('T')[0];
-        const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 13)
-          .toISOString().split('T')[0];
-
-        // Fetch all in parallel
-        const [weightLogs, photos, activityLogs, surveys] = await Promise.all([
-          getRecentWeightLogs(clientId, 5),
-          getUserProgressPhotos(clientId),
-          getActivityLogsForDateRange(clientId, startDate, endDate),
-          getRecentSurveys(clientId, 8),
-        ]);
-
-        if (weightLogs.length > 0) {
-          setLatestWeight(weightLogs[0]);
-        }
-
-        setProgressPhotos(photos);
-        setProgressPhotosCount(photos.length);
-        setClientActivityLogs(activityLogs);
-        setClientSurveys(surveys);
-        
-      } catch (error) {
-        console.error('Error fetching progress data:', error);
-      } finally {
-        setProgressLoading(false);
-      }
-    };
-
-    fetchProgressData();
-  }, [activeTab, clientId]);
 
   // Fetch plan data when on Plan tab
   useEffect(() => {
@@ -2409,309 +2349,15 @@ export default function ClientDetailPage() {
             )}
 
             {activeTab === 'progress' && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold mb-1">📈 Progress</h2>
                   <p className="text-gray-600">All progress tracking and measurements</p>
                 </div>
-
-                {progressLoading ? (
-                  <div className="text-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-3" />
-                    <p className="text-sm text-muted-foreground">Loading progress data...</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-
-                    {/* ── ROW 1: Body Metrics + Progress Photos ── */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                      {/* Body Metrics */}
-                      <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-3 bg-primary/10 rounded-full">
-                            <span className="text-2xl">⚖️</span>
-                          </div>
-                          <h3 className="text-xl font-semibold">Body Metrics</h3>
-                        </div>
-                        {latestWeight ? (
-                          <div className="space-y-2">
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-3xl font-bold text-foreground">{latestWeight.weight}</span>
-                              <span className="text-sm text-muted-foreground">{latestWeight.unit}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Last logged: {new Date(latestWeight.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </p>
-                            {latestWeight.bodyFat && (
-                              <p className="text-sm text-muted-foreground">Body Fat: {latestWeight.bodyFat}%</p>
-                            )}
-                            {latestWeight.bmi && (
-                              <p className="text-sm text-muted-foreground">BMI: {latestWeight.bmi}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4">
-                            <p className="text-sm text-muted-foreground">No weight data logged yet</p>
-                            <p className="text-xs text-muted-foreground mt-1">Client has not logged any weight entries</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Progress Photos — thumbnail grid + lightbox */}
-                      <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-3 bg-primary/10 rounded-full">
-                              <span className="text-2xl">📸</span>
-                            </div>
-                            <h3 className="text-xl font-semibold">Progress Photos</h3>
-                          </div>
-                          <span className="text-sm text-muted-foreground font-medium">{progressPhotosCount} total</span>
-                        </div>
-
-                        {progressPhotos.length === 0 ? (
-                          <div className="text-center py-4">
-                            <p className="text-sm text-muted-foreground">No photos uploaded yet</p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-3 gap-2">
-                            {progressPhotos.slice(0, 9).map((photoDoc) =>
-                              Object.entries(photoDoc.photos || {}).map(([angle, photoData]) => {
-                                const thumbUrl = (photoData as {thumbnailUrl?: string; url?: string}).thumbnailUrl
-                                  || (photoData as {url?: string}).url;
-                                const fullUrl = (photoData as {url?: string}).url || thumbUrl;
-                                if (!thumbUrl) return null;
-                                return (
-                                  <button
-                                    key={`${photoDoc.id}-${angle}`}
-                                    onClick={() => setLightboxPhoto({ url: fullUrl || thumbUrl, date: photoDoc.date, angle })}
-                                    className="aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all"
-                                  >
-                                    <img
-                                      src={thumbUrl}
-                                      alt={`${angle} - ${photoDoc.date}`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        )}
-
-                        {progressPhotosCount > 9 && (
-                          <p className="text-xs text-muted-foreground text-center mt-2">
-                            Showing 9 of {progressPhotosCount} photos
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* ── SECTION: Daily Activity Log (last 14 days) ── */}
-                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-primary/10 rounded-full">
-                          <span className="text-2xl">🚶</span>
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold">Daily Activity</h3>
-                          <p className="text-xs text-muted-foreground">Steps, water &amp; habits — last 14 days</p>
-                        </div>
-                      </div>
-
-                      {clientActivityLogs.length === 0 ? (
-                        <div className="text-center py-6">
-                          <p className="text-sm text-muted-foreground">No activity logged in the last 14 days</p>
-                          <p className="text-xs text-muted-foreground mt-1">Client activity will appear here once logged</p>
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="text-left border-b">
-                                <th className="pb-2 text-xs font-medium text-muted-foreground pr-4">Date</th>
-                                <th className="pb-2 text-xs font-medium text-muted-foreground pr-4">👟 Steps</th>
-                                <th className="pb-2 text-xs font-medium text-muted-foreground pr-4">💧 Water</th>
-                                <th className="pb-2 text-xs font-medium text-muted-foreground pr-4">✅ Weight</th>
-                                <th className="pb-2 text-xs font-medium text-muted-foreground">🎯 Habits</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                              {clientActivityLogs.map((log) => {
-                                const completedHabits = (log.habits || []).filter((h) => h.completed).length;
-                                const totalHabits = (log.habits || []).length;
-                                return (
-                                  <tr key={log.date} className="hover:bg-white/50">
-                                    <td className="py-2 pr-4 font-medium text-gray-900 whitespace-nowrap">
-                                      {new Date(log.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                    </td>
-                                    <td className="py-2 pr-4 text-gray-700">
-                                      {log.steps ? (
-                                        <span className={log.steps.steps >= (log.steps.goal || 10000) ? 'text-green-600 font-medium' : ''}>
-                                          {log.steps.steps.toLocaleString()}
-                                          {log.steps.goal ? ` / ${log.steps.goal.toLocaleString()}` : ''}
-                                        </span>
-                                      ) : <span className="text-gray-400">—</span>}
-                                    </td>
-                                    <td className="py-2 pr-4 text-gray-700">
-                                      {log.water ? (
-                                        <span className={log.water.amount >= (log.water.goal || 64) ? 'text-blue-600 font-medium' : ''}>
-                                          {log.water.amount} {log.water.unit}
-                                        </span>
-                                      ) : <span className="text-gray-400">—</span>}
-                                    </td>
-                                    <td className="py-2 pr-4 text-gray-700">
-                                      {log.weight ? (
-                                        <span className="text-green-600 font-medium">{log.weight.weight} {log.weight.unit}</span>
-                                      ) : <span className="text-gray-400">—</span>}
-                                    </td>
-                                    <td className="py-2 text-gray-700">
-                                      {totalHabits > 0 ? (
-                                        <span className={completedHabits === totalHabits ? 'text-green-600 font-medium' : completedHabits > 0 ? 'text-yellow-600' : 'text-red-500'}>
-                                          {completedHabits}/{totalHabits}
-                                        </span>
-                                      ) : <span className="text-gray-400">—</span>}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ── SECTION: Weekly Surveys (last 8 weeks) ── */}
-                    <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-3 bg-primary/10 rounded-full">
-                          <span className="text-2xl">📋</span>
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-semibold">Weekly Surveys &amp; Feedback</h3>
-                          <p className="text-xs text-muted-foreground">Last 8 weeks of qualitative check-ins</p>
-                        </div>
-                      </div>
-
-                      {clientSurveys.length === 0 ? (
-                        <div className="text-center py-6">
-                          <p className="text-sm text-muted-foreground">No weekly surveys submitted yet</p>
-                          <p className="text-xs text-muted-foreground mt-1">Client survey responses will appear here once submitted</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {clientSurveys.map((survey) => (
-                            <div key={survey.weekStartDate} className="bg-white/70 border rounded-lg p-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <p className="font-semibold text-sm text-gray-900">
-                                  Week of {new Date(survey.weekStartDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Submitted {new Date(survey.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </p>
-                              </div>
-
-                              {/* Ratings row */}
-                              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
-                                <div className="text-center p-2 bg-primary/5 rounded">
-                                  <p className="text-xs text-muted-foreground mb-1">Energy</p>
-                                  <div className="flex justify-center gap-0.5">
-                                    {[1,2,3,4,5].map(n => (
-                                      <span key={n} className={`text-sm ${n <= survey.ratings.energy ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="text-center p-2 bg-primary/5 rounded">
-                                  <p className="text-xs text-muted-foreground mb-1">Sleep</p>
-                                  <div className="flex justify-center gap-0.5">
-                                    {[1,2,3,4,5].map(n => (
-                                      <span key={n} className={`text-sm ${n <= survey.ratings.sleep ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="text-center p-2 bg-primary/5 rounded">
-                                  <p className="text-xs text-muted-foreground mb-1">Mood</p>
-                                  <div className="flex justify-center gap-0.5">
-                                    {[1,2,3,4,5].map(n => (
-                                      <span key={n} className={`text-sm ${n <= survey.ratings.mood ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="text-center p-2 bg-blue-50 rounded">
-                                  <p className="text-xs text-muted-foreground mb-1">Workouts</p>
-                                  <div className="flex justify-center gap-0.5">
-                                    {[1,2,3,4,5].map(n => (
-                                      <span key={n} className={`text-sm ${n <= survey.adherence.workouts ? 'text-blue-400' : 'text-gray-200'}`}>★</span>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="text-center p-2 bg-green-50 rounded">
-                                  <p className="text-xs text-muted-foreground mb-1">Nutrition</p>
-                                  <div className="flex justify-center gap-0.5">
-                                    {[1,2,3,4,5].map(n => (
-                                      <span key={n} className={`text-sm ${n <= survey.adherence.nutrition ? 'text-green-400' : 'text-gray-200'}`}>★</span>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Wins + Challenges */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {survey.wins && (
-                                  <div className="bg-green-50 border border-green-100 rounded p-3">
-                                    <p className="text-xs font-semibold text-green-700 mb-1">🏆 Wins</p>
-                                    <p className="text-xs text-gray-700">{survey.wins}</p>
-                                  </div>
-                                )}
-                                {survey.challenges && (
-                                  <div className="bg-amber-50 border border-amber-100 rounded p-3">
-                                    <p className="text-xs font-semibold text-amber-700 mb-1">⚠️ Challenges</p>
-                                    <p className="text-xs text-gray-700">{survey.challenges}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-                )}
-
-                {/* Lightbox modal for progress photos */}
-                {lightboxPhoto && (
-                  <div
-                    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-                    onClick={() => setLightboxPhoto(null)}
-                  >
-                    <div
-                      className="relative max-w-3xl w-full bg-white rounded-xl overflow-hidden shadow-2xl"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex items-center justify-between p-4 border-b">
-                        <div>
-                          <p className="font-semibold text-gray-900 capitalize">{lightboxPhoto.angle} view</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(lightboxPhoto.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setLightboxPhoto(null)}
-                          className="text-gray-500 hover:text-gray-900 text-2xl font-light leading-none"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      <img
-                        src={lightboxPhoto.url}
-                        alt={`${lightboxPhoto.angle} - ${lightboxPhoto.date}`}
-                        className="w-full max-h-[70vh] object-contain bg-gray-50"
-                      />
-                    </div>
-                  </div>
-                )}
+                <ClientProgressDashboard
+                  clientId={clientId}
+                  clientName={clientData.name}
+                />
               </div>
             )}
 
