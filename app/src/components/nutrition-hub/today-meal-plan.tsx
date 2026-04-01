@@ -103,6 +103,13 @@ export function TodayMealPlan({ weeklyMealPlan, selectedDate, compact = false, c
 
     setSending(true);
     try {
+      // Save to coachNotes so it appears in the trainer's nutrition dashboard
+      await addDoc(collection(db, 'nutritionLogs', user.uid, 'coachNotes'), {
+        note: messageText,
+        day: currentDay,
+        sentAt: serverTimestamp(),
+      });
+
       await addDoc(collection(db, 'client_messages'), {
         conversationId,
         senderId: user.uid,

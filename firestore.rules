@@ -628,6 +628,12 @@ service cloud.firestore {
         allow get, list: if isAdmin() || isAssignedTrainer(userId);
       }
       
+      // Coach notes — written by client, readable by their trainer
+      match /coachNotes/{noteId} {
+        allow create: if isOwner(userId);
+        allow read: if isOwner(userId) || isAdmin() || isAssignedTrainer(userId);
+      }
+
       // Meal plan adherence tracking subcollection
       match /mealPlans/{dateId} {
         // Users can read/write their own meal plan adherence (individual docs and queries)

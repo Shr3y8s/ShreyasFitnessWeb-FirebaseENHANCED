@@ -85,6 +85,7 @@ export async function getClientNutritionHabits(clientId: string) {
 
 /**
  * Fetch daily macro logs for a date range
+ * Note: documents use date as the document ID (not a field), same as habit logs
  */
 export async function getDailyMacroLogs(
   clientId: string,
@@ -92,19 +93,34 @@ export async function getDailyMacroLogs(
 ): Promise<DailyMacroLog[]> {
   try {
     const logsRef = collection(db, 'nutritionLogs', clientId, 'meals');
-    const q = query(
-      logsRef,
-      where('date', '>=', dateRange.start),
-      where('date', '<=', dateRange.end),
-      orderBy('date', 'desc')
-    );
+    // Fetch all documents and filter by doc ID (date), same approach as getDailyHabitLogs
+    const snapshot = await getDocs(logsRef);
     
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      ...doc.data(),
-      createdAt: doc.data().createdAt,
-      updatedAt: doc.data().updatedAt
-    })) as DailyMacroLog[];
+    const logs: DailyMacroLog[] = [];
+    snapshot.docs.forEach(docSnap => {
+      const date = docSnap.id; // Document ID is the date (YYYY-MM-DD)
+      if (date >= dateRange.start && date <= dateRange.end) {
+        const data = docSnap.data();
+        // Support both field-based date and doc-ID-based date
+        logs.push({
+          date,
+          meals: data.meals || {},
+          totalCalories: data.totalCalories || 0,
+          totalProtein: data.totalProtein || 0,
+          totalCarbs: data.totalCarbs || 0,
+          totalFat: data.totalFat || 0,
+          // adherencePercentage may be pre-calculated, or derive from dayComplete
+          adherencePercentage: data.adherencePercentage ?? (data.dayComplete ? 100 : (data.mealsCompleted > 0 ? Math.round((data.mealsCompleted / 4) * 100) : 0)),
+          mealsCompleted: data.mealsCompleted || (data.dayComplete ? 4 : Object.values(data.meals || {}).filter(Boolean).length),
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt
+        } as DailyMacroLog);
+      }
+    });
+    
+    // Sort by date descending
+    logs.sort((a, b) => b.date.localeCompare(a.date));
+    return logs;
   } catch (error) {
     console.error('[Nutrition Tracking API] Error fetching daily macro logs:', error);
     throw error;
@@ -545,7 +561,7 @@ export function getDateRangeFromPreset(preset: string): DateRange {
   today.setHours(0, 0, 0, 0);
   
   let start: Date;
-  let end: Date = new Date(today);
+  const end: Date = new Date(today);
   
   switch (preset) {
     case 'today':

@@ -51,6 +51,7 @@ import { GoalsManagementPanel } from '@/components/trainer/goals/GoalsManagement
 import { OnboardingMilestoneManager } from '@/components/trainer/onboarding/OnboardingMilestoneManager';
 import ClientActivityFeed from '@/components/trainer/activity-feed/ClientActivityFeed';
 import { ClientProgressDashboard } from '@/components/trainer/client-progress/ClientProgressDashboard';
+import { ClientNutritionDashboard } from '@/components/trainer/client-progress/ClientNutritionDashboard';
 import {
   fetchClientBillingData, 
   formatCurrency, 
@@ -2273,78 +2274,12 @@ export default function ClientDetailPage() {
             )}
 
             {activeTab === 'nutrition' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-1">🍎 Nutrition</h2>
-                    <p className="text-gray-600">Monitor client nutrition adherence and progress</p>
-                  </div>
-                  <Link
-                    href={`/dashboard/trainer/client-hub/${clientId}/nutrition`}
-                    className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors"
-                  >
-                    View Nutrition Dashboard
-                  </Link>
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">🍎 Nutrition</h2>
+                  <p className="text-gray-600">Monitor client nutrition adherence and progress</p>
                 </div>
-
-                {/* Quick Overview */}
-                <div className="bg-primary/5 border border-primary/50 rounded-lg p-6 transition-all duration-300 hover:shadow-glow">
-                  <h3 className="text-lg font-semibold mb-3">Nutrition Overview</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Track your client's nutrition adherence across their assigned approach:
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-600">✓</span>
-                      <span><strong>Macro Tracking:</strong> Daily calorie and macronutrient adherence with meal completion</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-600">✓</span>
-                      <span><strong>Healthy Habits:</strong> Daily habit completion tracking with streak monitoring</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-green-600">✓</span>
-                      <span><strong>Meal Plan:</strong> Weekly meal plan adherence with simplified tracking</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Features */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <h4 className="font-semibold mb-2">📅 Calendar View</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Visual calendar with color-coded adherence levels for quick assessment
-                    </p>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <h4 className="font-semibold mb-2">📊 Daily Inspector</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Detailed breakdown of meals, habits, and water intake for any selected day
-                    </p>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <h4 className="font-semibold mb-2">💧 Water Tracking</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Monitor daily water intake against goals across all nutrition approaches
-                    </p>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/50 rounded-lg p-4 transition-all duration-300 hover:shadow-glow">
-                    <h4 className="font-semibold mb-2">🔥 Habit Streaks</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Track consecutive days of full habit completion to motivate consistency
-                    </p>
-                  </div>
-                </div>
-
-                {/* Call to Action */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    💡 <strong>Tip:</strong> Access the full nutrition dashboard to view detailed adherence data, 
-                    analyze trends, and gain insights into your client's eating patterns. Configure the nutrition 
-                    approach in the Plan tab if not already set.
-                  </p>
-                </div>
+                <ClientNutritionDashboard clientId={clientId} />
               </div>
             )}
 

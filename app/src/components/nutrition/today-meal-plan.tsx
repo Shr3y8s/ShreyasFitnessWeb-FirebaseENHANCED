@@ -10,6 +10,10 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 interface Meal {
   name: string;
@@ -30,8 +34,12 @@ interface TodayMealPlanProps {
 }
 
 export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [checkedMeals, setCheckedMeals] = useState<CheckedMeals>({});
   const [currentDay, setCurrentDay] = useState<string>('');
+  const [noteText, setNoteText] = useState('');
+  const [sendingNote, setSendingNote] = useState(false);
 
   useEffect(() => {
     const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -44,6 +52,25 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
 
   const handleCheckedChange = (mealName: string, checked: boolean) => {
     setCheckedMeals(prev => ({ ...prev, [mealName]: checked }));
+  };
+
+  const handleSendNote = async () => {
+    if (!noteText.trim() || !user) return;
+    setSendingNote(true);
+    try {
+      await addDoc(collection(db, 'nutritionLogs', user.uid, 'coachNotes'), {
+        note: noteText.trim(),
+        day: currentDay,
+        sentAt: serverTimestamp(),
+      });
+      setNoteText('');
+      toast({ title: 'Note sent!', description: 'Your coach will see this in your nutrition section.' });
+    } catch (err) {
+      console.error('Error sending note:', err);
+      toast({ title: 'Error', description: 'Could not send note. Please try again.', variant: 'destructive' });
+    } finally {
+      setSendingNote(false);
+    }
   };
 
   if (!dayPlan) {
@@ -152,10 +179,14 @@ export function TodayMealPlan({ weeklyMealPlan }: TodayMealPlanProps) {
             <Utensils className="h-4 w-4" />
             Notes for your coach
           </h4>
-          <Textarea placeholder="e.g., 'Can I swap the chicken for fish in this meal?'" />
-          <Button className="w-full">
+          <Textarea
+            placeholder="e.g., 'Can I swap the chicken for fish in this meal?'"
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+          />
+          <Button className="w-full" onClick={handleSendNote} disabled={sendingNote || !noteText.trim()}>
             <Send className="mr-2 h-4 w-4" />
-            Send Note to Coach
+            {sendingNote ? 'Sending...' : 'Send Note to Coach'}
           </Button>
         </div>
       </CardFooter>
