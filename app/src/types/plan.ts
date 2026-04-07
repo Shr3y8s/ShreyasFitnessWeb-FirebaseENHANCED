@@ -59,8 +59,8 @@ export interface DailyHabitsData {
   lastUpdated: Date | null;
 }
 
-export type TrainingPhase = 'strength' | 'weight_loss' | 'muscle_building';
-export type TrainingFocus = 'weekly_split' | 'daily_split' | 'push' | 'pull' | 'legs';
+export type TrainingPhase = 'strength' | 'weight_loss' | 'muscle_building' | 'maintenance';
+export type TrainingFocus = 'full_body' | 'weekly_split' | 'upper_lower' | 'daily_split';
 export type CardioType = 'cardio' | 'steps';
 
 export interface TrainingProtocolData {

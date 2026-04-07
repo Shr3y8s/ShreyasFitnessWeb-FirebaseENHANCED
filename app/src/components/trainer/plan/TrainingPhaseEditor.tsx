@@ -30,14 +30,14 @@ const TRAINING_PHASE_OPTIONS: { value: TrainingPhase; label: string }[] = [
   { value: 'strength', label: 'Strength' },
   { value: 'weight_loss', label: 'Weight Loss' },
   { value: 'muscle_building', label: 'Muscle Building' },
+  { value: 'maintenance', label: 'Maintenance' },
 ];
 
 const TRAINING_FOCUS_OPTIONS: { value: TrainingFocus; label: string }[] = [
-  { value: 'weekly_split', label: 'Weekly Split' },
+  { value: 'full_body', label: 'Full Body' },
+  { value: 'weekly_split', label: 'Weekly Split (Push / Pull / Legs)' },
+  { value: 'upper_lower', label: 'Upper / Lower Split' },
   { value: 'daily_split', label: 'Daily Split' },
-  { value: 'push', label: 'Push' },
-  { value: 'pull', label: 'Pull' },
-  { value: 'legs', label: 'Legs' },
 ];
 
 // Today's date in YYYY-MM-DD format (local timezone) for max constraint
