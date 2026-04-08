@@ -123,6 +123,64 @@ exports.onDailyActivityWrite = onDocumentWritten({
         }
       }
 
+      // ACTIVITY FEED: Check if step goal was just hit for the first time today
+      const afterSteps = activityData.steps;
+      if (afterSteps && afterSteps.steps != null && afterSteps.goal != null) {
+        const stepsMet = afterSteps.steps >= afterSteps.goal;
+        const beforeData = change.before.exists ? change.before.data() : null;
+        const beforeSteps = beforeData?.steps;
+        const wasStepsMet = beforeSteps && beforeSteps.steps != null && beforeSteps.goal != null
+          ? beforeSteps.steps >= beforeSteps.goal
+          : false;
+
+        if (stepsMet && !wasStepsMet) {
+          const date = activityData.date || activityId.split('_')[1] || '';
+          getClientInfoForActivityFeed(clientId).then(clientInfo => {
+            writeActivityEvent({
+              type: 'daily_activities_completed',
+              clientId: clientId,
+              clientName: clientInfo.clientName,
+              trainerId: clientInfo.trainerId,
+              message: `${clientInfo.clientName} hit their step goal — ${afterSteps.steps.toLocaleString()} steps`,
+              metadata: { date: date, habitsCompleted: 0 },
+            }).catch(err => {
+              logger.warn('[ActivityFeed] Failed to write step goal event', { clientId, error: err.message });
+            });
+          }).catch(err => {
+            logger.warn('[ActivityFeed] Failed to get client info for step goal event', { clientId, error: err.message });
+          });
+        }
+      }
+
+      // ACTIVITY FEED: Check if water goal was just hit for the first time today
+      const afterWater = activityData.water;
+      if (afterWater && afterWater.amount != null && afterWater.goal != null) {
+        const waterMet = afterWater.amount >= afterWater.goal;
+        const beforeData2 = change.before.exists ? change.before.data() : null;
+        const beforeWater = beforeData2?.water;
+        const wasWaterMet = beforeWater && beforeWater.amount != null && beforeWater.goal != null
+          ? beforeWater.amount >= beforeWater.goal
+          : false;
+
+        if (waterMet && !wasWaterMet) {
+          const date = activityData.date || activityId.split('_')[1] || '';
+          getClientInfoForActivityFeed(clientId).then(clientInfo => {
+            writeActivityEvent({
+              type: 'daily_activities_completed',
+              clientId: clientId,
+              clientName: clientInfo.clientName,
+              trainerId: clientInfo.trainerId,
+              message: `${clientInfo.clientName} hit their water goal — ${afterWater.amount} ${afterWater.unit || 'oz'}`,
+              metadata: { date: date, habitsCompleted: 0 },
+            }).catch(err => {
+              logger.warn('[ActivityFeed] Failed to write water goal event', { clientId, error: err.message });
+            });
+          }).catch(err => {
+            logger.warn('[ActivityFeed] Failed to get client info for water goal event', { clientId, error: err.message });
+          });
+        }
+      }
+
       // Query all active goals for this client (steps + water categories)
       const goalsSnapshot = await db.collection('goals')
         .where('clientId', '==', clientId)

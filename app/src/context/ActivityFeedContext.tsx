@@ -4,7 +4,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { useAuth } from '@/lib/auth-context';
 import { subscribeToActivityFeed, markEventAsRead, markAllEventsAsRead } from '@/lib/activity-feed-api';
 import { useToast } from '@/hooks/use-toast';
-import { ACTIVITY_EVENT_ICONS } from '@/types/activity-feed';
+import { useActivitySound } from '@/hooks/use-activity-sound';
+import { ACTIVITY_EVENT_ICONS, ACTIVITY_FILTER_CATEGORIES } from '@/types/activity-feed';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import type { ActivityFeedEvent } from '@/types/activity-feed';
 
@@ -35,6 +36,10 @@ interface ActivityFeedContextType {
 
   // Filtered events (based on current filters)
   filteredEvents: ActivityFeedEvent[];
+
+  // Sound controls
+  soundEnabled: boolean;
+  toggleSound: () => void;
 }
 
 const ActivityFeedContext = createContext<ActivityFeedContextType | undefined>(undefined);
@@ -69,6 +74,9 @@ export function ActivityFeedProvider({ children }: ActivityFeedProviderProps) {
   // Toast hook
   const { toast } = useToast();
 
+  // Sound hook
+  const { soundEnabled, playSound, toggleSound } = useActivitySound();
+
   // Determine if user should see the feed
   const isTrainerOrAdmin = canAccessTrainerDashboard || canAccessAdminDashboard;
   const trainerId = user?.uid || '';
@@ -91,15 +99,15 @@ export function ActivityFeedProvider({ children }: ActivityFeedProviderProps) {
       (newEvents) => {
         // Detect truly NEW events (not initial load)
         if (!isInitialLoadRef.current && newEvents.length > 0) {
-          const newEventIds = new Set(newEvents.map(e => e.id));
           for (const event of newEvents) {
             if (!previousEventIdsRef.current.has(event.id) && !event.read) {
-              // This is a genuinely new event — show toast
+              // This is a genuinely new event — show toast + play sound
               const icon = ACTIVITY_EVENT_ICONS[event.type] || '📌';
               toast({
                 title: `${icon} ${event.clientName}`,
                 description: event.message.replace(event.clientName, '').trim() || event.message,
               });
+              playSound(event.type);
               break; // Only show one toast at a time to avoid flooding
             }
           }
@@ -146,13 +154,9 @@ export function ActivityFeedProvider({ children }: ActivityFeedProviderProps) {
     // Type filter
     if (activeFilter === 'all') return true;
 
-    // Import filter categories to match
-    const { ACTIVITY_FILTER_CATEGORIES } = require('@/types/activity-feed');
-    const category = ACTIVITY_FILTER_CATEGORIES.find(
-      (c: any) => c.key === activeFilter
-    );
+    const category = ACTIVITY_FILTER_CATEGORIES.find((c) => c.key === activeFilter);
     if (!category || !category.types) return true;
-    return category.types.includes(event.type);
+    return (category.types as readonly string[]).includes(event.type);
   });
 
   // Actions
@@ -183,6 +187,8 @@ export function ActivityFeedProvider({ children }: ActivityFeedProviderProps) {
         clientFilter,
         setClientFilter,
         filteredEvents,
+        soundEnabled,
+        toggleSound,
       }}
     >
       {children}
