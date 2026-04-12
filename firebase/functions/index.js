@@ -4288,23 +4288,40 @@ exports.onClientMessageWrite = onDocumentWritten({
     
     const senderId = after.senderId;
     if (!senderId) return null;
-    
-    // Check if sender is a client (not trainer/admin)
+
+    // Check if sender is a client (not trainer/admin) → trainer activity feed event
     const senderDoc = await admin.firestore().collection('users').doc(senderId).get();
-    if (!senderDoc.exists || senderDoc.data().role !== 'client') return null;
-    
-    const senderData = senderDoc.data();
-    
-    writeActivityEvent({
-      type: 'client_message_received',
-      clientId: senderId,
-      clientName: senderData.name || 'Client',
-      trainerId: senderData.assignedTrainerId || after.recipientId || '',
-      message: `${senderData.name || 'Client'} sent you a message`,
-      metadata: {},
-    }).catch(err => {
-      logger.warn("[ActivityFeed] Failed to write client_message_received event", { senderId, error: err.message });
-    });
+    if (senderDoc.exists && senderDoc.data().role === 'client') {
+      const senderData = senderDoc.data();
+      writeActivityEvent({
+        type: 'client_message_received',
+        clientId: senderId,
+        clientName: senderData.name || 'Client',
+        trainerId: senderData.assignedTrainerId || after.recipientId || '',
+        message: `${senderData.name || 'Client'} sent you a message`,
+        metadata: {},
+      }).catch(err => {
+        logger.warn("[ActivityFeed] Failed to write client_message_received event", {senderId, error: err.message});
+      });
+      return null;
+    }
+
+    // Sender is a trainer/admin → write new_message notification to the client
+    // Determine clientId: recipientId field, or look up via conversationId
+    const clientId = after.recipientId || null;
+    if (clientId) {
+      // No dedup — every trainer message creates a bell notification immediately
+      writeClientNotification({
+        type: "new_message",
+        clientId: clientId,
+        message: "Your coach sent you a new message 💬",
+        actionUrl: "/dashboard/client/messages",
+        metadata: {},
+      }).catch(err => {
+        logger.warn("[ClientNotifications] Failed to write new_message notification", {clientId, error: err.message});
+      });
+      logger.info("[ClientNotifications] new_message notification sent", {clientId});
+    }
     
     return null;
   } catch (error) {

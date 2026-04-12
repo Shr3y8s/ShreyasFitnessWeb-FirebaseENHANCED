@@ -15,6 +15,7 @@ import React, {
   useRef,
   ReactNode,
 } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   subscribeToClientNotifications,
@@ -23,6 +24,7 @@ import {
 } from '@/lib/client-notifications-api';
 import { useToast } from '@/hooks/use-toast';
 import { CLIENT_NOTIFICATION_CONFIG } from '@/types/client-notifications';
+import { playClientNotificationSound } from '@/lib/client-notification-sounds';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import type { ClientNotification } from '@/types/client-notifications';
 
@@ -65,6 +67,13 @@ export function ClientNotificationsProvider({ children }: ClientNotificationsPro
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const { toast } = useToast();
+  const pathname = usePathname();
+  // Keep a live ref to pathname so the Firestore listener closure
+  // always reads the current route (avoids stale closure bug)
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   // Only set up listener for clients
   const isClient = userData?.role === 'client';
@@ -86,13 +95,21 @@ export function ClientNotificationsProvider({ children }: ClientNotificationsPro
         if (!isInitialLoadRef.current && newNotifications.length > 0) {
           for (const notif of newNotifications) {
             if (!previousIdsRef.current.has(notif.id) && !notif.read) {
-              // New unread notification — show toast
+              // New unread notification — always play sound
+              playClientNotificationSound(notif.type);
+
+              // Show toast unless client is already on the relevant page
+              // (e.g. on Coach Chat when a new_message arrives — sound only)
               const config = CLIENT_NOTIFICATION_CONFIG[notif.type];
-              const icon = config?.icon || '🔔';
-              toast({
-                title: `${icon} ${config?.title || 'Notification'}`,
-                description: notif.message,
-              });
+              const isOnTargetPage = notif.type === 'new_message' &&
+                pathnameRef.current === '/dashboard/client/messages';
+              if (!isOnTargetPage) {
+                const icon = config?.icon || '🔔';
+                toast({
+                  title: `${icon} ${config?.title || 'Notification'}`,
+                  description: notif.message,
+                });
+              }
               break; // Show one toast at a time
             }
           }
@@ -125,6 +142,19 @@ export function ClientNotificationsProvider({ children }: ClientNotificationsPro
       }
     };
   }, [isClient, clientId]);
+
+  // Auto-mark all unread new_message notifications as read when client visits the messages page
+  useEffect(() => {
+    if (pathname !== '/dashboard/client/messages') return;
+    const unreadMessages = notifications.filter(
+      (n) => n.type === 'new_message' && !n.read
+    );
+    if (unreadMessages.length === 0) return;
+    // Mark all as read in background (fire-and-forget, UI updates via Firestore listener)
+    unreadMessages.forEach((n) => {
+      markNotificationAsRead(n.id).catch(() => {});
+    });
+  }, [pathname, notifications]);
 
   // Computed: unread count
   const unreadCount = notifications.filter((n) => !n.read).length;

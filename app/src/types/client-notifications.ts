@@ -17,6 +17,7 @@ export type ClientNotificationType =
   | 'login_streak'          // Login streak milestone
   | 'goal_added'            // New goal added by trainer
   | 'goal_updated'          // Existing goal updated by trainer
+  | 'new_message'           // Trainer sent a direct message
   // ── Automated daily reminders ──
   | 'workout_overdue'       // Assigned workout is past its due date
   | 'nutrition_reminder'    // Nutrition approach not completed today
@@ -191,5 +192,10 @@ export const CLIENT_NOTIFICATION_CONFIG: Record<
     icon: '⚖️',
     title: 'Log Your Weight',
     defaultActionUrl: '/dashboard/client/activity',
+  },
+  new_message: {
+    icon: '💬',
+    title: 'New Message from Coach',
+    defaultActionUrl: '/dashboard/client/messages',
   },
 };

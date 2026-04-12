@@ -18,6 +18,7 @@ import {
   Footprints,
   NotebookPen,
   Scale,
+  MessageSquare,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -44,6 +45,7 @@ const notifIcons: Record<ClientNotificationType, React.ReactElement> = {
   steps_reminder:      <Footprints className="h-4 w-4" />,
   habits_reminder:     <NotebookPen className="h-4 w-4" />,
   weight_reminder:     <Scale className="h-4 w-4" />,
+  new_message:         <MessageSquare className="h-4 w-4" />,
 };
 
 export function CoachUpdates() {
