@@ -839,6 +839,26 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
     
+    // CLIENT NOTIFICATIONS — In-app notifications sent TO the client
+    // Created exclusively by Cloud Functions (admin SDK bypasses rules).
+    // Clients can read their own, mark as read, and trainers/admins can read all.
+    match /clientNotifications/{notifId} {
+      // Clients can read their own notifications
+      allow read: if isAuthenticated() && 
+                  resource.data.clientId == request.auth.uid;
+      
+      // Trainers/admins can read all client notifications
+      allow read: if isTrainerOrAdmin();
+      
+      // Only Cloud Functions can create or delete (admin SDK bypasses rules)
+      allow create, delete: if false;
+      
+      // Clients can mark their own notification as read (only 'read' field)
+      allow update: if isAuthenticated() &&
+                    resource.data.clientId == request.auth.uid &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
     // Default deny all other collections
     match /{document=**} {
       allow read, write: if false;

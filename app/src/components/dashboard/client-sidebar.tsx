@@ -44,7 +44,7 @@ import {
   SidebarMenuItem,
   SidebarMenuBadge,
 } from '@/components/ui/sidebar';
-import { useCoachUpdates } from '@/context/CoachUpdatesContext';
+import { useClientNotifications } from '@/context/ClientNotificationsContext';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 
 interface ServiceTier {
@@ -67,7 +67,7 @@ interface ClientSidebarProps {
 export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogout, onShowWelcome, theme }: ClientSidebarProps) {
   
   const pathname = usePathname();
-  const { coachUpdates } = useCoachUpdates();
+  const { notifications } = useClientNotifications();
   const { user, userData } = useAuth();
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [availableSessions, setAvailableSessions] = useState(0);
@@ -192,24 +192,16 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
     };
   }, [user]);
   
-  // Filter notifications by type to get counts for each section (keeping for other features)
-  const progressUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'progress'
+  // Count unread notifications per relevant section
+  const unreadNotifs = notifications.filter((n) => !n.read);
+  const nutritionUpdatesCount = unreadNotifs.filter(
+    (n) => n.type === 'nutrition_updated'
   ).length;
-  const nutritionUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'nutrition'
+  const goalsUpdatesCount = unreadNotifs.filter(
+    (n) => n.type === 'goal_added' || n.type === 'goal_updated'
   ).length;
-  const goalsUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'goals'
-  ).length;
-  const resourcesUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'resources'
-  ).length;
-  const profileUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'profile'
-  ).length;
-  const billingUpdatesCount = coachUpdates.filter(
-    (update) => update.type === 'billing'
+  const billingUpdatesCount = unreadNotifs.filter(
+    (n) => n.type === 'upcoming_payment'
   ).length;
   
   return (
@@ -397,11 +389,6 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/dashboard/client/progress">
                     <BarChart3 className="w-4 h-4" />
                     <span className="font-medium">Progress</span>
-                    {progressUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {progressUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -418,11 +405,6 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/goals">
                     <Goal className="w-4 h-4" />
                     <span className="font-medium">Goals & Milestones (Mock)</span>
-                    {goalsUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {goalsUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -431,6 +413,11 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/dashboard/client/goals">
                     <Goal className="w-4 h-4" />
                     <span className="font-medium">Goals & Milestones</span>
+                    {goalsUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {goalsUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -469,11 +456,6 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/resources">
                     <BookOpen className="w-4 h-4" />
                     <span className="font-medium">Resources</span>
-                    {resourcesUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {resourcesUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -491,11 +473,6 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/dashboard/client/profile">
                     <User className="w-4 h-4" />
                     <span className="font-medium">Profile</span>
-                    {profileUpdatesCount > 0 && (
-                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
-                        {profileUpdatesCount}
-                      </SidebarMenuBadge>
-                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

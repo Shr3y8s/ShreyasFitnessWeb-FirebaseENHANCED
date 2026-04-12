@@ -23,6 +23,9 @@ const sharedConfig = require("./firebase-config.json");
 // Activity Feed helper
 const { writeActivityEvent, getClientInfoForActivityFeed } = require("./activity-feed");
 
+// Client Notifications helper
+const {writeClientNotification} = require("./client-notifications");
+
 /**
  * Assign a workout template to a client with configured parameters
  * Creates a unified Workout document with prescribed configuration
@@ -167,6 +170,25 @@ exports.assignWorkout = onCall({
       trainerId,
       clientId: data.clientId,
       templateId: data.workoutTemplateId,
+    });
+
+    // CLIENT NOTIFICATION: Notify client of new workout assignment
+    const workoutDisplayName = workoutData.name || "New Workout";
+    writeClientNotification({
+      type: "new_workout",
+      clientId: data.clientId,
+      message: `Your trainer assigned a new workout: ${workoutDisplayName}`,
+      actionUrl: "/dashboard/client/workouts",
+      metadata: {
+        workoutId: workoutRef.id,
+        workoutName: workoutDisplayName,
+        dueDate: data.dueDate || "",
+      },
+    }).catch((err) => {
+      logger.warn("[ClientNotifications] Failed to write new_workout notification", {
+        clientId: data.clientId,
+        error: err.message,
+      });
     });
 
     return {

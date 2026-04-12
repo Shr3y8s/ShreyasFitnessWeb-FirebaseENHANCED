@@ -15,6 +15,9 @@ const { ONBOARDING_DEADLINE_DAYS, CHECKIN_ELIGIBLE_PRODUCTS, MAX_CLIENT_REFUND_C
 // Activity Feed helper for writing client activity events
 const { writeActivityEvent } = require("./activity-feed");
 
+// Client Notifications helper
+const {writeClientNotification} = require("./client-notifications");
+
 // Define secrets for secure access to Stripe
 const stripeKey = defineSecret("STRIPE_KEY");
 const resendKey = defineSecret("RESEND_API_KEY");
@@ -3980,11 +3983,13 @@ exports.trackLogin = onCall({
 
     logger.info("Login tracked successfully", { userId });
 
-    // ACTIVITY FEED: Write client_login event (only for client-role users)
+    // ACTIVITY FEED + LOGIN STREAK: Process client login events
     if (loginRecord.success) {
       const userDocForFeed = await admin.firestore().collection('users').doc(userId).get();
       if (userDocForFeed.exists && userDocForFeed.data().role === 'client') {
         const feedUserData = userDocForFeed.data();
+
+        // Activity Feed: client_login event
         writeActivityEvent({
           type: 'client_login',
           clientId: userId,
@@ -3993,8 +3998,65 @@ exports.trackLogin = onCall({
           message: `${feedUserData.name || 'Client'} logged in`,
           metadata: {},
         }).catch(err => {
-          logger.warn("[ActivityFeed] Failed to write client_login event", { userId, error: err.message });
+          logger.warn("[ActivityFeed] Failed to write client_login event", {userId, error: err.message});
         });
+
+        // LOGIN STREAK: Count consecutive days with a login
+        // Check last 60 days and find the longest run ending today
+        const todayStr = new Date().toISOString().split('T')[0];
+        const loginHistorySnapshot = await admin.firestore()
+          .collection('login_history')
+          .where('userId', '==', userId)
+          .where('success', '==', true)
+          .orderBy('timestamp', 'desc')
+          .limit(60)
+          .get();
+
+        // Build a set of unique dates with successful logins
+        const loginDates = new Set();
+        loginHistorySnapshot.forEach((doc) => {
+          const ts = doc.data().timestamp;
+          if (ts) {
+            const d = ts.toDate ? ts.toDate() : new Date(ts);
+            loginDates.add(d.toISOString().split('T')[0]);
+          }
+        });
+        loginDates.add(todayStr); // Include today's login
+
+        // Count consecutive days ending today
+        let streak = 0;
+        const today = new Date(todayStr);
+        for (let i = 0; i < 60; i++) {
+          const check = new Date(today);
+          check.setDate(today.getDate() - i);
+          const checkStr = check.toISOString().split('T')[0];
+          if (loginDates.has(checkStr)) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+
+        // Progressive streak milestones:
+        // Days 1–30: every 3 days (streak % 3 === 0)
+        // Days 31–60: every 5 days ((streak - 30) % 5 === 0)
+        // Day 61+:   every 7 days ((streak - 60) % 7 === 0)
+        const isStreakMilestone =
+          (streak <= 30 && streak % 3 === 0) ||
+          (streak > 30 && streak <= 60 && (streak - 30) % 5 === 0) ||
+          (streak > 60 && (streak - 60) % 7 === 0);
+        if (isStreakMilestone) {
+          writeClientNotification({
+            type: "login_streak",
+            clientId: userId,
+            message: `🔥 ${streak}-day login streak! You're on a roll — keep it up!`,
+            actionUrl: "/dashboard/client",
+            metadata: {streakDays: streak},
+          }).catch((err) => {
+            logger.warn("[ClientNotifications] Failed to write login_streak notification", {userId, error: err.message});
+          });
+          logger.info("[ClientNotifications] login_streak notification sent", {userId, streak});
+        }
       }
     }
 
@@ -4252,6 +4314,108 @@ exports.onClientMessageWrite = onDocumentWritten({
 });
 
 /**
+ * CLIENT NOTIFICATIONS: clientPlans write trigger
+ * Fires when a trainer updates a client's plan in the clientPlans collection.
+ * Sends 'plan_updated' notification for general plan changes and
+ * 'nutrition_updated' for nutrition-specific changes.
+ *
+ * Detection logic:
+ * - nutritionProtocol changed  → nutrition_updated
+ * - mealPlan changed           → nutrition_updated
+ * - anything else changed      → plan_updated
+ * Only fires on updates (not creates), and only when relevant fields changed.
+ */
+exports.onClientPlanWrite = onDocumentWritten({
+  document: "clientPlans/{planId}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data.after.exists ? event.data.after.data() : null;
+
+    // Only handle updates (not creates or deletes)
+    if (!before || !after) return null;
+
+    const clientId = after.clientId;
+    if (!clientId) return null;
+
+    // Helper: deep-compare two values by JSON serialization
+    const changed = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
+
+    // Detect what changed
+    const nutritionChanged =
+      changed(before.nutritionProtocol, after.nutritionProtocol) ||
+      changed(before.mealPlan, after.mealPlan);
+
+    const activitiesChanged =
+      changed(before.stepGoal, after.stepGoal) ||
+      changed(before.waterGoal, after.waterGoal) ||
+      changed(before.dailyHabits, after.dailyHabits);
+
+    const planChanged =
+      changed(before.trainingProtocol, after.trainingProtocol) ||
+      changed(before.lissCardio, after.lissCardio) ||
+      changed(before.weeklyFocus, after.weeklyFocus) ||
+      changed(before.vision, after.vision);
+
+    if (!nutritionChanged && !activitiesChanged && !planChanged) return null;
+
+    if (nutritionChanged) {
+      writeClientNotification({
+        type: "nutrition_updated",
+        clientId: clientId,
+        message: "Your trainer updated your nutrition plan",
+        actionUrl: "/dashboard/client/nutrition",
+        metadata: {updatedSection: "Nutrition Plan"},
+      }).catch((err) => {
+        logger.warn("[ClientNotifications] Failed to write nutrition_updated notification", {
+          clientId,
+          error: err.message,
+        });
+      });
+      logger.info("[ClientNotifications] nutrition_updated sent", {clientId});
+    }
+
+    if (activitiesChanged) {
+      writeClientNotification({
+        type: "activities_updated",
+        clientId: clientId,
+        message: "Your trainer updated your daily activity goals",
+        actionUrl: "/dashboard/client/activity",
+        metadata: {updatedSection: "Daily Activities"},
+      }).catch((err) => {
+        logger.warn("[ClientNotifications] Failed to write activities_updated notification", {
+          clientId,
+          error: err.message,
+        });
+      });
+      logger.info("[ClientNotifications] activities_updated sent", {clientId});
+    }
+
+    if (planChanged) {
+      writeClientNotification({
+        type: "plan_updated",
+        clientId: clientId,
+        message: "Your trainer updated your training plan",
+        actionUrl: "/dashboard/client/plan",
+        metadata: {updatedSection: "Training Plan"},
+      }).catch((err) => {
+        logger.warn("[ClientNotifications] Failed to write plan_updated notification", {
+          clientId,
+          error: err.message,
+        });
+      });
+      logger.info("[ClientNotifications] plan_updated sent", {clientId});
+    }
+
+    return null;
+  } catch (error) {
+    logger.error("[ClientNotifications] Error in onClientPlanWrite trigger:", {error: error.message});
+    return null;
+  }
+});
+
+/**
  * CLIENT ACTIVITY FEED SYSTEM
  * Real-time activity log for trainers — auto-expires after 7 days.
  * See: docs/02-implementation/client-activity-feed-architecture.md
@@ -4262,6 +4426,392 @@ exports.onClientMessageWrite = onDocumentWritten({
  * Runs daily at 3 AM UTC. Deletes events where expiresAt < now.
  * Events have a 7-day TTL set at write time by writeActivityEvent().
  */
+/**
+ * CLIENT NOTIFICATIONS: Upcoming payment reminder
+ * Runs daily, finds active subscriptions renewing in 3 days, sends one notification per cycle.
+ */
+exports.notifyUpcomingPayments = onSchedule({
+  schedule: "0 9 * * *", // Daily at 9 AM UTC
+  timeZone: "UTC",
+  region: sharedConfig.region,
+  secrets: [stripeKey],
+}, async (event) => {
+  try {
+    logger.info("[ClientNotifications] Starting upcoming payment check");
+
+    const stripe = require("stripe")(stripeKey.value(), {apiVersion: "2024-09-30.acacia"});
+
+    // Find active subscriptions renewing in the next 3 days
+    const nowSec = Math.floor(Date.now() / 1000);
+    const threeDaysSec = nowSec + (3 * 24 * 60 * 60);
+
+    // Query users with active subscriptions
+    const usersSnapshot = await admin.firestore()
+      .collection("users")
+      .where("subscriptionStatus", "==", "active")
+      .where("accountActivated", "==", true)
+      .get();
+
+    let notified = 0;
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+      const subscriptionId = userData.subscriptionId;
+      if (!subscriptionId) continue;
+
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        const renewalSec = sub.current_period_end;
+
+        // Within next 3 days and not already canceled
+        if (renewalSec <= threeDaysSec && !sub.cancel_at_period_end) {
+          const daysUntil = Math.ceil((renewalSec - nowSec) / 86400);
+          const renewalDate = new Date(renewalSec * 1000).toISOString().split("T")[0];
+          const amountCents = sub.items.data[0].price.unit_amount || 0;
+          const amount = amountCents ? `$${(amountCents / 100).toFixed(2)}` : "";
+
+          // Check we haven't already notified for this renewal cycle (within 4 days)
+          const recentNotifSnapshot = await admin.firestore()
+            .collection("clientNotifications")
+            .where("clientId", "==", userId)
+            .where("type", "==", "upcoming_payment")
+            .orderBy("timestamp", "desc")
+            .limit(1)
+            .get();
+
+          let alreadyNotified = false;
+          if (!recentNotifSnapshot.empty) {
+            const lastTs = recentNotifSnapshot.docs[0].data().timestamp;
+            const lastMs = lastTs && lastTs.toMillis ? lastTs.toMillis() : 0;
+            // If notified in last 4 days, skip
+            if (Date.now() - lastMs < 4 * 24 * 60 * 60 * 1000) {
+              alreadyNotified = true;
+            }
+          }
+
+          if (!alreadyNotified) {
+            const message = amount
+              ? `Your subscription renews in ${daysUntil} day${daysUntil !== 1 ? "s" : ""} (${amount}) on ${renewalDate}`
+              : `Your subscription renews in ${daysUntil} day${daysUntil !== 1 ? "s" : ""} on ${renewalDate}`;
+
+            await writeClientNotification({
+              type: "upcoming_payment",
+              clientId: userId,
+              message,
+              actionUrl: "/dashboard/client/billing",
+              metadata: {
+                renewalDate,
+                daysUntilRenewal: daysUntil,
+                amount: amountCents,
+                currency: sub.items.data[0].price.currency || "usd",
+              },
+            });
+            notified++;
+            logger.info("[ClientNotifications] upcoming_payment sent", {userId, daysUntil});
+          }
+        }
+      } catch (subErr) {
+        logger.warn("[ClientNotifications] Failed to check subscription", {userId, error: subErr.message});
+      }
+    }
+
+    logger.info("[ClientNotifications] Upcoming payment check complete", {notified});
+    return {success: true, notified};
+  } catch (error) {
+    logger.error("[ClientNotifications] Error in notifyUpcomingPayments:", {error: error.message});
+    return null;
+  }
+});
+
+/**
+ * DAILY CLIENT REMINDERS
+ * Runs daily at 3 AM UTC (8 PM PT). Sends reminder notifications to active clients who:
+ * - have an overdue workout (past due date, not completed)
+ * - haven't completed their nutrition approach today
+ * - haven't logged any steps today
+ * - haven't checked off any daily habits today
+ * - haven't logged their weight in 7+ days
+ *
+ * All checks are non-blocking and individually try/catch'd so one failure
+ * never prevents the other reminders from firing.
+ * Uses 23-hour dedup to prevent re-sending on the same day (except weight: 7-day dedup).
+ */
+exports.dailyClientReminders = onSchedule({
+  schedule: "0 3 * * *", // 3 AM UTC = 8 PM PT
+  timeZone: "UTC",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    logger.info("[DailyReminders] Starting daily client reminder check");
+
+    const now = admin.firestore.Timestamp.now();
+    const nowMs = now.toMillis();
+    const TWENTY_THREE_HOURS_MS = 23 * 60 * 60 * 1000;
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+    // Today's date string in YYYY-MM-DD (UTC, which is fine for server-side date math)
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    // Helper: check if a notification of the given type was sent to this client recently
+    async function wasRecentlySent(clientId, type, windowMs) {
+      const snapshot = await admin.firestore()
+        .collection("clientNotifications")
+        .where("clientId", "==", clientId)
+        .where("type", "==", type)
+        .orderBy("timestamp", "desc")
+        .limit(1)
+        .get();
+      if (snapshot.empty) return false;
+      const lastTs = snapshot.docs[0].data().timestamp;
+      const lastMs = lastTs && lastTs.toMillis ? lastTs.toMillis() : 0;
+      return (nowMs - lastMs) < windowMs;
+    }
+
+    // Get all active, activated clients
+    const clientsSnapshot = await admin.firestore()
+      .collection("users")
+      .where("role", "==", "client")
+      .where("accountActivated", "==", true)
+      .get();
+
+    let stats = {workoutOverdue: 0, nutrition: 0, steps: 0, habits: 0, weight: 0};
+
+    for (const clientDoc of clientsSnapshot.docs) {
+      const clientId = clientDoc.id;
+
+      // ── 1. WORKOUT OVERDUE ──────────────────────────────────────────────────
+      try {
+        const overdueSnapshot = await admin.firestore()
+          .collection("workouts")
+          .where("clientId", "==", clientId)
+          .where("status", "==", "scheduled")
+          .where("dueDate", "<", now)
+          .get();
+
+        for (const workoutDoc of overdueSnapshot.docs) {
+          const workout = workoutDoc.data();
+          const workoutId = workoutDoc.id;
+          const workoutName = workout.name || "Your workout";
+
+          // Dedup per workoutId (stored in metadata)
+          const dedup = await admin.firestore()
+            .collection("clientNotifications")
+            .where("clientId", "==", clientId)
+            .where("type", "==", "workout_overdue")
+            .where("metadata.workoutId", "==", workoutId)
+            .orderBy("timestamp", "desc")
+            .limit(1)
+            .get();
+
+          let alreadySent = false;
+          if (!dedup.empty) {
+            const lastTs = dedup.docs[0].data().timestamp;
+            const lastMs = lastTs && lastTs.toMillis ? lastTs.toMillis() : 0;
+            alreadySent = (nowMs - lastMs) < TWENTY_THREE_HOURS_MS;
+          }
+
+          if (!alreadySent) {
+            await writeClientNotification({
+              type: "workout_overdue",
+              clientId,
+              message: `${workoutName} is overdue — complete it when you can!`,
+              actionUrl: "/dashboard/client/workouts",
+              metadata: {workoutId, workoutName},
+            });
+            stats.workoutOverdue++;
+          }
+        }
+      } catch (err) {
+        logger.warn("[DailyReminders] workout_overdue check failed", {clientId, error: err.message});
+      }
+
+      // ── 2. NUTRITION REMINDER ────────────────────────────────────────────────
+      try {
+        // Check both mealPlans (meal plan approach) and habits (healthy habits approach)
+        const [mealDoc, habitsDoc] = await Promise.all([
+          admin.firestore()
+            .collection("nutritionLogs")
+            .doc(clientId)
+            .collection("mealPlans")
+            .doc(todayStr)
+            .get(),
+          admin.firestore()
+            .collection("nutritionLogs")
+            .doc(clientId)
+            .collection("habits")
+            .doc(todayStr)
+            .get(),
+        ]);
+
+        const mealComplete = mealDoc.exists && mealDoc.data().dayComplete === true;
+        const habitsComplete = habitsDoc.exists && habitsDoc.data().dayComplete === true;
+
+        if (!mealComplete && !habitsComplete) {
+          const alreadySent = await wasRecentlySent(clientId, "nutrition_reminder", TWENTY_THREE_HOURS_MS);
+          if (!alreadySent) {
+            await writeClientNotification({
+              type: "nutrition_reminder",
+              clientId,
+              message: "Don't forget to complete your nutrition for today! 🥗",
+              actionUrl: "/dashboard/client/nutrition",
+              metadata: {},
+            });
+            stats.nutrition++;
+          }
+        }
+      } catch (err) {
+        logger.warn("[DailyReminders] nutrition_reminder check failed", {clientId, error: err.message});
+      }
+
+      // ── 3. STEPS REMINDER ────────────────────────────────────────────────────
+      try {
+        const activityDocId = `${clientId}_${todayStr}`;
+        const activityDoc = await admin.firestore()
+          .collection("dailyActivities")
+          .doc(activityDocId)
+          .get();
+
+        const steps = activityDoc.exists ? (activityDoc.data().steps?.steps || 0) : 0;
+
+        if (steps === 0) {
+          const alreadySent = await wasRecentlySent(clientId, "steps_reminder", TWENTY_THREE_HOURS_MS);
+          if (!alreadySent) {
+            await writeClientNotification({
+              type: "steps_reminder",
+              clientId,
+              message: "You haven't logged any steps today — get moving! 👟",
+              actionUrl: "/dashboard/client/activity",
+              metadata: {},
+            });
+            stats.steps++;
+          }
+        }
+      } catch (err) {
+        logger.warn("[DailyReminders] steps_reminder check failed", {clientId, error: err.message});
+      }
+
+      // ── 4. HABITS REMINDER ───────────────────────────────────────────────────
+      try {
+        const activityDocId = `${clientId}_${todayStr}`;
+        const activityDoc = await admin.firestore()
+          .collection("dailyActivities")
+          .doc(activityDocId)
+          .get();
+
+        const habits = activityDoc.exists ? (activityDoc.data().habits || []) : [];
+        const anyChecked = habits.some(h => h.completed === true || h.completed === 1);
+
+        if (!anyChecked) {
+          // Only send if the client actually has habits configured
+          const planDoc = await admin.firestore()
+            .collection("clientPlans")
+            .doc(clientId)
+            .get();
+          const hasHabits = planDoc.exists &&
+            planDoc.data().dailyHabits &&
+            (planDoc.data().dailyHabits.habits || []).length > 0;
+
+          if (hasHabits) {
+            const alreadySent = await wasRecentlySent(clientId, "habits_reminder", TWENTY_THREE_HOURS_MS);
+            if (!alreadySent) {
+              await writeClientNotification({
+                type: "habits_reminder",
+                clientId,
+                message: "You haven't checked off any habits today — small wins add up! 📝",
+                actionUrl: "/dashboard/client/activity",
+                metadata: {},
+              });
+              stats.habits++;
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn("[DailyReminders] habits_reminder check failed", {clientId, error: err.message});
+      }
+
+      // ── 5. WEIGHT REMINDER (7-day dedup) ─────────────────────────────────────
+      try {
+        // Check last 7 days for any weight entry
+        let hasRecentWeight = false;
+        const today = new Date();
+        for (let i = 0; i < 7; i++) {
+          const checkDate = new Date(today);
+          checkDate.setDate(today.getDate() - i);
+          const dateStr = checkDate.toISOString().split("T")[0];
+          const actDoc = await admin.firestore()
+            .collection("dailyActivities")
+            .doc(`${clientId}_${dateStr}`)
+            .get();
+          if (actDoc.exists && actDoc.data().weight && actDoc.data().weight.weight) {
+            hasRecentWeight = true;
+            break;
+          }
+        }
+
+        if (!hasRecentWeight) {
+          const alreadySent = await wasRecentlySent(clientId, "weight_reminder", SEVEN_DAYS_MS);
+          if (!alreadySent) {
+            await writeClientNotification({
+              type: "weight_reminder",
+              clientId,
+              message: "You haven't logged your weight in 7 days — hop on the scale! ⚖️",
+              actionUrl: "/dashboard/client/activity",
+              metadata: {},
+            });
+            stats.weight++;
+          }
+        }
+      } catch (err) {
+        logger.warn("[DailyReminders] weight_reminder check failed", {clientId, error: err.message});
+      }
+    }
+
+    logger.info("[DailyReminders] Complete", {
+      clientsChecked: clientsSnapshot.size,
+      ...stats,
+    });
+    return {success: true, clientsChecked: clientsSnapshot.size, ...stats};
+  } catch (error) {
+    logger.error("[DailyReminders] Fatal error", {error: error.message});
+    return null;
+  }
+});
+
+/**
+ * Scheduled function to clean up expired client notifications (7-day TTL).
+ * Runs daily at 4 AM UTC.
+ */
+exports.cleanupExpiredClientNotifications = onSchedule({
+  schedule: "0 4 * * *",
+  timeZone: "UTC",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const now = admin.firestore.Timestamp.now();
+    let totalDeleted = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const snapshot = await admin.firestore()
+        .collection("clientNotifications")
+        .where("expiresAt", "<", now)
+        .limit(500)
+        .get();
+      if (snapshot.empty) { hasMore = false; break; }
+      const batch = admin.firestore().batch();
+      snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      totalDeleted += snapshot.size;
+      if (snapshot.size < 500) hasMore = false;
+    }
+    logger.info("[ClientNotifications] Cleanup complete", {totalDeleted});
+    return {success: true, totalDeleted};
+  } catch (error) {
+    logger.error("[ClientNotifications] Cleanup failed", {error: error.message});
+    return null;
+  }
+});
+
 exports.cleanupExpiredActivityFeed = onSchedule({
   schedule: "0 3 * * *", // Daily at 3 AM UTC
   timeZone: "UTC",

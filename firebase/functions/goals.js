@@ -9,6 +9,9 @@ const sharedConfig = require("./firebase-config.json");
 // Activity Feed helper
 const { writeActivityEvent, getClientInfoForActivityFeed } = require("./activity-feed");
 
+// Client Notifications helper
+const {writeClientNotification} = require("./client-notifications");
+
 /**
  * PHASE 3: CLOUD FUNCTIONS FOR AUTO-TRACKING GOALS
  * 
@@ -848,10 +851,51 @@ exports.onGoalWrite = onDocumentWritten({
     const before = event.data.before.exists ? event.data.before.data() : null;
     const after = event.data.after.exists ? event.data.after.data() : null;
     
+    // DETECT: New goal created by trainer → notify client
+    if (!before && after) {
+      const clientId = after.clientId;
+      if (clientId && after.category !== 'setup') {
+        writeClientNotification({
+          type: "goal_added",
+          clientId: clientId,
+          message: `Your trainer added a new goal: ${after.title || 'New Goal'}`,
+          actionUrl: "/dashboard/client/goals",
+          metadata: {
+            goalId: event.params.goalId,
+            goalTitle: after.title || "",
+            goalCategory: after.category || "",
+          },
+        }).catch((err) => {
+          logger.warn("[ClientNotifications] Failed to write goal_added notification", {clientId, error: err.message});
+        });
+      }
+      return null;
+    }
+
     if (!after || !before) return null; // Only handle updates (not creates/deletes)
-    
+
     const clientId = after.clientId;
     const trainerId = after.trainerId;
+
+    // DETECT: Goal title/configuration updated by trainer → notify client
+    const titleChanged = before.title !== after.title;
+    const targetChanged = before.targetValue !== after.targetValue;
+    const termChanged = before.term !== after.term;
+    if ((titleChanged || targetChanged || termChanged) && after.category !== 'setup') {
+      writeClientNotification({
+        type: "goal_updated",
+        clientId: clientId,
+        message: `Your trainer updated your goal: ${after.title || 'Goal'}`,
+        actionUrl: "/dashboard/client/goals",
+        metadata: {
+          goalId: event.params.goalId,
+          goalTitle: after.title || "",
+          goalCategory: after.category || "",
+        },
+      }).catch((err) => {
+        logger.warn("[ClientNotifications] Failed to write goal_updated notification", {clientId, error: err.message});
+      });
+    }
 
     // DETECT: Goal status changed to 'completed'
     if (before.status !== 'completed' && after.status === 'completed') {
