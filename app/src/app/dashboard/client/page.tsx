@@ -21,7 +21,9 @@ import { WorkoutCalendar } from '@/components/dashboard/workout-calendar';
 import { PersonalRecords } from '@/components/dashboard/personal-records';
 import { NutritionSummary } from '@/components/dashboard/nutrition-summary';
 import { AccountSummary } from '@/components/dashboard/account-summary';
-import { CoachNotes } from '@/components/dashboard/coach-notes';
+import { CoachOutreach } from '@/components/dashboard/coach-outreach';
+import { CoachReminders } from '@/components/dashboard/coach-reminders';
+import { ActivityAlerts } from '@/components/dashboard/activity-alerts';
 import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { DailyHabitsChecklist } from '@/components/activity/DailyHabitsChecklist';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -493,12 +495,13 @@ export default function ClientDashboardPage() {
               onCycleTheme={cycleTheme}
             />
 
-            {/* First Row - Upcoming Session & Daily Habits (or Onboarding for new clients) */}
+            {/* First Row - Upcoming Session | From Your Coach (when active) | Daily Habits / Onboarding */}
             <div
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
               style={{ perspective: '1000px' }}
             >
-              <InteractiveCard>
+              <div className="space-y-6">
+                <InteractiveCard>
                 <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm hover:shadow-glow transition-shadow">
                   {loadingNextSession ? (
                     <CardContent className="text-center py-12">
@@ -529,6 +532,17 @@ export default function ClientDashboardPage() {
                   )}
                 </Card>
               </InteractiveCard>
+              <InteractiveCard>
+                <WeeklyCheckin />
+              </InteractiveCard>
+              </div>
+              {/* Column 2: Tasks + Coach Note (always renders since note is always present) */}
+              <CoachOutreach
+                coachName={coachNote.coachName}
+                coachNote={coachNote.message}
+              />
+
+              {/* Column 3: Onboarding checklist → Daily Habits once complete */}
               {setupGoalLoading ? (
                 <InteractiveCard>
                   <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm">
@@ -576,20 +590,13 @@ export default function ClientDashboardPage() {
 
               {/* Right Column - Sidebar */}
               <div className="lg:col-span-1 space-y-6">
-                <InteractiveCard>
-                  <CoachNotes
-                    coachName={coachNote.coachName}
-                    message={coachNote.message}
-                  />
-                </InteractiveCard>
+                <CoachReminders />
+                <ActivityAlerts />
                 <InteractiveCard>
                   <WorkoutCalendar
                     upcomingSessions={upcomingWorkouts}
                     completedSessions={completedWorkouts}
                   />
-                </InteractiveCard>
-                <InteractiveCard>
-                  <WeeklyCheckin />
                 </InteractiveCard>
                 <InteractiveCard>
                   <PersonalRecords />

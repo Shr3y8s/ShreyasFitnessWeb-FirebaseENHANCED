@@ -826,13 +826,19 @@ service cloud.firestore {
     
     // CLIENT ACTIVITY FEED — Real-time activity log for trainers
     // Write-once, append-only events. Auto-expires after 7 days.
-    // Only Cloud Functions can create/delete (via admin SDK).
+    // Cloud Functions write most events via admin SDK (bypasses rules).
+    // Clients can write task_completed events directly.
     match /activityFeed/{eventId} {
       // Trainers and admins can read activity feed events
       allow read: if isTrainerOrAdmin();
-      
-      // Only Cloud Functions write (via admin SDK, bypasses rules)
-      allow create, delete: if false;
+
+      // Only Cloud Functions write most events (via admin SDK, bypasses rules)
+      // Exception: clients can write task_completed events to notify their trainer
+      allow create: if isAuthenticated() &&
+                    request.resource.data.type == 'task_completed' &&
+                    request.resource.data.clientId == request.auth.uid;
+
+      allow delete: if false;
       
       // Trainers can mark events as read (only the 'read' field)
       allow update: if isTrainerOrAdmin() &&
@@ -850,13 +856,59 @@ service cloud.firestore {
       // Trainers/admins can read all client notifications
       allow read: if isTrainerOrAdmin();
       
-      // Only Cloud Functions can create or delete (admin SDK bypasses rules)
-      allow create, delete: if false;
+      // Trainers/admins can create notifications for clients they manage
+      allow create: if isTrainerOrAdmin();
+
+      // Only Cloud Functions can delete
+      allow delete: if false;
       
       // Clients can mark their own notification as read (only 'read' field)
       allow update: if isAuthenticated() &&
                     resource.data.clientId == request.auth.uid &&
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    // CLIENT TASKS — Trainer creates/manages, clients can read their own
+    match /clientTasks/{taskId} {
+      // Trainers/admins can read all tasks they created
+      allow read: if isTrainerOrAdmin();
+
+      // Clients can read their own tasks
+      allow read: if isAuthenticated() &&
+                  resource.data.clientId == request.auth.uid;
+
+      // Trainers can create tasks (must be the trainerId on the doc)
+      allow create: if isTrainerOrAdmin() &&
+                    request.resource.data.trainerId == request.auth.uid;
+
+      // Trainers can update/delete their own tasks
+      allow update, delete: if isTrainerOrAdmin() &&
+                             resource.data.trainerId == request.auth.uid;
+
+      // Clients can only mark their own task as completed (status + completedAt + updatedAt)
+      allow update: if isAuthenticated() &&
+                    resource.data.clientId == request.auth.uid &&
+                    request.resource.data.diff(resource.data).affectedKeys()
+                      .hasOnly(['status', 'completedAt', 'updatedAt']);
+    }
+
+    // CLIENT REMINDERS — Trainer creates/manages, clients can read their own
+    match /clientReminders/{reminderId} {
+      // Trainers/admins can read all reminders they created
+      allow read: if isTrainerOrAdmin();
+
+      // Clients can read reminders targeted at them or broadcast ('all')
+      allow read: if isAuthenticated() &&
+                  (resource.data.clientId == request.auth.uid ||
+                   resource.data.clientId == 'all');
+
+      // Trainers can create reminders (must be the trainerId on the doc)
+      allow create: if isTrainerOrAdmin() &&
+                    request.resource.data.trainerId == request.auth.uid;
+
+      // Trainers can cancel/update their own reminders
+      allow update, delete: if isTrainerOrAdmin() &&
+                             resource.data.trainerId == request.auth.uid;
     }
 
     // Default deny all other collections

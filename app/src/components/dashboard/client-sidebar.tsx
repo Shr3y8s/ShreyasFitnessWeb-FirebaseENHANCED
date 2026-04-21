@@ -30,6 +30,7 @@ import {
   Star,
   Receipt,
   PhoneCall,
+  ListTodo,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -72,6 +73,7 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [availableSessions, setAvailableSessions] = useState(0);
   const [activeWorkoutsCount, setActiveWorkoutsCount] = useState(0);
+  const [pendingTasksCount, setPendingTasksCount] = useState(0);
   
   // Listen for real-time session balance updates
   useEffect(() => {
@@ -160,6 +162,23 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
     };
   }, [user, userData]);
 
+  // Listen for pending tasks count
+  useEffect(() => {
+    if (!user) { setPendingTasksCount(0); return; }
+    const tasksQuery = query(
+      collection(db, 'clientTasks'),
+      where('clientId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+    const unsubscribe = onSnapshot(
+      tasksQuery,
+      (snap) => setPendingTasksCount(snap.size),
+      () => setPendingTasksCount(0)
+    );
+    registerListener(unsubscribe);
+    return () => { unregisterListener(unsubscribe); unsubscribe(); };
+  }, [user]);
+
   // Listen for active workouts (scheduled or started)
   useEffect(() => {
     if (!user) {
@@ -232,7 +251,28 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Planning Section */}
+          {/* Tasks Section */}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild className={pathname === '/dashboard/client/tasks' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                    <Link href="/dashboard/client/tasks">
+                      <ListTodo className="w-4 h-4" />
+                      <span className="font-medium">My Tasks</span>
+                      {pendingTasksCount > 0 && (
+                        <SidebarMenuBadge className="ml-auto bg-orange-500 text-white flex items-center justify-center w-5 h-5 p-0">
+                          {pendingTasksCount > 9 ? '9+' : pendingTasksCount}
+                        </SidebarMenuBadge>
+                      )}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* Planning Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Planning</SidebarGroupLabel>
           <SidebarGroupContent>

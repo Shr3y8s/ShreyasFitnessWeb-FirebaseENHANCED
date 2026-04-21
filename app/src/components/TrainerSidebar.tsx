@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import {
   LayoutDashboard,
   Users,
@@ -20,6 +21,7 @@ import {
   UserCircle,
   Calendar,
   Activity,
+  Send,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -46,6 +48,7 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
   const { user, userData, canAccessAdminDashboard } = useAuth();
   const [clientCount, setClientCount] = useState(0);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [openTaskCount, setOpenTaskCount] = useState(0);
 
   // Listen for real-time client count updates
   useEffect(() => {
@@ -72,13 +75,32 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
     );
 
     // Register with centralized registry
-    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
     registerListener(unsubscribe);
 
     return () => {
       unregisterListener(unsubscribe);
       unsubscribe();
     };
+  }, [user]);
+
+  // Listen for real-time open task count
+  useEffect(() => {
+    if (!user) { setOpenTaskCount(0); return; }
+
+    const tasksQuery = query(
+      collection(db, 'clientTasks'),
+      where('trainerId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+
+    const unsubscribe = onSnapshot(
+      tasksQuery,
+      (snapshot) => setOpenTaskCount(snapshot.size),
+      () => setOpenTaskCount(0)
+    );
+
+    registerListener(unsubscribe);
+    return () => { unregisterListener(unsubscribe); unsubscribe(); };
   }, [user]);
 
   // Listen for real-time unread message count (messages from clients to this trainer)
@@ -109,7 +131,6 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
     );
 
     // Register with centralized registry
-    const { registerListener, unregisterListener } = require('@/lib/listener-registry');
     registerListener(unsubscribe);
 
     return () => {
@@ -226,6 +247,22 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                   <Link href="/dashboard/trainer/activity">
                     <Activity className="w-4 h-4" />
                     <span className="font-medium">Activity Feed</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  className={pathname === '/dashboard/trainer/outreach' || currentPage === 'outreach' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/trainer/outreach">
+                    <Send className="w-4 h-4" />
+                    <span className="font-medium">Outreach</span>
+                    {openTaskCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-orange-500 text-white flex items-center justify-center w-5 h-5 p-0">
+                        {openTaskCount > 9 ? '9+' : openTaskCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
