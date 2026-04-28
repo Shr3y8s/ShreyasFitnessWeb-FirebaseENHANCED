@@ -4367,13 +4367,19 @@ exports.onClientPlanWrite = onDocumentWritten({
     const activitiesChanged =
       changed(before.stepGoal, after.stepGoal) ||
       changed(before.waterGoal, after.waterGoal) ||
-      changed(before.dailyHabits, after.dailyHabits);
+      changed(before.dailyHabits, after.dailyHabits) ||
+      changed(before.lissCardio, after.lissCardio); // LISS cardio lives in Daily Activities tracker
 
     const planChanged =
       changed(before.trainingProtocol, after.trainingProtocol) ||
       changed(before.lissCardio, after.lissCardio) ||
       changed(before.weeklyFocus, after.weeklyFocus) ||
-      changed(before.vision, after.vision);
+      changed(before.vision, after.vision) ||
+      changed(before.stepGoal, after.stepGoal) ||        // step goal shows on My Plan
+      changed(before.waterGoal, after.waterGoal) ||      // water goal shows on My Plan
+      changed(before.dailyHabits, after.dailyHabits) ||  // daily habits show on My Plan
+      changed(before.nutritionProtocol, after.nutritionProtocol) || // nutrition protocol shows on My Plan
+      changed(before.mealPlan, after.mealPlan);          // meal plan shows on My Plan
 
     if (!nutritionChanged && !activitiesChanged && !planChanged) return null;
 
@@ -4825,6 +4831,101 @@ exports.cleanupExpiredClientNotifications = onSchedule({
     return {success: true, totalDeleted};
   } catch (error) {
     logger.error("[ClientNotifications] Cleanup failed", {error: error.message});
+    return null;
+  }
+});
+
+/**
+ * ACTIVITY FEED: Client LISS cardio session completed trigger
+ * Fires when a client's dailyActivities document has cardio flipped to true.
+ * Writes an activity feed event: "Jane completed LISS cardio (2 / 3 this week)"
+ * Doc ID format: {userId}_{YYYY-MM-DD}
+ */
+exports.onCardioSessionLogged = onDocumentWritten({
+  document: "dailyActivities/{docId}",
+  region: sharedConfig.region,
+}, async (event) => {
+  try {
+    const before = event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data.after.exists ? event.data.after.data() : null;
+
+    if (!after) return null;
+
+    // Only fire when cardio flips from falsy → true
+    const wasCardio = before ? before.cardio === true : false;
+    const isCardio = after.cardio === true;
+    if (!isCardio || wasCardio) return null;
+
+    const userId = after.userId;
+    const date = after.date; // YYYY-MM-DD
+    if (!userId || !date) return null;
+
+    // Get client info for the activity feed
+    const { getClientInfoForActivityFeed } = require("./activity-feed");
+    const clientInfo = await getClientInfoForActivityFeed(userId);
+    if (!clientInfo.trainerId) return null;
+
+    // Get weekly frequency target from client plan
+    let target = 1;
+    let frequency = '';
+    try {
+      const planDoc = await admin.firestore().collection("clientPlans").doc(userId).get();
+      const freq = planDoc.data()?.lissCardio?.frequency || '';
+      frequency = freq;
+      const match = freq.match(/^(\d+)/);
+      if (match) target = parseInt(match[1], 10);
+    } catch (e) {
+      // Ignore — use target = 1
+    }
+
+    // Count cardio sessions in current Mon–Sun week
+    const dateObj = new Date(date + 'T00:00:00Z');
+    const dayOfWeek = dateObj.getUTCDay(); // 0=Sun,1=Mon,...
+    const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const weekMon = new Date(dateObj);
+    weekMon.setUTCDate(dateObj.getUTCDate() + diffToMon);
+    const weekSun = new Date(weekMon);
+    weekSun.setUTCDate(weekMon.getUTCDate() + 6);
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmt = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    const weekStartStr = fmt(weekMon);
+    const weekEndStr = fmt(weekSun);
+
+    // Query dailyActivities for this user in the week (filter cardio in JS to avoid composite index)
+    const snapshot = await admin.firestore()
+      .collection("dailyActivities")
+      .where("userId", "==", userId)
+      .where("date", ">=", weekStartStr)
+      .where("date", "<=", weekEndStr)
+      .limit(7)
+      .get();
+    const weekCount = snapshot.docs.filter(d => d.data().cardio === true).length;
+
+    // Build message
+    const goalMet = weekCount >= target;
+    const message = goalMet
+      ? `${clientInfo.clientName} completed LISS cardio (${weekCount}/${target} this week ✅)`
+      : `${clientInfo.clientName} completed LISS cardio (${weekCount}/${target} this week)`;
+
+    writeActivityEvent({
+      type: 'cardio_session_logged',
+      clientId: userId,
+      clientName: clientInfo.clientName,
+      trainerId: clientInfo.trainerId,
+      message,
+      metadata: {
+        date,
+        weekCount,
+        target,
+        frequency,
+      },
+    }).catch(err => {
+      logger.warn("[ActivityFeed] Failed to write cardio_session_logged event", { userId, error: err.message });
+    });
+
+    return null;
+  } catch (error) {
+    logger.error("[ActivityFeed] Error in onCardioSessionLogged trigger:", { error: error.message });
     return null;
   }
 });

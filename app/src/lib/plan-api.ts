@@ -68,6 +68,7 @@ const convertPlanFromFirestore = (id: string, data: any): ClientPlan => {
       duration: data.lissCardio.duration || '',
       targetHeartRate: data.lissCardio.targetHeartRate || '',
       timing: data.lissCardio.timing || '',
+      equipment: data.lissCardio.equipment || undefined,
       lastUpdated: timestampToDate(data.lissCardio.lastUpdated)
     } : null,
     weeklyFocus: data.weeklyFocus ? {
@@ -362,14 +363,20 @@ export async function updateLissCardio(
     const planRef = doc(db, PLANS_COLLECTION, clientId);
     const existingPlan = await getClientPlan(clientId);
     
+    const lissData: Record<string, unknown> = {
+      frequency: lissCardioData.frequency,
+      duration: lissCardioData.duration,
+      targetHeartRate: lissCardioData.targetHeartRate,
+      timing: lissCardioData.timing,
+      lastUpdated: serverTimestamp()
+    };
+    // Only include equipment if it has a value
+    if (lissCardioData.equipment) {
+      lissData.equipment = lissCardioData.equipment;
+    }
+
     const updateData: any = {
-      lissCardio: {
-        frequency: lissCardioData.frequency,
-        duration: lissCardioData.duration,
-        targetHeartRate: lissCardioData.targetHeartRate,
-        timing: lissCardioData.timing,
-        lastUpdated: serverTimestamp()
-      },
+      lissCardio: lissData,
       updatedAt: serverTimestamp()
     };
     

@@ -97,6 +97,7 @@ export async function getDailyActivity(
         notes: data.weight.notes,
         timestamp: timestampToDate(data.weight.timestamp)
       } : undefined,
+      cardio: data.cardio === true ? true : data.cardio === false ? false : undefined,
       updatedAt: timestampToDate(data.updatedAt)
     };
   } catch (error) {
@@ -426,6 +427,7 @@ export async function getActivityLogsForDateRange(
           notes: data.weight.notes,
           timestamp: timestampToDate(data.weight.timestamp)
         } : undefined,
+        cardio: data.cardio === true ? true : data.cardio === false ? false : undefined,
         updatedAt: timestampToDate(data.updatedAt)
       });
     });
@@ -435,6 +437,83 @@ export async function getActivityLogsForDateRange(
   } catch (error) {
     console.error('Error getting activity logs for date range:', error);
     return [];
+  }
+}
+
+/**
+ * Log whether the client completed their LISS cardio session on a specific date.
+ * Writes cardio: true/false to the daily activity document.
+ */
+export async function logCardio(
+  userId: string,
+  date: string,
+  completed: boolean
+): Promise<{ success: boolean; error?: unknown }> {
+  try {
+    const docId = getActivityDocId(userId, date);
+    const docRef = doc(db, ACTIVITIES_COLLECTION, docId);
+
+    const existingDoc = await getDoc(docRef);
+
+    if (existingDoc.exists()) {
+      await updateDoc(docRef, {
+        cardio: completed,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      await setDoc(docRef, {
+        userId,
+        date,
+        cardio: completed,
+        habits: [],
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error logging cardio:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Get the weekly LISS cardio session count for a client.
+ * Returns how many days in the given week have cardio: true,
+ * and whether today has been logged.
+ */
+export async function getWeeklyCardioCount(
+  userId: string,
+  weekStart: string, // YYYY-MM-DD (Monday)
+  weekEnd: string,   // YYYY-MM-DD (Sunday)
+  today: string      // YYYY-MM-DD
+): Promise<{ count: number; loggedToday: boolean }> {
+  try {
+    const activitiesRef = collection(db, ACTIVITIES_COLLECTION);
+    const q = query(
+      activitiesRef,
+      where('userId', '==', userId),
+      where('date', '>=', weekStart),
+      where('date', '<=', weekEnd),
+      limit(7)
+    );
+
+    const snapshot = await getDocs(q);
+    let count = 0;
+    let loggedToday = false;
+
+    snapshot.docs.forEach(d => {
+      const data = d.data();
+      if (data.cardio === true) {
+        count++;
+        if (data.date === today) loggedToday = true;
+      }
+    });
+
+    return { count, loggedToday };
+  } catch (error) {
+    console.error('Error getting weekly cardio count:', error);
+    return { count: 0, loggedToday: false };
   }
 }
 

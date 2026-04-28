@@ -25,7 +25,8 @@ export type ActivityEventType =
   | 'session_rescheduled'
   | 'progress_photo_uploaded'
   | 'client_message_received'
-  | 'daily_habits_completed';
+  | 'daily_habits_completed'
+  | 'cardio_session_logged';
 
 // ============================================================
 // Core Activity Feed Event
@@ -188,6 +189,7 @@ export const ACTIVITY_EVENT_ICONS: Record<ActivityEventType, string> = {
   progress_photo_uploaded: '📸',
   client_message_received: '💬',
   daily_habits_completed: '✅',
+  cardio_session_logged: '❤️',
 };
 
 export const ACTIVITY_EVENT_LABELS: Record<ActivityEventType, string> = {
@@ -209,6 +211,7 @@ export const ACTIVITY_EVENT_LABELS: Record<ActivityEventType, string> = {
   progress_photo_uploaded: 'Uploaded Progress Photo',
   client_message_received: 'Sent Message',
   daily_habits_completed: 'Completed Daily Habits',
+  cardio_session_logged: 'Logged Cardio Session',
 };
 
 // Filter categories for the UI filter pills

@@ -14,6 +14,8 @@ import {
   logWater, 
   toggleHabit, 
   logWeight,
+  logCardio,
+  getWeeklyCardioCount,
   getRecentWeightLogs 
 } from '@/lib/activity-api';
 import { getClientPlan } from '@/lib/plan-api';
@@ -21,6 +23,7 @@ import { StepsLogger } from '@/components/activity/StepsLogger';
 import { WaterLogger } from '@/components/activity/WaterLogger';
 import { DailyHabitsChecklist } from '@/components/activity/DailyHabitsChecklist';
 import { WeightLogger } from '@/components/activity/WeightLogger';
+import { LissCardioTracker } from '@/components/activity/LissCardioTracker';
 import type { DailyActivityData, WeightLog } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
@@ -50,6 +53,9 @@ export default function DailyActivityPage() {
   const [planData, setPlanData] = useState<ClientPlan | null>(null);
   const [activityData, setActivityData] = useState<DailyActivityData | null>(null);
   const [recentWeights, setRecentWeights] = useState<WeightLog[]>([]);
+  const [weeklyCardioCount, setWeeklyCardioCount] = useState(0);
+  const [cardioLoggedToday, setCardioLoggedToday] = useState(false);
+  const [cardioLoading, setCardioLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
@@ -93,6 +99,23 @@ export default function DailyActivityPage() {
         // Load recent weight logs
         const weights = await getRecentWeightLogs(user.uid, 10);
         setRecentWeights(weights);
+
+        // Load weekly cardio count (always based on current calendar week Mon-Sun)
+        if (plan?.lissCardio) {
+          const today = getTodayDate();
+          const todayObj = new Date(today + 'T00:00:00');
+          const dayOfWeek = todayObj.getDay(); // 0=Sun,1=Mon,...
+          const diffToMon = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+          const weekStart = new Date(todayObj);
+          weekStart.setDate(todayObj.getDate() + diffToMon);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          const weekStartStr = weekStart.toISOString().split('T')[0];
+          const weekEndStr = weekEnd.toISOString().split('T')[0];
+          const cardioResult = await getWeeklyCardioCount(user.uid, weekStartStr, weekEndStr, today);
+          setWeeklyCardioCount(cardioResult.count);
+          setCardioLoggedToday(cardioResult.loggedToday);
+        }
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -287,6 +310,23 @@ export default function DailyActivityPage() {
     }
   };
 
+  const handleToggleCardio = async (completed: boolean) => {
+    if (!user) return;
+    setCardioLoading(true);
+    // Optimistic update
+    const prev = cardioLoggedToday;
+    const prevCount = weeklyCardioCount;
+    setCardioLoggedToday(completed);
+    setWeeklyCardioCount(completed ? prevCount + 1 : Math.max(0, prevCount - 1));
+    const result = await logCardio(user.uid, getTodayDate(), completed);
+    if (!result.success) {
+      // Revert on error
+      setCardioLoggedToday(prev);
+      setWeeklyCardioCount(prevCount);
+    }
+    setCardioLoading(false);
+  };
+
   if (authLoading || !userData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -417,6 +457,17 @@ export default function DailyActivityPage() {
                       habits={planData.dailyHabits.habits}
                       completedHabits={activityData?.habits || []}
                       onToggle={handleToggleHabit}
+                    />
+                  )}
+
+                  {/* LISS Cardio Tracker — only shown when coach has assigned LISS cardio */}
+                  {planData?.lissCardio && (
+                    <LissCardioTracker
+                      lissCardio={planData.lissCardio}
+                      weeklyCount={weeklyCardioCount}
+                      loggedToday={cardioLoggedToday}
+                      onToggle={handleToggleCardio}
+                      isLoading={cardioLoading}
                     />
                   )}
                 </div>

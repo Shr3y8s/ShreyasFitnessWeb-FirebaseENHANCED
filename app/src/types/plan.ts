@@ -27,6 +27,7 @@ export interface LissCardioData {
   duration: string;
   targetHeartRate: string;
   timing: string;
+  equipment?: string; // e.g. 'Stairmaster', 'Treadmill', 'Tennis' (free-form when 'Other / Activity' selected)
   lastUpdated: Date | null;
 }
 
@@ -434,4 +435,16 @@ export const CARDIO_TIMING_OPTIONS = [
   'Morning (fasted)',
   'Evening',
   'Flexible'
+];
+
+// Equipment / activity options for LISS Cardio
+// 'Other / Activity' is the free-form option that reveals a text input
+export const CARDIO_EQUIPMENT_OPTIONS = [
+  'Stairmaster',
+  'Treadmill',
+  'Elliptical',
+  'Stationary Bike',
+  'Cross Trainer',
+  'Rowing Machine',
+  'Other / Activity',
 ];

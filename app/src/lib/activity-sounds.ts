@@ -30,6 +30,7 @@ export const ACTIVITY_EVENT_SOUNDS: Record<ActivityEventType, SoundCategory> = {
   nutrition_day_completed:    'completion',
   daily_activities_completed: 'completion',
   daily_habits_completed:     'completion',
+  cardio_session_logged:      'completion',
 
   // 📅 Info — neutral updates worth knowing
   session_scheduled:          'info',

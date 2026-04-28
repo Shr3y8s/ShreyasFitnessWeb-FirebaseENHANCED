@@ -143,15 +143,30 @@ export function ClientNotificationsProvider({ children }: ClientNotificationsPro
     };
   }, [isClient, clientId]);
 
-  // Auto-mark all unread new_message notifications as read when client visits the messages page
+  // Auto-mark notifications as read when the client visits the relevant section page.
+  // Only applies to one-time "something changed" notifications — NOT to live counters
+  // like active workouts, pending tasks, or session balance which should persist.
   useEffect(() => {
-    if (pathname !== '/dashboard/client/messages') return;
-    const unreadMessages = notifications.filter(
-      (n) => n.type === 'new_message' && !n.read
+    // Map each route to the notification types it should clear on visit
+    const routeTypesMap: Record<string, string[]> = {
+      '/dashboard/client/messages': ['new_message'],
+      '/dashboard/client/plan':     ['plan_updated'],
+      '/dashboard/client/activity': ['activities_updated'],
+      '/dashboard/client/nutrition':['nutrition_updated'],
+      '/dashboard/client/goals':    ['goal_added', 'goal_updated'],
+      '/dashboard/client/billing':  ['upcoming_payment'],
+    };
+
+    const typesToClear = routeTypesMap[pathname];
+    if (!typesToClear) return;
+
+    const unreadToClose = notifications.filter(
+      (n) => typesToClear.includes(n.type) && !n.read
     );
-    if (unreadMessages.length === 0) return;
-    // Mark all as read in background (fire-and-forget, UI updates via Firestore listener)
-    unreadMessages.forEach((n) => {
+    if (unreadToClose.length === 0) return;
+
+    // Mark as read in background (fire-and-forget, UI updates via Firestore listener)
+    unreadToClose.forEach((n) => {
       markNotificationAsRead(n.id).catch(() => {});
     });
   }, [pathname, notifications]);

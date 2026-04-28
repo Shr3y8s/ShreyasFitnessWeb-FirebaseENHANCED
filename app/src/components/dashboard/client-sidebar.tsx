@@ -213,6 +213,12 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
   
   // Count unread notifications per relevant section
   const unreadNotifs = notifications.filter((n) => !n.read);
+  const planUpdatesCount = unreadNotifs.filter(
+    (n) => n.type === 'plan_updated'
+  ).length;
+  const activitiesUpdatesCount = unreadNotifs.filter(
+    (n) => n.type === 'activities_updated'
+  ).length;
   const nutritionUpdatesCount = unreadNotifs.filter(
     (n) => n.type === 'nutrition_updated'
   ).length;
@@ -282,6 +288,11 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/dashboard/client/plan">
                     <ClipboardList className="w-4 h-4" />
                     <span className="font-medium">My Plan</span>
+                    {planUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {planUpdatesCount > 9 ? '9+' : planUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -307,6 +318,11 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   <Link href="/dashboard/client/activity">
                     <Activity className="w-4 h-4" />
                     <span className="font-medium">Daily Activities</span>
+                    {activitiesUpdatesCount > 0 && (
+                      <SidebarMenuBadge className="ml-auto bg-primary text-white flex items-center justify-center w-5 h-5 p-0">
+                        {activitiesUpdatesCount > 9 ? '9+' : activitiesUpdatesCount}
+                      </SidebarMenuBadge>
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

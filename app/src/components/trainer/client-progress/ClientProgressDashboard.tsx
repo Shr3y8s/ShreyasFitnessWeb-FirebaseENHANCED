@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Loader2, Scale, ArrowDown, ArrowUp, Footprints, Flame, Target, Dumbbell, ChevronDown, ChevronUp, Camera } from 'lucide-react';
+import { Loader2, Scale, ArrowDown, ArrowUp, Footprints, Flame, Target, Dumbbell, ChevronDown, ChevronUp, Camera, HeartPulse } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import type { ProgressPhotoWithId } from '@/types/progress-photo';
@@ -52,6 +52,9 @@ export function ClientProgressDashboard({ clientId }: ClientProgressDashboardPro
 
   // ── Activity state (last 7 days) ──
   const [activityLogs, setActivityLogs] = useState<DailyActivityData[]>([]);
+
+  // ── LISS Cardio adherence ──
+  const [lissCardioWeekly, setLissCardioWeekly] = useState<{ count: number; target: number; frequency: string; equipment?: string } | null>(null);
 
   // ── Photos state ──
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhotoWithId[]>([]);
@@ -123,6 +126,25 @@ export function ClientProgressDashboard({ clientId }: ClientProgressDashboardPro
           const goalDoc = await getDoc(doc(db, 'goals', `${clientId}_workout_consistency`));
           setWorkoutStreak(goalDoc.exists() ? (goalDoc.data().currentStreak ?? 0) : 0);
         } catch { setWorkoutStreak(0); }
+
+        // LISS Cardio adherence — current week sessions count
+        try {
+          const planSnap2 = await getDoc(doc(db, 'clientPlans', clientId));
+          const lissCardio = planSnap2.data()?.lissCardio;
+          if (lissCardio?.frequency) {
+            const freqMatch = lissCardio.frequency.match(/^(\d+)/);
+            const target = freqMatch ? parseInt(freqMatch[1], 10) : 1;
+            // Count daily activity docs in current week that have cardio: true
+            const { getActivityLogsForDateRange: getRange } = await import('@/lib/activity-api');
+            const weekLogs = await getRange(clientId, sundayStr, todayStr);
+            const count = weekLogs.filter(l => l.cardio === true).length;
+            setLissCardioWeekly({ count, target, frequency: lissCardio.frequency, equipment: lissCardio.equipment });
+          } else {
+            setLissCardioWeekly(null);
+          }
+        } catch {
+          setLissCardioWeekly(null);
+        }
 
         // Habit score — 4-factor formula
         try {
@@ -522,6 +544,41 @@ export function ClientProgressDashboard({ clientId }: ClientProgressDashboardPro
           )}
         </div>
       </div>
+
+      {/* ── LISS Cardio Adherence (only shown when assigned) ── */}
+      {lissCardioWeekly && (
+        <div className="bg-red-50/60 border border-red-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <HeartPulse className="h-4 w-4 text-red-500" />
+            <h3 className="text-sm font-semibold text-gray-900">💓 LISS Cardio Adherence</h3>
+            <span className="ml-auto text-xs text-muted-foreground bg-white/60 px-2 py-0.5 rounded-full">This week</span>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Session count */}
+            <div className="flex items-baseline gap-1">
+              <span className={`text-3xl font-bold ${lissCardioWeekly.count >= lissCardioWeekly.target ? 'text-green-600' : lissCardioWeekly.count > 0 ? 'text-amber-500' : 'text-red-500'}`}>
+                {lissCardioWeekly.count}
+              </span>
+              <span className="text-sm text-muted-foreground">/ {lissCardioWeekly.target} sessions</span>
+            </div>
+            {/* Progress bar */}
+            <div className="flex-1">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${lissCardioWeekly.count >= lissCardioWeekly.target ? 'bg-green-500' : lissCardioWeekly.count > 0 ? 'bg-amber-400' : 'bg-red-400'}`}
+                  style={{ width: `${Math.min((lissCardioWeekly.count / lissCardioWeekly.target) * 100, 100)}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-muted-foreground">{lissCardioWeekly.frequency}{lissCardioWeekly.equipment ? ` · ${lissCardioWeekly.equipment}` : ''}</p>
+                <p className={`text-xs font-medium ${lissCardioWeekly.count >= lissCardioWeekly.target ? 'text-green-600' : lissCardioWeekly.count > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                  {lissCardioWeekly.count >= lissCardioWeekly.target ? '✅ Goal met!' : lissCardioWeekly.count > 0 ? `${lissCardioWeekly.target - lissCardioWeekly.count} left` : 'Not started'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── ROW 3: Collapsible Progress Photos ── */}
       <div className="bg-primary/5 border border-primary/50 rounded-xl overflow-hidden">

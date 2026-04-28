@@ -1,8 +1,9 @@
 'use client';
 
-// CoachReminders — Right column widget showing manual reminders sent by the coach.
-// Styled as broadcast announcements (distinct from personal CoachNote).
-// Collapses to null when empty / all dismissed.
+// CoachReminders — Right column widget showing all coach-initiated notifications grouped by type.
+// Includes both manual reminders AND coach-action updates (plan changes, new workouts, goal updates, etc.)
+// Each notification type is grouped into one row with an unread count badge.
+// Dismiss-only (no View button) — collapses to null when all dismissed.
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
@@ -15,10 +16,46 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Megaphone, X } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/utils';
 
-interface CoachReminder {
-  id: string;
-  message: string;
-  sentAt: Date;
+// ── Notification type config ──────────────────────────────────
+
+type CoachType =
+  | 'plan_updated'
+  | 'nutrition_updated'
+  | 'activities_updated'
+  | 'new_workout'
+  | 'goal_added'
+  | 'goal_updated'
+  | 'task_reminder';
+
+interface CoachTypeConfig {
+  label: string;
+  icon: string;
+  actionUrl: string;
+}
+
+const COACH_TYPE_CONFIG: Record<CoachType, CoachTypeConfig> = {
+  plan_updated:        { label: 'My Plan Updated',         icon: '📋', actionUrl: '/dashboard/client/plan' },
+  nutrition_updated:   { label: 'Nutrition Updated',       icon: '🥗', actionUrl: '/dashboard/client/nutrition' },
+  activities_updated:  { label: 'Daily Activities Updated',icon: '⚡', actionUrl: '/dashboard/client/activity' },
+  new_workout:         { label: 'New Workout Assigned',    icon: '💪', actionUrl: '/dashboard/client/workouts' },
+  goal_added:          { label: 'New Goal Added',          icon: '🎯', actionUrl: '/dashboard/client/goals' },
+  goal_updated:        { label: 'Goal Updated',            icon: '🏆', actionUrl: '/dashboard/client/goals' },
+  task_reminder:       { label: 'Coach Reminder',          icon: '📌', actionUrl: '/dashboard/client' },
+};
+
+const COACH_TYPES = Object.keys(COACH_TYPE_CONFIG) as CoachType[];
+
+// ── Types ─────────────────────────────────────────────────────
+
+interface CoachGroup {
+  type: CoachType;
+  label: string;
+  icon: string;
+  actionUrl: string;
+  latestMessage: string;
+  latestTime: Date;
+  count: number;
+  ids: string[];
 }
 
 function toDate(val: unknown): Date {
@@ -29,13 +66,12 @@ function toDate(val: unknown): Date {
   return new Date(val as string | number);
 }
 
-// Manual reminder types (NOT auto-system types)
-const MANUAL_TYPES = ['task_reminder'];
+// ── Component ─────────────────────────────────────────────────
 
 export function CoachReminders() {
   const { user } = useAuth();
-  const [reminders, setReminders] = useState<CoachReminder[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [groups, setGroups] = useState<CoachGroup[]>([]);
+  const [dismissedTypes, setDismissedTypes] = useState<Set<CoachType>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -43,40 +79,64 @@ export function CoachReminders() {
     const q = query(
       collection(db, 'clientNotifications'),
       where('clientId', '==', user.uid),
-      where('type', 'in', MANUAL_TYPES),
+      where('type', 'in', COACH_TYPES),
       where('timestamp', '>=', sevenDaysAgo),
       orderBy('timestamp', 'desc'),
-      limit(5)
+      limit(50)
     );
+
     const unsub = onSnapshot(q, (snap) => {
-      const list: CoachReminder[] = snap.docs
+      const groupMap = new Map<CoachType, CoachGroup>();
+
+      for (const d of snap.docs) {
+        const data = d.data();
+        const type = data.type as CoachType;
+        const config = COACH_TYPE_CONFIG[type];
+        if (!config) continue;
+
         // Skip task-assignment notifications (they show as task cards in top row)
-        .filter(d => {
-          const data = d.data();
-          if (data.type === 'task_reminder' && data.metadata?.taskId) return false;
-          return true;
-        })
-        .map(d => {
-          const data = d.data();
-          return {
-            id: d.id,
-            message: data.message,
-            sentAt: toDate(data.timestamp),
-          };
-        });
-      setReminders(list);
+        if (type === 'task_reminder' && data.metadata?.taskId) continue;
+
+        if (!groupMap.has(type)) {
+          groupMap.set(type, {
+            type,
+            label: config.label,
+            icon: config.icon,
+            actionUrl: data.actionUrl || config.actionUrl,
+            latestMessage: data.message,
+            latestTime: toDate(data.timestamp),
+            count: 1,
+            ids: [d.id],
+          });
+        } else {
+          const existing = groupMap.get(type)!;
+          existing.count += 1;
+          existing.ids.push(d.id);
+          // onSnapshot returns desc order so first entry is already most recent
+        }
+      }
+
+      // Sort groups: unread first, then by latest time
+      const sorted = Array.from(groupMap.values()).sort(
+        (a, b) => b.latestTime.getTime() - a.latestTime.getTime()
+      );
+      setGroups(sorted);
     }, () => {});
+
     return () => unsub();
   }, [user]);
 
-  const handleDismiss = async (id: string) => {
-    setDismissedIds(prev => new Set([...prev, id]));
-    try {
-      await updateDoc(doc(db, 'clientNotifications', id), { read: true });
-    } catch { /* silent */ }
+  // Dismiss entire group — mark all its notifications as read
+  const handleDismiss = async (type: CoachType, ids: string[]) => {
+    setDismissedTypes(prev => new Set([...prev, type]));
+    await Promise.allSettled(
+      ids.map(id =>
+        updateDoc(doc(db, 'clientNotifications', id), { read: true })
+      )
+    );
   };
 
-  const visible = reminders.filter(r => !dismissedIds.has(r.id));
+  const visible = groups.filter(g => !dismissedTypes.has(g.type));
   if (visible.length === 0) return null;
 
   return (
@@ -88,21 +148,37 @@ export function CoachReminders() {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-2">
-        {visible.map(r => (
+        {visible.map(group => (
           <div
-            key={r.id}
+            key={group.type}
             className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2"
           >
             <div className="flex items-start gap-2">
-              <p className="text-xs text-foreground flex-1 leading-snug">{r.message}</p>
+              <span className="text-base shrink-0 mt-0.5">{group.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-semibold text-foreground">{group.label}</span>
+                  {group.count > 1 && (
+                    <span className="text-xs bg-primary/10 text-primary rounded px-1.5 py-0.5 font-medium">
+                      {group.count} updates
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
+                  {group.latestMessage}
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">
+                  {formatTimeAgo(group.latestTime)}
+                </p>
+              </div>
               <button
-                onClick={() => handleDismiss(r.id)}
+                onClick={() => handleDismiss(group.type, group.ids)}
                 className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5"
+                title={`Dismiss ${group.label}`}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(r.sentAt)}</p>
           </div>
         ))}
       </CardContent>

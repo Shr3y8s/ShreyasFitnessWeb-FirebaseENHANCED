@@ -153,6 +153,9 @@ export default function ClientDetailPage() {
   const [savingStepGoal, setSavingStepGoal] = useState(false);
   const [savingWaterGoal, setSavingWaterGoal] = useState(false);
   const [savingLissCardio, setSavingLissCardio] = useState(false);
+  // 4-week LISS cardio adherence (loaded when cardio tab is viewed)
+  const [cardioAdherence, setCardioAdherence] = useState<{ weekLabel: string; start: string; end: string; count: number; target: number }[]>([]);
+  const [cardioAdherenceLoading, setCardioAdherenceLoading] = useState(false);
   const [savingWeeklyFocus, setSavingWeeklyFocus] = useState(false);
   const [savingDailyHabits, setSavingDailyHabits] = useState(false);
 
@@ -352,6 +355,51 @@ export default function ClientDetailPage() {
 
     loadPlanData();
   }, [activeTab, clientId]);
+
+  // Load 4-week LISS cardio adherence when plan has lissCardio assigned
+  useEffect(() => {
+    if (!clientId || !plan?.lissCardio?.frequency) {
+      setCardioAdherence([]);
+      return;
+    }
+
+    const loadCardioAdherence = async () => {
+      setCardioAdherenceLoading(true);
+      try {
+        const { getActivityLogsForDateRange } = await import('@/lib/activity-api');
+        const today = new Date();
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        // Parse weekly target
+        const freqMatch = (plan.lissCardio?.frequency || '').match(/^(\d+)/);
+        const target = freqMatch ? parseInt(freqMatch[1], 10) : 1;
+        const weeks: { weekLabel: string; start: string; end: string; count: number; target: number }[] = [];
+        for (let w = 0; w < 4; w++) {
+          // For w=0: current week (Mon-Sun), w=1: last week, etc.
+          const dayOfWeek = today.getDay(); // 0=Sun
+          const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          const weekMon = new Date(today);
+          weekMon.setDate(today.getDate() + diffToMon - w * 7);
+          const weekSun = new Date(weekMon);
+          weekSun.setDate(weekMon.getDate() + 6);
+          const startStr = fmt(weekMon);
+          const endStr = fmt(weekSun);
+          const logs = await getActivityLogsForDateRange(clientId, startStr, endStr);
+          const count = logs.filter(l => l.cardio === true).length;
+          const label = w === 0 ? 'This week' : w === 1 ? 'Last week' :
+            `${weekMon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+          weeks.push({ weekLabel: label, start: startStr, end: endStr, count, target });
+        }
+        setCardioAdherence(weeks);
+      } catch {
+        setCardioAdherence([]);
+      } finally {
+        setCardioAdherenceLoading(false);
+      }
+    };
+
+    loadCardioAdherence();
+  }, [clientId, plan?.lissCardio?.frequency]);
 
   // Fetch workout assignments and subscribe to sessions when on Training or Overview tab
   useEffect(() => {
@@ -1629,13 +1677,53 @@ export default function ClientDetailPage() {
                       )}
                     </TabsContent>
 
-                    <TabsContent value="cardio">
+                    <TabsContent value="cardio" className="space-y-4">
                       <LissCardioEditor
                         initialData={plan?.lissCardio || null}
                         onSave={handleSaveLissCardio}
                         onRemove={handleRemoveLissCardio}
                         isSaving={savingLissCardio}
                       />
+
+                      {/* 4-Week LISS Cardio Adherence History — only shown when assigned */}
+                      {plan?.lissCardio && (
+                        <div className="bg-red-50/60 border border-red-200 rounded-xl p-5">
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="text-lg">💓</span>
+                            <h3 className="text-sm font-semibold text-gray-900">LISS Cardio Adherence History</h3>
+                            <span className="ml-auto text-xs text-muted-foreground bg-white/60 px-2 py-0.5 rounded-full">Last 4 weeks</span>
+                          </div>
+                          {cardioAdherenceLoading ? (
+                            <div className="flex items-center gap-2 py-4 justify-center">
+                              <Loader2 className="h-4 w-4 animate-spin text-red-500" />
+                              <span className="text-sm text-muted-foreground">Loading adherence...</span>
+                            </div>
+                          ) : cardioAdherence.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-4">No tracking data yet — client has not logged any cardio sessions.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {cardioAdherence.map((week) => {
+                                const pct = Math.min(100, Math.round((week.count / week.target) * 100));
+                                const isComplete = week.count >= week.target;
+                                return (
+                                  <div key={week.start} className="flex items-center gap-3">
+                                    <span className="w-24 text-xs font-medium text-gray-700 flex-shrink-0">{week.weekLabel}</span>
+                                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full transition-all ${isComplete ? 'bg-green-500' : week.count > 0 ? 'bg-amber-400' : 'bg-red-300'}`}
+                                        style={{ width: `${pct}%` }}
+                                      />
+                                    </div>
+                                    <span className={`w-16 text-xs font-bold text-right flex-shrink-0 ${isComplete ? 'text-green-600' : week.count > 0 ? 'text-amber-600' : 'text-red-500'}`}>
+                                      {week.count} / {week.target} {isComplete ? '✅' : ''}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </TabsContent>
                   </Tabs>
                 )}

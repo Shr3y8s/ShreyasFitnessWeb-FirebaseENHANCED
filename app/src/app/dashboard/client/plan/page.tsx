@@ -211,11 +211,12 @@ export default function PlanPage() {
 
                     {/* Cardio Protocol Card */}
                     {plan?.lissCardio && (
-                      <CardioProtocol 
+                      <CardioProtocol
                         frequency={plan.lissCardio.frequency}
                         duration={plan.lissCardio.duration}
                         targetHeartRate={plan.lissCardio.targetHeartRate}
                         timing={plan.lissCardio.timing}
+                        equipment={plan.lissCardio.equipment}
                       />
                     )}
                   </div>

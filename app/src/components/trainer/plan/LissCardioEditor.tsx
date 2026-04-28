@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { HeartPulse, Save, Loader2, Trash2, Info } from 'lucide-react';
-import { CARDIO_FREQUENCY_OPTIONS, CARDIO_TIMING_OPTIONS, LissCardioData } from '@/types/plan';
+import { CARDIO_FREQUENCY_OPTIONS, CARDIO_TIMING_OPTIONS, CARDIO_EQUIPMENT_OPTIONS, LissCardioData } from '@/types/plan';
 import { useToast } from '@/hooks/use-toast';
 
 interface LissCardioEditorProps {
@@ -20,6 +20,10 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
   const [duration, setDuration] = useState<string>('20-30 min');
   const [targetHeartRate, setTargetHeartRate] = useState<string>('120-130 BPM');
   const [timing, setTiming] = useState<string>('Post-workout');
+  // equipment: either a preset from CARDIO_EQUIPMENT_OPTIONS or a free-form string
+  // equipmentSelect: the dropdown selection ('Other / Activity' triggers text input)
+  const [equipmentSelect, setEquipmentSelect] = useState<string>('');
+  const [equipmentCustom, setEquipmentCustom] = useState<string>('');
   const [hasChanges, setHasChanges] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
@@ -30,6 +34,20 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
       setDuration(initialData.duration || '20-30 min');
       setTargetHeartRate(initialData.targetHeartRate || '120-130 BPM');
       setTiming(initialData.timing || 'Post-workout');
+      // Restore equipment state
+      if (initialData.equipment) {
+        if (CARDIO_EQUIPMENT_OPTIONS.includes(initialData.equipment) && initialData.equipment !== 'Other / Activity') {
+          setEquipmentSelect(initialData.equipment);
+          setEquipmentCustom('');
+        } else {
+          // It was free-form
+          setEquipmentSelect('Other / Activity');
+          setEquipmentCustom(initialData.equipment);
+        }
+      } else {
+        setEquipmentSelect('');
+        setEquipmentCustom('');
+      }
     }
   }, [initialData]);
 
@@ -64,16 +82,38 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
       return;
     }
 
+    // Resolve final equipment value
+    const resolvedEquipment =
+      equipmentSelect === 'Other / Activity'
+        ? equipmentCustom.trim()
+        : equipmentSelect || undefined;
+
     const lissCardioData: LissCardioData = {
       frequency,
       duration,
       targetHeartRate,
       timing,
+      equipment: resolvedEquipment || undefined,
       lastUpdated: new Date()
     };
 
     await onSave(lissCardioData);
     setHasChanges(false);
+  };
+
+  const resetEquipmentFromData = (data: LissCardioData | null) => {
+    if (data?.equipment) {
+      if (CARDIO_EQUIPMENT_OPTIONS.includes(data.equipment) && data.equipment !== 'Other / Activity') {
+        setEquipmentSelect(data.equipment);
+        setEquipmentCustom('');
+      } else {
+        setEquipmentSelect('Other / Activity');
+        setEquipmentCustom(data.equipment);
+      }
+    } else {
+      setEquipmentSelect('');
+      setEquipmentCustom('');
+    }
   };
 
   const handleCancel = () => {
@@ -83,11 +123,14 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
       setDuration(initialData.duration || '20-30 min');
       setTargetHeartRate(initialData.targetHeartRate || '120-130 BPM');
       setTiming(initialData.timing || 'Post-workout');
+      resetEquipmentFromData(initialData);
     } else {
       setFrequency('3x per week');
       setDuration('20-30 min');
       setTargetHeartRate('120-130 BPM');
       setTiming('Post-workout');
+      setEquipmentSelect('');
+      setEquipmentCustom('');
     }
     setHasChanges(false);
   };
@@ -179,7 +222,7 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
           <p className="text-sm text-blue-800 leading-relaxed">
             Low Intensity Steady State cardio is performed at a consistent, moderate pace 
             for an extended period. Examples: brisk walking, light cycling, swimming. 
-            It's great for fat burning, recovery, and building aerobic base.
+            Great for fat burning, recovery, and building aerobic base.
           </p>
         </div>
 
@@ -327,6 +370,37 @@ export function LissCardioEditor({ initialData, onSave, onRemove, isSaving }: Li
           </select>
           <p className="text-xs text-gray-600 mt-1.5">
             When should the client perform cardio
+          </p>
+        </div>
+
+        {/* Equipment / Activity (optional) */}
+        <div>
+          <label className="text-sm font-medium mb-2 block text-gray-700">
+            Equipment / Activity <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <select
+            value={equipmentSelect}
+            onChange={(e) => { setEquipmentSelect(e.target.value); setEquipmentCustom(''); setHasChanges(true); }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-gray-400 hover:shadow-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
+            disabled={isSaving}
+          >
+            <option value="">-- None specified --</option>
+            {CARDIO_EQUIPMENT_OPTIONS.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          {equipmentSelect === 'Other / Activity' && (
+            <input
+              type="text"
+              value={equipmentCustom}
+              onChange={(e) => { setEquipmentCustom(e.target.value); setHasChanges(true); }}
+              placeholder="e.g., Tennis, Basketball, Swimming..."
+              className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 placeholder:text-gray-400"
+              disabled={isSaving}
+            />
+          )}
+          <p className="text-xs text-gray-600 mt-1.5">
+            Specify the machine or activity — shown to the client in their plan and activity tracker
           </p>
         </div>
 

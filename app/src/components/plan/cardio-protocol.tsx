@@ -14,9 +14,10 @@ interface CardioProtocolProps {
   duration?: string;
   targetHeartRate?: string;
   timing?: string;
+  equipment?: string;
 }
 
-export function CardioProtocol({ frequency, duration, targetHeartRate, timing }: CardioProtocolProps) {
+export function CardioProtocol({ frequency, duration, targetHeartRate, timing, equipment }: CardioProtocolProps) {
   // Show nothing if no cardio protocol is set
   if (!frequency || !duration || !targetHeartRate || !timing) {
     return null;
@@ -27,7 +28,7 @@ export function CardioProtocol({ frequency, duration, targetHeartRate, timing }:
       <CardHeader className="relative">
         <CardTitle className="flex items-center gap-3 text-xl">
           <HeartPulse className="w-6 h-6 text-primary" />
-          <span>LISS Cardio</span>
+          <span>Cardio</span>
         </CardTitle>
         <CardDescription>
           Low Intensity Steady State prescription
@@ -52,6 +53,12 @@ export function CardioProtocol({ frequency, duration, targetHeartRate, timing }:
                     <p className="text-sm font-medium text-muted-foreground">Timing</p>
                     <p className="font-bold">{timing}</p>
                 </div>
+                {equipment && (
+                  <div className="space-y-1 col-span-2">
+                      <p className="text-sm font-medium text-muted-foreground">Equipment / Activity</p>
+                      <p className="font-bold">{equipment}</p>
+                  </div>
+                )}
             </div>
          </div>
       </CardContent>

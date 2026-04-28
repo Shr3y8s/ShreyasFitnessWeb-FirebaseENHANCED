@@ -41,6 +41,7 @@ export interface DailyActivityData {
   water?: DailyWaterLog;
   habits: DailyHabitLog[]; // Array of habit completions for the day
   weight?: WeightLog;
+  cardio?: boolean; // Whether the client completed their LISS cardio session on this day
   updatedAt: Date;
 }
 
