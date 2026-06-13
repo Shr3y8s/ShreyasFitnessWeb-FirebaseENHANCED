@@ -114,7 +114,7 @@ export default function ServicesPage() {
                 </div>
                 <h3 className="service-card-title">Online Coaching</h3>
                 <p className="service-card-tagline">Achieve total fitness transformation</p>
-                <div className="service-card-price">$199<span>/month</span></div>
+                <div className="service-card-price">$249<span>/month</span></div>
                 <p className="service-card-desc">Your complete transformation system - everything you need to build sustainable fitness habits and achieve lasting results.</p>
                 <span className="service-card-format">Remote Coaching</span>
                 <div className="card-action-buttons">
@@ -133,7 +133,7 @@ export default function ServicesPage() {
                 </div>
                 <h3 className="service-card-title">Complete Transformation</h3>
                 <p className="service-card-tagline">Experience premium results</p>
-                <div className="service-card-price">$199<span>/month</span> + $60<span>/session</span></div>
+                <div className="service-card-price">$249<span>/month</span> + $60<span>/session</span></div>
                 <p className="service-card-desc">The complete package - comprehensive transformation support plus hands-on training for maximum results and accountability.</p>
                 <span className="service-card-format">Seattle Premium Experience</span>
                 <div className="card-action-buttons">
@@ -211,12 +211,12 @@ export default function ServicesPage() {
                     <span className="comparison-label"><i className="fas fa-laptop"></i> Our Premium Services:</span>
                   </div>
                   <div className="comparison-value">
-                    <span className="price-tag">$6.50</span><span className="price-period">/day</span>
+                    <span className="price-tag">$8.30</span><span className="price-period">/day</span>
                   </div>
                 </div>
               </div>
               <div className="value-card-footer">
-                <p>For just $1 more than coffee, get your entire fitness solution</p>
+                <p>For less than $9/day, get your entire fitness solution</p>
               </div>
             </div>
 
@@ -271,13 +271,13 @@ export default function ServicesPage() {
                     </tr>
                     <tr style={{borderBottom: '2px dashed #e0e0e0', backgroundColor: '#f9f9f9', fontWeight: 600}}>
                       <td style={{padding: '14px 10px'}}>Total Monthly Cost</td>
-                      <td style={{padding: '14px 10px', textAlign: 'center'}}><span className="price-tag">$439</span></td>
+                      <td style={{padding: '14px 10px', textAlign: 'center'}}><span className="price-tag">$489</span></td>
                       <td style={{padding: '14px 10px', textAlign: 'right'}}><span className="price-tag">$1,279</span></td>
                     </tr>
                     <tr style={{backgroundColor: 'rgba(76, 175, 80, 0.2)'}}>
                       <td style={{padding: '14px 10px', fontWeight: 600, color: 'var(--primary-dark)'}}>Monthly Savings</td>
                       <td style={{padding: '14px 10px', textAlign: 'center'}}></td>
-                      <td style={{padding: '14px 10px', textAlign: 'right', fontWeight: 700}}><span className="price-tag" style={{color: '#00b300', fontSize: '1.3rem'}}>$840</span></td>
+                      <td style={{padding: '14px 10px', textAlign: 'right', fontWeight: 700}}><span className="price-tag" style={{color: '#00b300', fontSize: '1.3rem'}}>$790</span></td>
                     </tr>
                   </tbody>
                 </table>
@@ -417,8 +417,8 @@ export default function ServicesPage() {
             <p>Your complete transformation system that delivers everything you need to build sustainable fitness habits and achieve lasting results. This comprehensive program provides you with full support no matter where you are.</p>
             
             <div className="modal-price-callout">
-              <div className="modal-price">$199<span>/month</span></div>
-              <p>Less than $6.50 per day for complete fitness support</p>
+              <div className="modal-price">$249<span>/month</span></div>
+              <p>Less than $8.30 per day for complete fitness support</p>
             </div>
             
             <h3>What&apos;s Included:</h3>
@@ -534,7 +534,7 @@ export default function ServicesPage() {
             <p>The ultimate fitness experience combining comprehensive transformation support with hands-on personal training. Get the best of both worlds with complete remote coaching plus in-person training sessions for maximum results.</p>
             
             <div className="modal-price-callout">
-              <div className="modal-price">$199<span>/month</span> + $60<span>/session</span></div>
+              <div className="modal-price">$249<span>/month</span> + $60<span>/session</span></div>
               <p>The complete package for your fitness success</p>
             </div>
             

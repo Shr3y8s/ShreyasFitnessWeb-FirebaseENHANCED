@@ -412,8 +412,8 @@ export default function FAQPage() {
                   </div>
                   <ul className="enhanced-list">
                     <li><strong>In-Person Training:</strong> $70/session</li>
-                    <li><strong>Online Coaching:</strong> $199/month (includes all remote coaching services)</li>
-                    <li><strong>Complete Transformation:</strong> $199/month + $60/session (our premium package)</li>
+                    <li><strong>Online Coaching:</strong> $249/month (includes all remote coaching services)</li>
+                    <li><strong>Complete Transformation:</strong> $249/month + $60/session (our premium package)</li>
                   </ul>
                 </div>
               </div>
