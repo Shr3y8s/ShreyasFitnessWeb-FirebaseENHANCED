@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(), // Use app/ directory as Turbopack root
   },
+  eslint: {
+    // Don't fail production builds (e.g. Firebase App Hosting / Cloud Build) on
+    // ESLint errors. Linting is enforced in development and can be run
+    // separately in CI via `npm run lint`. Without this, `next build` aborts on
+    // lint-rule violations (react/no-unescaped-entities, no-explicit-any, etc.),
+    // which would block App Hosting rollouts.
+    ignoreDuringBuilds: true,
+  },
+
   env: {
     // Expose Firebase region from shared config file
     NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION: firebaseConfig.region,

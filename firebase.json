@@ -25,30 +25,10 @@
       ]
     }
   ],
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "functions/**"
-    ],
-    "rewrites": [
-      {
-        "source": "/api/v1/**",
-        "function": {
-          "functionId": "minimalTest",
-          "region": "us-west1"
-        }
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
   "extensions": {
     "firestore-stripe-payments": "invertase/firestore-stripe-payments",
     "firestore-stripe-payments-qscq": "invertase/firestore-stripe-payments@0.3.12"
   }
 }
+
+

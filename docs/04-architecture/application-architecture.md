@@ -1,8 +1,20 @@
 # Application Architecture Guide
 
+> **🚀 Going to production?** See the
+> [Production Architecture & Launch Plan](./production-architecture-and-launch-plan.md).
+> The production frontend is hosted on **Firebase App Hosting (GCP / Cloud Run)**
+> — not Vercel — chosen for its scale-to-zero cost model and single-vendor
+> consolidation with the Firebase backend. That doc has the full GCP-vs-Vercel
+> rationale, the production architecture, and the step-by-step launch runbook +
+> checklist. **Note:** the diagrams and references to "Vercel" below describe the
+> earlier dev-oriented model; the production source of truth is the launch plan.
+
+
 ## Overview
 
 This document explains the complete architecture of the Shreyas Method Fitness application, including how different services work together, data flows, and when to use each component.
+
+
 
 ---
 

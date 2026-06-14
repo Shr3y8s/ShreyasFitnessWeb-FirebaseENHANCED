@@ -468,8 +468,46 @@ export interface WorkoutExercise {
 
 
 /**
+ * WorkoutAssignmentExercise - An exercise as it appears in a workout assignment
+ * (trainer-prescribed). Carries the prescribed configuration plus display fields.
+ * Consumed by the exercise view components (Strength/Cardio/Core/etc.).
+ *
+ * Note: an index signature is included because the view components access a number
+ * of configuration-specific fields dynamically (and cast `configuration` to `any`).
+ */
+export interface WorkoutAssignmentExercise {
+  exerciseId: string;
+  exerciseName: string;
+  exerciseType?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  configuration: ExerciseConfigurationType | any;
+  notes?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+
+/**
+ * WorkoutExecutionExercise - An exercise as it appears during/after client
+ * execution. Carries the actual performance data alongside completion tracking.
+ */
+export interface WorkoutExecutionExercise {
+  exerciseId: string;
+  exerciseName?: string;
+  exerciseType?: 'strength' | 'cardio' | 'core' | 'flexibility' | 'balance' | 'mobility' | 'plyometric' | 'yoga_pilates';
+  actualData?: ExerciseActualData;
+  completionStatus?: 'not_started' | 'partial' | 'completed';
+  completionPercentage?: number;
+  notes?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+
+/**
  * ExerciseActualData - Polymorphic union of all actual performance data types
  */
+
 export type ExerciseActualData = 
   | StrengthActualData
   | CardioSteadyStateActualData

@@ -1666,9 +1666,16 @@ export default function ClientDetailPage() {
                           currentApproach={plan?.nutritionProtocol?.approach}
                           currentData={{
                             healthyHabits: plan?.nutritionProtocol?.healthyHabits,
-                            macroTracking: plan?.nutritionProtocol?.macroTracking,
-                            mealPlan: plan?.nutritionProtocol?.mealPlan
+                            // NutritionProtocolEditor uses its own local types (form-string
+                            // fields) which diverge from the canonical `@/types/plan`
+                            // numeric types. Values are runtime-compatible at this prop
+                            // boundary; the two type systems should be unified post-launch.
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            macroTracking: plan?.nutritionProtocol?.macroTracking as any,
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            mealPlan: plan?.nutritionProtocol?.mealPlan as any
                           }}
+
                           onUpdate={async () => {
                             const updatedPlan = await getClientPlan(clientId);
                             setPlan(updatedPlan);

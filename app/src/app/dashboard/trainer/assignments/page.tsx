@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -20,9 +21,10 @@ import { AssignmentsList } from './components/AssignmentsList';
 import { AssignmentDetails } from './components/AssignmentDetails';
 import { Workout } from '@/types/workout';
 
-export default function WorkoutAssignmentsPage() {
+function WorkoutAssignmentsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
 
   // Data fetching hook
   const { loading, clients, workoutTemplates, workouts, reloadWorkouts } = useAssignmentsData();
@@ -160,3 +162,17 @@ export default function WorkoutAssignmentsPage() {
     </SidebarProvider>
   );
 }
+
+export default function WorkoutAssignmentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+        <div className="text-stone-600">Loading...</div>
+      </div>
+    }>
+      <WorkoutAssignmentsPageInner />
+    </Suspense>
+  );
+}
+
+

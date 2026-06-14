@@ -362,7 +362,8 @@ export default function BillingPage() {
       <ClientSidebar
         userName={userData?.name}
         userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall}
+        userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
+
         onLogout={handleLogout}
       />
       <SidebarInset>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
@@ -61,7 +61,7 @@ interface Conversation {
   unreadCount: number;
 }
 
-export default function ClientMessagesPage() {
+function ClientMessagesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading, canAccessTrainerDashboard } = useAuth();
@@ -942,5 +942,17 @@ export default function ClientMessagesPage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function ClientMessagesPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+        <div className="text-stone-600">Loading...</div>
+      </div>
+    }>
+      <ClientMessagesPageInner />
+    </Suspense>
   );
 }

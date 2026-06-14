@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -81,7 +81,7 @@ function formatDateForDisplay(dateStr: string): string {
   });
 }
 
-export default function CreateAssignmentPage() {
+function CreateAssignmentPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedTemplateId = searchParams.get('templateId');
@@ -923,5 +923,17 @@ function StepIndicator({ step, label, active, completed, onClick }: { step: numb
       </div>
       <span className={`text-xs ${active ? 'text-primary font-medium' : 'text-gray-600'}`}>{label}</span>
     </button>
+  );
+}
+
+export default function CreateAssignmentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-stone-600">Loading...</div>
+      </div>
+    }>
+      <CreateAssignmentPageInner />
+    </Suspense>
   );
 }

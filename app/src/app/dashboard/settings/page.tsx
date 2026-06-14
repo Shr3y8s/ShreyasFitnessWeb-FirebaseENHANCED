@@ -32,10 +32,11 @@ import {
 interface UserData {
   name: string;
   email: string;
-  phone?: string;
+  phone?: string | null;
   role: string;
   collection?: string; // Track which collection the user is in
 }
+
 
 export default function SettingsPage() {
   const router = useRouter();

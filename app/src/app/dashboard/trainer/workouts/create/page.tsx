@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -123,7 +123,7 @@ function SortableExerciseItem({
   );
 }
 
-export default function CreateWorkoutTemplatePage() {
+function CreateWorkoutTemplatePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateId = searchParams.get('id');
@@ -860,5 +860,17 @@ export default function CreateWorkoutTemplatePage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+export default function CreateWorkoutTemplatePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-stone-600">Loading...</div>
+      </div>
+    }>
+      <CreateWorkoutTemplatePageInner />
+    </Suspense>
   );
 }
