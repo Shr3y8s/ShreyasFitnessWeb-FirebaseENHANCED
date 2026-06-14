@@ -434,7 +434,41 @@ Work the phases in order. Each step is a discrete, verifiable action.
 - [ ] Verify automatic managed **SSL/HTTPS** is issued.
 - [ ] Confirm a successful production rollout serves the app at `shrey.fit`.
 
-
+> **Owner Runbook — exact commands for the remaining Phase 2 steps.** These are
+> interactive (GitHub browser OAuth + registrar DNS) and must be run by the owner
+> in a terminal at the repo root, authenticated as the project owner. Validated
+> prerequisites: `apphosting.yaml` is present and correct, no backend exists yet
+> (`apphosting:backends:list` is empty), and `npm --prefix app run build` exits 0.
+>
+> 1. **Push the committed build fixes** so the connected branch is current:
+>    ```
+>    git push origin main
+>    ```
+> 2. **Create the backend + connect GitHub** (opens a browser to authorize the
+>    GitHub App; choose repo `Shr3y8s/ShreyasFitnessWeb-FirebaseENHANCED`, live
+>    branch `main`, root directory `app`, and enable automatic rollouts):
+>    ```
+>    firebase apphosting:backends:create --project shreyfitweb
+>    ```
+>    Note the backend ID it prints (referred to below as `<backend-id>`).
+> 3. **Grant the backend's service account access to the three secrets:**
+>    ```
+>    firebase apphosting:secrets:grantaccess GOOGLE_MAPS_API_KEY  --backend <backend-id> --project shreyfitweb
+>    firebase apphosting:secrets:grantaccess RECAPTCHA_SECRET_KEY --backend <backend-id> --project shreyfitweb
+>    firebase apphosting:secrets:grantaccess RESEND_API_KEY       --backend <backend-id> --project shreyfitweb
+>    ```
+> 4. **Trigger / confirm the first rollout** (creating the backend kicks off an
+>    initial rollout from the connected branch; to roll out manually later):
+>    ```
+>    firebase apphosting:rollouts:create <backend-id> --project shreyfitweb
+>    ```
+>    Watch it in the console (App Hosting → your backend → Rollouts) until it
+>    succeeds and prints the default `*.web.app`/`run.app` URL.
+> 5. **Add the custom domain** (console: App Hosting → backend → Add custom
+>    domain → `shrey.fit`, then add the `www` redirect). Create the DNS records
+>    Firebase shows at the registrar; wait for verification + managed SSL.
+> 6. **(Optional) reduce cold starts:** set `runConfig.minInstances: 1` in
+>    `apphosting.yaml` and commit, before launch.
 
 ### Phase 3 — Stripe Go-Live
 - [ ] Toggle Stripe dashboard to **live mode**.
