@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// This route uses the RESEND_API_KEY secret, which is RUNTIME-only on Firebase
+// App Hosting (not available during `next build`). Force dynamic so it's never
+// statically evaluated at build time.
+export const dynamic = 'force-dynamic';
 
 // Format date for email display
 function formatEmailDate(date: Date): string {
@@ -51,6 +54,9 @@ export async function POST(request: NextRequest) {
     const formattedDate = sentDate ? formatEmailDate(new Date(sentDate)) : 'Recently';
 
     // 5. Send email via Resend
+    // Instantiate lazily (per-request) so the API key is read at runtime, not at
+    // module-eval/build time when the secret is not present.
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
       from: 'Shreyas.fit <info@shrey.fit>',
       to: leadEmail,
