@@ -620,7 +620,7 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 - [x] 🔴 First rollout builds & serves successfully (`shreyfit-app--shreyfitweb.us-central1.hosted.app`)
 - [x] ✅ Next.js upgraded 15.5.4 → 15.5.19 (cleared buildpack CVE gate)
 - [x] ✅ `send-reply-email` Resend lazy-init fix (cleared build-time secret error)
-- [ ] 🔴 `shrey.fit` custom domain + managed SSL on App Hosting *(owner/console — last Phase 2 step)*
+- [x] 🔴 `shrey.fit` custom domain set up on App Hosting (Porkbun DNS: apex A → 35.219.200.15, fah-claim TXT, ACME CNAME → certificatemanager.goog; pixie parking + `*` wildcards removed). All records DNS-verified; managed SSL provisioning. *(www optional via Porkbun URL forwarding.)*
 
 
 
