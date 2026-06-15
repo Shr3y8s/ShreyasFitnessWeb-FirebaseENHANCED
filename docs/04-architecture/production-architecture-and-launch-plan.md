@@ -469,6 +469,27 @@ Work the phases in order. Each step is a discrete, verifiable action.
 >    Firebase shows at the registrar; wait for verification + managed SSL.
 > 6. **(Optional) reduce cold starts:** set `runConfig.minInstances: 1` in
 >    `apphosting.yaml` and commit, before launch.
+>
+> **✅ First rollout succeeded (2026-06-14).** The backend `shreyfit-app`
+> (us-central1, root `/app`, branch `main`) is live and serving at
+> `https://shreyfit-app--shreyfitweb.us-central1.hosted.app`. Two additional build
+> blockers were discovered and fixed during the first real Cloud Build (neither
+> reproduced in a plain local `next build`):
+> - **Next.js version gate:** the App Hosting buildpack hard-blocks vulnerable
+>   Next versions (CVE-2025-55182 flagged 15.5.4). Upgraded `next` +
+>   `eslint-config-next` to **15.5.19** (latest 15.5.x patch; avoided the 16.x
+>   major mid-launch).
+> - **Build-time secret evaluation:** `app/src/app/api/send-reply-email/route.ts`
+>   constructed `new Resend(process.env.RESEND_API_KEY)` at **module scope**.
+>   Since `RESEND_API_KEY` is RUNTIME-only, it was `undefined` during `next build`'s
+>   "Collecting page data" and Resend threw "Missing API key". Fixed by moving the
+>   `new Resend(...)` call **inside** the POST handler (lazy/per-request init) and
+>   adding `export const dynamic = 'force-dynamic'`. (The other 3 API routes read
+>   their secrets inside handlers already, so they were fine.)
+> - **Owner/Code-Defender note:** pushes to the GitHub remote must be done from the
+>   owner's terminal (the assistant's environment blocks external pushes); each push
+>   to `main` auto-triggers a rollout.
+- [x] First rollout builds & serves successfully *(serving on the `*.hosted.app` URL)*
 
 ### Phase 3 — Stripe Go-Live
 - [ ] Toggle Stripe dashboard to **live mode**.
@@ -594,10 +615,12 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 
 **Hosting & Domain (Phase 2)**
 - [x] 🔴 `firebase.json` legacy `hosting` block removed (static site retired)
-- [ ] 🔴 App Hosting backend created, GitHub connected, root = `app/`
-- [ ] 🔴 Backend service account granted Secret Accessor (`apphosting:secrets:grantaccess`)
-- [ ] 🔴 First rollout builds & serves successfully
-- [ ] 🔴 `shrey.fit` custom domain + managed SSL on App Hosting
+- [x] 🔴 App Hosting backend created (`shreyfit-app`, us-central1), GitHub connected, root = `/app`
+- [x] 🔴 Backend service account granted Secret Accessor (all 3 secrets)
+- [x] 🔴 First rollout builds & serves successfully (`shreyfit-app--shreyfitweb.us-central1.hosted.app`)
+- [x] ✅ Next.js upgraded 15.5.4 → 15.5.19 (cleared buildpack CVE gate)
+- [x] ✅ `send-reply-email` Resend lazy-init fix (cleared build-time secret error)
+- [ ] 🔴 `shrey.fit` custom domain + managed SSL on App Hosting *(owner/console — last Phase 2 step)*
 
 
 
