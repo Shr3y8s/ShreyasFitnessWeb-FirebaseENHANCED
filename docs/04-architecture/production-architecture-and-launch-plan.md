@@ -492,11 +492,84 @@ Work the phases in order. Each step is a discrete, verifiable action.
 - [x] First rollout builds & serves successfully *(serving on the `*.hosted.app` URL)*
 
 ### Phase 3 — Stripe Go-Live
+
+> **Business/banking note (sole proprietor):** Launching as a sole proprietor is
+> fine — onboard Stripe as Individual with your SSN and a personal bank account
+> now; you can add an EIN / business checking account / DBA / LLC later with no
+> impact on how income is taxed or reported (sole-prop income flows to Schedule C
+> + Schedule SE on your personal 1040 regardless of which account receives
+> payouts; the IRS keys on your Stripe TIN + income records). Not legal/tax
+> advice — confirm specifics with a CPA. *(A payout bank account should be in
+> place before the first payout, but it is not a code blocker.)*
+
+> **Pricing decision — Option A (Stripe `lookup_key`):** The owner changes prices
+> in the Stripe dashboard; the app resolves the **active** Price at runtime and
+> sends it to checkout, so **no code change or redeploy** is needed to change a
+> price. Each live Price gets a stable `lookup_key` (e.g. `online_coaching_monthly`,
+> `complete_transformation_monthly`). See **"Pricing architecture & Option A
+> migration"** below for the audit findings, code changes, and the owner's
+> change-price runbook.
+
+#### Pricing architecture & Option A migration
+
+**Audit finding (key):** Prices are **not hardcoded anywhere** — only Stripe
+**product IDs** are hardcoded. The app already reads price amounts dynamically
+from Firestore (synced by the invertase extension), so most of Option A is
+already in place. What's missing is making price *resolution* deterministic.
+
+- **Stripe → Firestore:** the extension mirrors products to
+  `stripe_products/{prod_id}` and prices to
+  `stripe_products/{prod_id}/prices/{price_id}` (price docs include
+  `unit_amount`, `currency`, `type`, `active`, and — version permitting —
+  `lookup_key`). Checkout is created via the extension's
+  `stripe_customers/{uid}/checkout_sessions` collection.
+- **Frontend (all dynamic):** `dashboard/client/upgrade/page.tsx`,
+  `payment/page.tsx`, and `signup/components/PaymentStep.tsx` fetch the price
+  subcollection live and display `formatCurrency(price.amount)`. Price selection
+  goes through `selectSignupPrice()` in `app/src/lib/stripe.ts`.
+- **Backend:** `createCheckoutSession` (HTTP, subscriptions) and
+  `createPaymentIntent` (callable, one-time) in `index.js` both receive a
+  `priceId` from the frontend and call `stripe.prices.retrieve(priceId)` — they
+  trust whatever the frontend resolved.
+- **⚠️ Gap/bug:** `selectSignupPrice()` does `prices.find(p => p.type ===
+  'recurring')`, returning the *first* recurring price in arbitrary order. When a
+  product temporarily has **two** recurring prices (old + new during a price
+  change), this is non-deterministic and may send the OLD price to checkout.
+- **Hardcoded product IDs (must stay in sync, and are TEST-mode `prod_…` →
+  change for live):** `app/src/lib/constants.ts` (`SUBSCRIPTION_TIERS`),
+  `firebase/functions/product-config.js` (`CHECKIN_ELIGIBLE_PRODUCTS`), and
+  `app/src/lib/product-marketing.ts` (marketing copy keyed by product ID).
+
+**Code changes for deterministic Option A resolution:**
+- [ ] `app/src/types/stripe.ts` — add `active: boolean` and `lookup_key?: string`
+      to `StripePrice`.
+- [ ] `app/src/lib/stripe.ts` — make `selectSignupPrice()` deterministic: filter
+      to `active === true`, prefer a price matching the known `lookup_key`, then
+      fall back to recurring, then one_time. Update `fetchAllProducts` /
+      `fetchProduct` to read `active` + `lookup_key` from synced price docs.
+- [ ] `upgrade/page.tsx`, `payment/page.tsx`, `PaymentStep.tsx` — in the inline
+      price-mapping loops, carry `active`/`lookup_key` and **drop
+      `active === false`** prices so archived old prices are never selected.
+- [ ] (Optional) add a `PRICE_LOOKUP_KEYS` map in `constants.ts` so resolution
+      targets a stable key rather than "first active recurring."
+
+**Owner runbook — change a subscription price (no code, no redeploy):**
+1. Stripe Dashboard → Product → **Create a new price** with the **same
+   `lookup_key`** → Stripe automatically removes the key from the old price.
+2. **Archive** the old price (sets `active: false`).
+3. The extension syncs both changes to Firestore → the app auto-resolves the new
+   active price for new checkouts. Existing subscribers are **grandfathered** on
+   their old price unless explicitly migrated in the dashboard.
+
 - [ ] Toggle Stripe dashboard to **live mode**.
 - [ ] Recreate **products & prices** in live mode (test-mode IDs do not carry
-      over).
+      over). **Assign each Price a stable `lookup_key`** (Option A) at creation.
 - [ ] Update live price/product IDs referenced in
-      `firebase/functions/product-config.js` and `firebase/functions/index.js`.
+      `firebase/functions/product-config.js`, `firebase/functions/index.js`,
+      `app/src/lib/constants.ts`, and `app/src/lib/product-marketing.ts`.
+- [ ] Apply the deterministic Option A code changes listed under "Pricing
+      architecture & Option A migration" above.
+
 - [ ] Verify/replace the hardcoded **Customer Portal config ID**
       (`STRIPE_PORTAL_CONFIG_ID = "bpc_..."` in `index.js`) with the **live**
       portal configuration.
