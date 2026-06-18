@@ -156,9 +156,12 @@ export default function PaymentPage() {
           id: doc.id,
           amount: priceData.unit_amount || 0,
           currency: priceData.currency || 'usd',
-          type: priceData.type || 'one_time'
+          type: priceData.type || 'one_time',
+          active: priceData.active !== false,
+          lookup_key: priceData.lookup_key ?? undefined
         });
       });
+
 
       // Store complete product data with ALL prices
       const product: StripeProduct = {

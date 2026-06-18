@@ -531,27 +531,44 @@ already in place. What's missing is making price *resolution* deterministic.
   `createPaymentIntent` (callable, one-time) in `index.js` both receive a
   `priceId` from the frontend and call `stripe.prices.retrieve(priceId)` — they
   trust whatever the frontend resolved.
-- **⚠️ Gap/bug:** `selectSignupPrice()` does `prices.find(p => p.type ===
+- **⚠️ Gap/bug (FIXED):** `selectSignupPrice()` used `prices.find(p => p.type ===
   'recurring')`, returning the *first* recurring price in arbitrary order. When a
-  product temporarily has **two** recurring prices (old + new during a price
-  change), this is non-deterministic and may send the OLD price to checkout.
+  product temporarily has **two prices of the SAME type** (e.g. old + new
+  recurring during a price change), this was non-deterministic and could send the
+  OLD price to checkout.
+- **`active` is the actual safety mechanism (not `lookup_key`):** Firestore
+  confirmed to already carry `active` on each synced price doc; `lookup_key` is
+  absent because no Stripe Price has one set. Archived/replaced prices are
+  `active: false`, so **filtering on `active` fully fixes the bug** — no
+  dependence on `lookup_key`.
+- **`lookup_key` is OPTIONAL — only needed for two ACTIVE same-type prices:**
+  resolving by type is unambiguous when a product has one one-time + one
+  recurring price (e.g. **Complete Transformation**, which has a one-time session
+  add-on *and* the monthly recurring price — different types, so "the recurring
+  one" is clear). `lookup_key` is only required if you ever offer **two active
+  prices of the same type** on one product (e.g. monthly *and* annual).
 - **Hardcoded product IDs (must stay in sync, and are TEST-mode `prod_…` →
   change for live):** `app/src/lib/constants.ts` (`SUBSCRIPTION_TIERS`),
   `firebase/functions/product-config.js` (`CHECKIN_ELIGIBLE_PRODUCTS`), and
   `app/src/lib/product-marketing.ts` (marketing copy keyed by product ID).
 
-**Code changes for deterministic Option A resolution:**
-- [ ] `app/src/types/stripe.ts` — add `active: boolean` and `lookup_key?: string`
-      to `StripePrice`.
-- [ ] `app/src/lib/stripe.ts` — make `selectSignupPrice()` deterministic: filter
-      to `active === true`, prefer a price matching the known `lookup_key`, then
-      fall back to recurring, then one_time. Update `fetchAllProducts` /
-      `fetchProduct` to read `active` + `lookup_key` from synced price docs.
-- [ ] `upgrade/page.tsx`, `payment/page.tsx`, `PaymentStep.tsx` — in the inline
-      price-mapping loops, carry `active`/`lookup_key` and **drop
-      `active === false`** prices so archived old prices are never selected.
-- [ ] (Optional) add a `PRICE_LOOKUP_KEYS` map in `constants.ts` so resolution
-      targets a stable key rather than "first active recurring."
+**Code changes — Tier 1 (the real fix, DONE this session):**
+- [x] `app/src/types/stripe.ts` — added `active?: boolean` and `lookup_key?:
+      string` to `StripePrice`.
+- [x] `app/src/lib/stripe.ts` — `selectSignupPrice()` now filters to
+      `active !== false` before choosing recurring → one_time. `fetchAllProducts`
+      / `fetchProduct` now read `active` + `lookup_key` from synced price docs.
+- [x] `upgrade/page.tsx`, `payment/page.tsx`, `PaymentStep.tsx` — the inline
+      price-mapping loops now carry `active`/`lookup_key`; combined with the
+      `selectSignupPrice` filter, archived (`active:false`) prices are never sent
+      to checkout. *(Owner: push these commits to `main`.)*
+
+**Code changes — Tier 2 (OPTIONAL, only if you sell two same-type prices):**
+- [ ] Assign a `lookup_key` to each live Price in the dashboard (good hygiene
+      regardless; free to do).
+- [ ] Add a `PRICE_LOOKUP_KEYS` map in `constants.ts` and prefer-by-lookup_key in
+      `selectSignupPrice()` to disambiguate multiple active same-type prices.
+
 
 **Owner runbook — change a subscription price (no code, no redeploy):**
 1. Stripe Dashboard → Product → **Create a new price** with the **same
@@ -577,10 +594,35 @@ already in place. What's missing is making price *resolution* deterministic.
       mixes `2024-09-30.acacia` and `2025-07-30.basil`).
 - [ ] **Remove the `isTestMode` unauthenticated bypass** in `createPaymentIntent`
       (and any other test-only fallbacks like `test-user-id`).
-- [ ] **Resolve duplicate Stripe extension** in `firebase.json` — it installs
-      `invertase/firestore-stripe-payments` twice
-      (`firestore-stripe-payments` and `firestore-stripe-payments-qscq@0.3.12`).
-      Keep exactly one and reconfigure it for live keys.
+- [x] **Resolve duplicate Stripe extension** in `firebase.json`. *Investigated
+      with `firebase ext:list` — only **ONE** instance is actually installed in
+      the project: `firestore-stripe-payments` (publisher `invertase`, version
+      **0.3.12**, ACTIVE). The "duplicate" existed only as two stale text entries
+      in `firebase.json` (an unpinned `firestore-stripe-payments` + a
+      `firestore-stripe-payments-qscq@0.3.12` that never matched an installed
+      instance). Collapsed to a single pinned entry
+      `"firestore-stripe-payments": "invertase/firestore-stripe-payments@0.3.12"`
+      — a config-only edit, no `firebase deploy --only extensions` needed since
+      the running instance is unchanged. **Owner: push this commit.***
+      - **Version note (verified vs. unverified):** **Verified** — `0.3.12` is the
+        version currently **installed + ACTIVE** in the project (`ext:list`), and
+        it works. **NOT verified** — whether a newer published version exists:
+        `firebase ext:info` does *not* print a version number (it only says
+        `@latest`). To find the actual latest published version, check the
+        marketplace page **https://extensions.dev/extensions/invertase/firestore-stripe-payments**
+        or the repo's `extension.yaml` `version:` field, or run
+        `firebase ext:install invertase/firestore-stripe-payments@latest`
+        (it prints the resolved version before prompting — **Ctrl+C to cancel**,
+        don't actually install). Any version upgrade — and the separately-maintained
+        **`stripe/firestore-stripe-payments`** publisher line — is a deliberate,
+        retest-heavy **post-launch** task, not a launch item.
+
+      - The leftover `firebase/extensions/firestore-stripe-payments-qscq.env`
+        file is harmless and can be renamed to match the instance ID
+        (`firestore-stripe-payments.env`) as optional cleanup later.
+      - **Still required for go-live:** reconfigure the (single) instance for
+        **live** Stripe keys + live webhook secret (see the webhook step below).
+
 - [ ] Create the **live webhook endpoint** in Stripe pointing at the production
       `stripeWebhook` / extension URL; capture the new `whsec_` into
       `STRIPE_WEBHOOK` (Phase 2).
@@ -701,8 +743,10 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 - [ ] 🔴 Live keys + live products/prices + updated price IDs
 - [ ] 🔴 Live webhook endpoint + new `whsec_`
 - [ ] 🔴 `isTestMode` bypass removed
-- [ ] 🔴 Duplicate Stripe extension resolved
+- [x] 🔴 Duplicate Stripe extension resolved *(was stale `firebase.json` text; one real instance verified via `ext:list`: invertase `firestore-stripe-payments` @0.3.12 ACTIVE. Whether a newer published version exists is unconfirmed — `ext:info` doesn't print a version; a version upgrade is a post-launch task.)*
+
 - [ ] ⚠️ Live Customer Portal config verified
+
 - [ ] ⚠️ Single Stripe API version pinned
 
 **Integrations**

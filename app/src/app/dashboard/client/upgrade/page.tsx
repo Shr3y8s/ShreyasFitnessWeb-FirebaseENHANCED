@@ -91,9 +91,12 @@ export default function UpgradePage() {
             id: doc.id,
             amount: priceData.unit_amount || 0,
             currency: priceData.currency || 'usd',
-            type: priceData.type || 'one_time'
+            type: priceData.type || 'one_time',
+            active: priceData.active !== false,
+            lookup_key: priceData.lookup_key ?? undefined
           });
         });
+
 
         const product: StripeProduct = {
           id: productId,

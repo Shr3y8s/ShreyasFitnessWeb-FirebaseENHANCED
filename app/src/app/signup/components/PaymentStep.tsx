@@ -415,9 +415,12 @@ export default function PaymentStep(props: PaymentStepProps) {
             id: doc.id,
             amount: priceData.unit_amount || 0,
             currency: priceData.currency || 'usd',
-            type: (priceData.type as 'recurring' | 'one_time') || 'one_time'
+            type: (priceData.type as 'recurring' | 'one_time') || 'one_time',
+            active: priceData.active !== false,
+            lookup_key: priceData.lookup_key ?? undefined
           });
         });
+
 
         // Build StripeProduct
         const product: StripeProduct = {

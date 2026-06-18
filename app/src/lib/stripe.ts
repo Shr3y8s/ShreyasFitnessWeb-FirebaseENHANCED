@@ -63,10 +63,16 @@ export const formatCurrency = (amount: number): string => {
  * while still supporting one-time purchase products.
  */
 export function selectSignupPrice(product: import('@/types/stripe').StripeProduct): import('@/types/stripe').StripePrice | null {
-  const recurringPrice = product.prices.find(p => p.type === 'recurring');
-  const oneTimePrice = product.prices.find(p => p.type === 'one_time');
+  // Only consider ACTIVE prices. When a subscription price is changed, the old
+  // price is archived (active: false) and a new one created — without this
+  // filter, `.find()` could return the superseded price in arbitrary order and
+  // charge the wrong amount. (See Phase 3 "Pricing architecture" in the launch plan.)
+  const livePrices = product.prices.filter(p => p.active !== false);
+  const recurringPrice = livePrices.find(p => p.type === 'recurring');
+  const oneTimePrice = livePrices.find(p => p.type === 'one_time');
   return recurringPrice || oneTimePrice || null;
 }
+
 
 /**
  * Helper function to select per-session price for session booking
@@ -117,12 +123,15 @@ export async function fetchAllProducts(includeInactive: boolean = false): Promis
         id: priceDoc.id,
         amount: priceData.unit_amount || 0,
         currency: priceData.currency || 'usd',
-        type: (priceData.type as 'recurring' | 'one_time') || 'one_time'
+        type: (priceData.type as 'recurring' | 'one_time') || 'one_time',
+        active: priceData.active !== false,
+        lookup_key: priceData.lookup_key ?? undefined
       });
     });
     
     products.push({
       id: productId,
+
       name: productData.name || '',
       description: productData.description,
       active: productData.active || false,
@@ -307,12 +316,15 @@ export async function fetchProduct(productId: string): Promise<import('@/types/s
       id: priceDoc.id,
       amount: priceData.unit_amount || 0,
       currency: priceData.currency || 'usd',
-      type: (priceData.type as 'recurring' | 'one_time') || 'one_time'
+      type: (priceData.type as 'recurring' | 'one_time') || 'one_time',
+      active: priceData.active !== false,
+      lookup_key: priceData.lookup_key ?? undefined
     });
   });
   
   return {
     id: productId,
+
     name: productData.name || '',
     description: productData.description,
     active: productData.active || false,

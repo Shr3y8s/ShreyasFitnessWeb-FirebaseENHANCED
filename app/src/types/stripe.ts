@@ -20,7 +20,21 @@ export interface StripePrice {
   currency: string;
   /** Price type - recurring for subscriptions, one_time for single charges */
   type: 'recurring' | 'one_time';
+  /**
+   * Whether the price is active in Stripe. Archived/replaced prices are
+   * `active: false`. Price resolution MUST ignore inactive prices so a
+   * superseded price is never sent to checkout. Defaults to `true` when a
+   * synced doc omits the field.
+   */
+  active?: boolean;
+  /**
+   * Optional stable Stripe lookup key (e.g. "complete_transformation_monthly").
+   * Only needed to disambiguate when a product has two ACTIVE prices of the
+   * same type (e.g. monthly + annual). Synced from Stripe when set on the Price.
+   */
+  lookup_key?: string;
 }
+
 
 export interface StripeProduct {
   /** Stripe product ID (e.g., "prod_1234abcd") */
