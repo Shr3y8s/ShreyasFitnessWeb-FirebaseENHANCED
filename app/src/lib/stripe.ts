@@ -1,5 +1,14 @@
 // Stripe configuration for Next.js app
 import { loadStripe } from '@stripe/stripe-js';
+import { SERVICE_TIERS } from '@/lib/constants';
+
+// Product IDs valid for the CURRENT Stripe mode (test vs live). SERVICE_TIERS
+// resolves to TEST ids in dev (pk_test) and LIVE ids in prod (pk_live). Both
+// test and live products coexist in the single `stripe_products` Firestore
+// collection (synced by the extension), so we must filter to the current mode's
+// ids — otherwise signup would list BOTH sets.
+const CURRENT_MODE_PRODUCT_IDS = new Set<string>(Object.values(SERVICE_TIERS));
+
 
 // Get Stripe publishable key from environment variable
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -104,12 +113,19 @@ export async function fetchAllProducts(includeInactive: boolean = false): Promis
   for (const productDoc of productsSnap.docs) {
     const productData = productDoc.data();
     
+    // Only include products belonging to the CURRENT Stripe mode (test vs live).
+    // Both sets coexist in `stripe_products`; without this, signup lists both.
+    if (!CURRENT_MODE_PRODUCT_IDS.has(productDoc.id)) {
+      continue;
+    }
+    
     // Filter inactive products unless explicitly requested
     if (!includeInactive && productData.active !== true) {
       continue;
     }
     
     const productId = productDoc.id;
+
     
     // Fetch prices for this product
     const pricesSnap = await getDocs(
