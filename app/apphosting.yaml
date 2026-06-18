@@ -69,9 +69,9 @@ env:
       - RUNTIME
 
   # ---- Stripe publishable key (PUBLIC). Replace value with the LIVE pk_live_... ----
-  # TODO(Phase 3): set to the live publishable key before go-live.
+
   - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-    value: "REPLACE_WITH_LIVE_pk_live_KEY"
+    value: "pk_live_51Hg4SwBjx3iGODd6mTNbJ8jDzAnTojvjzsyu7xmCtK99ApfDcKfc0nfSFNA8asTU1FwNKaJhMsFozycwHkYu2liy004O3xedCN"
     availability:
       - BUILD
       - RUNTIME

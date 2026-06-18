@@ -651,10 +651,18 @@ test keys, or a separate staging project. Non-payment dev is unaffected.)*
 - [ ] Verify/replace the hardcoded **Customer Portal config ID**
       (`STRIPE_PORTAL_CONFIG_ID = "bpc_..."` in `index.js`) with the **live**
       portal configuration.
-- [ ] Pin a **single** Stripe API version across the codebase (code currently
-      mixes `2024-09-30.acacia` and `2025-07-30.basil`).
-- [ ] **Remove the `isTestMode` unauthenticated bypass** in `createPaymentIntent`
-      (and any other test-only fallbacks like `test-user-id`).
+- [x] Pin a **single** Stripe API version across the codebase. *Verified all
+      ~16 Stripe inits in `index.js` already use `2024-09-30.acacia` — there is
+      no `basil` anywhere; the doc's earlier "mixed versions" note was incorrect.
+      Nothing to change.*
+- [x] **Remove the `isTestMode` unauthenticated bypass** in `createPaymentIntent`
+      (and the `test-user-id` fallback). *Done — `createPaymentIntent` now hard-
+      requires `request.auth`; removed the `isTestMode` flag, the `test-user-id`
+      fallback, and the `isTestMode` field from the PaymentIntent metadata.
+      Dev/test mode is unaffected: it comes from the test `STRIPE_KEY` (Functions
+      emulator + `functions/.secret.local` holding `sk_test`) with a logged-in
+      user — NOT from this bypass. **Owner: push this commit.***
+
 - [x] **Resolve duplicate Stripe extension** in `firebase.json`. *Investigated
       with `firebase ext:list` — only **ONE** instance is actually installed in
       the project: `firestore-stripe-payments` (publisher `invertase`, version
@@ -803,12 +811,12 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 **Stripe**
 - [ ] 🔴 Live keys + live products/prices + updated price IDs
 - [ ] 🔴 Live webhook endpoint + new `whsec_`
-- [ ] 🔴 `isTestMode` bypass removed
+- [x] 🔴 `isTestMode` bypass removed *(createPaymentIntent now requires auth; test-user-id fallback + metadata flag removed. Owner: push commit.)*
 - [x] 🔴 Duplicate Stripe extension resolved *(was stale `firebase.json` text; one real instance verified via `ext:list`: invertase `firestore-stripe-payments` @0.3.12 ACTIVE. Whether a newer published version exists is unconfirmed — `ext:info` doesn't print a version; a version upgrade is a post-launch task.)*
 
 - [ ] ⚠️ Live Customer Portal config verified
 
-- [ ] ⚠️ Single Stripe API version pinned
+- [x] ⚠️ Single Stripe API version pinned *(already uniform `2024-09-30.acacia` across index.js; no `basil` — nothing to change)*
 
 **Integrations**
 - [ ] ⚠️ Calendly production webhook + PAT verified

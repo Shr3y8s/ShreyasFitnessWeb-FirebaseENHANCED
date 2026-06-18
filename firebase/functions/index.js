@@ -22,8 +22,8 @@ const {writeClientNotification} = require("./client-notifications");
 const stripeKey = defineSecret("STRIPE_KEY");
 const resendKey = defineSecret("RESEND_API_KEY");
 
-// Stripe portal configuration ID for restricted payment method changes only
-const STRIPE_PORTAL_CONFIG_ID = "bpc_1SQLnDBjx3iGODd65BpKI3oK";
+// Stripe portal configuration ID for restricted payment method changes only (LIVE)
+const STRIPE_PORTAL_CONFIG_ID = "bpc_1TjmYzBjx3iGODd6BoqqhSti";
 
 /**
  * Create a payment intent for one-time payments
@@ -48,25 +48,20 @@ exports.createPaymentIntent = onCall({
       throw error;
     }
 
-    // For development/testing: Allow unauthenticated calls with testing flag
-    const isTestMode = request.data && request.data.isTestMode;
-
-    if (!request.auth && !isTestMode) {
+    // Require authentication — no unauthenticated/test bypass in production.
+    if (!request.auth) {
       const error = new Error("The function must be called while authenticated.");
-      logger.error("Payment intent creation failed - not authenticated", {
-        isTestMode: isTestMode,
-      });
+      logger.error("Payment intent creation failed - not authenticated");
       throw error;
     }
 
-    // Get user ID (or use test-user-id for testing)
-    const userId = request.auth ? request.auth.uid : "test-user-id";
+    const userId = request.auth.uid;
 
     logger.info("Creating payment intent", {
       userId: userId,
       priceId: request.data.price,
-      isTestMode: isTestMode,
     });
+
 
     // Initialize Stripe with the secret key
     const stripe = require("stripe")(stripeKey.value(), {
@@ -93,9 +88,9 @@ exports.createPaymentIntent = onCall({
       metadata: {
         userId: userId,
         priceId: request.data.price,
-        isTestMode: isTestMode || false,
       },
     });
+
 
     logger.info("Payment intent created successfully", {
       paymentIntentId: paymentIntent.id,
