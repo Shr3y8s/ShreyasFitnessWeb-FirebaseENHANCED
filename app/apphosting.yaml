@@ -76,6 +76,14 @@ env:
       - BUILD
       - RUNTIME
 
+  # ---- reCAPTCHA v3 SITE key (PUBLIC; runs in the browser) ----
+  - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+    value: "6LfvdvkrAAAAAH-3siHTiK8UwVOUJ75TOXLrXaxQ"
+    availability:
+      - BUILD
+      - RUNTIME
+
+
   # ---- Server-side secrets (Secret Manager references; RUNTIME only) ----
   # Used by Next.js API routes that run on the App Hosting (Cloud Run) server.
   # Create/populate each before the first rollout:
