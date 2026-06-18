@@ -13,10 +13,19 @@
  * These products include "Weekly check-ins" as a feature and allow
  * clients to book virtual check-in sessions with their trainer.
  */
+// Lists BOTH test and live product IDs so the same deployed code works whether
+// the backing Stripe key is test or live. Product IDs are globally unique, so a
+// user's `tier` only ever matches the set that created it — listing both is safe.
 const CHECKIN_ELIGIBLE_PRODUCTS = [
-  'prod_SwvHrfi1C4k4pS',  // Online Coaching
-  'prod_SwvI0SWs0J3DMQ',  // Complete Transformation
+  // LIVE
+  'prod_Uiwc6hs1G6YlIf',  // Online Coaching (live)
+  'prod_UiwXMrl2KqquZD',  // Complete Transformation (live)
+  // TEST
+  'prod_SwvHrfi1C4k4pS',  // Online Coaching (test)
+  'prod_SwvI0SWs0J3DMQ',  // Complete Transformation (test)
 ];
+
+
 
 /**
  * Check if a user's subscription includes check-in access

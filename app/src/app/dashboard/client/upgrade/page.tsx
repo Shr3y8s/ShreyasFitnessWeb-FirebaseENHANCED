@@ -15,7 +15,7 @@ import { Check, Loader2, CreditCard, Star, ArrowRight } from 'lucide-react';
 import { createStripeCheckoutSession, formatCurrency, selectSignupPrice } from '@/lib/stripe';
 import { StripeProduct, StripePrice } from '@/types/stripe';
 import { useToast } from '@/hooks/use-toast';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
+import { SERVICE_TIERS } from '@/lib/constants';
 
 interface SubscriptionOption {
   product: StripeProduct;
@@ -67,9 +67,10 @@ export default function UpgradePage() {
   const loadSubscriptionOptions = async () => {
     try {
       const productIds = [
-        SUBSCRIPTION_TIERS.ONLINE_COACHING,
-        SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION
+        SERVICE_TIERS.ONLINE_COACHING,
+        SERVICE_TIERS.COMPLETE_TRANSFORMATION
       ];
+
 
       const options: SubscriptionOption[] = [];
 
@@ -198,7 +199,7 @@ export default function UpgradePage() {
                 
                 return (
                   <Card key={option.product.id} className="relative overflow-hidden transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
-                    {option.product.id === SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION && (
+                    {option.product.id === SERVICE_TIERS.COMPLETE_TRANSFORMATION && (
                       <div className="absolute top-4 right-4">
                         <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600">
                           Most Popular
@@ -241,7 +242,7 @@ export default function UpgradePage() {
                           <Check className="h-4 w-4 text-green-600" />
                           <span>Priority support</span>
                         </div>
-                        {option.product.id === SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION && (
+                        {option.product.id === SERVICE_TIERS.COMPLETE_TRANSFORMATION && (
                           <div className="flex items-center gap-2 text-sm font-medium text-primary">
                             <Check className="h-4 w-4 text-primary" />
                             <span>Everything you need for transformation</span>

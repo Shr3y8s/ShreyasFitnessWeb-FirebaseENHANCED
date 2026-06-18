@@ -24,9 +24,56 @@ export interface ProductMarketing {
  * 2. Optionally add marketing metadata here for enhanced UI
  * 3. If no marketing data exists, product still works with Stripe defaults
  */
+// NOTE: Contains BOTH live and test product IDs. Lookup is by exact product ID,
+// so listing both sets is harmless — each Stripe mode resolves to its own entry.
+// (Live IDs prod_Uiw…, test IDs prod_Sw….)
 export const PRODUCT_MARKETING: Record<string, ProductMarketing> = {
-  // In-Person Training
+  // ===== TEST product IDs (Stripe test mode / npm run dev) =====
+  // In-Person Training (single session) — test
   'prod_SwuHPYlY94VZyY': {
+    details: 'Seattle Area Only',
+    features: [
+      '1:1 personalized training',
+      'Form correction',
+      'Custom exercise selection',
+      'Progress tracking'
+    ]
+  },
+  // 4-Pack Training Sessions — test
+  'prod_SwvMUVeTqAnveu': {
+    details: 'Seattle Area Only',
+    features: [
+      '4 personalized sessions',
+      'Discounted rate',
+      'Program design',
+      'Exercise technique review'
+    ]
+  },
+  // Online Coaching Subscription — test
+  'prod_SwvHrfi1C4k4pS': {
+    details: 'Remote Coaching',
+    features: [
+      'Custom workout program',
+      'Nutrition guidance',
+      '24/7 messaging support',
+      'Weekly check-ins'
+    ]
+  },
+  // Complete Transformation Package — test
+  'prod_SwvI0SWs0J3DMQ': {
+    details: 'Seattle Premium Experience',
+    features: [
+      'All online coaching features',
+      'Monthly in-person session',
+      'Advanced progress tracking',
+      'Priority support'
+    ]
+  },
+
+  // ===== LIVE product IDs (Stripe live mode / production) =====
+  // In-Person Training (single session)
+  'prod_UiweIP2zdj2sRv': {
+
     details: 'Seattle Area Only',
     features: [
       '1:1 personalized training',
@@ -37,7 +84,7 @@ export const PRODUCT_MARKETING: Record<string, ProductMarketing> = {
   },
   
   // 4-Pack Training Sessions
-  'prod_SwvMUVeTqAnveu': {
+  'prod_UiwQCggpkdr6S5': {
     details: 'Seattle Area Only',
     features: [
       '4 personalized sessions',
@@ -48,7 +95,7 @@ export const PRODUCT_MARKETING: Record<string, ProductMarketing> = {
   },
   
   // Online Coaching Subscription
-  'prod_SwvHrfi1C4k4pS': {
+  'prod_Uiwc6hs1G6YlIf': {
     details: 'Remote Coaching',
     features: [
       'Custom workout program',
@@ -59,7 +106,7 @@ export const PRODUCT_MARKETING: Record<string, ProductMarketing> = {
   },
   
   // Complete Transformation Package
-  'prod_SwvI0SWs0J3DMQ': {
+  'prod_UiwXMrl2KqquZD': {
     details: 'Seattle Premium Experience',
     features: [
       'All online coaching features',

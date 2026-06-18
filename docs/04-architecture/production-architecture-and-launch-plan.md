@@ -547,10 +547,19 @@ already in place. What's missing is making price *resolution* deterministic.
   add-on *and* the monthly recurring price — different types, so "the recurring
   one" is clear). `lookup_key` is only required if you ever offer **two active
   prices of the same type** on one product (e.g. monthly *and* annual).
-- **Hardcoded product IDs (must stay in sync, and are TEST-mode `prod_…` →
-  change for live):** `app/src/lib/constants.ts` (`SUBSCRIPTION_TIERS`),
-  `firebase/functions/product-config.js` (`CHECKIN_ELIGIBLE_PRODUCTS`), and
-  `app/src/lib/product-marketing.ts` (marketing copy keyed by product ID).
+- **Hardcoded product IDs — NOW SWAPPED TO LIVE (done this session):**
+  `app/src/lib/constants.ts` (renamed `SUBSCRIPTION_TIERS` → `SERVICE_TIERS`,
+  now lists all 4 live product IDs + added the previously-missing single
+  In-Person tier; added `IN_PERSON_TIERS` helper), `firebase/functions/product-config.js`
+  (`CHECKIN_ELIGIBLE_PRODUCTS` → live Online + Complete), and
+  `app/src/lib/product-marketing.ts` (all 4 entries re-keyed to live IDs).
+  Live IDs: In-Person `prod_UiweIP2zdj2sRv`, 4-Pack `prod_UiwQCggpkdr6S5`,
+  Online Coaching `prod_Uiwc6hs1G6YlIf`, Complete Transformation `prod_UiwXMrl2KqquZD`.
+  Also fixed two pre-existing bugs: the 4-Pack constant held a stale/nonexistent
+  ID (`prod_RWc0…`), and single In-Person was missing from the tier map entirely.
+  Trainer/admin "in-person" count+filter now matches single OR 4-pack. `tsc`
+  passes. *(Owner: push these commits.)*
+
 
 **Code changes — Tier 1 (the real fix, DONE this session):**
 - [x] `app/src/types/stripe.ts` — added `active?: boolean` and `lookup_key?:
@@ -570,13 +579,65 @@ already in place. What's missing is making price *resolution* deterministic.
       `selectSignupPrice()` to disambiguate multiple active same-type prices.
 
 
-**Owner runbook — change a subscription price (no code, no redeploy):**
-1. Stripe Dashboard → Product → **Create a new price** with the **same
-   `lookup_key`** → Stripe automatically removes the key from the old price.
-2. **Archive** the old price (sets `active: false`).
-3. The extension syncs both changes to Firestore → the app auto-resolves the new
-   active price for new checkouts. Existing subscribers are **grandfathered** on
-   their old price unless explicitly migrated in the dashboard.
+#### Pricing playbook (lookup keys, archiving, discount codes)
+
+How this app's pricing works in practice — three distinct scenarios:
+
+**A. Change a price occasionally (everyone pays the new price)**
+1. Stripe Dashboard → Product → **Add another price** with the new amount.
+2. **Set it as the default**, then **archive the old price** (`active:false`).
+   - ⚠️ **Archive is hard to find in the UI:** it is NOT in the product-edit
+     modal's price `…` menu (that only shows Edit / Duplicate / Set-default /
+     Delete). **Click the price's amount link** to open the **price detail page**,
+     and Archive is there. (Unused prices show **Delete** instead; once a price
+     has any charge, only **Archive** is offered.) CLI fallback that always
+     works: `stripe prices update price_XXXX --active=false`.
+3. The extension syncs to Firestore → the app's `active` filter auto-resolves the
+   new price. Existing subscribers are **grandfathered** unless migrated.
+
+**B. `active` vs `lookup_key` (they are INDEPENDENT fields)**
+- `active` = can this price be charged? (archiving sets it false). A product may
+  have **any number** of active prices.
+- `lookup_key` = a stable human name to fetch "the current price" by, instead of
+  the immutable `price_…` id. It is **unique among active prices** — a given key
+  can sit on **only one** active price at a time. The dashboard does **not**
+  auto-transfer a key; to move it you use the API `transfer_lookup_key: true`
+  (e.g. `stripe prices create … --lookup-key inperson_training
+  --transfer-lookup-key`). You cannot put the same key on two prices.
+- **This app does NOT read `lookup_key`** — `selectSignupPrice()` resolves by
+  `active` + `type`. So lookup_keys are **optional** here (nice dashboard handle,
+  not required). They'd only become load-bearing if we add Tier-2 below.
+
+**C. Charge different customers different prices — two options**
+1. **Coupons / promotion codes (recommended; simplest):** keep ONE standard
+   price; create a Coupon (e.g. 25% off) + a Promotion code (e.g. `FRIENDS25`).
+   Checkout already passes `allow_promotion_codes: true`, so customers can enter
+   a code today with **no code change**. To auto-apply silently, add
+   `discounts: [{ promotion_code }]` to the checkout session **server-side**,
+   resolved from a trusted user attribute (never trust a client-sent discount).
+   Best for friends pricing, limited promos, % or $ off. Also the cleanest
+   **smoke-test** path: a 100%-off code → $0 live checkout → verify → done.
+2. **Multiple prices + distinct lookup_keys (Tier-2):** only for genuinely
+   parallel *list* prices (monthly vs annual, USD vs EUR, regular vs friend as a
+   permanent tier). Create separate active prices with **different** keys
+   (`complete_monthly` / `complete_annual`), store a tier attribute on the user,
+   make `selectSignupPrice()` pick by key, and **enforce the choice server-side**
+   in the checkout Function (re-read the trusted attribute; don't trust the
+   client's price id). More to maintain — reserve for true parallel pricing.
+
+**Rule of thumb:** archive-and-replace for routine price changes; **coupons** for
+per-customer discounts; **multiple prices + lookup_keys (Tier-2)** only for true
+parallel list prices.
+
+**Dev vs Live Stripe modes (both supported):** mode follows the **publishable key
+prefix** — `.env.local` (`pk_test`) → `npm run dev` uses TEST product IDs;
+`apphosting.yaml` (`pk_live`) → production uses LIVE product IDs. `constants.ts`
+selects `TEST_TIERS`/`LIVE_TIERS` off `pk_live` prefix; `product-config.js` and
+`product-marketing.ts` list BOTH id sets (ids are globally unique, so harmless).
+*(Caveat: local dev runs against the live Firestore, so to truly exercise TEST
+payments you also need the test products synced there — i.e. the extension on
+test keys, or a separate staging project. Non-payment dev is unaffected.)*
+
 
 - [ ] Toggle Stripe dashboard to **live mode**.
 - [ ] Recreate **products & prices** in live mode (test-mode IDs do not carry

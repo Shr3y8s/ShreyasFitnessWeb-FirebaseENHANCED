@@ -26,7 +26,7 @@ import {
   CreditCard,
   Activity
 } from 'lucide-react';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
+import { SERVICE_TIERS } from '@/lib/constants';
 import { formatDateISO } from '@/lib/date-utils';
 import DashboardActivityFeed from '@/components/trainer/activity-feed/DashboardActivityFeed';
 
@@ -271,9 +271,10 @@ export default function TrainerDashboardPage() {
 
   // Tier breakdown
   const tierCounts = {
-    inPerson: clients.filter(c => c.tier === SUBSCRIPTION_TIERS.IN_PERSON_4PACK).length,
-    online: clients.filter(c => c.tier === SUBSCRIPTION_TIERS.ONLINE_COACHING).length,
-    complete: clients.filter(c => c.tier === SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION).length,
+    inPerson: clients.filter(c => c.tier === SERVICE_TIERS.IN_PERSON || c.tier === SERVICE_TIERS.IN_PERSON_4PACK).length,
+    online: clients.filter(c => c.tier === SERVICE_TIERS.ONLINE_COACHING).length,
+    complete: clients.filter(c => c.tier === SERVICE_TIERS.COMPLETE_TRANSFORMATION).length,
+
     noTier: clients.filter(c => !c.tier).length,
   };
 

@@ -13,7 +13,7 @@ import { Breadcrumb } from '@/components/Breadcrumb';
 import Link from 'next/link';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
-import { SUBSCRIPTION_TIERS } from '@/lib/constants';
+import { SERVICE_TIERS } from '@/lib/constants';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Client {
@@ -101,9 +101,9 @@ export default function ClientManagementPage() {
     if (tierFilter !== 'all') {
       filtered = filtered.filter((client) => {
         switch (tierFilter) {
-          case 'ipt': return client.tier === SUBSCRIPTION_TIERS.IN_PERSON_4PACK;
-          case 'oc': return client.tier === SUBSCRIPTION_TIERS.ONLINE_COACHING;
-          case 'ct': return client.tier === SUBSCRIPTION_TIERS.COMPLETE_TRANSFORMATION;
+          case 'ipt': return client.tier === SERVICE_TIERS.IN_PERSON || client.tier === SERVICE_TIERS.IN_PERSON_4PACK;
+          case 'oc': return client.tier === SERVICE_TIERS.ONLINE_COACHING;
+          case 'ct': return client.tier === SERVICE_TIERS.COMPLETE_TRANSFORMATION;
           case 'none': return !client.tier;
           default: return true;
         }
