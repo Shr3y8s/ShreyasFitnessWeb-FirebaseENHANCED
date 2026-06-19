@@ -639,18 +639,48 @@ payments you also need the test products synced there — i.e. the extension on
 test keys, or a separate staging project. Non-payment dev is unaffected.)*
 
 
-- [ ] Toggle Stripe dashboard to **live mode**.
-- [ ] Recreate **products & prices** in live mode (test-mode IDs do not carry
-      over). **Assign each Price a stable `lookup_key`** (Option A) at creation.
-- [ ] Update live price/product IDs referenced in
-      `firebase/functions/product-config.js`, `firebase/functions/index.js`,
-      `app/src/lib/constants.ts`, and `app/src/lib/product-marketing.ts`.
-- [ ] Apply the deterministic Option A code changes listed under "Pricing
-      architecture & Option A migration" above.
+> ### ✅ Go-live execution status (2026-06-18)
+> The Stripe live wiring + frontend dual-mode work is **done and deployed**. The
+> only remaining blocker is **Stripe account activation / risk review** (see the
+> "account cannot make live charges" note below). Real-world gotchas hit during
+> go-live, captured for future reference:
+> - **Price sub-docs don't sync on a product edit.** The invertase extension only
+>   writes `stripe_products/{id}/prices/{priceId}` on a `price.created`/
+>   `price.updated` event. After flipping to live keys, editing the *product*
+>   synced the product doc but left prices empty → signup showed **$0**. Fix:
+>   trigger a `price.updated` (we added+removed dummy **metadata** on each live
+>   price); the price docs then populated with `unit_amount`.
+> - **`stripe_products` holds BOTH test + live docs** (test extension synced
+>   earlier, live extension synced now). `fetchAllProducts()` returned all 8 →
+>   signup listed test+live. Fix: `app/src/lib/stripe.ts` now filters to
+>   `CURRENT_MODE_PRODUCT_IDS = Object.values(SERVICE_TIERS)` (test ids in dev /
+>   live ids in prod).
+> - **`NEXT_PUBLIC_RECAPTCHA_SITE_KEY` was missing from `apphosting.yaml`** (only
+>   the server `RECAPTCHA_SECRET_KEY` was set) → "Security verification failed" on
+>   signup. Fix: added the public site key to `apphosting.yaml` (BUILD+RUNTIME);
+>   `shrey.fit` + `www` confirmed in the reCAPTCHA key's allowed domains.
+> - **"Your account cannot currently make live charges"** is NOT a code issue —
+>   it's Stripe **account activation / risk review**. Account submitted all docs;
+>   identity verified, but the account is in Stripe's risk-review queue. Charges
+>   (even a 100%-off $0 checkout) are blocked until Stripe enables `charges_enabled`.
+>   No human to contact until Stripe emails; typical resolution hours–3 business days.
+> - A real test user (`KFslkdH0CIdD14H1BjGdkxP1Y9v2`) was created during a failed
+>   attempt — delete via admin deletion flow after launch.
 
-- [ ] Verify/replace the hardcoded **Customer Portal config ID**
-      (`STRIPE_PORTAL_CONFIG_ID = "bpc_..."` in `index.js`) with the **live**
-      portal configuration.
+- [x] Toggle Stripe dashboard to **live mode**. *Done.*
+- [x] Recreate **products & prices** in live mode. *Done — 4 live products synced
+      to Firestore via the extension (prices populated after a `price.updated`
+      trigger). `lookup_key`s optional and not required (app resolves by
+      `active`+type); deferred.*
+- [x] Update live price/product IDs in `product-config.js`, `constants.ts`,
+      `product-marketing.ts` (dual test+live; resolves by `pk_` prefix). *Done.*
+- [x] Apply the deterministic Option A code changes (active-price filtering in
+      `selectSignupPrice`; `fetchAllProducts` mode-filter). *Done.*
+
+- [x] Verify/replace the hardcoded **Customer Portal config ID** in `index.js`
+      with the **live** config. *Done — `STRIPE_PORTAL_CONFIG_ID =
+      "bpc_1TjmYzBjx3iGODd6BoqqhSti"`.*
+
 - [x] Pin a **single** Stripe API version across the codebase. *Verified all
       ~16 Stripe inits in `index.js` already use `2024-09-30.acacia` — there is
       no `basil` anywhere; the doc's earlier "mixed versions" note was incorrect.
@@ -692,24 +722,64 @@ test keys, or a separate staging project. Non-payment dev is unaffected.)*
       - **Still required for go-live:** reconfigure the (single) instance for
         **live** Stripe keys + live webhook secret (see the webhook step below).
 
-- [ ] Create the **live webhook endpoint** in Stripe pointing at the production
-      `stripeWebhook` / extension URL; capture the new `whsec_` into
-      `STRIPE_WEBHOOK` (Phase 2).
-- [ ] Configure live BNPL options (Affirm/Klarna/Afterpay) in the dashboard if
-      desired.
-- [ ] Deploy Functions: `firebase deploy --only functions`.
+- [x] Create the **live webhook endpoint** in Stripe → extension's
+      `…handleWebhookEvents` URL; `whsec_` set in extension config + `STRIPE_WEBHOOK`
+      secret. *Done — products synced (200s).*
+- [ ] Configure live **BNPL** (Affirm/Klarna/Afterpay) in the **dashboard** if
+      desired. *Dashboard-only toggle (Settings → Payment methods); the app's
+      `automatic_payment_methods`/extension checkout auto-offers whatever's
+      enabled — **no code change**. Requires the account to be **activated for
+      live charges** first, and BNPL has Stripe eligibility/threshold rules.*
+- [x] Deploy Functions: `firebase deploy --only functions`. *Done (live keys +
+      portal id + isTestMode removal deployed).*
+
+> ### ⏳ Phase 3 BLOCKER — Stripe account activation / risk review
+> All code + config is done and deployed. The **only** remaining Phase-3 item is
+> the **Stripe smoke test**, which is blocked because the account is in Stripe's
+> **risk-review queue** ("Your account cannot currently make live charges").
+> Docs submitted; awaiting Stripe approval (`charges_enabled: true`). Nothing
+> actionable in code — monitor Stripe email + Account status. Once approved:
+> run the 100%-off promo smoke test, then clean up test user
+> `KFslkdH0CIdD14H1BjGdkxP1Y9v2`.
+
 
 ### Phase 4 — Third-Party Integrations
-- [ ] **Calendly:** create a **production webhook subscription** pointing at the
-      live `calendlyWebhook` Function URL; verify the production PAT
-      (`CALENDLY_PAT`). Test booking → cancellation round-trip.
-- [ ] **Resend:** verify the `shrey.fit` domain (SPF/DKIM/DMARC) so
-      `support@`, `verify@`, `info@`, `billing@` etc. send from a verified
-      domain and are not sandboxed. Send test emails to Gmail/Outlook and check
-      they don't land in spam.
-- [ ] **Google Places:** ensure billing is enabled and **restrict the API key**
-      (API restriction = Places API; appropriate application restriction for
-      server-side use).
+
+> **✅ Phase 4 status (2026-06-18):** Calendly + Resend verified; Google Places
+> restriction correct (one doubled-secret bug fixed — see note).
+
+- [x] **Calendly:** prod webhook **verified via API** (the Calendly dashboard
+      does NOT show API-created subscriptions — they're only queryable via API).
+      `GET /webhook_subscriptions?organization=…&scope=organization` returned
+      exactly **one active** subscription with `callback_url =
+      https://us-west1-shreyfitweb.cloudfunctions.net/calendlyWebhook`, events
+      `invitee.created` + `invitee.canceled`. `CALENDLY_PAT` lives in **Secret
+      Manager** (read via `defineSecret` in `sessions.js`; not in `.env.local`).
+      ⚠️ **Owner: rotate the PAT** — it was pasted in plaintext during
+      verification (Calendly → API tokens → recreate → Secret Manager new
+      version; the webhook subscription stays active across rotation).
+- [x] **Resend:** `shrey.fit` domain **verified** — DKIM (`resend._domainkey`),
+      SPF (`send` TXT), MX (`feedback-smtp…amazonses.com`) all green; sending
+      enabled. Confirmed live by the signup OTP from `verify@shrey.fit` arriving
+      reliably. (Inbound "Enable Receiving" left off — app only sends.) No code
+      change — Functions already send from `@shrey.fit`.
+- [x] **Google Places:** key restriction **correct** — "API key 1" restricted to
+      **Places API (New)**, matching the code (`/api/autocomplete` →
+      `places.googleapis.com/v1/places:autocomplete`; `/api/place-details` →
+      `/v1/{placeId}`; both server-side via `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`).
+      Server-side → **API restriction only** (HTTP-referrer N/A; Cloud Run IPs
+      dynamic). Billing on (Blaze).
+      - ⚠️ **Bug + fix:** the `GOOGLE_MAPS_API_KEY` Secret Manager value was
+        **doubled** (key pasted twice) → `/api/autocomplete` returned **500**
+        (`API_KEY_INVALID`). Added a new version with the **single** correct value
+        and disabled the doubled one.
+      - 🔑 **Lesson — App Hosting secret injection:** adding a new secret version
+        does **NOT** update the running instance; App Hosting injects secrets at
+        **deploy time**. The unpinned `secret: GOOGLE_MAPS_API_KEY` ref resolves
+        to `latest` only on the **next rollout** → **must trigger a rollout**
+        (push to `main` or re-deploy) then re-test autocomplete. **(Owner: roll
+        out + verify autocomplete returns suggestions.)**
+
 
 ### Phase 5 — Backend Hardening
 - [ ] Review and lock down **`firestore.rules`** for production (no broad
@@ -731,7 +801,12 @@ test keys, or a separate staging project. Non-payment dev is unaffected.)*
       if not used in production.
 - [ ] Strip noisy `console.log` statements from Functions (keep structured
       `logger` calls).
+- [ ] **Fix dead nav links** `/integrations` and `/mobile` — they 404 (seen as
+      RSC-prefetch 404s in the browser console on `shrey.fit`). A nav/footer
+      `<Link>` points to pages that don't exist; create the pages or remove the
+      links. Cosmetic, not launch-blocking.
 - [ ] **Delete the orphaned top-level `static/` directory.** It's the legacy
+
       pre-Next.js HTML site, fully superseded by the `app/src/app/(marketing)/`
       route group and no longer served by anything (the `firebase.json` Hosting
       block that referenced it was removed in Phase 2). Verify nothing references
@@ -808,19 +883,24 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 
 
 
-**Stripe**
-- [ ] 🔴 Live keys + live products/prices + updated price IDs
-- [ ] 🔴 Live webhook endpoint + new `whsec_`
-- [x] 🔴 `isTestMode` bypass removed *(createPaymentIntent now requires auth; test-user-id fallback + metadata flag removed. Owner: push commit.)*
-- [x] 🔴 Duplicate Stripe extension resolved *(was stale `firebase.json` text; one real instance verified via `ext:list`: invertase `firestore-stripe-payments` @0.3.12 ACTIVE. Whether a newer published version exists is unconfirmed — `ext:info` doesn't print a version; a version upgrade is a post-launch task.)*
+**Stripe** *(all code/config done & deployed; only account activation pending)*
+- [x] 🔴 Live keys + live products/prices + updated price IDs
+- [x] 🔴 Live webhook endpoint + new `whsec_` *(extension `…handleWebhookEvents`; 200s)*
+- [x] 🔴 `isTestMode` bypass removed
+- [x] 🔴 Duplicate Stripe extension resolved *(invertase `firestore-stripe-payments` @0.3.12 ACTIVE)*
+- [x] ⚠️ Live Customer Portal config verified *(`bpc_1TjmYzBjx3iGODd6BoqqhSti`)*
+- [x] ⚠️ Single Stripe API version pinned *(`2024-09-30.acacia`)*
+- [x] ✅ `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` added; signup lists only current-mode products
+- [ ] ⏳ **Stripe account ACTIVATED for live charges** — BLOCKER, in risk review (docs submitted)
+- [ ] 🔴 Live $0-promo smoke test *(blocked on activation)*
+- [ ] ⬜ (optional) BNPL Affirm/Klarna enabled in dashboard *(no code; after activation)*
 
-- [ ] ⚠️ Live Customer Portal config verified
 
-- [x] ⚠️ Single Stripe API version pinned *(already uniform `2024-09-30.acacia` across index.js; no `basil` — nothing to change)*
+**Integrations** — ✅ verified (Phase 4)
+- [x] ⚠️ Calendly production webhook verified *(active org sub → prod `calendlyWebhook`; ⚠️ owner: rotate PAT — exposed in chat)*
+- [x] ⚠️ Resend `shrey.fit` domain verified (DKIM/SPF/MX; OTP live)
+- [x] ⚠️ Google Places key restricted to Places API (New) *(⚠️ owner: roll out to apply fixed single-value `GOOGLE_MAPS_API_KEY` + re-test autocomplete)*
 
-**Integrations**
-- [ ] ⚠️ Calendly production webhook + PAT verified
-- [ ] ⚠️ Resend `shrey.fit` domain verified (SPF/DKIM)
 
 **Backend Hardening**
 - [ ] 🔴 `firestore.rules` locked for production
