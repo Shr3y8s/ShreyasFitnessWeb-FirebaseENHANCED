@@ -782,9 +782,43 @@ test keys, or a separate staging project. Non-payment dev is unaffected.)*
 
 
 ### Phase 5 — Backend Hardening
-- [ ] Review and lock down **`firestore.rules`** for production (no broad
-      read/write; enforce auth + ownership/role checks).
-- [ ] Review and lock down **`storage.rules`**.
+
+> **✅ Security-rules audit (2026-06-18).** Reviewed both rule files.
+> `storage.rules` is **production-grade** (default-deny catch-all, per-user
+> ownership, image-only + 5MB limits) — no change. `firestore.rules` is mostly
+> solid (default-deny catch-all, role helpers, field-diff guards on
+> role/Stripe/profile fields, Extension/Cloud-Function writes locked `if false`).
+> **One critical fix applied + deployed:**
+> - 🔴 **`verifiedEmails` OTP exposure (FIXED).** Was `allow read: if request.auth
+>   == null` — anyone knowing a target email could read the doc's OTP `code` and
+>   defeat verification. Changed to `allow read: if false`. Verified safe: grep of
+>   `app/src` shows **no client reads** of this collection (verification runs
+>   server-side in the `verifyEmailOTP` callable / admin SDK). Deployed via
+>   `firebase deploy --only firestore:rules`.
+>
+> **⏸️ Held back — fixing now would destabilize the app (→ post-launch, see §Post-Launch Hardening):**
+> - **Unscoped `list` rules** on top-level collections keyed by `{userId}_{date}`:
+>   `sessions`, `progressPhotos`, `dailyActivities`, `goals`. Firestore rules
+>   **cannot scope a `list` to the caller** (can't read a query's `where` clause),
+>   and 20+ client/trainer query call sites rely on these broad list rules (e.g.
+>   `UpcomingSessionsCard` queries `sessions where status=='scheduled'`). Tightening
+>   them breaks working queries; the correct fix is migrating to `users/{uid}/…`
+>   subcollections (data migration + query rewrites) — too risky pre-launch.
+> - **Staff profiles** (`admins`/`trainers`) readable by any authed user (to "find
+>   your coach") expose full docs incl. email/`stripeCustomerId`; rules can't
+>   field-filter reads → needs a `publicProfiles` collection (refactor).
+> - **`contact_form_submissions` create: `if true`** — public/unbounded; reCAPTCHA
+>   mitigates; add field/size validation later.
+> - **Risk assessment for launch:** LOW. Held items expose fitness logs/photos, not
+>   payment/PII (Stripe + auth data are correctly locked). The app never issues
+>   unscoped queries, so exploiting requires a hand-crafted malicious query.
+
+- [x] Review and lock down **`storage.rules`** — already production-grade; no change.
+- [~] Review and lock down **`firestore.rules`** — critical OTP-read fix applied +
+      deployed; remaining hardening (unscoped lists, staff profiles, contact-form
+      validation) deferred to **Post-Launch Hardening** below (refactors, not safe
+      to do pre-launch).
+
 - [ ] Confirm **`firestore.indexes.json`** is deployed
       (`firebase deploy --only firestore:indexes`).
 - [ ] Set **min instances** on latency-sensitive Functions (payments, webhooks)
@@ -899,13 +933,14 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 **Integrations** — ✅ verified (Phase 4)
 - [x] ⚠️ Calendly production webhook verified *(active org sub → prod `calendlyWebhook`; ⚠️ owner: rotate PAT — exposed in chat)*
 - [x] ⚠️ Resend `shrey.fit` domain verified (DKIM/SPF/MX; OTP live)
-- [x] ⚠️ Google Places key restricted to Places API (New) *(⚠️ owner: roll out to apply fixed single-value `GOOGLE_MAPS_API_KEY` + re-test autocomplete)*
+- [x] ✅ Google Places key restricted to Places API (New) *(single-value `GOOGLE_MAPS_API_KEY` rolled out; autocomplete verified working; doubled version deleted)*
 
 
 **Backend Hardening**
-- [ ] 🔴 `firestore.rules` locked for production
-- [ ] 🔴 `storage.rules` locked for production
+- [~] 🔴 `firestore.rules` locked for production *(critical OTP-read fix applied + deployed; remaining hardening → Post-Launch Hardening §8.5)*
+- [x] 🔴 `storage.rules` locked for production *(already production-grade)*
 - [ ] ⚠️ Indexes deployed; min-instances set; prod data seeded
+
 
 **Code Cleanup**
 - [ ] ⚠️ Test flags / fallbacks removed
@@ -954,7 +989,63 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 
 ---
 
+## 8.5 Post-Launch Hardening (security rules — deferred from Phase 5)
+
+These were **intentionally deferred** because fixing them pre-launch is a
+refactor that risks breaking working queries/UI. Risk is **LOW** for a soft
+launch (no payment/PII exposure — Stripe + auth data are correctly locked; the
+app never issues unscoped queries). Tackle after launch, each behind a test pass.
+
+**A. Migrate `{userId}_{date}`-keyed top-level collections → `users/{uid}/…` subcollections**
+- Affected: `sessions`, `progressPhotos`, `dailyActivities`, `goals` (+ review
+  `weeklySurveys`, `dailyActivityLogs` which are already subcollections under a
+  `{userId}` doc and are fine).
+- **Why:** Firestore rules **cannot scope a `list` to the caller** — a top-level
+  collection can only be `list`-secured by `request.auth != null` (today's rule),
+  which lets any authed user list everyone's docs. Subcollections under
+  `users/{uid}/…` let the rule enforce `isOwner(uid)` on the path, truly scoping
+  reads.
+- **Work involved (why it's not a pre-launch change):**
+  1. Migrate existing docs to the new path (one-time Cloud Function/script).
+  2. Rewrite ~20+ query call sites (see `session-*`, `progress-photo-api`,
+     `goals-api`, `checkin-api`, `consultation-api`, dashboards) from
+     `collection(db,'sessions')` + `where('clientId','==',uid)` to
+     `collection(db,'users',uid,'sessions')`.
+  3. Update trainer/admin read paths (they currently read across all users — would
+     need `collectionGroup` queries + rules).
+  4. Update `firestore.indexes.json` for any new composite indexes.
+  5. Full regression test of client + trainer dashboards.
+- **Interim mitigation (optional, lower effort):** keep top-level collections but
+  add an authenticated **server-side query proxy** (callable Function) for the
+  trainer cross-user reads and tighten client `list` rules — still can't fully
+  scope a top-level `list`, so the subcollection migration is the real fix.
+
+**B. Staff public profiles → dedicated `publicProfiles` collection**
+- Today any authed user can read full `admins`/`trainers` docs (to "find their
+  coach"), exposing email + `stripeCustomerId`. Rules can't field-filter reads.
+- **Fix:** Cloud Function mirrors only display-safe fields (name, photo, title,
+  bio) into `publicProfiles/{uid}`; point the "find your coach" UI there; lock
+  `admins`/`trainers` reads to self + admin only.
+
+**C. `contact_form_submissions` create validation**
+- Currently `allow create: if true` (public, unbounded). reCAPTCHA mitigates spam.
+- **Fix:** add field/size validation (required keys, max content length) and
+  consider a per-IP/per-session rate limit or moving submission behind the
+  existing `/api/submit-contact` route + App Check.
+
+**D. Optional platform hardening (post-launch nice-to-haves)**
+- **Firebase App Check** on callable Functions + Firestore (blocks non-app clients).
+- **Cloud Armor / WAF** rate-limiting at the edge for the bot scans (the harmless
+  `/wp-admin/*` 404s seen in logs).
+- Bot-path `middleware.ts` to early-404 known scanner paths (cosmetic log cleanup).
+
+> **Suggested sequence:** B (quick, real exposure of staff PII) → C (cheap) →
+> A (the big one; schedule a dedicated migration sprint with tests) → D (ongoing).
+
+---
+
 ## Related Documents
+
 
 - [Application Architecture (dev/overview)](./application-architecture.md)
 - [Stripe Integration](../02-implementation/stripe-integration.md)
