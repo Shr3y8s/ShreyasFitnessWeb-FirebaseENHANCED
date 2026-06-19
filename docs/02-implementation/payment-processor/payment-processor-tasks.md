@@ -96,26 +96,47 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · 🔒 blocked on provide
   new interface members are additive/optional). Full `next build` re-run with the
   page adoption in Phase 3.
 
-## Phase 2 — Server seam (Stripe still live)
-- [ ] **T2.1** `firebase/functions/payments/fulfillment.js` — neutral
-  `activateSubscription`, `fulfillSessionPackage`, `writeSubscriptionRecord`,
-  activity-feed writes (ported from current `index.js`/`sessions.js` Stripe logic).
-- [ ] **T2.2** `firebase/functions/payments/index.js` — generic `paymentWebhook`
-  (verify→parse→fulfill) + `getBillingHistory`/`openBillingPortal`/
-  `cancelSubscription` callables (provider-routed).
-- [ ] **T2.3** `firebase/functions/payments/providers/stripe.js` — reference
-  `verifySignature` + `parseEvent` (so generic path is proven on Stripe).
-- [ ] **T2.4** Neutral `billing_*` Firestore writes + read path; keep `users/*`
-  flags.
-- [ ] **T2.5** `firestore.rules` for `billing_customers/**` (owner-read, server-write).
+## Phase 2 — Server seam (Stripe still live) — built 2026-06-19 (scaffolding; not yet live-wired)
+> All `node --check` syntax-verified. NOT yet registered as a live webhook — the
+> invertase extension + existing triggers in `../index.js` remain the live Stripe
+> path until cutover (design §8). Generic path is wired live per-provider in Phase 3/5.
+- [x] **T2.1** `firebase/functions/payments/fulfillment.js` — neutral
+  `activateSubscription`, `deactivateSubscription`, `fulfillSessionPackage`,
+  `writeSubscriptionRecord`, `writeTransactionRecord`, `writeBillingCustomer`.
+  Ported from `index.js` (`syncSubscriptionToUser`, `createSessionPackageFromPayment`):
+  write-once `accountActivated`, tier sync, trainer auto-assign, subscriptionId
+  cleanup on cancel, 60-day session-package expiry, idempotent package create.
+  *Welcome email / onboarding goal / `new_client_signup` activity-feed are exposed
+  as an `onFirstActivation` hook — MUST be wired before PayPal go-live (T3.3).*
+- [x] **T2.2** `firebase/functions/payments/index.js` — generic `paymentWebhook`
+  (HTTP: verify→parse→fulfill) with provider registry + `?provider=` routing; returns
+  500 on fulfillment error so the provider retries (fulfillment is idempotent).
+  *(getBillingHistory/openBillingPortal/cancelSubscription callables added per-provider
+  in Phase 3 alongside PayPal.)*
+- [x] **T2.3** `firebase/functions/payments/providers/stripe.js` — reference
+  `verifySignature` (HMAC via `stripe.webhooks.constructEvent`) + `parseEvent`
+  (event-mapping table §3.3) so the generic path is proven on Stripe.
+- [x] **T2.4** Neutral `billing_customers/**` writes (customer + subscriptions +
+  transactions); `users/*` activation flags preserved by fulfillment.
+- [x] **T2.5** `firestore.rules` for `billing_customers/**` — owner/admin read,
+  `write: if false` (server-only via admin SDK). *Deploy with `firebase deploy
+  --only firestore:rules` at cutover; additive (new collection), safe to deploy now.*
 
 ## Phase 3 — PayPal adapter ✅ launch processor (account approved 2026-06-19)
-- [ ] **T3.0 (owner)** Create PayPal **sandbox app** → sandbox Client ID + Secret;
-  create **Catalog Product → Billing Plan** (`P-xxxx`) per recurring tier
-  (Online Coaching, Complete Transformation); provide plan IDs.
+- [ ] **T3.0 (owner)** Create PayPal apps for **BOTH** environments (NFR-7 / design §7.1):
+  - **Sandbox** (used in dev): sandbox Client ID + Secret; sandbox Catalog Product →
+    Billing Plan (`P-xxxx`) per recurring tier (Online Coaching, Complete
+    Transformation); register sandbox webhook → sandbox `PAYPAL_WEBHOOK_ID`.
+  - **Live** (used in prod): live Client ID + Secret; live Billing Plans (`P-xxxx`);
+    register live webhook → live `PAYPAL_WEBHOOK_ID`.
+  - Provide both sets of plan IDs (→ `SANDBOX_PLANS` / `LIVE_PLANS`).
 - [ ] **T3.1** Add `@paypal/react-paypal-js` (client) + `@paypal/paypal-server-sdk`
-  (server); env/secrets (`NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `NEXT_PUBLIC_PAYPAL_ENV`,
-  `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`); store `P-xxxx` plan IDs in config.
+  (server). Env split per environment (design §7.1):
+  - dev `.env.local`: `NEXT_PUBLIC_PAYPAL_ENV=sandbox` + sandbox `NEXT_PUBLIC_PAYPAL_CLIENT_ID`.
+  - prod `apphosting.yaml`: `NEXT_PUBLIC_PAYPAL_ENV=production` + live `NEXT_PUBLIC_PAYPAL_CLIENT_ID`.
+  - Secret Manager: sandbox + live `PAYPAL_CLIENT_SECRET` and `PAYPAL_WEBHOOK_ID`;
+    server adapter selects API base (`api-m.sandbox.paypal.com` vs `api-m.paypal.com`).
+  - `constants.ts`: `PAYPAL_PLANS = PAYPAL_LIVE ? LIVE_PLANS : SANDBOX_PLANS`.
 - [ ] **T3.2** `providers/paypal.ts` (client) — **Smart Buttons** via `renderCheckout`
   for BOTH flows (subscription `createSubscription({plan_id})`, one-time
   `createOrder`/capture); capabilities `{buttonCheckout:true, hostedPortal:false,

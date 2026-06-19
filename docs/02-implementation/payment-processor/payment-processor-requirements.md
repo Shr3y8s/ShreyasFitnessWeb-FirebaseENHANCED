@@ -140,6 +140,15 @@ any provider without per-processor branching in the page.
   any production cutover.
 - **NFR-6 Observability.** Webhook handlers use structured `logger.*` (no
   `console.log`), consistent with the Phase 6 cleanup.
+- **NFR-7 Environment isolation (test vs live).** Dev runs the provider's
+  **sandbox** end-to-end (fake money, test buyers); prod runs **live**. Selected by
+  `NEXT_PUBLIC_PAYPAL_ENV` (`sandbox`|`production`) + the matching credentials,
+  Billing Plan IDs (`P-xxxx`), API base, and webhook ID per environment. Unlike the
+  Stripe setup — where test and live products shared the `stripe_products` Firestore
+  collection and had to be filtered by mode — PayPal environments are fully isolated
+  by credentials + API base, so there is **no shared catalog to filter**. This
+  enables what we could not do cleanly with Stripe: confidently use test mode in dev
+  and live mode in prod with no cross-contamination.
 
 ## 8. Out of Scope (this effort)
 

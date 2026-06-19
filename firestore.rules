@@ -409,6 +409,20 @@ service cloud.firestore {
                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
     }
     
+    // Neutral billing store (provider-agnostic payment abstraction).
+    // Written ONLY by Cloud Functions (Admin SDK bypasses rules); the owner may
+    // read their own billing customer doc + subscriptions/transactions subcollections.
+    // No client writes — fulfillment is server-side (design §4, NFR-1/NFR-2).
+    match /billing_customers/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
+
+      match /{sub=**} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+    }
+
     // Stripe Products - Public read access
     match /stripe_products/{document=**} {
       allow read: if true;  // Allow public reads for product/price info

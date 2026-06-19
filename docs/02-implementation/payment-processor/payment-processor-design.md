@@ -230,6 +230,32 @@ present) and remain provider-independent.
   stored in config (`constants.ts` `SERVICE_TIERS`-style map or env), created in the
   PayPal dashboard (Catalog Product → Billing Plan).
 
+### 7.1 Dual test/live environments (sandbox in dev, live in prod) — NFR-7
+PayPal exposes two fully isolated environments (separate dashboards, accounts,
+credentials, API base, and webhooks). We select per deploy environment — **no
+shared catalog to filter** (the Stripe pain point is gone):
+
+| Concern | Dev (`.env.local`) | Prod (`apphosting.yaml`) |
+|---|---|---|
+| `NEXT_PUBLIC_PAYPAL_ENV` | `sandbox` | `production` |
+| `NEXT_PUBLIC_PAYPAL_CLIENT_ID` | sandbox client id | live client id |
+| API base (server) | `api-m.sandbox.paypal.com` | `api-m.paypal.com` |
+| `PAYPAL_CLIENT_SECRET` (Secret Mgr) | sandbox secret | live secret |
+| `PAYPAL_WEBHOOK_ID` (Secret Mgr) | sandbox webhook id | live webhook id |
+| Billing Plan IDs (`P-xxxx`) | `SANDBOX_PLANS` | `LIVE_PLANS` |
+
+- **Client:** the PayPal JS SDK loader reads `NEXT_PUBLIC_PAYPAL_ENV` +
+  `NEXT_PUBLIC_PAYPAL_CLIENT_ID`; sandbox renders the sandbox popup, prod the live one.
+- **Server:** the PayPal adapter picks the API base from `PAYPAL_ENV` and verifies
+  webhook signatures with the matching `PAYPAL_WEBHOOK_ID`.
+- **Plan IDs:** `constants.ts` mirrors the existing `SERVICE_TIERS` test/live pattern:
+  ```ts
+  const PAYPAL_LIVE = process.env.NEXT_PUBLIC_PAYPAL_ENV === 'production';
+  export const PAYPAL_PLANS = PAYPAL_LIVE ? LIVE_PLANS : SANDBOX_PLANS;
+  ```
+- **Webhooks:** sandbox and live are registered separately (each its own endpoint +
+  `PAYPAL_WEBHOOK_ID`), so dev never receives live events and vice-versa.
+
 ## 8. Testing & Cutover
 - Each provider integrated against its **sandbox** first.
 - Cutover = set the per-mode env to the new provider, deploy Functions, register
