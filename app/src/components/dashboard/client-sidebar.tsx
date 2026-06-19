@@ -19,9 +19,8 @@ import {
   MessageSquare,
   BookOpen,
   CreditCard,
-  Plug,
-  Smartphone,
   LogOut,
+
   ClipboardList,
   UserCircle,
   Apple,
@@ -296,19 +295,14 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/plan' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/plan">
-                    <ClipboardList className="w-4 h-4" />
-                    <span className="font-medium">My Plan (mock)</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         {/* Logging Section */}
+
+
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Logging</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -365,15 +359,8 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/workouts">
-                    <Dumbbell className="w-4 h-4" />
-                    <span className="font-medium">My Workouts (Mock)</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/buy' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+
                   <Link href="/dashboard/client/sessions/buy">
                     <CreditCard className="w-4 h-4" />
                     <span className="font-medium">Buy 1-on-1 Sessions</span>
@@ -423,15 +410,8 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/nutrition' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/nutrition">
-                    <Apple className="w-4 h-4" />
-                    <span className="font-medium">Nutrition Hub (Mock)</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
+
           </SidebarGroupContent>
         </SidebarGroup>
 
@@ -449,23 +429,8 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/progress' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/progress">
-                    <BarChart3 className="w-4 h-4" />
-                    <span className="font-medium">Metrics (Mock)</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/goals' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/goals">
-                    <Goal className="w-4 h-4" />
-                    <span className="font-medium">Goals & Milestones (Mock)</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/goals' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+
                   <Link href="/dashboard/client/goals">
                     <Goal className="w-4 h-4" />
                     <span className="font-medium">Goals & Milestones</span>
@@ -561,32 +526,11 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/integrations">
-                    <Plug className="w-4 h-4" />
-                    <span className="font-medium">Integrations</span>
-                    <span className="ml-auto border border-primary/50 text-primary text-xs px-2 py-0.5 rounded-full">
-                      Coming Soon
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/mobile">
-                    <Smartphone className="w-4 h-4" />
-                    <span className="font-medium">Mobile App</span>
-                    <span className="ml-auto border border-primary/50 text-primary text-xs px-2 py-0.5 rounded-full">
-                      Coming Soon
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
 
       <SidebarFooter>
         <div className="p-2 border-t border-white/10">
