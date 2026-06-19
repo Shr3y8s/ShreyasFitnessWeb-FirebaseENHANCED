@@ -828,13 +828,31 @@ test keys, or a separate staging project. Non-payment dev is unaffected.)*
       (`admin-account-setup-guide.md`).
 
 ### Phase 6 — Code Cleanup
-- [ ] Remove dev-only flags/bypasses (`isTestMode`, `test-user-id` fallbacks).
-- [ ] Audit hardcoded values; ensure all emails/links use the production domain
+- [x] Remove dev-only flags/bypasses (`isTestMode`, `test-user-id` fallbacks).
+      *Verified clean (2026-06-18): repo-wide grep shows matches only in
+      `static/payment-test.html` (intentional legacy test page, not in the GCP
+      build), this doc, and `node_modules`. Zero hits in `app/src/**` or
+      `firebase/functions/**`. The Phase 3 `index.js` removal holds.*
+- [x] Audit hardcoded values; ensure all emails/links use the production domain
       (most already use `shrey.fit` ✅) and `NEXT_PUBLIC_APP_URL`.
-- [ ] Remove `picsum.photos` from `app/next.config.ts` `images.remotePatterns`
-      if not used in production.
-- [ ] Strip noisy `console.log` statements from Functions (keep structured
-      `logger` calls).
+      *Verified (2026-06-18) — effectively a no-op. All Stripe checkout/portal/
+      return URLs already use `window.location.origin` (resolves to
+      `https://shrey.fit` in prod). The only literal URL is the intentional brand
+      link `https://shrey.fit` in the `send-reply-email` template. No `localhost`/
+      `*.web.app`/`*.firebaseapp.com` leakage in `app/src`.*
+- [x] Remove `picsum.photos` from `app/next.config.ts` `images.remotePatterns`
+      if not used in production. *Kept (2026-06-18) — still used 2× in
+      `app/src/components/progress/qualitative-feedback.tsx` (the progress mock
+      page that intentionally stays in the repo). Removing the `remotePatterns`
+      entry would break that page's `next/image`, so it stays.*
+- [x] Strip noisy `console.log` statements from Functions (keep structured
+      `logger` calls). *Done (2026-06-18) — `goals.js` & `sessions.js` were the
+      only offenders (other Functions already use `logger.*`). Deleted the noisy/
+      duplicate `console.log` flow traces and **converted** every standalone
+      `console.error`/`console.warn` to `logger.error`/`logger.warn` (added the
+      `firebase-functions/logger` import to `sessions.js`); zero `console.*` left
+      in either file, no logic touched. **Owner: `firebase deploy --only
+      functions` to ship.***
 - [ ] **Fix dead nav links** `/integrations` and `/mobile` — they 404 (seen as
       RSC-prefetch 404s in the browser console on `shrey.fit`). A nav/footer
       `<Link>` points to pages that don't exist; create the pages or remove the
@@ -943,9 +961,12 @@ Quick-reference consolidated view. Legend: 🔴 blocker · ⚠️ needs work · 
 
 
 **Code Cleanup**
-- [ ] ⚠️ Test flags / fallbacks removed
-- [ ] ⚠️ `picsum.photos` removed from `next.config.ts` (if unused)
-- [ ] ⚠️ Console logs cleaned in Functions
+- [x] ✅ Test flags / fallbacks removed *(verified clean — no `isTestMode`/`test-user-id` in `app/src` or `firebase/functions`)*
+- [x] ✅ `picsum.photos` reviewed *(kept — still used by the progress mock page)*
+- [x] ✅ Console logs cleaned in Functions *(`goals.js` + `sessions.js`: noisy `console.log` removed, `console.error/warn` → `logger.*`; owner: `firebase deploy --only functions`)*
+- [x] ✅ Hardcoded URLs audited *(already use `window.location.origin`; only intentional `shrey.fit` brand link remains)*
+- [ ] ⚠️ Dead nav links `/integrations` + `/mobile` and mock sidebar links *(sidebar cleanup build-verified; owner: push)*
+- [ ] ⬜ Orphaned `static/` dir — **intentionally KEPT** (not in GCP build)
 
 **Legal / Analytics / Ops**
 - [ ] ✅ Terms & Privacy pages exist — confirm final content
@@ -1038,6 +1059,11 @@ app never issues unscoped queries). Tackle after launch, each behind a test pass
 - **Cloud Armor / WAF** rate-limiting at the edge for the bot scans (the harmless
   `/wp-admin/*` 404s seen in logs).
 - Bot-path `middleware.ts` to early-404 known scanner paths (cosmetic log cleanup).
+- **Don't echo error internals in webhook responses.** `calendlyWebhook`'s 500
+  path returns `details: error.message` in the HTTP response body. It's a
+  server-to-server endpoint (low risk), but on principle the response should be a
+  generic error while the detail goes only to `logger.error` (already does).
+  Trivial change; deferred to avoid touching webhook behavior pre-launch.
 
 > **Suggested sequence:** B (quick, real exposure of staff PII) → C (cheap) →
 > A (the big one; schedule a dedicated migration sprint with tests) → D (ongoing).

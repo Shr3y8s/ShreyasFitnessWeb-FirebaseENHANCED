@@ -193,7 +193,6 @@ exports.onDailyActivityWrite = onDocumentWritten({
         .get();
       
       if (goalsSnapshot.empty) {
-        console.log(`No active steps/water goals for user ${clientId}`);
         return null;
       }
 
@@ -298,10 +297,9 @@ exports.onDailyActivityWrite = onDocumentWritten({
       
       await batch.commit();
       logger.info(`[GOALS] Batch committed successfully for user ${clientId}`);
-      console.log(`Updated goals for user ${clientId} after activity log`);
       return null;
     } catch (error) {
-      console.error('Error updating goals after activity:', error);
+      logger.error('Error updating goals after activity:', error);
       return null;
     }
   });
@@ -563,16 +561,15 @@ exports.onWorkoutChange = onDocumentWritten({
         }
         
         await batch.commit();
-        logger.info(`[GOALS] Workout consistency goals updated for ${clientId}`);
-        console.log(`Updated workout consistency goal for ${clientId}`);
-        
+      logger.info(`[GOALS] Workout consistency goals updated for ${clientId}`);
+      
         // Also check for Strength PRs in this workout
         await checkForStrengthPRs(clientId, after);
       }
       
       return null;
     } catch (error) {
-      console.error('Error updating workout consistency goal:', error);
+      logger.error('Error updating workout consistency goal:', error);
       return null;
     }
   });
@@ -692,7 +689,6 @@ exports.onWeightLog = onDocumentWritten({
       
       await batch.commit();
       logger.info(`[GOALS] Weight loss goal updated for ${clientId}`);
-      console.log(`Updated weight loss goal for ${clientId}`);
 
       // ACTIVITY FEED: Write weight_logged event
       const beforeData = change.before.exists ? change.before.data() : null;
@@ -731,7 +727,7 @@ exports.onWeightLog = onDocumentWritten({
 
       return null;
     } catch (error) {
-      console.error('Error updating weight loss goal:', error);
+      logger.error('Error updating weight loss goal:', error);
       return null;
     }
   });
@@ -781,7 +777,6 @@ exports.onNutritionLogWrite = onDocumentWritten({
         .get();
       
       if (goalsSnapshot.empty) {
-        console.log(`No active nutrition goals for user ${userId}`);
         return null;
       }
 
@@ -829,11 +824,10 @@ exports.onNutritionLogWrite = onDocumentWritten({
       
       await batch.commit();
       logger.info(`[GOALS] Nutrition goals updated for user ${userId}`);
-      console.log(`Updated nutrition goals for user ${userId}`);
 
       return null;
     } catch (error) {
-      console.error('Error updating nutrition goals:', error);
+      logger.error('Error updating nutrition goals:', error);
       return null;
     }
   });

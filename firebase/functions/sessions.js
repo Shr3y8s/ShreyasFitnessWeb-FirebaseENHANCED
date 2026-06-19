@@ -14,6 +14,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
+const logger = require("firebase-functions/logger");
 const sharedConfig = require("./firebase-config.json");
 const { isEligibleForCheckins } = require("./product-config");
 
@@ -104,7 +105,7 @@ exports.getSessionBalance = onCall({
       upcomingExpirations: upcomingExpirations,
     };
   } catch (error) {
-    console.error("Error getting session balance:", error);
+    logger.error("Error getting session balance:", error);
     throw new HttpsError("internal", "Failed to get session balance");
   }
 });
@@ -117,8 +118,6 @@ async function resolveLocation(locationString, userId) {
   // Normalize location string
   const location = (locationString || "").trim();
   
-  console.log(`Resolving location: "${location}" for user ${userId}`);
-  
   // Only process if location is non-empty
   if (location) {
     // Case 1: Private location (client's address)
@@ -130,14 +129,13 @@ async function resolveLocation(locationString, userId) {
       const userData = userDoc.data();
       
       if (userData?.address) {
-        console.log(`Using private address for user ${userId}`);
         return {
           locationId: "private",
           locationType: "private"
         };
       }
       // If no address set, will fall through to default location (Case 3)
-      console.warn(`User ${userId} selected private location but no address set, defaulting`);
+      logger.warn(`User ${userId} selected private location but no address set, defaulting`);
       
     } else {
       // Case 2: Match against public trainer locations
@@ -159,7 +157,6 @@ async function resolveLocation(locationString, userId) {
             locationLower.includes(displayNameLower) ||
             displayNameLower.includes(locationLower)) {
           
-          console.log(`Matched location: ${locationData.displayName} (${locationDoc.id})`);
           return {
             locationId: locationDoc.id,
             locationType: "public"
@@ -170,7 +167,6 @@ async function resolveLocation(locationString, userId) {
   }
   
   // Case 3: Default fallback (empty location OR no match found)
-  console.log("Using default location");
   const defaultLocationSnapshot = await db.collection("training_locations")
     .where("isDefault", "==", true)
     .limit(1)
@@ -193,8 +189,6 @@ async function resolveLocation(locationString, userId) {
  * This happens when user reschedules (cancel + new booking) or manually cancels
  */
 async function handleCalendlyCancellation(calendlyEventId) {
-  console.log(`Looking for session with Calendly event ID: ${calendlyEventId}`);
-  
   // Find the session
   const sessionsSnapshot = await db.collection("sessions")
     .where("calendlyEventId", "==", calendlyEventId)
@@ -203,9 +197,6 @@ async function handleCalendlyCancellation(calendlyEventId) {
     .get();
   
   if (sessionsSnapshot.empty) {
-    console.log(`No scheduled session found for Calendly event: ${calendlyEventId}`);
-    console.log(`This could be a race condition (cancel before create finished) or orphaned cancellation (test booking).`);
-    console.log(`Returning gracefully to prevent webhook retry spam.`);
     // Don't throw error - this prevents webhook from being disabled due to:
     // 1. Race conditions (user cancels immediately after booking)
     // 2. Orphaned cancellations (test bookings, deleted sessions, failed creations)
@@ -215,8 +206,6 @@ async function handleCalendlyCancellation(calendlyEventId) {
   const sessionDoc = sessionsSnapshot.docs[0];
   const sessionData = sessionDoc.data();
   const sessionRef = db.collection("sessions").doc(sessionDoc.id);
-  
-  console.log(`Found session ${sessionDoc.id} for user ${sessionData.clientId}`);
   
   // Mark as canceled (this is from Calendly, so return credit automatically)
   const now = admin.firestore.Timestamp.now();
@@ -229,7 +218,6 @@ async function handleCalendlyCancellation(calendlyEventId) {
     const freshSessionData = freshSessionDoc.data();
     
     if (freshSessionData.status !== "scheduled") {
-      console.log(`Session ${sessionDoc.id} already has status "${freshSessionData.status}" — skipping webhook credit return (likely already handled by cancelSession Cloud Function)`);
       return;
     }
     
@@ -257,8 +245,6 @@ async function handleCalendlyCancellation(calendlyEventId) {
           sessionPackages: packages,
           sessionBalance: updatedBalance,
         });
-        
-        console.log(`Returned credit for canceled training session`);
       }
     }
     
@@ -272,8 +258,6 @@ async function handleCalendlyCancellation(calendlyEventId) {
       updatedAt: now,
     });
   });
-  
-  console.log(`Session ${sessionDoc.id} marked as canceled`);
 
   // ACTIVITY FEED: Write session_canceled event for Calendly cancellations (training + check-in)
   const sessionType = sessionData.sessionType || 'training';
@@ -294,7 +278,7 @@ async function handleCalendlyCancellation(calendlyEventId) {
         cancelReason: 'Canceled via Calendly',
       },
     }).catch(err => {
-      console.warn("[ActivityFeed] Failed to write Calendly session_canceled event", { clientId: sessionData.clientId, error: err.message });
+      logger.warn("[ActivityFeed] Failed to write Calendly session_canceled event", { clientId: sessionData.clientId, error: err.message });
     });
   });
 }
@@ -310,8 +294,6 @@ exports.calendlyWebhook = onRequest({
   // TODO: Verify Calendly webhook signature
   
   const webhookEvent = req.body;
-  
-  console.log("Received Calendly webhook:", JSON.stringify(webhookEvent, null, 2));
 
   try {
     if (webhookEvent.event === "invitee.created") {
@@ -323,7 +305,7 @@ exports.calendlyWebhook = onRequest({
       const scheduledEvent = payload.scheduled_event;
       
       if (!inviteeEmail || !scheduledEvent) {
-        console.error("Missing required data in webhook payload");
+        logger.error("Missing required data in webhook payload");
         return res.status(400).json({ error: "Invalid webhook payload" });
       }
 
@@ -339,10 +321,6 @@ exports.calendlyWebhook = onRequest({
       const cancelUrl = payload.cancel_url || null;
       const rescheduleUrl = payload.reschedule_url || null;
 
-      console.log(`Processing booking for ${inviteeEmail} (${inviteeName})`);
-      if (cancelUrl) console.log(`Cancel URL: ${cancelUrl}`);
-      if (rescheduleUrl) console.log(`Reschedule URL: ${rescheduleUrl}`);
-
       // Find user by email
       const usersSnapshot = await db.collection("users")
         .where("email", "==", inviteeEmail)
@@ -350,7 +328,7 @@ exports.calendlyWebhook = onRequest({
         .get();
 
       if (usersSnapshot.empty) {
-        console.error(`User not found for email: ${inviteeEmail}`);
+        logger.error(`User not found for email: ${inviteeEmail}`);
         return res.status(404).json({ error: "User not found" });
       }
 
@@ -374,7 +352,6 @@ exports.calendlyWebhook = onRequest({
 
       if (isOnboarding) {
         // Handle as ONBOARDING CONSULTATION (no credit, one-time setup)
-        console.log(`Routing to onboarding consultation handler for user ${userId}`);
         await scheduleOnboardingConsultation({
           userId,
           calendlyEventId,
@@ -389,10 +366,8 @@ exports.calendlyWebhook = onRequest({
           },
           userData,
         });
-        console.log(`Successfully scheduled onboarding consultation for user ${userId}`);
       } else if (isCheckin) {
         // Handle as CHECK-IN (subscription-based, no credit deduction)
-        console.log(`Routing to check-in handler for user ${userId}`);
         await scheduleCheckin({
           userId,
           calendlyEventId,
@@ -407,11 +382,8 @@ exports.calendlyWebhook = onRequest({
           },
           userData,
         });
-        console.log(`Successfully scheduled check-in for user ${userId}`);
       } else {
         // Handle as TRAINING SESSION (deducts credit from package)
-        console.log(`Routing to training session handler for user ${userId}`);
-        
         // Extract location from Calendly event
         // Calendly sends location as an object: { location: "address string", type: "physical" }
         const locationString = scheduledEvent.location?.location || "";
@@ -435,7 +407,6 @@ exports.calendlyWebhook = onRequest({
           locationInfo,
           userData,
         });
-        console.log(`Successfully scheduled training session for user ${userId}`);
       }
 
       res.json({ success: true });
@@ -445,23 +416,22 @@ exports.calendlyWebhook = onRequest({
       const scheduledEvent = payload.scheduled_event;
       
       if (!scheduledEvent) {
-        console.error("Missing scheduled_event in cancel payload");
+        logger.error("Missing scheduled_event in cancel payload");
         return res.status(400).json({ error: "Invalid webhook payload" });
       }
 
       const calendlyEventId = scheduledEvent.uri.split('/').pop();
-      console.log(`Processing cancellation for Calendly event: ${calendlyEventId}`);
 
       // Find and cancel the session
       await handleCalendlyCancellation(calendlyEventId);
       
       res.json({ received: true });
     } else {
-      console.log("Unhandled event type:", webhookEvent.event);
+      logger.info("Unhandled Calendly event type", { event: webhookEvent.event });
       res.json({ received: true });
     }
   } catch (error) {
-    console.error("Error processing Calendly webhook:", error);
+    logger.error("Error processing Calendly webhook:", error);
     res.status(500).json({ error: "Webhook processing failed", details: error.message });
   }
 });
@@ -547,8 +517,6 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, calendly
       sessionPackages: packages,
       sessionBalance: updatedBalance,
     });
-
-    console.log(`Session scheduled for user ${userId}, location: ${locationInfo.locationType}, deducted from package ${packageToUse.id}`);
   });
 
   // ACTIVITY FEED: Write session_scheduled event
@@ -564,7 +532,7 @@ async function scheduleSession({ userId, calendlyEventId, eventDetails, calendly
       sessionType: 'training',
     },
   }).catch(err => {
-    console.warn("[ActivityFeed] Failed to write session_scheduled event", { userId, error: err.message });
+    logger.warn("[ActivityFeed] Failed to write session_scheduled event", { userId, error: err.message });
   });
 }
 
@@ -623,14 +591,13 @@ exports.expireSessionPackages = onSchedule({
           sessionBalance: updatedBalance,
         });
 
-        console.log(`Expired packages for user ${userId}`);
         // TODO: Send expiration notification email
       }
     }
 
-    console.log(`Expiration job completed: ${packagesExpired} packages expired, ${sessionsExpired} sessions lost`);
+    logger.info(`Expiration job completed: ${packagesExpired} packages expired, ${sessionsExpired} sessions lost`);
   } catch (error) {
-    console.error("Error in expiration job:", error);
+    logger.error("Error in expiration job:", error);
   }
 });
 
@@ -705,7 +672,6 @@ async function scheduleCheckin({ userId, calendlyEventId, eventDetails, calendly
   };
   
   await db.collection("sessions").doc().set(sessionData);
-  console.log(`Check-in scheduled: ${userId}, week: ${sessionData.weekIdentifier}`);
 
   // ACTIVITY FEED: Write checkin_scheduled event
   const checkinDateStr = eventDetails.scheduledDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -719,7 +685,7 @@ async function scheduleCheckin({ userId, calendlyEventId, eventDetails, calendly
       checkinDate: eventDetails.scheduledDate.toDate().toISOString(),
     },
   }).catch(err => {
-    console.warn("[ActivityFeed] Failed to write checkin_scheduled event", { userId, error: err.message });
+    logger.warn("[ActivityFeed] Failed to write checkin_scheduled event", { userId, error: err.message });
   });
 }
 
@@ -779,15 +745,11 @@ async function scheduleOnboardingConsultation({ userId, calendlyEventId, eventDe
           milestones: milestones,
           updatedAt: now,
         });
-        
-        console.log(`Marked setup goal milestone #1 as complete for user ${userId}`);
       }
     } else {
-      console.warn(`Setup goal not found for user ${userId} - milestone not updated`);
+      logger.warn(`Setup goal not found for user ${userId} - milestone not updated`);
     }
   });
-  
-  console.log(`Onboarding consultation scheduled: ${userId}`);
 }
 
 
@@ -880,8 +842,6 @@ exports.cancelSession = onCall({
 
     // 1. Cancel in Calendly (sends email notifications to both parties)
     try {
-      console.log(`Canceling Calendly event: ${sessionData.calendlyEventId}`);
-      
       const calendlyResponse = await fetch(
         `https://api.calendly.com/scheduled_events/${sessionData.calendlyEventId}/cancellation`,
         {
@@ -896,17 +856,13 @@ exports.cancelSession = onCall({
         }
       );
 
-      console.log(`Calendly API response: ${calendlyResponse.status}`);
-
       if (!calendlyResponse.ok) {
         const errorText = await calendlyResponse.text();
-        console.error(`Calendly cancellation failed: ${calendlyResponse.status} - ${errorText}`);
+        logger.error(`Calendly cancellation failed: ${calendlyResponse.status} - ${errorText}`);
         // Continue anyway - Firestore update is more important
-      } else {
-        console.log("Successfully canceled in Calendly");
       }
     } catch (calendlyError) {
-      console.error("Error calling Calendly API:", calendlyError.message);
+      logger.error("Error calling Calendly API:", calendlyError.message);
       // Continue - local cancellation is still valid
     }
 
@@ -987,8 +943,6 @@ exports.cancelSession = onCall({
       });
     });
 
-    console.log(`Session ${sessionId} canceled by ${canceledBy}, credit returned: ${creditReturned}`);
-
     // ACTIVITY FEED: Write session_canceled event
     getClientInfoForActivityFeed(sessionData.clientId).then(clientInfo => {
       const sessionDateStr = sessionData.scheduledDate.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -1004,7 +958,7 @@ exports.cancelSession = onCall({
           cancelReason: reason || '',
         },
       }).catch(err => {
-        console.warn("[ActivityFeed] Failed to write session_canceled event", { sessionId, error: err.message });
+        logger.warn("[ActivityFeed] Failed to write session_canceled event", { sessionId, error: err.message });
       });
     });
 
@@ -1013,7 +967,7 @@ exports.cancelSession = onCall({
       creditReturned: creditReturned,
     };
   } catch (error) {
-    console.error("Error canceling session:", error);
+    logger.error("Error canceling session:", error);
     throw new HttpsError("internal", "Failed to cancel session");
   }
 });
