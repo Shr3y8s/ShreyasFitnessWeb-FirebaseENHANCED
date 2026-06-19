@@ -13,8 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { Check, Loader2, CreditCard, Star, ArrowRight } from 'lucide-react';
-import { createStripeCheckoutSession, formatCurrency, selectSignupPrice } from '@/lib/stripe';
+import { selectSignupPrice } from '@/lib/stripe';
+import { getPaymentProvider, formatCurrency } from '@/lib/payments';
 import { StripeProduct, StripePrice } from '@/types/stripe';
+
 import { useToast } from '@/hooks/use-toast';
 import { SERVICE_TIERS } from '@/lib/constants';
 
@@ -142,7 +144,7 @@ export default function UpgradePage() {
     });
 
     try {
-      const checkoutUrl = await createStripeCheckoutSession({
+      const { url: checkoutUrl } = await getPaymentProvider({ mode: 'subscription' }).startCheckout({
         userId: user.uid,
         priceId: option.price.id,
         mode: 'subscription',
@@ -158,7 +160,7 @@ export default function UpgradePage() {
         }
       });
 
-      window.location.href = checkoutUrl;
+      if (checkoutUrl) window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Error creating checkout:', error);
       toast({

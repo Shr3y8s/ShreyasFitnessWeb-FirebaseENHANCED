@@ -8,7 +8,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { signOutUser, functions, db } from '@/lib/firebase';
-import { getSessionPricing, calculateSessionSavings, createStripeCheckoutSession } from '@/lib/stripe';
+import { getSessionPricing, calculateSessionSavings } from '@/lib/stripe';
+import { getPaymentProvider } from '@/lib/payments';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import SessionBalanceCard from '@/components/sessions/SessionBalanceCard';
@@ -104,7 +105,7 @@ export default function BuySessionsPage() {
       const baseUrl = window.location.origin;
       
       // Use reusable helper function
-      const checkoutUrl = await createStripeCheckoutSession({
+      const { url: checkoutUrl } = await getPaymentProvider({ mode: 'payment' }).startCheckout({
         userId: user.uid,
         priceId,
         mode: 'payment',
@@ -116,8 +117,8 @@ export default function BuySessionsPage() {
         },
       });
 
-      // Redirect to Stripe Checkout
-      window.location.href = checkoutUrl;
+      // Redirect to provider checkout
+      if (checkoutUrl) window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Error creating checkout session:', error);
       toast({

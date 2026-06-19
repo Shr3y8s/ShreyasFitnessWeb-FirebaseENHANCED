@@ -7,6 +7,7 @@ import { signOutUser, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { getPaymentProvider } from '@/lib/payments';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -266,16 +267,18 @@ export default function BillingPage() {
     setError(null);
 
     try {
-      const createPaymentMethodPortalSession = httpsCallable(functions, 'createPaymentMethodPortalSession');
-      const result = await createPaymentMethodPortalSession({
+      const provider = getPaymentProvider();
+      if (!provider.openBillingPortal) {
+        throw new Error('Billing portal is not available for this provider');
+      }
+      const url = await provider.openBillingPortal({
         customerId: stripeCustomerId,
-        return_url: `${window.location.origin}/dashboard/client/billing`,
+        returnUrl: `${window.location.origin}/dashboard/client/billing`,
+        restricted: true,
       });
 
-      const data = result.data as { success: boolean; url: string };
-
-      if (data.success && data.url) {
-        window.location.href = data.url;
+      if (url) {
+        window.location.href = url;
       } else {
         throw new Error('Failed to create portal session');
       }

@@ -9,6 +9,7 @@ import { User } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { stripePromise, appearance, formatCurrency, selectSignupPrice } from '@/lib/stripe';
+import { getPaymentProvider } from '@/lib/payments';
 import { trackEvent } from '@/lib/firebase';
 import { StripeProduct, StripePrice } from '@/types/stripe';
 
@@ -65,39 +66,25 @@ function SubscriptionPaymentForm({
     });
 
     try {
-      // Subscription flow: Create Stripe Checkout session via HTTP endpoint
-      const response = await fetch('https://us-west1-shreyfitweb.cloudfunctions.net/createCheckoutSession', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // Subscription flow: start checkout via the active payment provider.
+      const { url } = await getPaymentProvider({ mode: 'subscription' }).startCheckout({
+        userId: currentUser?.uid || '',
+        email: formData.email,
+        priceId: selectedPrice.id,
+        mode: 'subscription',
+        successUrl: `${window.location.origin}/account-setup?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/signup`,
+        metadata: {
+          userName: formData.name,
+          userEmail: formData.email,
+          tierName: formData.tier?.name || 'Unknown',
+          tierId: formData.tier?.id || 'unknown',
+          createAccount: 'true',
         },
-        body: JSON.stringify({
-          line_items: [{ price: selectedPrice.id, quantity: 1 }],
-          success_url: `${window.location.origin}/account-setup?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${window.location.origin}/signup`,
-          billing_address_collection: 'required',
-          customer_email: formData.email,
-          allow_promotion_codes: true,
-          metadata: {
-            userName: formData.name,
-            userEmail: formData.email,
-            tierName: formData.tier?.name || 'Unknown',
-            tierId: formData.tier?.id || 'unknown',
-            createAccount: 'true'
-          }
-        })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-
-      const data = await response.json();
-      const { url } = data;
-      
-      // Redirect to Stripe Checkout using the URL from the session
-      window.location.href = url;
+      // Redirect to provider checkout using the URL from the session
+      if (url) window.location.href = url;
       
     } catch (err) {
       console.error('Payment error:', err);

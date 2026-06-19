@@ -9,7 +9,8 @@ import { doc, getDoc, collection, getDocs, addDoc, onSnapshot, setDoc, serverTim
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
-import { formatCurrency, selectSignupPrice, createStripeCheckoutSession } from '@/lib/stripe';
+import { selectSignupPrice } from '@/lib/stripe';
+import { getPaymentProvider, formatCurrency } from '@/lib/payments';
 import { StripeProduct, StripePrice } from '@/types/stripe';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 import { Footer } from '@/components/Footer';
@@ -299,7 +300,7 @@ export default function PaymentPage() {
       // Detect if this is a session product (one-time pricing indicates session packages)
       const isSessionProduct = selectedPrice.type === 'one_time';
       
-      const checkoutUrl = await createStripeCheckoutSession({
+      const { url: checkoutUrl } = await getPaymentProvider({ mode: checkoutMode }).startCheckout({
         userId,
         priceId: selectedPrice.id,
         mode: checkoutMode,
@@ -316,7 +317,7 @@ export default function PaymentPage() {
       });
 
       console.log('Checkout URL received, redirecting...');
-      window.location.href = checkoutUrl;
+      if (checkoutUrl) window.location.href = checkoutUrl;
       
     } catch (err) {
       console.error('Payment error:', err);

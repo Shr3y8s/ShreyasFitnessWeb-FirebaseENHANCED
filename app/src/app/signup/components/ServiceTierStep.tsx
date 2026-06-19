@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Check, ExternalLink } from 'lucide-react';
 import { FormData, ServiceTier as ServiceTierType } from '../page';
-import { fetchAllProducts, selectSignupPrice } from '@/lib/stripe';
-import { StripeProduct } from '@/types/stripe';
+import { getPaymentProvider, selectSignupPrice, type Product } from '@/lib/payments';
 import { getProductMarketing } from '@/lib/product-marketing';
 import Link from 'next/link';
 
@@ -18,7 +17,7 @@ interface ServiceTierStepProps {
   isSubmitting: boolean;
 }
 
-interface EnhancedProduct extends StripeProduct {
+interface EnhancedProduct extends Product {
   displayPrice: number;
   priceFormatted: string;
   details?: string;
@@ -44,8 +43,8 @@ export default function ServiceTierStep({
       try {
         setLoading(true);
         
-        // Fetch all active products from Firestore
-        const stripeProducts = await fetchAllProducts();
+        // Fetch all active products via the active payment provider
+        const stripeProducts = await getPaymentProvider().fetchAllProducts();
         
         if (stripeProducts.length === 0) {
           setLoadError('No products available at this time');
