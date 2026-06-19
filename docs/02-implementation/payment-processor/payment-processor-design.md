@@ -64,6 +64,7 @@ export interface Transaction {
   status: string; productName: string; receiptUrl?: string;
 }
 export interface ProviderCapabilities {
+  buttonCheckout: boolean;    // PayPal ✅ (Smart Buttons) — Stripe ❌ / Paddle ❌
   hostedPortal: boolean;      // Stripe ✅ Paddle ✅ PayPal ❌
   showsStoredCard: boolean;   // Stripe ✅ Paddle ✅ PayPal ❌
   inAppCancel: boolean;       // all ✅
@@ -79,8 +80,15 @@ export interface PaymentProvider {
   readonly capabilities: ProviderCapabilities;
   fetchAllProducts(includeInactive?: boolean): Promise<Product[]>;
   fetchProduct(productId: string): Promise<Product | null>;
-  // Opens overlay (Paddle), redirects (Stripe/PayPal), or returns a url to follow:
+  // Redirect/overlay providers return a url to follow:
   startCheckout(opts: CheckoutOptions): Promise<{ url?: string }>;
+  // Button-checkout providers (capabilities.buttonCheckout) mount in-place buttons
+  // instead of redirecting; returns an unmount/cleanup fn:
+  renderCheckout?(opts: CheckoutOptions & {
+    container: HTMLElement;
+    onApproved: () => void;     // post-approval UI feedback; webhook is source of truth
+    onError?: (e: unknown) => void;
+  }): Promise<() => void>;
   getBillingHistory(customerId: string): Promise<Transaction[]>;
   openBillingPortal?(opts: { customerId: string; returnUrl: string; restricted?: boolean }): Promise<string>;
   cancelSubscription?(subscriptionId: string): Promise<void>;
@@ -98,6 +106,16 @@ export function getPaymentProvider(hint?: { mode?: 'subscription' | 'payment' })
 ```
 Today every value defaults to `stripe`, so behavior is unchanged.
 
+### 2.3a `<ProviderCheckout>` component
+A shared component (`app/src/components/payments/ProviderCheckout.tsx`) keeps pages
+provider-agnostic. It branches on `capabilities.buttonCheckout`:
+- **redirect providers (Stripe):** call `startCheckout()` then follow `url`.
+- **button providers (PayPal):** mount a container + call `renderCheckout()` (which
+  renders `<PayPalButtons>` for subscription or one-time), wiring `onApproved` to
+  navigate to `successUrl`.
+Pages render `<ProviderCheckout mode priceId successUrl cancelUrl metadata />` and
+never reference a processor directly.
+
 ### 2.4 Pricing helpers (`pricing.ts`)
 Move the provider-independent math out of `lib/stripe.ts`: `formatCurrency`,
 `selectSignupPrice`, `selectSessionPrice`, `isSessionProduct`,
@@ -108,9 +126,20 @@ neutral `Product`/`Price`, so they never change again across providers.
 Implements `PaymentProvider` by delegating to the **existing** `lib/stripe.ts`
 (`fetchAllProducts`, `fetchProduct`, `createStripeCheckoutSession`) and the
 existing Functions callables (`createPaymentMethodPortalSession`,
-`getBillingHistory`). Capabilities: `{ hostedPortal:true, showsStoredCard:true,
-inAppCancel:true }`. No logic rewrite — pure delegation, mapping `lookup_key`→
-`lookupKey` etc.
+`getBillingHistory`). Capabilities: `{ buttonCheckout:false, hostedPortal:true,
+showsStoredCard:true, inAppCancel:true }`. No logic rewrite — pure delegation,
+mapping `lookup_key`→`lookupKey` etc.
+
+### 2.6 PayPal adapter (`providers/paypal.ts`) — launch processor
+Uses **PayPal Smart Buttons** (`@paypal/react-paypal-js`) for BOTH flows via
+`renderCheckout()` (not a redirect). Capabilities: `{ buttonCheckout:true,
+hostedPortal:false, showsStoredCard:false, inAppCancel:true }`.
+- **subscription** → `<PayPalButtons createSubscription={() => actions.subscription.create({ plan_id })}>` against a pre-created Billing Plan (`P-xxxx`).
+- **one-time** → `<PayPalButtons createOrder=… onApprove=…>` (Orders API; capture server-side).
+- `fetchAllProducts`/`fetchProduct` resolve the neutral catalog from config/Firestore
+  (plan + price metadata); `cancelSubscription()` calls the server cancel callable.
+- The PayPal approval popup (PayPal / Venmo / card) completes payment; **the webhook
+  is the source of truth** for activation/fulfillment.
 
 ## 3. Server Architecture (Phase 2+)
 
@@ -179,8 +208,11 @@ No processor names appear in the page; it branches only on capability flags.
 ## 6. Checkout UX per provider
 - **Stripe (today):** redirect to Stripe Checkout (subscription) / Payment Element
   (one-time) — unchanged behind `startCheckout`.
-- **PayPal:** PayPal JS SDK buttons / Orders+Subscriptions; approval popup; on
-  approve, capture server-side; webhook fulfills.
+- **PayPal (launch):** **Smart Buttons** (`@paypal/react-paypal-js`) for BOTH
+  subscription and one-time, mounted via `renderCheckout()` through
+  `<ProviderCheckout>` (no redirect). Subscription → `createSubscription({plan_id})`;
+  one-time → `createOrder`→capture. Approval popup (PayPal / Venmo / card); webhook
+  fulfills. Embedded card fields (ACDC) are out of scope (requirements §8).
 - **Paddle:** `Paddle.Checkout.open({ items:[{priceId}], customer, customData })`
   overlay (no redirect); webhook fulfills.
 
@@ -193,6 +225,10 @@ present) and remain provider-independent.
   `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, existing `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`).
 - Server (Secret Manager): `PADDLE_API_KEY`, `PADDLE_WEBHOOK_SECRET`,
   `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, existing `STRIPE_*`.
+- PayPal client config: `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `NEXT_PUBLIC_PAYPAL_ENV`
+  (`sandbox`|`production`). Recurring **Billing Plan IDs** (`P-xxxx`) per tier are
+  stored in config (`constants.ts` `SERVICE_TIERS`-style map or env), created in the
+  PayPal dashboard (Catalog Product → Billing Plan).
 
 ## 8. Testing & Cutover
 - Each provider integrated against its **sandbox** first.
@@ -202,8 +238,11 @@ present) and remain provider-independent.
 - Rollback = env flip back + redeploy previous Functions.
 
 ## 9. Phasing (maps to tasks doc)
-1. **Phase 1 (now, Stripe-safe):** client seam + neutral types/pricing + Stripe
-   adapter + re-point call sites + build-verify. No functional change.
+1. **Phase 1 (done):** client seam + neutral types/pricing + Stripe adapter +
+   re-point call sites + build-verify. No functional change.
+1.5. **Phase 1.5:** interface extension — add `buttonCheckout` capability +
+   optional `renderCheckout()` + shared `<ProviderCheckout>` component; Stripe
+   sets `buttonCheckout:false`. Build-verify (Stripe unchanged).
 2. **Phase 2:** server seam — generic `paymentWebhook` + neutral fulfillment +
    neutral `billing_*` writes (Stripe still live).
 3. **Phase 3:** PayPal adapter (client+server+webhook) + sandbox test.

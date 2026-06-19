@@ -70,8 +70,31 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · 🔒 blocked on provide
 - [x] **T1.11** `app/src/lib/stripe.ts` + `types/stripe.ts` retained as the Stripe
   adapter's backing impl; neutral helpers live in `payments/pricing.ts`. *Done.*
 - [x] **T1.12** Build-verify — `npm --prefix app run build` ✓ Compiled, 76/76 pages,
-  no errors; Stripe behavior unchanged. *Done. Ready for owner commit (Phase 1 as
-  one unit).*
+  no errors; Stripe behavior unchanged. *Done.*
+- [x] **T1.13** Owner committed + pushed Phase 1 to `main` (2026-06-19).
+
+## Phase 1.5 — Interface extension for button-checkout (Smart Buttons)
+> Adds the seam pieces PayPal needs. Stripe-safe; build stays green.
+> Decisions (owner-approved 2026-06-19): **Smart Buttons for BOTH** sub + one-time;
+> add a `renderCheckout` capability **(A)** rather than per-page PayPal code.
+
+- [x] **T1.5.1** `types.ts` — added `buttonCheckout: boolean` to `ProviderCapabilities`
+  and optional `renderCheckout(opts & {container,onApproved,onError}) => Promise<()=>void>`
+  to `PaymentProvider`. *Done; tsc PASSED.*
+- [x] **T1.5.2** `providers/stripe.ts` — set `buttonCheckout:false` (no `renderCheckout`).
+  *Done.*
+- [x] **T1.5.3** `app/src/components/payments/ProviderCheckout.tsx` — shared component
+  branching on `capabilities.buttonCheckout` (redirect via `startCheckout` vs mount
+  via `renderCheckout`). *Done; tsc PASSED.*
+- [ ] **T1.5.4** Adopt `<ProviderCheckout>` in the checkout call sites (PaymentStep,
+  payment/page, upgrade/page, sessions/buy) — keep GA4 events. **Deferred into
+  Phase 3 (T3.2):** with only Stripe registered (`buttonCheckout:false`), the
+  component would just re-wrap the existing `startCheckout` calls with no behavior
+  change; it becomes load-bearing when the PayPal adapter renders Smart Buttons, so
+  the page swap happens then to avoid dead UI now.
+- [x] **T1.5.5** Build-verify — `tsc --noEmit` PASSED (Stripe behavior unchanged;
+  new interface members are additive/optional). Full `next build` re-run with the
+  page adoption in Phase 3.
 
 ## Phase 2 — Server seam (Stripe still live)
 - [ ] **T2.1** `firebase/functions/payments/fulfillment.js` — neutral
@@ -86,13 +109,21 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · 🔒 blocked on provide
   flags.
 - [ ] **T2.5** `firestore.rules` for `billing_customers/**` (owner-read, server-write).
 
-## Phase 3 — PayPal adapter 🔒 (needs approved PayPal Business)
-- [ ] **T3.1** Add `@paypal/paypal-js` (client) + PayPal server SDK; env/secrets.
-- [ ] **T3.2** `providers/paypal.ts` (client) — buttons/checkout, capabilities
-  `{hostedPortal:false, showsStoredCard:false, inAppCancel:true}`.
-- [ ] **T3.3** `payments/providers/paypal.js` (server) — webhook verify + event map;
-  order capture; subscription cancel.
-- [ ] **T3.4** Billing page in no-hosted-portal mode (manage-in-PayPal + in-app cancel).
+## Phase 3 — PayPal adapter ✅ launch processor (account approved 2026-06-19)
+- [ ] **T3.0 (owner)** Create PayPal **sandbox app** → sandbox Client ID + Secret;
+  create **Catalog Product → Billing Plan** (`P-xxxx`) per recurring tier
+  (Online Coaching, Complete Transformation); provide plan IDs.
+- [ ] **T3.1** Add `@paypal/react-paypal-js` (client) + `@paypal/paypal-server-sdk`
+  (server); env/secrets (`NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `NEXT_PUBLIC_PAYPAL_ENV`,
+  `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`); store `P-xxxx` plan IDs in config.
+- [ ] **T3.2** `providers/paypal.ts` (client) — **Smart Buttons** via `renderCheckout`
+  for BOTH flows (subscription `createSubscription({plan_id})`, one-time
+  `createOrder`/capture); capabilities `{buttonCheckout:true, hostedPortal:false,
+  showsStoredCard:false, inAppCancel:true}`; register in `index.ts`.
+- [ ] **T3.3** `payments/providers/paypal.js` (server) — webhook verify + event map
+  (`BILLING.SUBSCRIPTION.*`, `PAYMENT.SALE.*`); order capture; subscription cancel.
+- [ ] **T3.4** Billing page in no-hosted-portal mode (manage-in-PayPal + in-app cancel),
+  driven by capability flags.
 - [ ] **T3.5** Sandbox E2E: subscribe, one-time package, cancel, billing history.
 
 ## Phase 4 — Paddle adapter 🔒 (needs approved Paddle)

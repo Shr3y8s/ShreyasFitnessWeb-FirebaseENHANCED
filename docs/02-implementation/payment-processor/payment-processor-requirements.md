@@ -39,10 +39,11 @@ single processor is ideal for both.
 
 - **Stripe** — current code; rejected; kept only as the reference adapter that
   proves the abstraction works. Not a launch option.
-- **PayPal Business** — fast/lenient approval; strong client trust; supports
-  subscriptions + one-time. **No** hosted billing portal; **no** stored-card
-  display; **no** seller protection for *services* (chargeback risk on us).
-  Likely **launch** processor (live fastest).
+- **PayPal Business** — **CONFIRMED LAUNCH PROCESSOR (account approved 2026-06-19).**
+  Fast approval; strong client trust; supports subscriptions + one-time. **No**
+  hosted billing portal; **no** stored-card display; **no** seller protection for
+  *services* (chargeback risk on us). Checkout uses **Smart Buttons** (PayPal /
+  Venmo / card-via-popup) for BOTH subscription and one-time flows — see FR-2/FR-3.
 - **Paddle** — Merchant of Record (handles sales tax + chargeback liability),
   built-in hosted customer portal, built-in subscriptions. Slow/iterative
   approval (1–6 weeks), SaaS-oriented AUP (fitness is "adjacent"). Preferred
@@ -76,9 +77,15 @@ Each requirement is testable and provider-independent.
   their prices (subscription + one-time) in a neutral shape, filtered to the
   active provider/mode.
 - **FR-2 Subscription checkout.** A user can purchase a recurring plan
-  (Online Coaching, Complete Transformation) and be charged monthly.
+  (Online Coaching, Complete Transformation) and be charged monthly. On PayPal
+  this uses **Smart Buttons** → `createSubscription({plan_id})` against a
+  pre-created Billing Plan (`P-xxxx`); the PayPal approval popup (PayPal / Venmo /
+  card) completes it. Activation is confirmed by webhook, not the client.
 - **FR-3 One-time checkout.** A user can purchase a one-time item / session
-  package (single in-person session, 4-pack).
+  package (single in-person session, 4-pack). On PayPal this uses **Smart
+  Buttons** → Orders API (`createOrder` → capture); same popup UX as FR-2.
+  Embedded card-on-page fields (PayPal ACDC/hosted-fields) are **out of scope**
+  (see §8).
 - **FR-4 Fulfillment via webhook.** On a completed payment, the server updates
   the app: set `accountActivated`, write/refresh the subscription record, and
   create session packages — **driven by a signature-verified webhook**, which is
@@ -103,12 +110,17 @@ Each requirement is testable and provider-independent.
 |---|---|---|---|
 | Subscriptions | ✅ | ✅ | ✅ |
 | One-time / packages | ✅ | ✅ | ✅ |
-| Hosted billing portal | ✅ | ❌ | ✅ |
-| Stored-card display | ✅ | ❌ (wallet) | ✅ |
-| In-app cancel API | ✅ | ✅ | ✅ |
+| Button checkout (`buttonCheckout`) | ❌ (redirect) | ✅ (Smart Buttons) | ❌ (overlay) |
+| Hosted billing portal (`hostedPortal`) | ✅ | ❌ | ✅ |
+| Stored-card display (`showsStoredCard`) | ✅ | ❌ (wallet) | ✅ |
+| In-app cancel API (`inAppCancel`) | ✅ | ✅ | ✅ |
 | Merchant of Record (tax + chargeback) | ❌ | ❌ | ✅ |
 | In-person / POS | ✅ (Terminal) | ✅ (Zettle) | ❌ |
 | Hosted invoices | ✅ | partial | ✅ |
+
+The named flags (`buttonCheckout`, `hostedPortal`, `showsStoredCard`,
+`inAppCancel`) are the literal fields on `ProviderCapabilities` (design §2.2) the
+UI branches on.
 
 The abstraction exposes these as **capability flags** so one billing UI adapts to
 any provider without per-processor branching in the page.
@@ -133,6 +145,11 @@ any provider without per-processor branching in the page.
 
 - In-person POS card-reader hardware (Stripe Terminal / PayPal Zettle / Square).
   Clients prepay online; informal in-person can use PayPal/Venmo links.
+- **Embedded card-on-page fields (PayPal ACDC / Advanced hosted-fields).** Needs
+  extra PayPal underwriting and only applies to one-time card entry (subscriptions
+  always use the PayPal approval popup), so it cannot unify the UX anyway. Smart
+  Buttons (PayPal / Venmo / card-via-popup) are used for both flows at launch. May
+  be revisited post-launch as an enhancement behind the same adapter.
 - Migrating historical Stripe customers/subscriptions to a new processor (there
   are none live yet — pre-launch).
 

@@ -53,6 +53,12 @@ export interface Transaction {
  * `showsStoredCard` is true.
  */
 export interface ProviderCapabilities {
+  /**
+   * Provider checks out via in-place mounted buttons (PayPal Smart Buttons) rather
+   * than a redirect/overlay. When true, the adapter implements `renderCheckout`;
+   * when false (Stripe/Paddle), it uses `startCheckout`.
+   */
+  buttonCheckout: boolean;
   /** Provider offers a hosted customer/billing portal (Stripe ✅ Paddle ✅ PayPal ❌). */
   hostedPortal: boolean;
   /** Provider exposes a stored card-on-file to display (Stripe ✅ Paddle ✅ PayPal ❌). */
@@ -97,6 +103,20 @@ export interface PaymentProvider {
 
   // Checkout — opens an overlay, redirects, or returns a URL to follow.
   startCheckout(opts: CheckoutOptions): Promise<CheckoutResult>;
+
+  /**
+   * Button-checkout providers (capabilities.buttonCheckout === true) mount in-place
+   * payment buttons into `container` instead of redirecting. `onApproved` fires
+   * after buyer approval (UI feedback only — the webhook is the source of truth for
+   * fulfillment). Returns an unmount/cleanup function.
+   */
+  renderCheckout?(
+    opts: CheckoutOptions & {
+      container: HTMLElement;
+      onApproved: () => void;
+      onError?: (e: unknown) => void;
+    }
+  ): Promise<() => void>;
 
   // Post-purchase management
   getBillingHistory(customerId: string): Promise<Transaction[]>;

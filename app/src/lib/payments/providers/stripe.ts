@@ -42,6 +42,7 @@ function toNeutralProduct(p: StripeProduct): Product {
 export const stripeProvider: PaymentProvider = {
   name: 'stripe',
   capabilities: {
+    buttonCheckout: false,
     hostedPortal: true,
     showsStoredCard: true,
     inAppCancel: true,
