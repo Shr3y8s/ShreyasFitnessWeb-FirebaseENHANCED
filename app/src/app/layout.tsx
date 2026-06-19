@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth-context';
 import { CoachUpdatesProvider } from '@/context/CoachUpdatesContext';
 import { Toaster } from '@/components/ui/toaster';
+import AnalyticsListener from '@/components/AnalyticsListener';
+
 
 export const metadata: Metadata = {
   title: 'SHREY.FIT',
@@ -23,6 +25,7 @@ export default function RootLayout({
           </CoachUpdatesProvider>
         </AuthProvider>
         <Toaster />
+        <AnalyticsListener />
       </body>
     </html>
   );

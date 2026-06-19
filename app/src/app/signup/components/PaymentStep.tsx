@@ -9,7 +9,9 @@ import { User } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { stripePromise, appearance, formatCurrency, selectSignupPrice } from '@/lib/stripe';
+import { trackEvent } from '@/lib/firebase';
 import { StripeProduct, StripePrice } from '@/types/stripe';
+
 import { Stripe } from '@stripe/stripe-js';
 
 // Types for Firebase Functions responses
@@ -53,6 +55,14 @@ function SubscriptionPaymentForm({
     e.preventDefault();
     setIsProcessing(true);
     setPaymentError('');
+
+    // Analytics: user is starting checkout (subscription)
+    trackEvent('begin_checkout', {
+      currency: (selectedPrice.currency || 'usd').toUpperCase(),
+      value: selectedPrice.amount / 100,
+      tier: formData.tier?.name || product.name,
+      price_type: 'recurring',
+    });
 
     try {
       // Subscription flow: Create Stripe Checkout session via HTTP endpoint
@@ -218,6 +228,14 @@ function OneTimePaymentForm({
       return;
     }
 
+    // Analytics: user is starting checkout (one-time)
+    trackEvent('begin_checkout', {
+      currency: (selectedPrice.currency || 'usd').toUpperCase(),
+      value: selectedPrice.amount / 100,
+      tier: formData.tier?.name || product.name,
+      price_type: 'one_time',
+    });
+
     try {
       const paymentResult = await stripe.confirmPayment({
         elements,
@@ -249,6 +267,16 @@ function OneTimePaymentForm({
           cardType: "card",
           completed: true
         }
+      });
+
+      // Analytics: one-time payment succeeded (the subscription "purchase" is
+      // tracked server-side via the Stripe webhook → not here, since that flow
+      // redirects to Stripe Checkout before returning).
+      trackEvent('purchase', {
+        currency: (selectedPrice.currency || 'usd').toUpperCase(),
+        value: selectedPrice.amount / 100,
+        tier: formData.tier?.name || product.name,
+        price_type: 'one_time',
       });
 
       nextStep();

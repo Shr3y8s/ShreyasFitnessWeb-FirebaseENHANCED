@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { signOutUser, db, trackEvent } from '@/lib/firebase';
+
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -130,6 +131,15 @@ export default function UpgradePage() {
     if (!user || !userData) return;
 
     setProcessingId(option.product.id);
+
+    // Analytics: user is starting an upgrade checkout
+    trackEvent('begin_checkout', {
+      currency: (option.price.currency || 'usd').toUpperCase(),
+      value: option.price.amount / 100,
+      tier: option.product.name,
+      price_type: 'recurring',
+      context: 'upgrade',
+    });
 
     try {
       const checkoutUrl = await createStripeCheckoutSession({

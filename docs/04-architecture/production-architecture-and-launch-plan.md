@@ -866,16 +866,43 @@ test keys, or a separate staging project. Non-payment dev is unaffected.)*
 
 
 ### Phase 7 — Legal, Analytics & Ops
+
+> **🔶 Phase 7 status (2026-06-18):** Firebase Analytics **wired in code** (the
+> one code task). The rest are **owner console clicks** — concrete steps below.
+> Sentry is documented as a turnkey recipe but deferred (needs a Sentry project +
+> DSN; not worth a half-built integration pre-launch).
+
 - [ ] Confirm final content + contact emails on Terms (`app/src/app/legal/terms`)
-      and Privacy (`app/src/app/legal/privacy`) pages.
-- [ ] Enable analytics (Firebase Analytics via `measurementId`) and/or a product
-      analytics tool.
-- [ ] Add error tracking (e.g. Sentry) for frontend and Functions.
-- [ ] Configure Firestore **backups**: scheduled exports and/or Point-in-Time
-      Recovery (PITR).
-- [ ] Set **budget alerts** on GCP (covers App Hosting/Cloud Run, Functions,
-      Firestore, and Cloud Build spend in one place).
-- [ ] Set up uptime monitoring for the site and webhook endpoints.
+      and Privacy (`app/src/app/legal/privacy`) pages. *(Owner content review.)*
+- [x] Enable analytics (Firebase Analytics via `measurementId`). *Done in code
+      (2026-06-18) — `app/src/lib/firebase.ts` now lazily inits GA4 behind an
+      async `isSupported()` + `typeof window` guard (SSR/Cloud-Run safe) and
+      exports `analytics` + a `trackEvent()` helper. A new client component
+      `app/src/components/AnalyticsListener.tsx` (Suspense-wrapped, matching the
+      `useSearchParams` pattern) fires a `page_view` on every route change; it's
+      mounted in `app/src/app/layout.tsx`. `measurementId` already flows via
+      `apphosting.yaml` → env, so no config change. **Owner:** after rollout,
+      confirm GA4 "Realtime" shows traffic (Firebase Console → Analytics), and
+      that the **Google Analytics** linkage exists for the `shreyfitweb` GA4
+      property (Analytics is auto-collected once the measurementId is live).*
+- [ ] Add error tracking (e.g. Sentry) for frontend and Functions. *Deferred —
+      turnkey recipe in §8.5 "E. Sentry error tracking". Needs a Sentry project +
+      DSN first.*
+- [ ] Configure Firestore **backups** (PITR). *Owner — Firebase Console →
+      Firestore → **Backups**: enable **Point-in-Time Recovery** (7-day window)
+      AND create a **scheduled backup** (daily, e.g. 14-day retention). CLI
+      alt: `gcloud firestore databases update --enable-pitr` and
+      `gcloud firestore backups schedules create --database='(default)'
+      --recurrence=daily --retention=14d`.*
+- [ ] Set **GCP budget alerts**. *Owner — Cloud Console → Billing → **Budgets &
+      alerts** → Create budget scoped to `shreyfitweb`, set a monthly amount, and
+      email thresholds at **50% / 90% / 100%** (covers App Hosting/Cloud Run,
+      Functions, Firestore, Cloud Build in one budget).*
+- [ ] Set up **uptime monitoring**. *Owner — Cloud Console → Monitoring →
+      **Uptime checks** → create HTTPS checks for `https://shrey.fit` and the
+      `https://us-west1-shreyfitweb.cloudfunctions.net/calendlyWebhook` endpoint
+      (expect 200/expected status); attach an alerting policy → email. Free tier
+      covers this.*
 
 ### Phase 8 — Pre-Launch Verification
 - [ ] **End-to-end live smoke test** with a real card (small amount, then
@@ -1065,8 +1092,30 @@ app never issues unscoped queries). Tackle after launch, each behind a test pass
   generic error while the detail goes only to `logger.error` (already does).
   Trivial change; deferred to avoid touching webhook behavior pre-launch.
 
+**E. Sentry error tracking (deferred from Phase 7 — turnkey recipe)**
+- **Prereq (owner):** create a Sentry project (platform: Next.js) → copy the
+  **DSN**. Store it as a Secret Manager value and reference it in
+  `apphosting.yaml` (build+runtime) as `NEXT_PUBLIC_SENTRY_DSN`; add
+  `SENTRY_AUTH_TOKEN` (for sourcemap upload) as a RUNTIME/build secret.
+- **Frontend (Next.js):**
+  1. `npm --prefix app install @sentry/nextjs`
+  2. `npx @sentry/wizard@latest -i nextjs` (or manually add
+     `sentry.client.config.ts`, `sentry.server.config.ts`,
+     `sentry.edge.config.ts`, and wrap `next.config.ts` with
+     `withSentryConfig`). Set a low `tracesSampleRate` (e.g. 0.1) to control cost.
+  3. Add `instrumentation.ts` exporting `register()` (Next 15 pattern) so server
+     init runs on Cloud Run.
+  4. Verify `npm --prefix app run build` still exits 0 (Turbopack + Sentry can
+     need `withSentryConfig`'s `transpileClientSDK`/options tuning).
+- **Cloud Functions:** `npm --prefix firebase/functions install @sentry/node`,
+  call `Sentry.init({ dsn, tracesSampleRate })` at the top of `index.js`, and
+  wrap handlers (or use `Sentry.wrapHttpFunction`-style try/catch → already have
+  `logger.error`; add `Sentry.captureException(error)` alongside).
+- **Cost note:** Sentry free tier covers a small launch; keep sample rates low.
+
 > **Suggested sequence:** B (quick, real exposure of staff PII) → C (cheap) →
-> A (the big one; schedule a dedicated migration sprint with tests) → D (ongoing).
+> A (the big one; schedule a dedicated migration sprint with tests) → D (ongoing)
+> → E (Sentry, whenever the owner provisions a DSN).
 
 ---
 

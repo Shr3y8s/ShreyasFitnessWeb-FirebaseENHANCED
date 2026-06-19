@@ -3,6 +3,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
+import { getAnalytics, isSupported, logEvent, type Analytics } from 'firebase/analytics';
+
 
 /**
  * Translates Firebase error codes to user-friendly messages
@@ -162,6 +164,35 @@ export const storage = getStorage(app);
 // and exposed as an environment variable
 const functionsRegion = process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION || 'us-central1';
 export const functions = getFunctions(app, functionsRegion);
+
+// Firebase Analytics (GA4) — browser-only.
+// `getAnalytics()` touches `window`, so it must NOT run during SSR / on Cloud Run.
+// We guard with `isSupported()` (async) which also returns false in unsupported
+// environments (e.g. SSR, some in-app browsers) so this is safe to import anywhere.
+export let analytics: Analytics | null = null;
+
+if (typeof window !== 'undefined') {
+  isSupported()
+    .then((supported) => {
+      if (supported && firebaseConfig.measurementId) {
+        analytics = getAnalytics(app);
+      }
+    })
+    .catch(() => {
+      // Analytics is optional — never let it break the app.
+    });
+}
+
+/**
+ * Safe analytics event logger. No-ops on the server or before analytics
+ * has finished initializing in the browser.
+ */
+export function trackEvent(eventName: string, params?: Record<string, unknown>) {
+  if (analytics) {
+    logEvent(analytics, eventName, params);
+  }
+}
+
 
 // Function to create a user with tier information
 export async function createUserWithTier(email: string, password: string, name: string, phone: string, tier: ServiceTier): Promise<UserCreationResult> {
