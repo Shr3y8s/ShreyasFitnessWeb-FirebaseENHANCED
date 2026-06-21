@@ -269,32 +269,45 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · 🔒 blocked on provide
 - [x] **T3.7.0** Docs-first: design §2.7 (CHECKOUT_ITEMS registry, `/checkout`,
       `/checkout/success`, card-in-modal, Cardholder Name, deferred Apple/Google Pay)
       + this tasks phase.
-- [ ] **T3.7.1** `constants.ts` — `CHECKOUT_ITEMS` registry keyed by short URL param
+- [x] **T3.7.1** `constants.ts` — `CHECKOUT_ITEMS` registry keyed by short URL param
       (`IN_PERSON`, `IN_PERSON_4PACK`, `ONLINE_COACHING`, `COMPLETE_TRANSFORMATION`) →
       `{ mode, productId: SERVICE_TIERS.x, fulfillment }` + `CheckoutItemKey` type +
-      `getCheckoutItem(key)` helper. tsc-verify.
-- [ ] **T3.7.2** `paypal.ts` `renderCardFields` — add `cardField.NameField()`
+      `getCheckoutItem(key)` helper. *Done; tsc PASSED.*
+- [x] **T3.7.2** `paypal.ts` `renderCardFields` — add `cardField.NameField()`
       (Cardholder Name) in the isolated container; keep the single `buttons,card-fields`
-      `loadScript`. tsc-verify.
-- [ ] **T3.7.3** `<ProviderCheckout>` — add card-in-modal mode (Radix `Dialog`); wallet
+      `loadScript`. *Done; fields laid out Name→Number→Expiry|CVV (§2.7.5); tsc PASSED.*
+- [x] **T3.7.3** `<ProviderCheckout>` — add card-in-modal mode (Radix `Dialog`); wallet
       buttons inline, ACDC fields mount inside the modal (iframe-isolation §2.3a). Inline
-      behavior stays the default. Stripe unaffected (capability-driven). tsc-verify.
-- [ ] **T3.7.4** `/checkout/page.tsx` — generic, auth-required: parse `item` + `return`
+      behavior stays the default. Stripe unaffected (capability-driven). *Done; tsc PASSED.*
+- [x] **T3.7.4** `/checkout/page.tsx` — generic, auth-required: parse `item` + `return`
       (allowlist: must start with `/`, not `//`; else `/dashboard`); resolve summary +
       active-provider `priceId`; render `<ProviderCheckout>` (modal-card);
-      `successUrl=/checkout/success?item=&return=`. tsc-verify.
-- [ ] **T3.7.5** `/checkout/success/page.tsx` — "Finalizing…" → Firestore `onSnapshot`
+      `successUrl=/checkout/success?item=&return=`. *Done; branded AuthHeader/Footer shell; tsc PASSED.*
+- [x] **T3.7.5** `/checkout/success/page.tsx` — "Finalizing…" → Firestore `onSnapshot`
       on `users/{uid}` awaiting the item's fulfillment signal (`session_package` →
       `sessionBalance.purchased` > baseline; `subscription_active` → `accountActivated`);
-      ✅ + Continue (→ `return`); 15s soft-timeout fallback. tsc-verify.
-- [ ] **T3.7.6** Repoint Buy/Pay buttons → `router.push('/checkout?item=&return=')`:
+      ✅ + Continue (→ `return`); 15s soft-timeout fallback. *Done; tsc PASSED.*
+- [x] **T3.7.6** Repoint Buy/Pay buttons → `router.push('/checkout?item=&return=')`:
       `sessions/buy` + `PricingCard` (remove inline card form/`ProviderCheckout` from the
       cards), `upgrade/page`, then signup (create the Firebase account + reCAPTCHA at the
       end of the signup steps, THEN route to `/checkout` — `/payment` superseded for
-      signup). tsc-verify.
-- [ ] **T3.7.7** Verify: `tsc --noEmit` (app) + `node --check` any touched Functions.
+      signup). *Done; tsc PASSED.*
+- [x] **T3.7.7** Verify: `tsc --noEmit` (app) + `node --check` any touched Functions.
       Owner runs dev + tests: dashboard → Buy 1-1 sessions → Buy Now → `/checkout` →
       card-in-modal (with name) or PayPal → `/checkout/success` waits → Continue.
+      *Done; tsc PASSED; owner committed.*
+- [x] **T3.7.8** UI hardening of the card modal + accepted-method logos (design §2.7.4–2.7.8):
+      Amazon-style **two-column modal** (header CreditCard "Enter Card Details"; left =
+      stacked fields Name→Number→Expiry|CVV + **billing address Country/ZIP for AVS**; right =
+      centered card-network logos; footer = Cancel / "🛡 Encrypted & Secure" / "Pay $amount");
+      neutral `BillingAddress` type + `submit(billingAddress)` → `cardField.submit({billingAddress})`;
+      `PaymentMethodLogos` with official card icons (`react-svg-credit-card-payment-icons`) +
+      PayPal/Google Pay/Apple Pay (official `/public/payment-icons` SVGs), `variant`
+      cards|wallets|both; **fixed-height dialog** + spinner/fade + Strict-Mode-safe
+      mount/deferred-teardown to eliminate reposition-flicker. Apple/Google Pay logos are
+      display-only (functional buttons deferred — §2.7.6). *Done; owner installed
+      `react-svg-credit-card-payment-icons`; tsc PASSED.*
+
 
 ## Phase 4 — Paddle adapter 🔒 (needs approved Paddle)
 
@@ -306,14 +319,25 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · 🔒 blocked on provide
   portal session; transactions list.
 - [ ] **T4.4** Sandbox E2E: subscribe, one-time, portal, billing history.
 
-## Phase 5 — Cutover
-- [ ] **T5.1** Set per-mode provider env (e.g. subscription=paddle, onetime=paypal,
-  or single provider) in `apphosting.yaml`.
-- [ ] **T5.2** Deploy Functions; register live webhook endpoint(s).
-- [ ] **T5.3** Live smoke purchase (small/refunded); verify activation + history.
-- [ ] **T5.4** Remove invertase `firestore-stripe-payments` from `firebase.json`;
-  retire Stripe env/secrets.
-- [ ] **T5.5** Update launch plan Master Checklist (payment provider = live).
+## Phase 5 — Cutover (PayPal live)
+> **Processor pivot (2026-06-20):** Stripe rejected the merchant application, so the
+> Stripe test→live attempt is abandoned and **PayPal is the sole live processor**. The
+> code now defaults to `paypal` (app + Functions). Cutover below is PayPal-only.
+- [ ] **T5.1** Create the **live PayPal app** → live Client ID + Secret; set
+  `NEXT_PUBLIC_PAYPAL_ENV=production` + live `NEXT_PUBLIC_PAYPAL_CLIENT_ID` in
+  `apphosting.yaml`; live `PAYPAL_CLIENT_SECRET`/`PAYPAL_WEBHOOK_ID` in Secret Manager.
+- [ ] **T5.2** Recreate the catalog in **live** (re-run `firebase/scripts/paypal-setup-catalog.js`
+  with live creds) → fill `LIVE_PLANS` (`P-xxxx`) in `constants.ts`.
+- [ ] **T5.3** Deploy Functions; register the **live** webhook at
+  `paymentWebhook?provider=paypal`; store its id as live `PAYPAL_WEBHOOK_ID`.
+- [ ] **T5.4** Live smoke purchase (small/refunded); verify activation + history + cancel.
+- [ ] **T5.5** Enable **Apple Pay / Google Pay** functional buttons (deferred — design §2.7.6):
+  PayPal **domain registration** of `shrey.fit` (serve the live domain-association file over
+  HTTPS) + add `applepay`/`googlepay` SDK components + buttons. Logos already display (§2.7.7).
+- [ ] **T5.6** *(optional cleanup, non-blocking)* Remove the unused invertase
+  `firestore-stripe-payments` extension from `firebase.json`; retire Stripe live env/secrets.
+  (Stripe **adapter code** stays — dormant — for possible future reinstatement.)
+- [ ] **T5.7** Update launch plan Master Checklist (payment provider = PayPal live).
 
 ## Phase 6 — Admin Billing Management 🔮 (future, post-launch)
 > Not launch-critical. Captured here so the design intent isn't lost. Depends on

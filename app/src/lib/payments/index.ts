@@ -8,9 +8,12 @@
 //   NEXT_PUBLIC_PAYMENT_PROVIDER_SUBSCRIPTION = stripe | paypal | paddle
 //   NEXT_PUBLIC_PAYMENT_PROVIDER_ONETIME      = stripe | paypal | paddle
 //   NEXT_PUBLIC_PAYMENT_PROVIDER              = fallback for both
-// Default everywhere is 'stripe', so today's behavior is unchanged.
+// Default everywhere is 'paypal' — PayPal is the live processor. The Stripe adapter
+// is retained but DORMANT (Stripe rejected the merchant application at go-live); it
+// can be reactivated by setting the env back to 'stripe' if Stripe ever reinstates.
 //
 // See docs/02-implementation/payment-processor/payment-processor-design.md (§2.3)
+
 
 import type { PaymentProvider, PaymentProviderName } from './types';
 import { stripeProvider } from './providers/stripe';
@@ -34,8 +37,9 @@ function resolveName(mode?: 'subscription' | 'payment'): PaymentProviderName {
       : mode === 'payment'
         ? process.env.NEXT_PUBLIC_PAYMENT_PROVIDER_ONETIME
         : undefined;
-  const name = (perMode || fallback || 'stripe') as PaymentProviderName;
+  const name = (perMode || fallback || 'paypal') as PaymentProviderName;
   return name;
+
 }
 
 /**
@@ -49,8 +53,9 @@ export function getPaymentProvider(hint?: {
   const provider = REGISTRY[name];
   if (!provider) {
     // Configured for a provider whose adapter isn't registered yet — fail safe
-    // to Stripe (the always-present reference adapter) rather than crash.
-    return stripeProvider;
+    // to PayPal (the live processor) rather than crash or route to dormant Stripe.
+    return paypalProvider;
   }
+
   return provider;
 }

@@ -146,7 +146,10 @@ function detectProvider(req) {
   const h = req.headers || {};
   if (h["paypal-transmission-sig"]) return "paypal";
   if (h["stripe-signature"]) return "stripe";
-  return (process.env.PAYMENT_PROVIDER || "stripe").toString();
+  // PayPal is the live processor; Stripe is dormant. Default to PayPal when no
+  // query param or signature header identifies the sender.
+  return (process.env.PAYMENT_PROVIDER || "paypal").toString();
+
 }
 
 const paymentWebhook = onRequest({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req, res) => {

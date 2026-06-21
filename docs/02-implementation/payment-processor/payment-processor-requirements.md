@@ -8,6 +8,19 @@
 
 ---
 
+> **⚑ Current state (2026-06-20): PayPal is the sole active processor.**
+> Stripe is fully out — the merchant application was rejected (see §1), and the
+> attempted Stripe test→live cutover is abandoned. The provider seam now **defaults
+> to `paypal`** in both the app (`payments/index.ts`) and Functions
+> (`payments/index.js` `detectProvider`). The **Stripe adapter is retained but
+> dormant** (revisit only if Stripe ever reinstates the account). All checkout work
+> below is delivered against PayPal (sandbox in dev). The invertase
+> `firestore-stripe-payments` extension may still be installed with live creds — it's
+> unused and slated for optional cleanup (tasks T5.4), not a blocker.
+
+---
+
+
 ## 1. Background & Problem
 
 The app was built tightly coupled to **Stripe** (Stripe.js + `@stripe/react-stripe-js`

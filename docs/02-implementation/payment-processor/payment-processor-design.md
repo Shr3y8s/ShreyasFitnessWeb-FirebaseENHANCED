@@ -101,10 +101,14 @@ export interface PaymentProvider {
 // Env (apphosting.yaml / .env.local):
 //   NEXT_PUBLIC_PAYMENT_PROVIDER_SUBSCRIPTION = stripe | paypal | paddle
 //   NEXT_PUBLIC_PAYMENT_PROVIDER_ONETIME      = stripe | paypal | paddle
-//   (fallback NEXT_PUBLIC_PAYMENT_PROVIDER for both; default 'stripe')
+//   (fallback NEXT_PUBLIC_PAYMENT_PROVIDER for both; default 'paypal')
 export function getPaymentProvider(hint?: { mode?: 'subscription' | 'payment' }): PaymentProvider;
 ```
-Today every value defaults to `stripe`, so behavior is unchanged.
+**Default is now `paypal`** (PayPal is the live processor). The Stripe adapter stays
+registered but **dormant** — Stripe rejected the merchant application at go-live
+(Jun 2026); set the env back to `stripe` to reactivate it if Stripe ever reinstates.
+The safety fallback in `getPaymentProvider()` also returns PayPal (not Stripe).
+
 
 ### 2.3a `<ProviderCheckout>` component
 A shared component (`app/src/components/payments/ProviderCheckout.tsx`) keeps pages
@@ -308,24 +312,70 @@ written fulfillment). Flow:
 4. **15s timeout fallback** → show a soft note ("still processing — you can continue") and
    enable Continue anyway, so a slow webhook never traps the user.
 
-#### 2.7.4 `<ProviderCheckout>` card-in-modal mode
-`<ProviderCheckout>` gains an optional mode (e.g. `cardMode="modal"`) used by `/checkout`:
-wallet/Smart Buttons render inline, and the ACDC hosted fields mount inside a Radix
-`Dialog` opened by the "Pay with debit/credit card" button. The iframe-isolation rule from
-§2.3a still applies (fields mount into an imperatively-created non-React child node). The
-existing inline behavior remains the default so other call sites are unaffected. Stripe
-stays redirect (capability-driven; no card-in-modal for Stripe).
+#### 2.7.4 `<ProviderCheckout>` card-in-modal mode (Amazon-style two-column)
+`<ProviderCheckout>` gains `cardMode="modal"` (used by `/checkout`): wallet/Smart Buttons
+render inline, and a **"Debit or Credit Card"** button opens a Radix `Dialog` with the ACDC
+hosted card fields. The iframe-isolation rule from §2.3a still applies (fields mount into an
+imperatively-created non-React child node). Inline behavior remains the default so other
+call sites are unaffected. Stripe stays redirect (capability-driven; no card-in-modal).
 
-#### 2.7.5 Cardholder Name (`renderCardFields`)
+The modal is a **professional two-column layout** (Amazon/Google checkout style):
+- **Header:** `CreditCard` icon + title **"Enter Card Details"** (not "Add a card" — we do
+  NOT store the card) + "All fields required … we never store your card."
+- **Left column (form):** stacked fields **Cardholder Name (full) → Card Number (full) →
+  Expiry | CVV** (the only paired row), each with a label above it; then a **billing
+  address** row — **Country `<select>` + ZIP/Postal `<input>`** collected as our own React
+  inputs (NOT hosted fields) for AVS.
+- **Right column (sidebar):** "We accept all major cards" + the accepted **card-network
+  logos** (cards-only here — see §2.7.7), centered.
+- **Footer:** `[ Cancel (outline) ]` — `[ 🛡 Encrypted & Secure ]` (ShieldCheck) —
+  `[ Pay $<amount> ]` (the amount comes from a `payLabel` prop the page passes).
+
+**Billing address → AVS.** A neutral `BillingAddress { countryCode, postalCode }` type is
+added; the card `submit(billingAddress?)` forwards it to PayPal's
+`cardField.submit({ billingAddress })` so the issuer can run Address Verification (reduces
+declines/fraud). Country defaults to `US`.
+
+#### 2.7.5 Cardholder Name + field layout (`renderCardFields`)
 `renderCardFields` in `paypal.ts` adds `cardField.NameField()` (Cardholder Name) alongside
-Number/Expiry/CVV, mounted in the same isolated container. Still ONE `loadScript`
-(`buttons,card-fields`) — no second SDK load.
+Number/Expiry/CVV, mounted in the same isolated container, laid out **Name (full) → Number
+(full) → Expiry | CVV** via a CSS grid with a label above each field. Still ONE `loadScript`
+(`buttons,card-fields`) — no second SDK load. `submit()` accepts the optional billing address
+(§2.7.4).
+
+#### 2.7.7 Accepted-method logos (`PaymentMethodLogos`)
+`app/src/components/payments/PaymentMethodLogos.tsx` renders the "We accept" brand marks:
+- **Card networks** (Visa, Mastercard, Amex, Discover) via the **`react-svg-credit-card-payment-icons`**
+  package — official-style inline SVGs (no asset 404s, brand-faithful).
+- **Wallets** — **PayPal** (inline wordmark) + **Google Pay** and **Apple Pay** rendered from
+  the **official mark SVGs** in `app/public/payment-icons/` (`google-pay-mark_800.svg`,
+  `Apple_Pay_Mark_RGB_041619.svg`) via `<img>` (brand-guideline compliant).
+- API: `variant="cards" | "wallets" | "both"` (+ optional `columns` grid). The `/checkout`
+  page shows two captioned rows (**Cards** / **Wallets**); the **card-entry modal sidebar**
+  shows **cards-only** (wallets don't belong in a card-typing form).
+- These are **display-only**. Apple/Google Pay as *functional* buttons remain deferred
+  (§2.7.6).
+
+#### 2.7.8 Modal render stability (PayPal hosted-field iframes)
+PayPal's ACDC fields are cross-origin **iframes** that load AFTER the dialog opens, which
+caused two artifacts that are now fixed:
+- **No reposition/flicker:** the `DialogContent` has a **fixed height** (`h-[760px]`,
+  `max-h-[92vh]`, internal scroll) so Radix computes the centered position once and never
+  recenters when the iframes grow. (A `min-height`-only reserve was insufficient — taller
+  iframes still grew the box and a centered dialog moves by half the delta.)
+- **No "fields fill in" / Strict-Mode double-mount:** the fields are held hidden
+  (`opacity:0`) behind a spinner until rendered, then fade in together after a short settle;
+  the mount effect mounts once per real open and **defers teardown** so React 19 dev Strict
+  Mode's mount→unmount→remount reuses the existing fields instead of destroying/rebuilding.
+- The residual brief field-load is inherent to PayPal's remote iframes (no app fix possible);
+  it's masked by the spinner+fade.
 
 #### 2.7.6 Deferred (NOT built now)
-- **Apple Pay / Google Pay** via PayPal — require separate `applepay`/`googlepay` SDK
-  components AND PayPal **domain registration** of `shrey.fit` over HTTPS; they won't render
-  on `localhost`. Tracked as a follow-up.
+- **Apple Pay / Google Pay** *functional buttons* via PayPal — require separate
+  `applepay`/`googlepay` SDK components AND PayPal **domain registration** of `shrey.fit`
+  over HTTPS; they won't render on `localhost`. (Their **logos** are already shown — §2.7.7.)
 - **Affirm / Klarna** are NOT available through PayPal (Stripe-only) — out of scope.
+
 
 
 ## 3. Server Architecture (Phase 2+)
