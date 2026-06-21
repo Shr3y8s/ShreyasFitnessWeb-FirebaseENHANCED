@@ -10,10 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CreditCard, Shield, Check, ArrowLeft, AlertCircle } from 'lucide-react';
 import { selectSignupPrice } from '@/lib/stripe';
-import { getPaymentProvider, formatCurrency } from '@/lib/payments';
+import { formatCurrency } from '@/lib/payments';
+import { trackEvent } from '@/lib/firebase';
 import { StripeProduct, StripePrice } from '@/types/stripe';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
+import { getCheckoutKeyForProduct } from '@/lib/constants';
 import { Footer } from '@/components/Footer';
+
+
 
 interface UserData {
   name: string;
@@ -41,8 +45,10 @@ export default function PaymentPage() {
   const [pendingSignup, setPendingSignup] = useState<PendingSignupData | null>(null);
   const [productData, setProductData] = useState<StripeProduct | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+
+
 
   useEffect(() => {
     const loadPaymentData = async () => {
@@ -174,53 +180,48 @@ export default function PaymentPage() {
       };
 
       setProductData(product);
-      
+
     } catch (err) {
       console.error('Error loading price:', err);
       setError('Failed to load pricing information');
     }
   };
 
-  const handlePayment = async () => {
-    if (!productData) return;
 
-    // Select appropriate price for signup flow
+  /**
+   * Signup-specific step: create the Firebase account (reCAPTCHA + auth + users doc)
+   * BEFORE handing off to the GENERIC, reusable /checkout page. Per the owner's
+   * reusability rule, /checkout assumes an authenticated user and contains NO
+   * account-creation logic — that scenario-specific work lives here. On success we
+   * route to /checkout?item=<tier key>&return=/dashboard.
+   */
+  const handleContinueToCheckout = async () => {
+    if (!productData) {
+      setError('No product loaded');
+      return;
+    }
     const selectedPrice = selectSignupPrice(productData);
     if (!selectedPrice) {
       setError('No valid price available for this product');
       return;
     }
 
-    setIsProcessing(true);
-    setError('');
-
+    setSubmitting(true);
     try {
-      // Execute reCAPTCHA verification for new signups
-      let recaptchaToken: string | null = null;
-      if (pendingSignup) {
-        try {
-          console.log("Executing reCAPTCHA verification...");
-          recaptchaToken = await executeRecaptcha('create_account');
-          console.log("reCAPTCHA token obtained");
-        } catch (recaptchaError) {
-          console.error("reCAPTCHA failed:", recaptchaError);
-          setError('Security verification failed. Please try again.');
-          setIsProcessing(false);
-          return;
-        }
-      }
+      // GA4 begin_checkout
+      trackEvent('begin_checkout', {
+        currency: (selectedPrice.currency || 'usd').toUpperCase(),
+        value: selectedPrice.amount / 100,
+        tier: (userData || pendingSignup)?.tierName,
+        price_type: selectedPrice.type,
+      });
 
-      let userId: string;
-      let userEmail: string;
-      let userName: string;
-      let tierName: string;
       let tierId: string;
 
-      // Step 1: Create account if this is a pending signup
+      // Create account if this is a pending signup (before the generic checkout).
       if (pendingSignup) {
-        console.log("Creating new account before payment...");
-        
-        // Create Firebase Auth account
+        const recaptchaToken = await executeRecaptcha('create_account');
+
         let userCredential;
         try {
           userCredential = await createUserWithEmailAndPassword(
@@ -230,101 +231,59 @@ export default function PaymentPage() {
           );
         } catch (authError: any) {
           console.error('Firebase Auth error:', authError);
-          
-          // Handle specific auth errors
           if (authError.code === 'auth/email-already-in-use') {
             setError('This email is already registered. Redirecting to login page...');
             setTimeout(() => router.push('/login'), 3000);
-            return;
-          } else if (authError.code === 'auth/weak-password') {
-            setError('Password is too weak. Please use at least 6 characters.');
-            setIsProcessing(false);
-            return;
-          } else if (authError.code === 'auth/invalid-email') {
-            setError('Invalid email address format.');
-            setIsProcessing(false);
-            return;
           } else {
-            setError(`Account creation failed: ${authError.message}`);
-            setIsProcessing(false);
-            return;
+            setError(authError?.message || 'Failed to create your account.');
           }
+          setSubmitting(false);
+          return;
         }
-        
-        userId = userCredential.user.uid;
-        userEmail = pendingSignup.email;
-        userName = pendingSignup.name;
-        tierName = pendingSignup.tierName;
+
+        const newUserId = userCredential.user.uid;
         tierId = pendingSignup.tier;
-        
-        // Create Firestore user document with reCAPTCHA token
-        await setDoc(doc(db, 'users', userId), {
+
+        await setDoc(doc(db, 'users', newUserId), {
           name: pendingSignup.name,
           email: pendingSignup.email,
           phone: pendingSignup.phone,
           tier: pendingSignup.tier,
           tierName: pendingSignup.tierName,
-          emailVerified: pendingSignup.emailVerified || false, // Save email verification status from signup
-          accountActivated: false, // Will be set to true on first payment
-          gdprDeleted: false, // Track deletion status for filtering
+          emailVerified: pendingSignup.emailVerified || false,
+          accountActivated: false,
+          gdprDeleted: false,
           role: 'client',
           recaptchaToken: recaptchaToken || null,
-          recaptchaVerified: false, // Will be verified by backend
+          recaptchaVerified: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
-        
-        console.log("Account created successfully:", userId);
-        
-        // Clear pending signup data
+
         sessionStorage.removeItem('pendingSignup');
-        
       } else if (user && userData) {
-        // Existing user
-        userId = user.uid;
-        userEmail = userData.email;
-        userName = userData.name;
-        tierName = userData.tierName;
         tierId = userData.tier;
-        
       } else {
-        throw new Error('No user data available');
+        setError('No user data available');
+        setSubmitting(false);
+        return;
       }
 
-      // Step 2: Create Stripe checkout session using reusable helper
-      console.log("Creating Stripe checkout session...");
-      
-      // Derive checkout mode from the selected price's type
-      const checkoutMode = selectedPrice.type === 'recurring' ? 'subscription' : 'payment';
-      
-      // Detect if this is a session product (one-time pricing indicates session packages)
-      const isSessionProduct = selectedPrice.type === 'one_time';
-      
-      const { url: checkoutUrl } = await getPaymentProvider({ mode: checkoutMode }).startCheckout({
-        userId,
-        priceId: selectedPrice.id,
-        mode: checkoutMode,
-        successUrl: `${window.location.origin}/dashboard?payment=success`,
-        cancelUrl: `${window.location.origin}/payment`,
-        metadata: {
-          userId,
-          userName,
-          userEmail,
-          tierName,
-          tierId,
-          type: isSessionProduct ? 'session_package' : 'subscription'
-        }
-      });
-
-      console.log('Checkout URL received, redirecting...');
-      if (checkoutUrl) window.location.href = checkoutUrl;
-      
-    } catch (err) {
-      console.error('Payment error:', err);
-      setError((err as Error).message || 'An unexpected error occurred');
-      setIsProcessing(false);
+      // Hand off to the generic checkout (auth now guaranteed).
+      const itemKey = getCheckoutKeyForProduct(tierId);
+      if (!itemKey) {
+        setError('This plan is not available for checkout.');
+        setSubmitting(false);
+        return;
+      }
+      router.push(`/checkout?item=${itemKey}&return=${encodeURIComponent('/dashboard')}`);
+    } catch (e) {
+      setError((e as Error)?.message || 'An unexpected error occurred');
+      setSubmitting(false);
     }
   };
+
+
 
   if (loading) {
     return (
@@ -486,23 +445,22 @@ export default function PaymentPage() {
                 </div>
               </div>
 
-              {/* Payment Button */}
+              {/* Continue button — creates the account (signup-specific work), then
+                  hands off to the GENERIC /checkout page (design §2.7). Account
+                  creation happens here, NOT inside /checkout. */}
               <Button
-                onClick={handlePayment}
-                disabled={isProcessing}
+                disabled={submitting}
+                onClick={handleContinueToCheckout}
                 className="w-full py-6 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
               >
-                {isProcessing ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    {pendingSignup ? 'Creating Account...' : 'Processing...'}
-                  </div>
-                ) : (
-                  displayPrice.type === 'recurring'
-                    ? `Complete Payment • ${formatCurrency(displayPrice.amount)}/month`
-                    : `Complete Payment • ${formatCurrency(displayPrice.amount)}`
-                )}
+                {submitting
+                  ? 'Setting up your account…'
+                  : displayPrice.type === 'recurring'
+                    ? `Continue to Payment • ${formatCurrency(displayPrice.amount)}/month`
+                    : `Continue to Payment • ${formatCurrency(displayPrice.amount)}`}
               </Button>
+
+
 
               {/* Money Back Guarantee */}
               <div className="text-center pt-4">

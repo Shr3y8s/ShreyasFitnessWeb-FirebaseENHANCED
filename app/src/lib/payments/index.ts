@@ -14,15 +14,17 @@
 
 import type { PaymentProvider, PaymentProviderName } from './types';
 import { stripeProvider } from './providers/stripe';
+import { paypalProvider } from './providers/paypal';
 
 export * from './types';
 export * from './pricing';
 
 const REGISTRY: Partial<Record<PaymentProviderName, PaymentProvider>> = {
   stripe: stripeProvider,
-  // paypal: paypalProvider,  // added in Phase 3
+  paypal: paypalProvider,
   // paddle: paddleProvider,  // added in Phase 4
 };
+
 
 function resolveName(mode?: 'subscription' | 'payment'): PaymentProviderName {
   const fallback = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER;

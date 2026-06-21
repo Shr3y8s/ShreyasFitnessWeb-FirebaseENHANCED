@@ -3,31 +3,38 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
-import { useToast } from '@/hooks/use-toast';
-import { signOutUser, functions, db } from '@/lib/firebase';
+import { signOutUser, db } from '@/lib/firebase';
+
 import { getSessionPricing, calculateSessionSavings } from '@/lib/stripe';
-import { getPaymentProvider } from '@/lib/payments';
+import { SERVICE_TIERS, type CheckoutItemKey } from '@/lib/constants';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import SessionBalanceCard from '@/components/sessions/SessionBalanceCard';
 import PricingCard from '@/components/sessions/PricingCard';
+
 import PurchaseHistory from '@/components/sessions/PurchaseHistory';
-import { SessionBalance, SessionPackage } from '@/types/session';
+import { SessionPackage } from '@/types/session';
+
+const RETURN_PATH = '/dashboard/client/sessions/buy';
+
+/** Map a session product id → the unified checkout item key. */
+function checkoutItemForProduct(productId: string): CheckoutItemKey {
+  return productId === SERVICE_TIERS.IN_PERSON_4PACK ? 'IN_PERSON_4PACK' : 'IN_PERSON';
+}
 
 export default function BuySessionsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [processingPriceId, setProcessingPriceId] = useState<string | null>(null);
+
   const [sessionOptions, setSessionOptions] = useState<any[]>([]);
   const [balance, setBalance] = useState<any>(null);
   const [packages, setPackages] = useState<SessionPackage[]>([]);
-  
-  // Load session pricing on mount
+
+  // Load session pricing on mount (display only — checkout amounts are resolved
+  // server-/adapter-side from the CHECKOUT_ITEMS registry on the /checkout page).
   useEffect(() => {
     const loadPricing = async () => {
       try {
@@ -39,7 +46,7 @@ export default function BuySessionsPage() {
         setSessionOptions([]);
       }
     };
-    
+
     loadPricing();
   }, []);
 
@@ -94,40 +101,10 @@ export default function BuySessionsPage() {
     }
   };
 
-  const handlePurchase = async (priceId: string) => {
-    try {
-      setProcessingPriceId(priceId);
-      
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      const baseUrl = window.location.origin;
-      
-      // Use reusable helper function
-      const { url: checkoutUrl } = await getPaymentProvider({ mode: 'payment' }).startCheckout({
-        userId: user.uid,
-        priceId,
-        mode: 'payment',
-        successUrl: `${baseUrl}/dashboard/client/sessions/buy?success=true`,
-        cancelUrl: `${baseUrl}/dashboard/client/sessions/buy?canceled=true`,
-        metadata: {
-          type: 'session_package',
-          userId: user.uid,
-        },
-      });
-
-      // Redirect to provider checkout
-      if (checkoutUrl) window.location.href = checkoutUrl;
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      toast({
-        title: "Checkout Failed",
-        description: `Failed to create checkout session: ${(error as Error).message}`,
-        variant: "destructive",
-      });
-      setProcessingPriceId(null);
-    }
+  // Route to the unified, reusable checkout page (design §2.7).
+  const goToCheckout = (productId: string) => {
+    const item = checkoutItemForProduct(productId);
+    router.push(`/checkout?item=${item}&return=${encodeURIComponent(RETURN_PATH)}`);
   };
 
   if (authLoading) {
@@ -170,7 +147,7 @@ export default function BuySessionsPage() {
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-foreground mb-4">Choose Your Package</h2>
               <div className="grid md:grid-cols-2 gap-6">
-                {sessionOptions.map((option, index) => (
+                {sessionOptions.map((option) => (
                   <PricingCard
                     key={option.priceId}
                     productName={option.product.name}
@@ -179,11 +156,11 @@ export default function BuySessionsPage() {
                     pricePerSession={option.pricePerSession}
                     savings={option.savings}
                     stripePriceId={option.priceId}
-                    onPurchase={handlePurchase}
-                    loading={processingPriceId === option.priceId}
                     featured={option.quantity > 1}
+                    onPurchase={() => goToCheckout(option.product.id)}
                   />
                 ))}
+
               </div>
             </div>
 

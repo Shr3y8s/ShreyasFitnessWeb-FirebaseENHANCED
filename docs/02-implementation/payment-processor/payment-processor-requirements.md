@@ -103,6 +103,20 @@ Each requirement is testable and provider-independent.
   to one provider and one-time checkouts to another, simultaneously.
 - **FR-10 Refunds (admin).** Admin can issue refunds through the active provider
   (parity with the current Stripe refund capability).
+- **FR-11 Server-side order capture (PayPal one-time).** One-time PayPal orders are
+  captured **server-side** (callable → Orders capture API), not via the browser SDK,
+  so guest-card one-time purchases succeed reliably (the browser `actions.order.capture()`
+  returns `permission_denied` for unbranded/guest-card orders).
+- **FR-12 Card-only checkout without a PayPal account (ACDC).** A user paying by
+  **credit/debit card** can complete BOTH a subscription and a one-time purchase
+  **without creating or logging into a PayPal account**, using PayPal **ACDC hosted
+  card fields** (branded, 3-D Secure) rendered in-page. The PayPal **Smart Button**
+  (PayPal/Venmo + card-via-popup) remains available alongside the card fields as the
+  wallet option. For subscriptions the card is **vaulted** and used to create the
+  Billing Plan subscription; for one-time it creates+captures an Order. Activation/
+  fulfillment is still confirmed by webhook (FR-4). Advertised via a new
+  `cardFields` capability flag so the UI renders card fields only where supported.
+
 
 ## 6. Provider Capability Matrix
 
@@ -111,8 +125,10 @@ Each requirement is testable and provider-independent.
 | Subscriptions | ✅ | ✅ | ✅ |
 | One-time / packages | ✅ | ✅ | ✅ |
 | Button checkout (`buttonCheckout`) | ❌ (redirect) | ✅ (Smart Buttons) | ❌ (overlay) |
+| Card fields in-page (`cardFields`) | ✅ (Elements) | ✅ (ACDC hosted fields) | ❌ (overlay) |
 | Hosted billing portal (`hostedPortal`) | ✅ | ❌ | ✅ |
 | Stored-card display (`showsStoredCard`) | ✅ | ❌ (wallet) | ✅ |
+
 | In-app cancel API (`inAppCancel`) | ✅ | ✅ | ✅ |
 | Merchant of Record (tax + chargeback) | ❌ | ❌ | ✅ |
 | In-person / POS | ✅ (Terminal) | ✅ (Zettle) | ❌ |
@@ -154,11 +170,16 @@ any provider without per-processor branching in the page.
 
 - In-person POS card-reader hardware (Stripe Terminal / PayPal Zettle / Square).
   Clients prepay online; informal in-person can use PayPal/Venmo links.
-- **Embedded card-on-page fields (PayPal ACDC / Advanced hosted-fields).** Needs
-  extra PayPal underwriting and only applies to one-time card entry (subscriptions
-  always use the PayPal approval popup), so it cannot unify the UX anyway. Smart
-  Buttons (PayPal / Venmo / card-via-popup) are used for both flows at launch. May
-  be revisited post-launch as an enhancement behind the same adapter.
+- ~~Embedded card-on-page fields (PayPal ACDC / Advanced hosted-fields).~~
+  **MOVED IN SCOPE (2026-06-20) — see FR-12.** Originally deferred, but sandbox
+  testing showed PayPal **Smart Buttons force card-paying subscribers to create/log
+  into a PayPal account** (recurring billing requires a vaulted wallet), which is
+  unacceptable CX. PayPal **ACDC ("Advanced Credit and Debit Card Payments") is
+  already enabled on our account** (confirmed in the dashboard, bundled under
+  "Expanded checkout"), so we will use ACDC **hosted card fields** to accept
+  card-only subscriptions (and one-time) with no PayPal account required. Stays
+  inside the existing PayPal adapter/webhook/fulfillment — no new processor.
+
 - Migrating historical Stripe customers/subscriptions to a new processor (there
   are none live yet — pre-launch).
 

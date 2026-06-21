@@ -85,11 +85,15 @@ export default function DashboardWelcomePage() {
         
         if (data.accountActivated) {
           console.log('[Dashboard] Payment confirmed! Proceeding...');
+          // Just stop waiting — no reload. auth-context's own user-doc listener has
+          // already updated userData.accountActivated in place, so clearing this
+          // flag lets the component re-render straight into <WelcomeScreen> (URL
+          // still has ?payment=success). A full reload here caused a visible
+          // welcome → blank → welcome flicker (the page loading twice).
           setWaitingForWebhook(false);
-          // Clear the payment query parameter and reload
-          window.history.replaceState({}, '', '/dashboard');
-          window.location.reload();
         }
+
+
       }
     }, (error) => {
       console.error('[Dashboard] Error listening to payment status:', error);

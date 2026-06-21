@@ -9,9 +9,11 @@ import { User } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirestore, doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { stripePromise, appearance, formatCurrency, selectSignupPrice } from '@/lib/stripe';
-import { getPaymentProvider } from '@/lib/payments';
+import { getPaymentProvider, selectSignupPrice as selectNeutralSignupPrice } from '@/lib/payments';
+import { ProviderCheckout } from '@/components/payments/ProviderCheckout';
 import { trackEvent } from '@/lib/firebase';
 import { StripeProduct, StripePrice } from '@/types/stripe';
+
 
 import { Stripe } from '@stripe/stripe-js';
 
@@ -48,54 +50,41 @@ function SubscriptionPaymentForm({
   product: StripeProduct; 
   selectedPrice: StripePrice;
 }) {
-  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
-  const functions = getFunctions(undefined, 'us-west1');
+  // Active-provider checkout price id (Stripe price_… or PayPal Billing Plan P-…).
+  const [checkoutPriceId, setCheckoutPriceId] = useState<string>(selectedPrice.id);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    setPaymentError('');
+  // Resolve the active provider's price id for the selected tier. Product.id is the
+  // Stripe product id in both adapters (design §2.6). Falls back to the Stripe price.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const neutralProduct = await getPaymentProvider({ mode: 'subscription' }).fetchProduct(product.id);
+        const neutralPrice = neutralProduct ? selectNeutralSignupPrice(neutralProduct) : null;
+        if (!cancelled && neutralPrice) setCheckoutPriceId(neutralPrice.id);
+      } catch (e) {
+        console.error('Failed to resolve provider price id; using Stripe price.', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
 
-    // Analytics: user is starting checkout (subscription)
+  // GA4 begin_checkout — fired by <ProviderCheckout> right before the processor call.
+  const trackSubscriptionBeginCheckout = () => {
     trackEvent('begin_checkout', {
       currency: (selectedPrice.currency || 'usd').toUpperCase(),
       value: selectedPrice.amount / 100,
       tier: formData.tier?.name || product.name,
       price_type: 'recurring',
     });
-
-    try {
-      // Subscription flow: start checkout via the active payment provider.
-      const { url } = await getPaymentProvider({ mode: 'subscription' }).startCheckout({
-        userId: currentUser?.uid || '',
-        email: formData.email,
-        priceId: selectedPrice.id,
-        mode: 'subscription',
-        successUrl: `${window.location.origin}/account-setup?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${window.location.origin}/signup`,
-        metadata: {
-          userName: formData.name,
-          userEmail: formData.email,
-          tierName: formData.tier?.name || 'Unknown',
-          tierId: formData.tier?.id || 'unknown',
-          createAccount: 'true',
-        },
-      });
-
-      // Redirect to provider checkout using the URL from the session
-      if (url) window.location.href = url;
-      
-    } catch (err) {
-      console.error('Payment error:', err);
-      setPaymentError((err as Error).message || 'An unexpected error occurred');
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 py-4">
+    <div className="space-y-6 py-4">
+
       <h3 className="text-xl font-semibold text-gray-900">Payment Information</h3>
       
       {/* Error Display */}
@@ -151,33 +140,38 @@ function SubscriptionPaymentForm({
 
       {/* Navigation Buttons */}
       <div className="flex justify-between pt-4">
-        <Button 
-          type="button" 
+        <Button
+          type="button"
           variant="outline"
           onClick={prevStep}
-          disabled={isProcessing}
           className="px-6"
         >
           Back
         </Button>
-        <Button 
-          type="submit" 
-          disabled={isProcessing}
+        <ProviderCheckout
+          mode="subscription"
+          priceId={checkoutPriceId}
+          userId={currentUser?.uid}
+          email={formData.email}
+          successUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/account-setup?session_id={CHECKOUT_SESSION_ID}`}
+          cancelUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/signup`}
+          metadata={{
+            userName: formData.name,
+            userEmail: formData.email,
+            tierName: formData.tier?.name || 'Unknown',
+            tierId: formData.tier?.id || 'unknown',
+            createAccount: 'true',
+          }}
+          label="Subscribe Now"
           className="px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-        >
-          {isProcessing ? (
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Processing...
-            </div>
-          ) : (
-            'Subscribe Now'
-          )}
-        </Button>
+          onBeforeCheckout={trackSubscriptionBeginCheckout}
+          onError={(e) => setPaymentError((e as Error)?.message || 'An unexpected error occurred')}
+        />
       </div>
-    </form>
+    </div>
   );
 }
+
 
 // One-time payment form (uses Stripe hooks)
 function OneTimePaymentForm({ 

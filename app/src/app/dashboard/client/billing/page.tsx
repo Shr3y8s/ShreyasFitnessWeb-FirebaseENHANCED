@@ -60,6 +60,14 @@ export default function BillingPage() {
   const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canceling, setCanceling] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
+
+  // Capability-driven rendering (design §5). Stripe → hosted portal + stored card;
+  // PayPal → neutral history store, no card block, in-app cancel (no portal link).
+  const provider = getPaymentProvider();
+  const caps = provider.capabilities;
+
 
   useEffect(() => {
     if (authLoading) return;
@@ -98,9 +106,34 @@ export default function BillingPage() {
     const fetchBillingData = async () => {
       try {
         setError(null);
-        
+
+        // PayPal (no hosted portal): read neutral billing history from our store.
+        if (!caps.hostedPortal) {
+          setBillingData({ paypal: true });
+          try {
+            const history = await provider.getBillingHistory(user.uid);
+            const txns: Transaction[] = history.map((t) => ({
+              id: t.id,
+              date: t.date,
+              productName: t.productName || 'Payment',
+              description: t.productName || 'Payment',
+              amount: t.amount,
+              currency: t.currency,
+              status: t.status,
+              paymentMethod: 'PayPal',
+              receiptUrl: t.receiptUrl ?? null,
+            }));
+            txns.sort((a, b) => b.date - a.date);
+            setTransactions(txns);
+          } catch (e) {
+            console.error('[Billing] PayPal history fetch failed', e);
+          }
+          return;
+        }
+
         // Get Stripe customer ID from Firestore
         const customerDocRef = doc(db, 'stripe_customers', user.uid);
+
         const customerDoc = await getDoc(customerDocRef);
 
         if (!customerDoc.exists()) {
@@ -290,7 +323,34 @@ export default function BillingPage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    const subscriptionId = (userData as any)?.subscriptionId;
+    if (!subscriptionId) {
+      setError('No active subscription found to cancel.');
+      return;
+    }
+    if (!provider.cancelSubscription) {
+      setError('Cancellation is not available for this provider.');
+      return;
+    }
+    if (!window.confirm('Cancel your subscription? You will lose access at the end of the current period.')) {
+      return;
+    }
+    setCanceling(true);
+    setError(null);
+    try {
+      await provider.cancelSubscription(subscriptionId);
+      setCancelSuccess(true);
+    } catch (e) {
+      console.error('[Billing] Cancel subscription failed', e);
+      setError('Failed to cancel subscription. Please try again or contact support.');
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string = 'usd') => {
+
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase(),
@@ -404,7 +464,52 @@ export default function BillingPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {currentPaymentMethod ? (
+                {!caps.showsStoredCard ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                      <div className="w-14 h-14 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                        <CreditCard className="w-8 h-8 text-gray-700" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-lg text-foreground">Paid with PayPal</p>
+                        <p className="text-sm text-muted-foreground">
+                          Your PayPal account funds your subscription. Manage your funding source in PayPal.
+                        </p>
+                      </div>
+                    </div>
+
+                    {caps.inAppCancel && (userData as any)?.subscriptionId &&
+                      (userData as any)?.subscriptionStatus !== 'canceled' && (
+                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                        <div>
+                          <p className="font-medium text-foreground">Subscription</p>
+                          <p className="text-sm text-muted-foreground">
+                            {cancelSuccess
+                              ? 'Cancellation requested — access continues until the end of your billing period.'
+                              : 'Cancel anytime. Access continues until the end of your current billing period.'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleCancelSubscription}
+                          disabled={canceling || cancelSuccess}
+                          className="px-5 py-2.5 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors font-medium"
+                        >
+                          {canceling ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Canceling...</span>
+                            </>
+                          ) : cancelSuccess ? (
+                            <span>Cancellation Requested</span>
+                          ) : (
+                            <span>Cancel Subscription</span>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : currentPaymentMethod ? (
+
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
                       <div className="flex items-center gap-4">

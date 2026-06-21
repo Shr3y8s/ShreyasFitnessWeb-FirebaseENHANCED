@@ -76,6 +76,22 @@ env:
       - BUILD
       - RUNTIME
 
+  # ---- PayPal (launch processor). PRODUCTION env in prod (design §7.1). ----
+  # NEXT_PUBLIC_PAYPAL_CLIENT_ID is PUBLIC by design (browser SDK loader). The live
+  # CLIENT SECRET + WEBHOOK_ID are server-side only and live in Secret Manager
+  # (referenced by Cloud Functions, not here). Replace the client id placeholder
+  # with the LIVE PayPal app's Client ID before cutover (Phase 5).
+  - variable: NEXT_PUBLIC_PAYPAL_ENV
+    value: "production"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+    value: "REPLACE_WITH_LIVE_PAYPAL_CLIENT_ID"
+    availability:
+      - BUILD
+      - RUNTIME
+
   # ---- reCAPTCHA v3 SITE key (PUBLIC; runs in the browser) ----
   - variable: NEXT_PUBLIC_RECAPTCHA_SITE_KEY
     value: "6LfvdvkrAAAAAH-3siHTiK8UwVOUJ75TOXLrXaxQ"

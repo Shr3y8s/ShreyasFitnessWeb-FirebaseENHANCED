@@ -9,9 +9,15 @@ interface PricingCardProps {
   pricePerSession: number;
   savings?: number;
   stripePriceId: string;
-  onPurchase: (priceId: string) => void;
+  /** Legacy redirect-style purchase handler. Ignored when `action` is provided. */
+  onPurchase?: (priceId: string) => void;
   loading?: boolean;
   featured?: boolean;
+  /**
+   * Optional purchase control that replaces the built-in "Buy Now" button — used to
+   * mount a provider-agnostic <ProviderCheckout> (e.g. PayPal Smart Buttons).
+   */
+  action?: React.ReactNode;
 }
 
 export default function PricingCard({
@@ -23,8 +29,10 @@ export default function PricingCard({
   stripePriceId,
   onPurchase,
   loading,
-  featured
+  featured,
+  action
 }: PricingCardProps) {
+
   return (
     <div className={`relative rounded-lg shadow-lg overflow-hidden transition-transform hover:scale-105 h-full bg-card ${
       featured 
@@ -94,13 +102,18 @@ export default function PricingCard({
           )}
         </ul>
         
-        <button
-          onClick={() => onPurchase(stripePriceId)}
-          disabled={loading}
-          className="w-full py-3 px-4 rounded-lg font-semibold transition-colors mt-auto bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Processing...' : 'Buy Now'}
-        </button>
+        {action ? (
+          <div className="mt-auto">{action}</div>
+        ) : (
+          <button
+            onClick={() => onPurchase?.(stripePriceId)}
+            disabled={loading}
+            className="w-full py-3 px-4 rounded-lg font-semibold transition-colors mt-auto bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Processing...' : 'Buy Now'}
+          </button>
+        )}
+
       </div>
     </div>
   );

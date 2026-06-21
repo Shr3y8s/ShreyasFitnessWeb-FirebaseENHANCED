@@ -14,16 +14,41 @@
  * See docs/02-implementation/payment-processor/payment-processor-design.md (§3)
  */
 
-const { onRequest } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const { logger } = require("firebase-functions");
 const fulfillment = require("./fulfillment");
 
-// Provider registry. PayPal/Paddle adapters are added in their phases.
+// PayPal secrets (Secret Manager). Declared here so the functions below can read
+// them via process.env at runtime. Set with:
+//   firebase functions:secrets:set PAYPAL_CLIENT_ID
+//   firebase functions:secrets:set PAYPAL_CLIENT_SECRET
+//   firebase functions:secrets:set PAYPAL_WEBHOOK_ID
+// (PAYPAL_ENV is a plain env var; the adapter defaults to "sandbox" when unset.)
+const PAYPAL_CLIENT_ID = defineSecret("PAYPAL_CLIENT_ID");
+const PAYPAL_CLIENT_SECRET = defineSecret("PAYPAL_CLIENT_SECRET");
+const PAYPAL_WEBHOOK_ID = defineSecret("PAYPAL_WEBHOOK_ID");
+const PAYPAL_SECRETS = [PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID];
+
+
+// Provider registry. Paddle adapter is added in its phase.
 const PROVIDERS = {
   stripe: require("./providers/stripe"),
-  // paypal: require("./providers/paypal"),  // Phase 3
+  paypal: require("./providers/paypal"), // Phase 3
   // paddle: require("./providers/paddle"),  // Phase 4
 };
+
+/**
+ * Injectable fulfillment hooks (parity side effects: welcome email / onboarding
+ * goal / activity-feed). The main functions entrypoint (../index.js) calls
+ * `setFulfillmentHooks({ onFirstActivation })` so this neutral module stays free
+ * of those dependencies (avoids a circular require). See fulfillment.js header.
+ */
+let fulfillmentHooks = {};
+function setFulfillmentHooks(hooks) {
+  fulfillmentHooks = hooks || {};
+}
+
 
 /**
  * Dispatch a single neutral PaymentEvent to fulfillment.
@@ -32,18 +57,22 @@ async function handleEvent(providerName, e) {
   switch (e.type) {
     case "subscription.activated":
     case "subscription.updated":
-      await fulfillment.activateSubscription({
-        userId: e.userId,
-        subscriptionId: e.subscriptionId,
-        provider: providerName,
-        status: e.subscription?.status || "active",
-        priceId: e.subscription?.priceId,
-        productId: e.subscription?.productId,
-        tierId: e.subscription?.tierId,
-        tierName: e.subscription?.tierName,
-        currentPeriodEnd: e.subscription?.currentPeriodEnd,
-      });
+      await fulfillment.activateSubscription(
+        {
+          userId: e.userId,
+          subscriptionId: e.subscriptionId,
+          provider: providerName,
+          status: e.subscription?.status || "active",
+          priceId: e.subscription?.priceId,
+          productId: e.subscription?.productId,
+          tierId: e.subscription?.tierId,
+          tierName: e.subscription?.tierName,
+          currentPeriodEnd: e.subscription?.currentPeriodEnd,
+        },
+        fulfillmentHooks
+      );
       break;
+
 
     case "subscription.canceled":
       // A status-only cancel still flows through activateSubscription so the
@@ -105,9 +134,26 @@ async function handleEvent(providerName, e) {
  * single function can serve multiple providers' endpoints) or defaults to env.
  * Each provider registers its own endpoint URL + signature secret at cutover.
  */
-const paymentWebhook = onRequest({ region: "us-west1" }, async (req, res) => {
-  const providerName = (req.query.provider || process.env.PAYMENT_PROVIDER || "stripe").toString();
+/**
+ * Resolve which provider sent this webhook. Prefer the explicit `?provider=` query
+ * (how we register each endpoint), but FALL BACK to the provider-specific signature
+ * headers so a missing/stripped query param can never silently route a PayPal event
+ * to the Stripe verifier (PayPal sends `paypal-transmission-sig`; Stripe sends
+ * `stripe-signature`). Last resort: env default, then "stripe".
+ */
+function detectProvider(req) {
+  if (req.query && req.query.provider) return req.query.provider.toString();
+  const h = req.headers || {};
+  if (h["paypal-transmission-sig"]) return "paypal";
+  if (h["stripe-signature"]) return "stripe";
+  return (process.env.PAYMENT_PROVIDER || "stripe").toString();
+}
+
+const paymentWebhook = onRequest({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req, res) => {
+
+  const providerName = detectProvider(req);
   const provider = PROVIDERS[providerName];
+
 
   if (!provider) {
     logger.error("paymentWebhook: unknown provider", { providerName });
@@ -158,8 +204,126 @@ const paymentWebhook = onRequest({ region: "us-west1" }, async (req, res) => {
   }
 });
 
+/**
+ * Callable: cancel the caller's PayPal subscription (backs the client adapter's
+ * `cancelSubscription`). Auth-gated; verifies the subscription belongs to the
+ * caller via their user doc before calling PayPal. The webhook
+ * (BILLING.SUBSCRIPTION.CANCELLED) performs the actual fulfillment/state change.
+ */
+const cancelPaypalSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+
+  const subscriptionId = req.data?.subscriptionId;
+  if (!subscriptionId) throw new HttpsError("invalid-argument", "subscriptionId required.");
+
+  const admin = require("firebase-admin");
+  const userSnap = await admin.firestore().collection("users").doc(uid).get();
+  const userData = userSnap.data() || {};
+  if (userData.subscriptionId !== subscriptionId) {
+    throw new HttpsError("permission-denied", "Subscription does not belong to caller.");
+  }
+
+  try {
+    await PROVIDERS.paypal.cancelSubscription(subscriptionId);
+    return { ok: true };
+  } catch (err) {
+    logger.error("cancelPaypalSubscription failed", { uid, subscriptionId, error: err.message });
+    throw new HttpsError("internal", "Failed to cancel subscription.");
+  }
+});
+
+/**
+ * Callable: capture a one-time PayPal Order SERVER-SIDE (backs the client adapter's
+ * one-time onApprove). The browser SDK's actions.order.capture() is unreliable for
+ * guest-card orders (permission_denied); our server credentials capture reliably.
+ * Auth-gated. The PAYMENT.CAPTURE.COMPLETED webhook performs fulfillment (idempotent),
+ * so this just triggers/confirms the capture and returns its status.
+ */
+const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+
+  const orderId = req.data?.orderId;
+  if (!orderId) throw new HttpsError("invalid-argument", "orderId required.");
+
+  try {
+    const result = await PROVIDERS.paypal.captureOrder(orderId);
+    const status = result?.status || result?.purchase_units?.[0]?.payments?.captures?.[0]?.status;
+    return { ok: true, status: status || "COMPLETED" };
+  } catch (err) {
+    logger.error("capturePaypalOrder failed", { uid, orderId, error: err.message });
+    throw new HttpsError("internal", "Failed to capture order.");
+  }
+});
+
+/**
+ * Callable: create a one-time PayPal Order SERVER-SIDE (ACDC card-fields flow).
+ * Amount is resolved server-side from the priceId (never trusted from client).
+ */
+const createPaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const priceId = req.data?.priceId;
+  if (!priceId) throw new HttpsError("invalid-argument", "priceId required.");
+  try {
+    const orderId = await PROVIDERS.paypal.createOrder(priceId, uid);
+    return { ok: true, orderId };
+  } catch (err) {
+    logger.error("createPaypalOrder failed", { uid, priceId, error: err.message });
+    throw new HttpsError("internal", "Failed to create order.");
+  }
+});
+
+/**
+ * Callable: create a vault SETUP TOKEN so the client's ACDC card fields can vault a
+ * card for a subscription. Returns the setup token id.
+ */
+const createPaypalCardSetupToken = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  try {
+    const setupToken = await PROVIDERS.paypal.createCardSetupToken();
+    return { ok: true, setupToken };
+  } catch (err) {
+    logger.error("createPaypalCardSetupToken failed", { uid, error: err.message });
+    throw new HttpsError("internal", "Failed to create card setup token.");
+  }
+});
+
+/**
+ * Callable: create a subscription billed to a vaulted CARD (ACDC). Lets a card-only
+ * buyer subscribe with NO PayPal account. The webhook (BILLING.SUBSCRIPTION.ACTIVATED)
+ * performs fulfillment; `custom_id` = uid maps it to the user.
+ */
+const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const setupToken = req.data?.setupToken;
+  const planId = req.data?.planId;
+  if (!setupToken) throw new HttpsError("invalid-argument", "setupToken required.");
+  if (!planId) throw new HttpsError("invalid-argument", "planId required.");
+  try {
+    const sub = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planId, uid);
+    return { ok: true, subscriptionId: sub?.id, status: sub?.status };
+  } catch (err) {
+    logger.error("createPaypalSubscriptionWithCard failed", { uid, planId, error: err.message });
+    throw new HttpsError("internal", "Failed to create subscription.");
+  }
+});
+
 module.exports = {
   paymentWebhook,
+  cancelPaypalSubscription,
+  capturePaypalOrder,
+  createPaypalOrder,
+  createPaypalCardSetupToken,
+  createPaypalSubscriptionWithCard,
+
+
+  setFulfillmentHooks, // ../index.js injects parity side-effects (welcome email/goal/feed)
   handleEvent, // exported for unit testing
   PROVIDERS,
 };
+
+

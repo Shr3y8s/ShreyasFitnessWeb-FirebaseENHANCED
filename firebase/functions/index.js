@@ -4974,3 +4974,110 @@ exports.cleanupExpiredActivityFeed = onSchedule({
     return null;
   }
 });
+
+/* ============================================================================
+ * PROVIDER-NEUTRAL PAYMENTS (PayPal launch — payment-processor spec Phase 3)
+ *
+ * The generic `paymentWebhook` (payments/index.js) verifies + parses a provider
+ * webhook and runs neutral fulfillment (payments/fulfillment.js). Here we (a)
+ * inject the parity side-effects on first activation (welcome email / onboarding
+ * setup goal / new_client_signup activity event) so the PayPal path matches the
+ * Stripe `syncSubscriptionToUser` behavior, and (b) re-export the function +
+ * the cancel callable so they deploy.
+ *
+ * Stripe remains the LIVE path (invertase extension + the triggers above) until
+ * cutover; this webhook is invoked live per-provider in Phase 3/5.
+ * ========================================================================== */
+const paymentsModule = require("./payments");
+
+/**
+ * Parity side-effects on first subscription activation, shared across providers.
+ * Mirrors the inline logic in syncSubscriptionToUser (welcome email + setup goal
+ * + activity feed). Each effect is best-effort and must not throw.
+ */
+async function onFirstActivation({ userId, userData, tierId, trainerId }) {
+  // 1) Onboarding setup goal — only for check-in-eligible tiers, only if a
+  //    trainer is assigned and no setup goal exists yet.
+  try {
+    if (trainerId && tierId && CHECKIN_ELIGIBLE_PRODUCTS.includes(tierId)) {
+      const setupGoalRef = admin.firestore().collection("goals").doc(`${userId}_setup`);
+      const existingGoal = await setupGoalRef.get();
+      if (!existingGoal.exists) {
+        const now = admin.firestore.Timestamp.now();
+        const deadline = admin.firestore.Timestamp.fromDate(
+          new Date(Date.now() + ONBOARDING_DEADLINE_DAYS * 24 * 60 * 60 * 1000)
+        );
+        await setupGoalRef.set({
+          clientId: userId,
+          trainerId,
+          category: "setup",
+          title: "Complete Your Onboarding",
+          term: "short-term",
+          priority: "high",
+          isActive: true,
+          isConfigured: true,
+          targetValue: 3,
+          currentValue: 0,
+          unit: "tasks",
+          lowerIsBetter: false,
+          status: "active",
+          deadline,
+          completedAt: null,
+          milestones: [
+            { id: `${userId}_setup_m0`, order: 1, text: "Schedule your 30-minute planning consultation", targetValue: 1, completed: false, completedAt: null, autoTracked: false, createdAt: now, updatedAt: now },
+            { id: `${userId}_setup_m1`, order: 2, text: "Complete your consultation", targetValue: 2, completed: false, completedAt: null, autoTracked: false, createdAt: now, updatedAt: now },
+            { id: `${userId}_setup_m2`, order: 3, text: "Receive your personalized fitness plan", targetValue: 3, completed: false, completedAt: null, autoTracked: false, createdAt: now, updatedAt: now },
+          ],
+          createdAt: now,
+          updatedAt: now,
+          createdBy: trainerId,
+        });
+        logger.info("Setup goal created (neutral onFirstActivation)", { userId });
+      }
+    }
+  } catch (error) {
+    logger.error("onFirstActivation: setup goal failed (non-fatal)", { userId, error: error.message });
+  }
+
+  // 2) Welcome email (non-blocking).
+  try {
+    const fresh = await admin.firestore().collection("users").doc(userId).get();
+    const u = fresh.data() || userData || {};
+    sendWelcomeEmail(u.name, u.email, u.assignedTrainerName, u.tierName).catch(() => {
+      logger.warn("Welcome email sending failed but continuing", { userId });
+    });
+  } catch (error) {
+    logger.error("onFirstActivation: welcome email failed (non-fatal)", { userId, error: error.message });
+  }
+
+  // 3) Activity feed: new_client_signup.
+  try {
+    const clientName = userData?.name || "New Client";
+    const tierDisplayName = userData?.tierName || "";
+    await writeActivityEvent({
+      type: "new_client_signup",
+      clientId: userId,
+      clientName,
+      trainerId: trainerId || "",
+      message: tierDisplayName ? `${clientName} signed up (${tierDisplayName})` : `${clientName} signed up`,
+      metadata: { tierName: tierDisplayName },
+    });
+  } catch (error) {
+    logger.warn("onFirstActivation: new_client_signup event failed (non-fatal)", { userId, error: error.message });
+  }
+}
+
+paymentsModule.setFulfillmentHooks({ onFirstActivation });
+
+// Generic provider webhook (HTTP) + PayPal cancel callable.
+exports.paymentWebhook = paymentsModule.paymentWebhook;
+exports.cancelPaypalSubscription = paymentsModule.cancelPaypalSubscription;
+exports.capturePaypalOrder = paymentsModule.capturePaypalOrder;
+// ACDC card-fields (card-only checkout, no PayPal account) — FR-12 / Phase 3.6
+exports.createPaypalOrder = paymentsModule.createPaypalOrder;
+exports.createPaypalCardSetupToken = paymentsModule.createPaypalCardSetupToken;
+exports.createPaypalSubscriptionWithCard = paymentsModule.createPaypalSubscriptionWithCard;
+
+
+
+

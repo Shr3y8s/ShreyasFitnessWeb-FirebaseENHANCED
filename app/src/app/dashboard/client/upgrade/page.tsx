@@ -14,16 +14,27 @@ import { Badge } from '@/components/ui/badge';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { Check, Loader2, CreditCard, Star, ArrowRight } from 'lucide-react';
 import { selectSignupPrice } from '@/lib/stripe';
-import { getPaymentProvider, formatCurrency } from '@/lib/payments';
+import { formatCurrency } from '@/lib/payments';
 import { StripeProduct, StripePrice } from '@/types/stripe';
 
 import { useToast } from '@/hooks/use-toast';
-import { SERVICE_TIERS } from '@/lib/constants';
+import { SERVICE_TIERS, type CheckoutItemKey } from '@/lib/constants';
 
 interface SubscriptionOption {
   product: StripeProduct;
   price: StripePrice;
 }
+
+const RETURN_PATH = '/dashboard/client/membership';
+
+/** Map a subscription product id → the unified checkout item key. */
+function checkoutItemForProduct(productId: string): CheckoutItemKey | null {
+  if (productId === SERVICE_TIERS.ONLINE_COACHING) return 'ONLINE_COACHING';
+  if (productId === SERVICE_TIERS.COMPLETE_TRANSFORMATION) return 'COMPLETE_TRANSFORMATION';
+  return null;
+}
+
+
 
 export default function UpgradePage() {
   const router = useRouter();
@@ -31,7 +42,7 @@ export default function UpgradePage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscriptionOptions, setSubscriptionOptions] = useState<SubscriptionOption[]>([]);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+
 
   const handleLogout = async () => {
     try {
@@ -111,12 +122,14 @@ export default function UpgradePage() {
         };
 
         const price = selectSignupPrice(product);
-        if (price) {
-          options.push({ product, price });
-        }
+        if (!price) continue;
+
+        options.push({ product, price });
       }
 
+
       setSubscriptionOptions(options);
+
     } catch (error) {
       console.error('Error loading subscription options:', error);
       toast({
@@ -129,12 +142,8 @@ export default function UpgradePage() {
     }
   };
 
-  const handleSelectPlan = async (option: SubscriptionOption) => {
-    if (!user || !userData) return;
-
-    setProcessingId(option.product.id);
-
-    // Analytics: user is starting an upgrade checkout
+  // GA4 begin_checkout, fired by <ProviderCheckout> right before the processor call.
+  const trackUpgradeBeginCheckout = (option: SubscriptionOption) => {
     trackEvent('begin_checkout', {
       currency: (option.price.currency || 'usd').toUpperCase(),
       value: option.price.amount / 100,
@@ -142,37 +151,10 @@ export default function UpgradePage() {
       price_type: 'recurring',
       context: 'upgrade',
     });
-
-    try {
-      const { url: checkoutUrl } = await getPaymentProvider({ mode: 'subscription' }).startCheckout({
-        userId: user.uid,
-        priceId: option.price.id,
-        mode: 'subscription',
-        successUrl: `${window.location.origin}/dashboard/client/membership?upgrade=success`,
-        cancelUrl: `${window.location.origin}/dashboard/client/upgrade`,
-        metadata: {
-          userId: user.uid,
-          userName: userData.name,
-          userEmail: userData.email,
-          tierName: option.product.name,
-          tierId: option.product.id,
-          type: 'subscription'
-        }
-      });
-
-      if (checkoutUrl) window.location.href = checkoutUrl;
-    } catch (error) {
-      console.error('Error creating checkout:', error);
-      toast({
-        title: "Checkout Failed",
-        description: "Failed to start checkout. Please try again.",
-        variant: "destructive",
-      });
-      setProcessingId(null);
-    }
   };
 
   if (loading || authLoading) {
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -207,10 +189,9 @@ export default function UpgradePage() {
 
             <div className="grid md:grid-cols-2 gap-6">
               {subscriptionOptions.map((option) => {
-                const isProcessing = processingId === option.product.id;
-                
                 return (
                   <Card key={option.product.id} className="relative overflow-hidden transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+
                     {option.product.id === SERVICE_TIERS.COMPLETE_TRANSFORMATION && (
                       <div className="absolute top-4 right-4">
                         <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600">
@@ -263,23 +244,28 @@ export default function UpgradePage() {
                       </div>
 
                       <Button
-                        onClick={() => handleSelectPlan(option)}
-                        disabled={isProcessing}
                         className="w-full"
+                        onClick={() => {
+                          const item = checkoutItemForProduct(option.product.id);
+                          if (!item) {
+                            toast({
+                              title: 'Unavailable',
+                              description: 'This plan is not available for checkout.',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          trackUpgradeBeginCheckout(option);
+                          router.push(
+                            `/checkout?item=${item}&return=${encodeURIComponent(RETURN_PATH)}`
+                          );
+                        }}
                       >
-                        {isProcessing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            Select Plan
-                            <ArrowRight className="h-4 w-4 ml-2" />
-                          </>
-                        )}
+                        Select Plan
+                        <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
+
+
                     </CardContent>
                   </Card>
                 );

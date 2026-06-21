@@ -209,27 +209,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           
           if (sourceCollection) {
-            // Setup real-time listener for this user's document
-            firestoreUnsubscribe = onSnapshot(
-              doc(db, sourceCollection, authUser.uid),
-              (snapshot) => {
-                if (snapshot.exists()) {
-                  const data = snapshot.data();
-                  setUserData({
-                    ...data,
-                    userType,
-                    sourceCollection,
-                    role: data.role || userType
-                  } as UserData);
+            // Setup real-time listener for this user's document.
+            // On a fresh signup the account is created → onAuthStateChanged fires →
+            // this listener attaches before the new ID token has propagated to the
+            // Firestore Listen channel, so the first listen can be briefly denied
+            // (permission-denied). We self-heal: force a token refresh and re-attach
+            // a few times before surfacing the error. Capped so a genuine permission
+            // error still logs (and never loops).
+            const attachUserListener = (attempt = 0) => {
+              firestoreUnsubscribe = onSnapshot(
+                doc(db, sourceCollection!, authUser.uid),
+                (snapshot) => {
+                  if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    setUserData({
+                      ...data,
+                      userType,
+                      sourceCollection,
+                      role: data.role || userType
+                    } as UserData);
+                  }
+                  // Set loading false after first data fetch
+                  setLoading(false);
+                },
+                (error) => {
+                  if ((error as { code?: string })?.code === 'permission-denied' && attempt < 3) {
+                    // Token race on fresh signup — refresh token, then re-attach.
+                    authUser
+                      .getIdToken(true)
+                      .catch(() => { /* ignore; retry will still re-attach */ })
+                      .finally(() => {
+                        setTimeout(() => attachUserListener(attempt + 1), 300 * (attempt + 1));
+                      });
+                    return;
+                  }
+                  console.error('[AuthContext] Firestore listener error:', error);
                 }
-                // Set loading false after first data fetch
-                setLoading(false);
-              },
-              (error) => {
-                console.error('[AuthContext] Firestore listener error:', error);
-              }
-            );
+              );
+            };
+            attachUserListener();
           } else {
+
             setUserData(null);
             setLoading(false);
           }

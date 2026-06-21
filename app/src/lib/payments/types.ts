@@ -59,8 +59,16 @@ export interface ProviderCapabilities {
    * when false (Stripe/Paddle), it uses `startCheckout`.
    */
   buttonCheckout: boolean;
+  /**
+   * Provider can render in-page hosted CARD fields (no account/login needed) for
+   * card-only checkout. PayPal ✅ via ACDC ("Advanced Credit and Debit Card");
+   * Stripe ✅ via Elements; Paddle ❌ (overlay). When true the adapter implements
+   * `renderCardFields`. Lets a card-paying subscriber avoid the PayPal-account wall.
+   */
+  cardFields?: boolean;
   /** Provider offers a hosted customer/billing portal (Stripe ✅ Paddle ✅ PayPal ❌). */
   hostedPortal: boolean;
+
   /** Provider exposes a stored card-on-file to display (Stripe ✅ Paddle ✅ PayPal ❌). */
   showsStoredCard: boolean;
   /** Provider supports canceling a subscription via API from our own UI. */
@@ -87,6 +95,16 @@ export interface CheckoutResult {
 }
 
 export type PaymentProviderName = 'stripe' | 'paypal' | 'paddle';
+
+/**
+ * Minimal billing address for card AVS / 3-D Secure. Collected as plain inputs
+ * (NOT a hosted field) and passed into the card `submit()`. Country is an
+ * ISO-3166-1 alpha-2 code (e.g. 'US').
+ */
+export interface BillingAddress {
+  countryCode: string;
+  postalCode: string;
+}
 
 /**
  * The single interface the app depends on. Adapters implement this; pages call
@@ -118,8 +136,26 @@ export interface PaymentProvider {
     }
   ): Promise<() => void>;
 
+  /**
+   * Card-fields providers (capabilities.cardFields === true) render hosted, in-page
+   * CARD inputs into `container` for card-only checkout WITHOUT a provider account
+   * (PayPal ACDC). Returns `{ submit, cleanup }`: `submit()` validates + runs 3DS and
+   * (one-time) captures server-side or (subscription) vaults the card and creates the
+   * subscription; `onApproved` then fires (webhook is the source of truth). `cleanup`
+   * unmounts the fields.
+   */
+  renderCardFields?(
+    opts: CheckoutOptions & {
+      container: HTMLElement;
+      onApproved: () => void;
+      onError?: (e: unknown) => void;
+    }
+  ): Promise<{ submit: (billingAddress?: BillingAddress) => Promise<void>; cleanup: () => void }>;
+
+
   // Post-purchase management
   getBillingHistory(customerId: string): Promise<Transaction[]>;
+
   openBillingPortal?(opts: {
     customerId: string;
     returnUrl: string;
