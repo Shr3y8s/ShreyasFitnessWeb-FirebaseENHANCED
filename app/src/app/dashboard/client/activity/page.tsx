@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
+import { redirectToCheckoutForTier } from '@/lib/constants';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -75,7 +76,7 @@ export default function DailyActivityPage() {
     }
 
     if (!userData.accountActivated) {
-      router.push('/payment');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/activity');
       return;
     }
   }, [userData, authLoading, router]);

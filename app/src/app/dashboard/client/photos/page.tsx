@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
+import { redirectToCheckoutForTier } from '@/lib/constants';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Loader2, Camera, Upload, CheckCircle, XCircle, Info } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function MonthlyPhotosPage() {
     }
 
     if (!userData.accountActivated) {
-      router.push('/payment');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/photos');
       return;
     }
   }, [userData, authLoading, router]);

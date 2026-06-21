@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
 import { signOutUser } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -40,9 +42,10 @@ export default function PlanPage() {
       }
 
       if (!userData.accountActivated) {
-        router.push('/payment');
+        redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/plan');
         return;
       }
+
 
       try {
         // Fetch plan data

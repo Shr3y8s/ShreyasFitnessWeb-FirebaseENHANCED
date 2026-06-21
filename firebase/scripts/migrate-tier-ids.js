@@ -24,6 +24,15 @@
 
 const admin = require("firebase-admin");
 
+// Prefer an explicit service-account key if it exists; else fall back to ADC.
+let serviceAccount = null;
+try {
+  serviceAccount = require("../../service-account-key.json");
+} catch {
+  serviceAccount = null;
+}
+
+
 // Legacy Stripe product id  app product id. Both test + live, since ids are
 // globally unique and a given user's tier only ever matches one set.
 const TIER_MIGRATION = {
@@ -45,8 +54,11 @@ const APP_IDS = new Set(Object.values(TIER_MIGRATION));
 const COMMIT = process.argv.includes("--commit");
 
 async function main() {
-  admin.initializeApp();
+  admin.initializeApp(
+    serviceAccount ? { credential: admin.credential.cert(serviceAccount) } : undefined
+  );
   const db = admin.firestore();
+
 
   console.log(`\nTier id migration — mode: ${COMMIT ? "COMMIT" : "DRY RUN"}\n`);
 

@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
 import { signOutUser, db, auth } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
@@ -141,8 +143,9 @@ export default function ProfilePage() {
 
     // CRITICAL: Check account activation
     if (!userData.accountActivated) {
-      console.log('[Profile] Account not activated, redirecting to payment');
-      router.push('/payment');
+      console.log('[Profile] Account not activated, redirecting to checkout');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/profile');
+
       return;
     }
 

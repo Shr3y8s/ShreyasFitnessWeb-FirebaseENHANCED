@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { redirectToCheckoutForTier } from '@/lib/constants';
 import { signOutUser, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -91,8 +92,8 @@ export default function BillingPage() {
 
     // Check account activation
     if (!userData.accountActivated) {
-      console.log('[Billing] Account not activated, redirecting to payment');
-      router.push('/payment');
+      console.log('[Billing] Account not activated, redirecting to checkout');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/billing');
       return;
     }
 

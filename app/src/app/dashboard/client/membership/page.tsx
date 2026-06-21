@@ -2,7 +2,9 @@
 
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
+import { redirectToCheckoutForTier } from '@/lib/constants';
 import { signOutUser, db } from '@/lib/firebase';
+
 import { doc, onSnapshot } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -69,8 +71,9 @@ export default function MembershipPage() {
 
     // CRITICAL: Check account activation
     if (!userData.accountActivated) {
-      console.log('[Membership] Account not activated, redirecting to payment');
-      router.push('/payment');
+      console.log('[Membership] Account not activated, redirecting to checkout');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/membership');
+
       return;
     }
 

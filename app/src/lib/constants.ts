@@ -225,6 +225,31 @@ export function getCheckoutKeyForProduct(productId: string): CheckoutItemKey | n
   return entry ? entry[0] : null;
 }
 
+/**
+ * Redirect an un-activated client to resume payment via the unified checkout,
+ * keyed by their tier. Falls back to /dashboard if the tier is missing/unmapped.
+ *
+ * This is the single source of truth for the "account not activated" guard used
+ * across the client app (replaces the legacy hard-coded `router.push('/payment')`).
+ * The router param is typed structurally to avoid importing `next/navigation`
+ * into this constants module.
+ */
+export function redirectToCheckoutForTier(
+  router: { push: (href: string) => void },
+  tier: string | undefined | null,
+  returnPath = '/dashboard',
+  fallback = '/dashboard'
+): void {
+  const itemKey = tier ? getCheckoutKeyForProduct(tier) : null;
+  router.push(
+    itemKey
+      ? `/checkout?item=${itemKey}&return=${encodeURIComponent(returnPath)}`
+      : fallback
+  );
+}
+
+
+
 
 // Note: Additional constants can be added as needed.
 

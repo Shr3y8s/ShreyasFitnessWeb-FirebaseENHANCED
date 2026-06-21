@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { signOutUser } from '@/lib/firebase';
@@ -39,9 +41,10 @@ export default function ProgressPage() {
     }
 
     if (!userData.accountActivated) {
-      router.push('/payment');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/progress');
       return;
     }
+
 
     setLoading(false);
   }, [userData, authLoading, router]);

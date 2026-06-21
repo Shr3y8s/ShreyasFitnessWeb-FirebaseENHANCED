@@ -359,7 +359,45 @@ async function captureOrder(orderId, ctx = {}) {
 
 }
 
+/**
+ * Refund a PayPal capture, fully or partially (Payments API v2).
+ *
+ * Backs neutral session-credit refunds (e.g. the account-deletion "GDPR-clean"
+ * flow). `captureId` is the provider's capture/transaction id — i.e. the neutral
+ * `sessionPackages[].providerTransactionId`. Omit `amount` for a FULL refund;
+ * pass minor units (cents) for a partial refund.
+ *
+ * NOTE: This capability is implemented and exported for reuse, but is NOT yet
+ * wired into deleteAccount — that path is deferred to the deletion review.
+ *
+ * @param {string} captureId  PayPal capture id (providerTransactionId)
+ * @param {object} [opts] { amountMinorUnits?: number, currency?: string }
+ * @param {object} ctx { clientId, clientSecret, base }
+ * @returns the PayPal refund response (status COMPLETED on success)
+ */
+async function refundCapture(captureId, opts = {}, ctx = {}) {
+  if (!captureId) throw new Error("captureId required");
+  const token = await getAccessToken(ctx);
+  const body =
+    opts.amountMinorUnits != null
+      ? {
+          amount: {
+            value: (opts.amountMinorUnits / 100).toFixed(2),
+            currency_code: opts.currency || "USD",
+          },
+        }
+      : {}; // empty body = full refund
+  return request(
+    "POST",
+    `/v2/payments/captures/${captureId}/refund`,
+    token,
+    body,
+    ctx.base
+  );
+}
+
 // One-time amounts (minor units) — mirrors app constants.ts PAYPAL_ONETIME. Kept
+
 // server-side so order creation can't be tampered with from the client. `appId`
 // is the provider-neutral product id stored in Firestore (sessionPackages.productId).
 const ONETIME_AMOUNTS = {
@@ -454,7 +492,9 @@ module.exports = {
   parseEvent,
   cancelSubscription,
   captureOrder,
+  refundCapture,
   createOrder,
+
   createCardSetupToken,
   createSubscriptionWithCard,
 

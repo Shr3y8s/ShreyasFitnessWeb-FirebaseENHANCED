@@ -12,6 +12,20 @@ import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 import { AuthHeader } from '@/components/AuthHeader';
 
+/**
+ * Post-login destination. Honors a `?next=<relative path>` param (e.g. signup sends
+ * unpaid returning users to `/checkout?item=…`), but ONLY for same-site relative
+ * paths (must start with a single '/', not '//') to prevent open-redirects. Read
+ * from window.location at call time (client-only) so we avoid useSearchParams +
+ * the Suspense boundary it would require.
+ */
+function getSafeNext(): string {
+  if (typeof window === 'undefined') return '/dashboard';
+  const raw = new URLSearchParams(window.location.search).get('next');
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/dashboard';
+  return raw;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +43,7 @@ export default function LoginPage() {
       const result = await signInUser(email, password);
       
       if (result.success) {
-        router.push('/dashboard');
+        router.push(getSafeNext());
       } else {
         setError(getFirebaseErrorMessage(result.error));
       }
@@ -46,13 +60,14 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogleAuth();
-      router.push('/dashboard');
+      router.push(getSafeNext());
     } catch (err) {
       setError(getFirebaseErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">

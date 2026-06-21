@@ -97,9 +97,12 @@ export default function ServiceTierStep({
   };
   
   const handleTierSelect = (product: EnhancedProduct) => {
-    // Store actual Stripe product ID instead of friendly name
+    // Store the provider-neutral APP PRODUCT ID (e.g. in_person, online_coaching).
+    // `product.id` is the app id emitted by the active provider's catalog, so this
+    // is what lands in users/{uid}.tier at signup (one-time AND subscription tiers).
     const tier: ServiceTierType = {
-      id: product.id, // NOW STORES ACTUAL STRIPE PRODUCT ID
+      id: product.id, // app product id (NOT a Stripe id)
+
       name: product.name,
       price: product.displayPrice / 100,
       features: product.features

@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
 import { Shield, Key, Mail, Smartphone, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -62,9 +64,10 @@ export default function SecurityPage() {
     }
 
     if (!userData.accountActivated) {
-      router.push('/payment');
+      redirectToCheckoutForTier(router, userData.tier, '/dashboard/client/security');
       return;
     }
+
 
     setLoading(false);
   }, [userData, authLoading, router]);

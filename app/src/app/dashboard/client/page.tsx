@@ -30,6 +30,9 @@ import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { getClientPlan } from '@/lib/plan-api';
 import { getDailyActivity, toggleHabit } from '@/lib/activity-api';
 import { getTodayLocal } from '@/lib/date-utils';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
+
 import type { DailyActivityData } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
@@ -84,12 +87,16 @@ export default function ClientDashboardPage() {
       return;
     }
 
-    // CRITICAL: Check account activation before allowing dashboard access
+    // CRITICAL: Check account activation before allowing dashboard access.
+    // Un-activated client → resume payment via the unified checkout, keyed by tier
+    // (matches /dashboard root guard). Falls back to /dashboard if tier unmapped.
     if (!userDataFromAuth.accountActivated) {
-      console.log('[ClientDashboard] Account not activated, redirecting to payment');
-      router.push('/payment');
+      console.log('[ClientDashboard] Account not activated, redirecting to checkout');
+      redirectToCheckoutForTier(router, userDataFromAuth.tier, '/dashboard');
       return;
     }
+
+
 
     setLoading(false);
   }, [userDataFromAuth, authLoading, router]);

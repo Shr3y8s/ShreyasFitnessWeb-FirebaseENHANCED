@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
+
 import { WelcomeScreen } from '@/components/dashboard/welcome-screen';
 
 export default function DashboardWelcomePage() {
@@ -37,12 +40,16 @@ export default function DashboardWelcomePage() {
             return;
           }
           
-          // CRITICAL: Check account activation FIRST (but not if waiting for webhook)
+          // CRITICAL: Check account activation FIRST (but not if waiting for webhook).
+          // Un-activated client (e.g. signup whose payment failed/was abandoned) →
+          // resume payment via the unified checkout, keyed by their selected tier.
           if (userData.role === 'client' && !userData.accountActivated) {
-            // Redirect to payment if not activated
-            router.push('/payment');
+            // Fallback to /dashboard/client (not /dashboard) to avoid a self-redirect loop.
+            redirectToCheckoutForTier(router, userData.tier, '/dashboard', '/dashboard/client');
             return;
           }
+
+
           
           // Check user role and redirect appropriately
           if (userData.role === 'trainer' || userData.role === 'admin') {

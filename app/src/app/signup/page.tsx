@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createUserWithTier, auth } from '@/lib/firebase';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth, db, trackEvent } from '@/lib/firebase';
+import { onAuthStateChanged, createUserWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getCheckoutKeyForProduct } from '@/lib/constants';
+import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
+
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Check, UserPlus, Crown, Star, Target, Clock, Mail, User } from 'lucide-react';
 import EmailStep from './components/EmailStep';
@@ -164,56 +168,112 @@ export default function SignupPage() {
   
   const prevStep = () => setCurrentStep(currentStep - 1);
 
-  // Store signup data and redirect to payment (account created later)
+  // Create the Firebase account, then hand off to the GENERIC checkout flow.
+  // Per the reusability rule, /checkout assumes an authenticated user and contains
+  // NO account-creation logic — so we do reCAPTCHA + auth + the users/{uid} doc
+  // HERE, then route to /checkout?item=<key>. `formData.tier.id` is the app
+  // product id; CHECKOUT_ITEMS is keyed by app id via getCheckoutKeyForProduct.
   const handleTierSelectionComplete = async () => {
     setIsSubmitting(true);
     setError('');
-    
+
     if (!formData.tier) {
       setError('Please select a service tier');
       setIsSubmitting(false);
       return;
     }
-    
+
     // Validate all required fields
     if (!formData.email || !formData.name || !formData.password) {
       setError('Please fill in all required fields');
       setIsSubmitting(false);
       return;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setIsSubmitting(false);
       return;
     }
-    
+
+    // Resolve the checkout item (app id → CHECKOUT_ITEMS key) before creating anything.
+    const itemKey = getCheckoutKeyForProduct(formData.tier.id);
+    if (!itemKey) {
+      setError('This plan is not available for checkout.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      console.log("Tier selected, proceeding to payment page");
-      
-      // Store signup data in sessionStorage for payment page
-      // Account will be created when user clicks "Complete Payment"
-      sessionStorage.setItem('pendingSignup', JSON.stringify({
+      // reCAPTCHA (best-effort; not fatal if it fails to load).
+      let recaptchaToken: string | null = null;
+      try {
+        await loadRecaptcha();
+        recaptchaToken = await executeRecaptcha('create_account');
+      } catch (e) {
+        console.error('reCAPTCHA failed (continuing):', e);
+      }
+
+      // Create the Firebase Auth account.
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
+      } catch (authError: any) {
+        console.error('Firebase Auth error:', authError);
+        if (authError?.code === 'auth/email-already-in-use') {
+          // Account exists (e.g. a prior signup whose payment failed). Send them to
+          // log in, carrying the checkout target so they land straight on payment.
+          const nextUrl = `/checkout?item=${itemKey}&return=${encodeURIComponent('/dashboard')}`;
+          setError('This email already has an account. Redirecting you to log in so you can finish your purchase…');
+          setTimeout(() => router.push(`/login?next=${encodeURIComponent(nextUrl)}`), 2500);
+        } else {
+
+          setError(authError?.message || 'Failed to create your account.');
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      const newUserId = userCredential.user.uid;
+
+      // Write the user doc (account created, payment NOT yet completed).
+      await setDoc(doc(db, 'users', newUserId), {
         name: formData.name,
         email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        tier: formData.tier.id,
+        phone: formData.phone || null,
+        tier: formData.tier.id,        // app product id
         tierName: formData.tier.name,
-        emailVerified: emailVerified
-      }));
-      
-      console.log("Redirecting to payment page");
-      
-      // Redirect to payment page (no account created yet)
-      router.push('/payment');
-      
+        emailVerified: emailVerified,
+        accountActivated: false,
+        gdprDeleted: false,
+        role: 'client',
+        recaptchaToken: recaptchaToken || null,
+        recaptchaVerified: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // GA4 begin_checkout
+      trackEvent('begin_checkout', {
+        tier: formData.tier.name,
+        value: formData.tier.price || 0,
+      });
+
+      sessionStorage.removeItem('pendingSignup');
+
+      // Hand off to the generic, reusable checkout (auth now guaranteed).
+      router.push(`/checkout?item=${itemKey}&return=${encodeURIComponent('/dashboard')}`);
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error('Account creation / checkout handoff error:', error);
       setError((error as Error).message);
       setIsSubmitting(false);
     }
   };
+
 
   // Render the current step (4 steps: Email → OTP → Details → Tier Selection)
   const renderStep = () => {

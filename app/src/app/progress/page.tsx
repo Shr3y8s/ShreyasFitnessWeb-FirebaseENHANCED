@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { redirectToCheckoutForTier } from '@/lib/constants';
+
 import { useAuth } from '@/lib/auth-context';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
@@ -48,9 +50,10 @@ export default function ProgressPage() {
     }
 
     if (!userData.accountActivated) {
-      router.push('/payment');
+      redirectToCheckoutForTier(router, userData.tier, '/progress');
       return;
     }
+
 
     setLoading(false);
   }, [userData, authLoading, router]);
