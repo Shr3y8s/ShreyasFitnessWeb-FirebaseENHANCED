@@ -5071,6 +5071,11 @@ paymentsModule.setFulfillmentHooks({ onFirstActivation });
 
 // Generic provider webhook (HTTP) + PayPal cancel callable.
 exports.paymentWebhook = paymentsModule.paymentWebhook;
+// Dedicated PayPal webhooks — one per env (each binds only its env's secrets).
+// Register the sandbox dashboard → paypalWebhookSandbox, live → paypalWebhookLive.
+exports.paypalWebhookSandbox = paymentsModule.paypalWebhookSandbox;
+exports.paypalWebhookLive = paymentsModule.paypalWebhookLive;
+
 exports.cancelPaypalSubscription = paymentsModule.cancelPaypalSubscription;
 exports.capturePaypalOrder = paymentsModule.capturePaypalOrder;
 // ACDC card-fields (card-only checkout, no PayPal account) — FR-12 / Phase 3.6

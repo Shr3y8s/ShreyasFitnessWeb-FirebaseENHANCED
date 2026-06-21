@@ -87,7 +87,7 @@ env:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_PAYPAL_CLIENT_ID
-    value: "REPLACE_WITH_LIVE_PAYPAL_CLIENT_ID"
+    value: "AXaVrTyT7QK5Rk8eEUETRH5oq8ZFBtikcx5au_E8x1RvYdg-mSbOnnYw6qPvyvcOV8KFhDFA0yLiqV_T"
     availability:
       - BUILD
       - RUNTIME

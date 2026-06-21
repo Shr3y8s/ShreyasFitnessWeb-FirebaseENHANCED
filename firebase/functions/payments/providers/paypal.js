@@ -26,45 +26,60 @@
 const https = require("https");
 const { logger } = require("firebase-functions");
 
-const PAYPAL_ENV = (process.env.PAYPAL_ENV || "sandbox").toLowerCase();
-const API_BASE = PAYPAL_ENV === "production" ? "api-m.paypal.com" : "api-m.sandbox.paypal.com";
+/**
+ * Dual-environment (design §7.1): ONE deployed Functions backend serves BOTH the
+ * PayPal sandbox (used by `npm run dev`) and live (prod build). Because there's a
+ * single backend, each request carries its env and we resolve credentials + API
+ * base per call — never from a single module-level constant:
+ *   - Callables (B1): client passes `paypalEnv` (from NEXT_PUBLIC_PAYPAL_ENV); the
+ *     callable wrapper builds the cfg and passes it in.
+ *   - Webhooks: two thin functions (`paypalWebhookSandbox`/`paypalWebhookLive`) each
+ *     bind only their env's secrets and pass the matching cfg.
+ *
+ * `cfg` shape (built in payments/index.js `paypalEnvConfig`):
+ *   { base, clientId, clientSecret, webhookId }
+ * Every helper below takes `cfg` so the right API base + creds are used.
+ */
+function apiBaseForEnv(env) {
+  return env === "production" ? "api-m.paypal.com" : "api-m.sandbox.paypal.com";
+}
 
 /**
  * Plan id (P-xxxx) → tier identity. `tierId` is the SAME Stripe product id stored
- * in `user.tier` (so check-in eligibility / tier logic is unchanged). Keyed by env
- * because both PayPal plan ids AND Stripe product ids differ sandbox(test)/live.
- *
- * NOTE: dev uses sandbox PayPal + Stripe TEST products; prod uses live PayPal +
- * Stripe LIVE products — they line up. Live plan ids are filled at cutover (Phase 5)
- * when the catalog script is re-run with live credentials.
+ * in `user.tier` (so check-in eligibility / tier logic is unchanged). Both PayPal
+ * plan ids AND Stripe product ids differ sandbox/live, but plan ids are globally
+ * unique, so we keep ONE merged map and look up by plan id regardless of env (the
+ * webhook that delivered the event already determined the env via its function).
  */
 const PLAN_TIER_MAP = {
-  sandbox: {
-    "P-98H09129JK640830CNI26BLQ": { tierId: "prod_SwvHrfi1C4k4pS", tierName: "Online Coaching" },
-    "P-9YF75345BP118725ENI26GLI": { tierId: "prod_SwvI0SWs0J3DMQ", tierName: "Complete Transformation" },
-  },
-  production: {
-    // TODO(Phase 5): fill live P-xxxx → live Stripe product ids after live catalog run.
-    // "P-LIVE_ONLINE_COACHING":        { tierId: "prod_Uiwc6hs1G6YlIf", tierName: "Online Coaching" },
-    // "P-LIVE_COMPLETE_TRANSFORMATION":{ tierId: "prod_UiwXMrl2KqquZD", tierName: "Complete Transformation" },
-  },
+  // sandbox
+  "P-98H09129JK640830CNI26BLQ": { tierId: "prod_SwvHrfi1C4k4pS", tierName: "Online Coaching" },
+  "P-9YF75345BP118725ENI26GLI": { tierId: "prod_SwvI0SWs0J3DMQ", tierName: "Complete Transformation" },
+  // live (prod catalog run 2026-06-21). Same Stripe product ids as sandbox — tier
+  // identity is processor-independent (user.tier keys off the Stripe product id).
+  "P-96194639LX633004DNI4ANSI": { tierId: "prod_SwvHrfi1C4k4pS", tierName: "Online Coaching" },
+  "P-3S168526T8851291KNI4ANSI": { tierId: "prod_SwvI0SWs0J3DMQ", tierName: "Complete Transformation" },
 };
 
 function resolvePlanTier(planId) {
   if (!planId) return {};
-  const map = PLAN_TIER_MAP[PAYPAL_ENV] || {};
-  return map[planId] || {};
+  return PLAN_TIER_MAP[planId] || {};
 }
 
-/** Low-level JSON request to the PayPal REST API. */
-function request(method, path, token, body) {
+
+/**
+ * Low-level JSON request to the PayPal REST API. `base` is the per-request API host
+ * (sandbox vs live). Falls back to the sandbox host only as a last resort.
+ */
+function request(method, path, token, body, base) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const headers = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     if (data) headers["Content-Length"] = Buffer.byteLength(data);
 
-    const req = https.request({ hostname: API_BASE, path, method, headers }, (res) => {
+    const hostname = base || apiBaseForEnv("sandbox");
+    const req = https.request({ hostname, path, method, headers }, (res) => {
       let chunks = "";
       res.on("data", (c) => (chunks += c));
       res.on("end", () => {
@@ -80,18 +95,22 @@ function request(method, path, token, body) {
   });
 }
 
-/** OAuth2 client-credentials token. Reads PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET. */
-async function getAccessToken({ clientId, clientSecret }) {
-  const id = clientId || process.env.PAYPAL_CLIENT_ID;
-  const secret = clientSecret || process.env.PAYPAL_CLIENT_SECRET;
-  if (!id || !secret) throw new Error("PayPal credentials missing (PAYPAL_CLIENT_ID/PAYPAL_CLIENT_SECRET)");
+/**
+ * OAuth2 client-credentials token. `cfg` = { clientId, clientSecret, base } for the
+ * target env (built by payments/index.js `paypalEnvConfig`).
+ */
+async function getAccessToken(cfg = {}) {
+  const id = cfg.clientId || process.env.PAYPAL_CLIENT_ID;
+  const secret = cfg.clientSecret || process.env.PAYPAL_CLIENT_SECRET;
+  const base = cfg.base || apiBaseForEnv("sandbox");
+  if (!id || !secret) throw new Error("PayPal credentials missing (clientId/clientSecret)");
 
   return new Promise((resolve, reject) => {
     const auth = Buffer.from(`${id}:${secret}`).toString("base64");
     const payload = "grant_type=client_credentials";
     const req = https.request(
       {
-        hostname: API_BASE,
+        hostname: base,
         path: "/v1/oauth2/token",
         method: "POST",
         headers: {
@@ -100,6 +119,7 @@ async function getAccessToken({ clientId, clientSecret }) {
           "Content-Length": Buffer.byteLength(payload),
         },
       },
+
       (res) => {
         let chunks = "";
         res.on("data", (c) => (chunks += c));
@@ -146,7 +166,8 @@ async function verifySignature(req, ctx = {}) {
       webhook_event: event,
     };
 
-    const result = await request("POST", "/v1/notifications/verify-webhook-signature", token, verifyBody);
+    const result = await request("POST", "/v1/notifications/verify-webhook-signature", token, verifyBody, ctx.base);
+
     if (result.verification_status === "SUCCESS") {
       return { ok: true, event };
     }
@@ -301,8 +322,10 @@ async function cancelSubscription(subscriptionId, ctx = {}) {
     "POST",
     `/v1/billing/subscriptions/${subscriptionId}/cancel`,
     token,
-    { reason: "Canceled by customer" }
+    { reason: "Canceled by customer" },
+    ctx.base
   );
+
 }
 
 /**
@@ -323,8 +346,10 @@ async function captureOrder(orderId, ctx = {}) {
     "POST",
     `/v2/checkout/orders/${orderId}/capture`,
     token,
-    {} // empty body; PayPal requires a body for this POST
+    {}, // empty body; PayPal requires a body for this POST
+    ctx.base
   );
+
 }
 
 // One-time amounts (minor units) — mirrors app constants.ts PAYPAL_ONETIME. Kept
@@ -353,8 +378,9 @@ async function createOrder(priceId, customId, ctx = {}) {
         custom_id: customId || undefined,
       },
     ],
-  });
+  }, ctx.base);
   return order.id;
+
 }
 
 /**
@@ -366,7 +392,7 @@ async function createCardSetupToken(ctx = {}) {
   const token = await getAccessToken(ctx);
   const res = await request("POST", "/v3/vault/setup-tokens", token, {
     payment_source: { card: {} },
-  });
+  }, ctx.base);
   return res.id;
 }
 
@@ -384,7 +410,7 @@ async function createSubscriptionWithCard(setupToken, planId, customId, ctx = {}
   // 1) Exchange setup token → permanent payment token (vaulted card).
   const paymentToken = await request("POST", "/v3/vault/payment-tokens", token, {
     payment_source: { token: { id: setupToken, type: "SETUP_TOKEN" } },
-  });
+  }, ctx.base);
 
   // 2) Create the subscription using the vaulted card as the payment source.
   const subscription = await request("POST", "/v1/billing/subscriptions", token, {
@@ -393,8 +419,9 @@ async function createSubscriptionWithCard(setupToken, planId, customId, ctx = {}
     payment_source: {
       token: { id: paymentToken.id, type: "PAYMENT_METHOD_TOKEN" },
     },
-  });
+  }, ctx.base);
   return subscription;
+
 }
 
 

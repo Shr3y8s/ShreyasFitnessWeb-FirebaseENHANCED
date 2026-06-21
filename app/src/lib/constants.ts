@@ -98,8 +98,8 @@ const SANDBOX_PLANS = {
 } as const;
 
 const LIVE_PLANS = {
-  ONLINE_COACHING: '',          // TODO(Phase 5): paste live P-xxxx from catalog script
-  COMPLETE_TRANSFORMATION: '',  // TODO(Phase 5): paste live P-xxxx from catalog script
+  ONLINE_COACHING: 'P-96194639LX633004DNI4ANSI',
+  COMPLETE_TRANSFORMATION: 'P-3S168526T8851291KNI4ANSI',
 } as const;
 
 export const PAYPAL_PLANS = PAYPAL_LIVE ? LIVE_PLANS : SANDBOX_PLANS;

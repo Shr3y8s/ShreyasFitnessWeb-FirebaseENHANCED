@@ -25,10 +25,44 @@ const fulfillment = require("./fulfillment");
 //   firebase functions:secrets:set PAYPAL_CLIENT_SECRET
 //   firebase functions:secrets:set PAYPAL_WEBHOOK_ID
 // (PAYPAL_ENV is a plain env var; the adapter defaults to "sandbox" when unset.)
-const PAYPAL_CLIENT_ID = defineSecret("PAYPAL_CLIENT_ID");
-const PAYPAL_CLIENT_SECRET = defineSecret("PAYPAL_CLIENT_SECRET");
-const PAYPAL_WEBHOOK_ID = defineSecret("PAYPAL_WEBHOOK_ID");
-const PAYPAL_SECRETS = [PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_WEBHOOK_ID];
+// DUAL ENV (design §7.1): one deployed backend serves BOTH PayPal sandbox (used by
+// `npm run dev`) and live (prod build). Two credential SETS, selected per request:
+//   - Callables: client passes `paypalEnv` (from NEXT_PUBLIC_PAYPAL_ENV) → cfg.
+//   - Webhooks: two functions (paypalWebhookSandbox/Live), each binds only its set.
+// Set each with `firebase functions:secrets:set <NAME>`.
+const PAYPAL_CLIENT_ID_SANDBOX = defineSecret("PAYPAL_CLIENT_ID_SANDBOX");
+const PAYPAL_CLIENT_SECRET_SANDBOX = defineSecret("PAYPAL_CLIENT_SECRET_SANDBOX");
+const PAYPAL_WEBHOOK_ID_SANDBOX = defineSecret("PAYPAL_WEBHOOK_ID_SANDBOX");
+const PAYPAL_CLIENT_ID_LIVE = defineSecret("PAYPAL_CLIENT_ID_LIVE");
+const PAYPAL_CLIENT_SECRET_LIVE = defineSecret("PAYPAL_CLIENT_SECRET_LIVE");
+const PAYPAL_WEBHOOK_ID_LIVE = defineSecret("PAYPAL_WEBHOOK_ID_LIVE");
+
+const PAYPAL_SANDBOX_SECRETS = [PAYPAL_CLIENT_ID_SANDBOX, PAYPAL_CLIENT_SECRET_SANDBOX, PAYPAL_WEBHOOK_ID_SANDBOX];
+const PAYPAL_LIVE_SECRETS = [PAYPAL_CLIENT_ID_LIVE, PAYPAL_CLIENT_SECRET_LIVE, PAYPAL_WEBHOOK_ID_LIVE];
+// Callables can be invoked for EITHER env, so they bind BOTH sets and pick per call.
+const PAYPAL_SECRETS = [...PAYPAL_SANDBOX_SECRETS, ...PAYPAL_LIVE_SECRETS];
+
+/**
+ * Resolve the PayPal config (API base + credentials + webhook id) for an env.
+ * `env` is 'production' | 'sandbox' (anything else → sandbox). Returns the `cfg`
+ * shape the paypal.js adapter helpers expect: { base, clientId, clientSecret,
+ * paypalWebhookId }.
+ */
+function paypalEnvConfig(env) {
+  const live = env === "production";
+  return {
+    base: live ? "api-m.paypal.com" : "api-m.sandbox.paypal.com",
+    clientId: process.env[live ? "PAYPAL_CLIENT_ID_LIVE" : "PAYPAL_CLIENT_ID_SANDBOX"],
+    clientSecret: process.env[live ? "PAYPAL_CLIENT_SECRET_LIVE" : "PAYPAL_CLIENT_SECRET_SANDBOX"],
+    paypalWebhookId: process.env[live ? "PAYPAL_WEBHOOK_ID_LIVE" : "PAYPAL_WEBHOOK_ID_SANDBOX"],
+  };
+}
+
+/** Normalize a client-supplied paypalEnv to 'production' | 'sandbox'. */
+function normalizePaypalEnv(v) {
+  return String(v || "").toLowerCase() === "production" ? "production" : "sandbox";
+}
+
 
 
 // Provider registry. Paddle adapter is added in its phase.
@@ -165,11 +199,12 @@ const paymentWebhook = onRequest({ region: "us-west1", secrets: PAYPAL_SECRETS }
   }
 
   // Verify signature using provider-specific secrets (read from env/Secret Mgr).
+  // For PayPal, default to a sandbox cfg here (this generic endpoint is retained for
+  // Stripe/other; PayPal uses the dedicated paypalWebhookSandbox/Live functions).
   const verifyCtx = {
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID,
-    paypalEnv: process.env.PAYPAL_ENV,
+    ...paypalEnvConfig("sandbox"),
   };
 
   let verified;
@@ -208,6 +243,58 @@ const paymentWebhook = onRequest({ region: "us-west1", secrets: PAYPAL_SECRETS }
 });
 
 /**
+ * Shared PayPal webhook handler. Verifies + parses + fulfills against the given env.
+ * Backed by two thin wrappers (sandbox/live) so each binds only its own secrets and
+ * PayPal points each dashboard at a distinct URL (no env query param to rely on).
+ */
+async function handlePaypalWebhook(req, res, env) {
+  const cfg = paypalEnvConfig(env);
+  const provider = PROVIDERS.paypal;
+  let verified;
+  try {
+    verified = await provider.verifySignature(req, cfg);
+  } catch (err) {
+    logger.error("paypalWebhook: verifySignature threw", { env, error: err.message });
+    res.status(400).send("Signature verification error");
+    return;
+  }
+  if (!verified?.ok) {
+    res.status(400).send("Invalid signature");
+    return;
+  }
+  let events = [];
+  try {
+    events = (await provider.parseEvent(verified.event)) || [];
+  } catch (err) {
+    logger.error("paypalWebhook: parseEvent threw", { env, error: err.message });
+    res.status(400).send("Parse error");
+    return;
+  }
+  try {
+    for (const e of events) {
+      await handleEvent("paypal", e);
+    }
+    res.status(200).send("ok");
+  } catch (err) {
+    logger.error("paypalWebhook: fulfillment failed", { env, error: err.message });
+    res.status(500).send("Fulfillment error");
+  }
+}
+
+// SANDBOX webhook — register the sandbox PayPal dashboard webhook at this URL.
+const paypalWebhookSandbox = onRequest(
+  { region: "us-west1", secrets: PAYPAL_SANDBOX_SECRETS },
+  (req, res) => handlePaypalWebhook(req, res, "sandbox")
+);
+
+// LIVE webhook — register the live PayPal dashboard webhook at this URL.
+const paypalWebhookLive = onRequest(
+  { region: "us-west1", secrets: PAYPAL_LIVE_SECRETS },
+  (req, res) => handlePaypalWebhook(req, res, "production")
+);
+
+
+/**
  * Callable: cancel the caller's PayPal subscription (backs the client adapter's
  * `cancelSubscription`). Auth-gated; verifies the subscription belongs to the
  * caller via their user doc before calling PayPal. The webhook
@@ -227,8 +314,9 @@ const cancelPaypalSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SE
     throw new HttpsError("permission-denied", "Subscription does not belong to caller.");
   }
 
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
-    await PROVIDERS.paypal.cancelSubscription(subscriptionId);
+    await PROVIDERS.paypal.cancelSubscription(subscriptionId, cfg);
     return { ok: true };
   } catch (err) {
     logger.error("cancelPaypalSubscription failed", { uid, subscriptionId, error: err.message });
@@ -250,8 +338,9 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
   const orderId = req.data?.orderId;
   if (!orderId) throw new HttpsError("invalid-argument", "orderId required.");
 
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
-    const result = await PROVIDERS.paypal.captureOrder(orderId);
+    const result = await PROVIDERS.paypal.captureOrder(orderId, cfg);
     const status = result?.status || result?.purchase_units?.[0]?.payments?.captures?.[0]?.status;
     return { ok: true, status: status || "COMPLETED" };
   } catch (err) {
@@ -269,8 +358,9 @@ const createPaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
   const priceId = req.data?.priceId;
   if (!priceId) throw new HttpsError("invalid-argument", "priceId required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
-    const orderId = await PROVIDERS.paypal.createOrder(priceId, uid);
+    const orderId = await PROVIDERS.paypal.createOrder(priceId, uid, cfg);
     return { ok: true, orderId };
   } catch (err) {
     logger.error("createPaypalOrder failed", { uid, priceId, error: err.message });
@@ -285,8 +375,10 @@ const createPaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }
 const createPaypalCardSetupToken = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
   const uid = req.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
-    const setupToken = await PROVIDERS.paypal.createCardSetupToken();
+    const setupToken = await PROVIDERS.paypal.createCardSetupToken(cfg);
+
     return { ok: true, setupToken };
   } catch (err) {
     logger.error("createPaypalCardSetupToken failed", { uid, error: err.message });
@@ -306,8 +398,9 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
   const planId = req.data?.planId;
   if (!setupToken) throw new HttpsError("invalid-argument", "setupToken required.");
   if (!planId) throw new HttpsError("invalid-argument", "planId required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
-    const sub = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planId, uid);
+    const sub = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planId, uid, cfg);
     return { ok: true, subscriptionId: sub?.id, status: sub?.status };
   } catch (err) {
     logger.error("createPaypalSubscriptionWithCard failed", { uid, planId, error: err.message });
@@ -317,6 +410,8 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
 
 module.exports = {
   paymentWebhook,
+  paypalWebhookSandbox,
+  paypalWebhookLive,
   cancelPaypalSubscription,
   capturePaypalOrder,
   createPaypalOrder,

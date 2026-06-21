@@ -240,7 +240,7 @@ export const paypalProvider: PaymentProvider = {
         const { httpsCallable } = await import('firebase/functions');
         const { functions } = await import('@/lib/firebase');
         const capture = httpsCallable(functions, 'capturePaypalOrder');
-        await capture({ orderId: data?.orderID });
+        await capture({ orderId: data?.orderID, paypalEnv: PAYPAL_ENV });
         opts.onApproved();
       };
 
@@ -305,7 +305,7 @@ export const paypalProvider: PaymentProvider = {
       // Vault the card via a setup token, then create the subscription server-side
       // with the resulting vaulted payment source.
       cardFieldConfig.createVaultSetupToken = async () => {
-        const data = await callable('createPaypalCardSetupToken', { userId: opts.userId });
+        const data = await callable('createPaypalCardSetupToken', { userId: opts.userId, paypalEnv: PAYPAL_ENV });
         if (!data?.setupToken) throw new Error('Failed to create card setup token.');
         return data.setupToken as string;
       };
@@ -314,6 +314,7 @@ export const paypalProvider: PaymentProvider = {
           setupToken: data?.vaultSetupToken,
           planId: opts.priceId, // P-xxxx
           userId: opts.userId,
+          paypalEnv: PAYPAL_ENV,
         });
         opts.onApproved();
       };
@@ -326,13 +327,14 @@ export const paypalProvider: PaymentProvider = {
         const data = await callable('createPaypalOrder', {
           priceId: opts.priceId,
           userId: opts.userId,
+          paypalEnv: PAYPAL_ENV,
         });
         if (!data?.orderId) throw new Error('Failed to create PayPal order.');
         return data.orderId as string;
       };
       cardFieldConfig.onApprove = async (data: { orderID?: string }) => {
         // Capture server-side (guest-card client capture is unreliable — FR-11).
-        await callable('capturePaypalOrder', { orderId: data?.orderID });
+        await callable('capturePaypalOrder', { orderId: data?.orderID, paypalEnv: PAYPAL_ENV });
         opts.onApproved();
       };
     }
@@ -437,6 +439,6 @@ export const paypalProvider: PaymentProvider = {
     const { httpsCallable } = await import('firebase/functions');
     const { functions } = await import('@/lib/firebase');
     const cancel = httpsCallable(functions, 'cancelPaypalSubscription');
-    await cancel({ subscriptionId });
+    await cancel({ subscriptionId, paypalEnv: PAYPAL_ENV });
   },
 };
