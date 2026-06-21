@@ -60,7 +60,8 @@ export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps
   useEffect(() => {
     if (!userId) return;
 
-    const subsRef = collection(db, 'stripe_customers', userId, 'subscriptions');
+    const subsRef = collection(db, 'billing_customers', userId, 'subscriptions');
+
     
     const unsubscribe = onSnapshot(subsRef, (snapshot) => {
       if (snapshot.empty) {
@@ -74,7 +75,8 @@ export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps
       
       if (activeSub) {
         const subData = activeSub.data();
-        const periodEnd = subData.current_period_end;
+        const periodEnd = subData.currentPeriodEnd ?? subData.current_period_end;
+
         
         if (periodEnd) {
           const date = new Date(periodEnd * 1000);

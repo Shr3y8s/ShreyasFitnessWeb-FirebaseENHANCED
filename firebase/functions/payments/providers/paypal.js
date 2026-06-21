@@ -51,15 +51,18 @@ function apiBaseForEnv(env) {
  * unique, so we keep ONE merged map and look up by plan id regardless of env (the
  * webhook that delivered the event already determined the env via its function).
  */
+// `tierId` is the provider-neutral APP PRODUCT ID (app/src/lib/constants.ts
+// APP_PRODUCTS) stored in `user.tier`. Plan ids are globally unique, so one merged
+// map works for both envs; both sandbox and live plans map to the SAME app id.
 const PLAN_TIER_MAP = {
   // sandbox
-  "P-98H09129JK640830CNI26BLQ": { tierId: "prod_SwvHrfi1C4k4pS", tierName: "Online Coaching" },
-  "P-9YF75345BP118725ENI26GLI": { tierId: "prod_SwvI0SWs0J3DMQ", tierName: "Complete Transformation" },
-  // live (prod catalog run 2026-06-21). Same Stripe product ids as sandbox — tier
-  // identity is processor-independent (user.tier keys off the Stripe product id).
-  "P-96194639LX633004DNI4ANSI": { tierId: "prod_SwvHrfi1C4k4pS", tierName: "Online Coaching" },
-  "P-3S168526T8851291KNI4ANSI": { tierId: "prod_SwvI0SWs0J3DMQ", tierName: "Complete Transformation" },
+  "P-98H09129JK640830CNI26BLQ": { tierId: "online_coaching", tierName: "Online Coaching" },
+  "P-9YF75345BP118725ENI26GLI": { tierId: "complete_transformation", tierName: "Complete Transformation" },
+  // live (prod catalog run 2026-06-21)
+  "P-96194639LX633004DNI4ANSI": { tierId: "online_coaching", tierName: "Online Coaching" },
+  "P-3S168526T8851291KNI4ANSI": { tierId: "complete_transformation", tierName: "Complete Transformation" },
 };
+
 
 function resolvePlanTier(planId) {
   if (!planId) return {};
@@ -272,25 +275,29 @@ function parseEvent(event) {
 
     // ---- One-time order capture (Orders API v2) → session package ----
     case "PAYMENT.CAPTURE.COMPLETED": {
-      // custom_id is set on the capture (inherited from the purchase_unit we sent).
-      const description = r.invoice_id || r.custom_id_description || "";
+      // Resolve the neutral product identity from the captured amount ($75 / $240).
+      const minor = toMinorUnits(r.amount);
+      const item = resolveOneTimeByAmount(minor);
+      const appProductName = item ? item.label : "Training Sessions";
       events.push({
         type: "payment.completed",
         userId: r.custom_id || null,
         isSessionPackage: true, // our only PayPal one-time items are session packages
-        productId: null,
-        productName: description || "Training Sessions",
+        productId: item ? item.appId : null, // provider-neutral app product id
+        productName: appProductName,
+        quantity: item ? item.quantity : undefined,
         transaction: {
           id: r.id,
           date: toEpoch(r.create_time),
-          amount: toMinorUnits(r.amount),
+          amount: minor,
           currency: r.amount?.currency_code || "usd",
           status: "succeeded",
-          productName: description || "Training Sessions",
+          productName: appProductName,
         },
       });
       break;
     }
+
     case "CHECKOUT.ORDER.APPROVED": {
       // IMPORTANT: do NOT fulfill on APPROVED. For an Orders purchase PayPal fires
       // BOTH this event (approval, not yet captured) AND PAYMENT.CAPTURE.COMPLETED
@@ -353,11 +360,26 @@ async function captureOrder(orderId, ctx = {}) {
 }
 
 // One-time amounts (minor units) — mirrors app constants.ts PAYPAL_ONETIME. Kept
-// server-side so order creation can't be tampered with from the client.
+// server-side so order creation can't be tampered with from the client. `appId`
+// is the provider-neutral product id stored in Firestore (sessionPackages.productId).
 const ONETIME_AMOUNTS = {
-  IN_PERSON: { amount: 7500, label: "In-Person Training Session" },
-  IN_PERSON_4PACK: { amount: 24000, label: "4-Pack In-Person Sessions" },
+  IN_PERSON: { amount: 7500, label: "In-Person Training Session", appId: "in_person", quantity: 1 },
+  IN_PERSON_4PACK: { amount: 24000, label: "4-Pack In-Person Sessions", appId: "in_person_4pack", quantity: 4 },
 };
+
+/**
+ * Resolve a one-time capture's neutral product identity from its amount (minor
+ * units). One-time PayPal amounts are distinct ($75 vs $240), so the capture
+ * amount unambiguously identifies the app product — the capture webhook payload
+ * doesn't reliably carry the order's line-item description.
+ */
+function resolveOneTimeByAmount(minorUnits) {
+  for (const v of Object.values(ONETIME_AMOUNTS)) {
+    if (v.amount === minorUnits) return v;
+  }
+  return null;
+}
+
 
 /**
  * Create a one-time PayPal Order SERVER-SIDE (ACDC card-fields flow). The amount is

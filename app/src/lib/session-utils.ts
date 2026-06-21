@@ -235,10 +235,13 @@ export function formatSessionTimeRange(timestamp: Timestamp | Date, duration: nu
  * @returns Display name for package type
  */
 export function getPackageTypeName(packageData: SessionPackage): string {
-  // Use Stripe product name if available
-  if (packageData.stripeProductName) {
-    return packageData.stripeProductName;
+  // Use the stored product name if available (neutral field, falling back to the
+  // legacy Stripe-named field for not-yet-migrated docs).
+  const storedName = packageData.productName || packageData.stripeProductName;
+  if (storedName) {
+    return storedName;
   }
+
   // Fallback based on quantity
   return packageData.quantity === 1 
     ? 'Single Session' 

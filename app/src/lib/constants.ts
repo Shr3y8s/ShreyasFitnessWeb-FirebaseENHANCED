@@ -14,41 +14,90 @@ export const CALENDLY_URLS = {
   ONBOARDING_CONSULTATION: 'https://calendly.com/shreyas-annapureddy/30-min-onboarding-consultation',
 } as const;
 
-// ========== SERVICE TIERS (Stripe product IDs) ==========
-// Maps each selectable signup product to its Stripe product ID.
-// `user.tier` stores whichever product the client chose at signup, so this
-// includes BOTH the recurring subscriptions (Online Coaching, Complete
-// Transformation) AND the one-time in-person products (single session, 4-pack).
-// These are NOT all "subscriptions" — the name is "service tiers" because any
-// of them can be the value of `user.tier` that trainer/admin screens compare against.
+// ========== APP PRODUCTS (provider-neutral, env-independent) ==========
+// The app's OWN product catalog. These ids are the single source of truth for
+// what we sell, the price shown (= price charged), and tier semantics. They are
+// the SAME in dev and prod — the env-specific *provider* ids (PayPal plan ids,
+// Stripe product/price ids) are mapped from these inside the payment adapters
+// only (app/src/lib/payments/providers/*). The app NEVER hardcodes a provider id.
 //
-// DUAL MODE: product IDs differ between Stripe test mode and live mode. We pick
-// the set based on the publishable key prefix, which is the only thing that
-// differs per environment (`.env.local` = pk_test in dev; `apphosting.yaml` =
-// pk_live in prod). So `npm run dev` uses TEST product IDs and production uses
-// LIVE — no extra env var to manage.
-//
-// IMPORTANT: Keep the subscription/check-in subset in sync with
-// firebase/functions/product-config.js `CHECKIN_ELIGIBLE_PRODUCTS` (which lists
-// BOTH test + live IDs since product IDs are globally unique).
-// Frontend can't import from /functions, so the IDs are duplicated.
-const STRIPE_LIVE = (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '').startsWith('pk_live');
+// `user.tier` stores an AppProductId (e.g. 'online_coaching'). Historically it
+// stored a Stripe product id (`prod_…`); a one-time migration converts existing
+// docs (firebase/scripts/migrate-tier-ids.js).
+export type AppProductId =
+  | 'in_person'
+  | 'in_person_4pack'
+  | 'online_coaching'
+  | 'complete_transformation';
 
-const LIVE_TIERS = {
-  IN_PERSON: 'prod_UiweIP2zdj2sRv',              // One-time single session, no check-ins
-  IN_PERSON_4PACK: 'prod_UiwQCggpkdr6S5',        // One-time 4-pack, no check-ins
-  ONLINE_COACHING: 'prod_Uiwc6hs1G6YlIf',        // Subscription, has check-ins
-  COMPLETE_TRANSFORMATION: 'prod_UiwXMrl2KqquZD', // Subscription, has check-ins
+export interface AppProduct {
+  id: AppProductId;
+  name: string;
+  kind: 'subscription' | 'one_time';
+  /** Price in MINOR units (cents) — the amount shown AND charged. */
+  amount: number;
+  interval?: 'month';
+  /** One-time fee charged with the first subscription cycle (CT first session). */
+  setupFee?: number;
+  /** True for tiers that include weekly check-ins (Online Coaching family). */
+  hasCheckins: boolean;
+  /** Sessions granted for one-time session packages (1, 4). */
+  sessionsIncluded?: number;
+}
+
+export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
+  in_person: {
+    id: 'in_person',
+    name: 'In-Person Training Session',
+    kind: 'one_time',
+    amount: 7500, // $75
+    hasCheckins: false,
+    sessionsIncluded: 1,
+  },
+  in_person_4pack: {
+    id: 'in_person_4pack',
+    name: '4-Pack In-Person Sessions',
+    kind: 'one_time',
+    amount: 24000, // $240
+    hasCheckins: false,
+    sessionsIncluded: 4,
+  },
+  online_coaching: {
+    id: 'online_coaching',
+    name: 'Online Coaching',
+    kind: 'subscription',
+    amount: 25000, // $250/mo
+    interval: 'month',
+    hasCheckins: true,
+  },
+  complete_transformation: {
+    id: 'complete_transformation',
+    name: 'Complete Transformation',
+    kind: 'subscription',
+    amount: 25000, // $250/mo
+    interval: 'month',
+    setupFee: 6000, // $60 discounted in-person session at signup (first cycle)
+    hasCheckins: true,
+  },
+};
+
+/** Look up an app product by id (or null). */
+export function getAppProduct(id: string | undefined | null): AppProduct | null {
+  if (!id) return null;
+  return (APP_PRODUCTS as Record<string, AppProduct>)[id] ?? null;
+}
+
+// ========== SERVICE TIERS (app product ids) ==========
+// Back-compat alias: many screens compare `user.tier` against `SERVICE_TIERS.X`.
+// These now resolve to the provider-neutral AppProductIds above (same dev+prod),
+// so those comparisons keep working without per-call changes.
+export const SERVICE_TIERS = {
+  IN_PERSON: 'in_person',
+  IN_PERSON_4PACK: 'in_person_4pack',
+  ONLINE_COACHING: 'online_coaching',
+  COMPLETE_TRANSFORMATION: 'complete_transformation',
 } as const;
 
-const TEST_TIERS = {
-  IN_PERSON: 'prod_SwuHPYlY94VZyY',              // One-time single session, no check-ins
-  IN_PERSON_4PACK: 'prod_SwvMUVeTqAnveu',        // One-time 4-pack, no check-ins
-  ONLINE_COACHING: 'prod_SwvHrfi1C4k4pS',        // Subscription, has check-ins
-  COMPLETE_TRANSFORMATION: 'prod_SwvI0SWs0J3DMQ', // Subscription, has check-ins
-} as const;
-
-export const SERVICE_TIERS = STRIPE_LIVE ? LIVE_TIERS : TEST_TIERS;
 
 
 // In-person product IDs (one-time session purchases — single or 4-pack).

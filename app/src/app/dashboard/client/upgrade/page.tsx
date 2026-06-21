@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db, trackEvent } from '@/lib/firebase';
 
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,17 +12,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { Check, Loader2, CreditCard, Star, ArrowRight } from 'lucide-react';
-import { selectSignupPrice } from '@/lib/stripe';
-import { formatCurrency } from '@/lib/payments';
-import { StripeProduct, StripePrice } from '@/types/stripe';
+import { getPaymentProvider, selectSignupPrice, formatCurrency, type Product, type Price } from '@/lib/payments';
 
 import { useToast } from '@/hooks/use-toast';
 import { SERVICE_TIERS, type CheckoutItemKey } from '@/lib/constants';
 
 interface SubscriptionOption {
-  product: StripeProduct;
-  price: StripePrice;
+  product: Product;
+  price: Price;
 }
+
 
 const RETURN_PATH = '/dashboard/client/membership';
 
@@ -88,44 +86,19 @@ export default function UpgradePage() {
 
       const options: SubscriptionOption[] = [];
 
+      // Pull from the ACTIVE payment provider (single source of truth) so the
+      // displayed amount always matches what's charged — no stripe_products read.
+      const provider = getPaymentProvider({ mode: 'subscription' });
       for (const productId of productIds) {
-        const productRef = doc(db, 'stripe_products', productId);
-        const productSnap = await getDoc(productRef);
-
-        if (!productSnap.exists() || !productSnap.data().active) continue;
-
-        const productInfo = productSnap.data();
-        const pricesSnapshot = await getDocs(collection(db, 'stripe_products', productId, 'prices'));
-
-        if (pricesSnapshot.empty) continue;
-
-        const prices: StripePrice[] = [];
-        pricesSnapshot.forEach(doc => {
-          const priceData = doc.data();
-          prices.push({
-            id: doc.id,
-            amount: priceData.unit_amount || 0,
-            currency: priceData.currency || 'usd',
-            type: priceData.type || 'one_time',
-            active: priceData.active !== false,
-            lookup_key: priceData.lookup_key ?? undefined
-          });
-        });
-
-
-        const product: StripeProduct = {
-          id: productId,
-          name: productInfo.name || '',
-          description: productInfo.description,
-          active: productInfo.active || false,
-          prices: prices
-        };
+        const product = await provider.fetchProduct(productId);
+        if (!product || !product.active) continue;
 
         const price = selectSignupPrice(product);
         if (!price) continue;
 
         options.push({ product, price });
       }
+
 
 
       setSubscriptionOptions(options);

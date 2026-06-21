@@ -211,15 +211,12 @@ export async function createUserWithTier(email: string, password: string, name: 
       createdAt: serverTimestamp()
     });
     
-    // CRITICAL: Create stripe_customers document for Stripe Extension
-    // The Extension expects this document to exist for webhooks to work
-    await setDoc(doc(db, 'stripe_customers', userId), {
-      email: email,
-      name: name,
-      createdAt: serverTimestamp()
-    });
-    
+    // NOTE: We no longer create a `stripe_customers` doc here. Billing is
+    // provider-neutral now — the payment webhook writes `billing_customers/{uid}`
+    // (provider, providerCustomerId, email) on first payment. No pre-creation needed.
+
     return { success: true, userId, user: userCredential.user };
+
   } catch (error) {
     console.error('Error creating user:', error);
     return {

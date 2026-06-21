@@ -2705,7 +2705,8 @@ export default function ClientDetailPage() {
                                         <td className="py-3 px-4 text-xs font-medium text-gray-900">
                                           {purchaseDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                         </td>
-                                        <td className="py-3 px-4 text-xs text-gray-900">{pkg.stripeProductName || 'Session Package'}</td>
+                                        <td className="py-3 px-4 text-xs text-gray-900">{pkg.productName || pkg.stripeProductName || 'Session Package'}</td>
+
                                         <td className="py-3 px-4 text-xs text-gray-900">{pkg.quantity}</td>
                                         <td className="py-3 px-4 text-xs text-gray-900">{sessionsUsed}</td>
                                         <td className="py-3 px-4 text-xs font-medium text-gray-900">{pkg.remaining}</td>

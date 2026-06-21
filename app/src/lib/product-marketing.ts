@@ -28,7 +28,46 @@ export interface ProductMarketing {
 // so listing both sets is harmless — each Stripe mode resolves to its own entry.
 // (Live IDs prod_Uiw…, test IDs prod_Sw….)
 export const PRODUCT_MARKETING: Record<string, ProductMarketing> = {
+  // ===== APP product ids (provider-neutral — see constants.ts APP_PRODUCTS) =====
+  in_person: {
+    details: 'Seattle Area Only',
+    features: [
+      '1:1 personalized training',
+      'Form correction',
+      'Custom exercise selection',
+      'Progress tracking',
+    ],
+  },
+  in_person_4pack: {
+    details: 'Seattle Area Only',
+    features: [
+      '4 personalized sessions',
+      'Discounted rate',
+      'Program design',
+      'Exercise technique review',
+    ],
+  },
+  online_coaching: {
+    details: 'Remote Coaching',
+    features: [
+      'Custom workout program',
+      'Nutrition guidance',
+      '24/7 messaging support',
+      'Weekly check-ins',
+    ],
+  },
+  complete_transformation: {
+    details: 'Seattle Premium Experience',
+    features: [
+      'All online coaching features',
+      'Monthly in-person session',
+      'Advanced progress tracking',
+      'Priority support',
+    ],
+  },
+
   // ===== TEST product IDs (Stripe test mode / npm run dev) =====
+
   // In-Person Training (single session) — test
   'prod_SwuHPYlY94VZyY': {
     details: 'Seattle Area Only',

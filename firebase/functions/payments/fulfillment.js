@@ -269,12 +269,16 @@ async function fulfillSessionPackage(p) {
     const userData = userDoc.data() || {};
 
     // Idempotency: if a package already exists for this transaction, skip.
+    // (Also checks the legacy stripePaymentIntentId for any pre-migration rows.)
     const currentPackages = userData.sessionPackages || [];
     if (transactionId && currentPackages.some((pkg) => pkg.providerTransactionId === transactionId || pkg.stripePaymentIntentId === transactionId)) {
       logger.info("Session package already exists for transaction, skipping", { userId, transactionId });
       return;
     }
 
+    // Provider-NEUTRAL package shape (no stripe* fields). `productId` is the app
+    // product id (e.g. in_person_4pack); `providerTransactionId` is the provider's
+    // payment/capture id.
     const packageData = {
       id: admin.firestore().collection("users").doc().id,
       quantity,
@@ -284,13 +288,12 @@ async function fulfillSessionPackage(p) {
       expired: false,
       provider,
       providerTransactionId: transactionId || null,
-      // Back-compat fields read by existing UI/types:
-      stripePaymentIntentId: transactionId || null,
-      stripePriceId: priceId || null,
-      stripeProductId: productId || null,
-      stripeProductName: productName || null,
+      productId: productId || null,
+      priceId: priceId || null,
+      productName: productName || null,
       amount: amount ?? 0,
     };
+
 
     const currentBalance = userData.sessionBalance || {
       available: 0,

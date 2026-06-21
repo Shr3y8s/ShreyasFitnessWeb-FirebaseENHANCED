@@ -78,8 +78,9 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
                   })}
                 </td>
                 <td className="py-3 px-4 text-sm font-medium">
-                  {pkg.stripeProductName || 'Session Package'}
+                  {pkg.productName || pkg.stripeProductName || 'Session Package'}
                 </td>
+
                 <td className="py-3 px-4 text-sm">
                   {new Date(typeof pkg.expirationDate === 'number' ? pkg.expirationDate : pkg.expirationDate.toMillis()).toLocaleDateString('en-US', {
                     month: 'short',
@@ -115,8 +116,9 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
             <div className="flex justify-between items-start mb-2">
               <div>
                 <div className="font-medium text-sm text-foreground">
-                  {pkg.stripeProductName || 'Session Package'}
+                  {pkg.productName || pkg.stripeProductName || 'Session Package'}
                 </div>
+
                 <div className="text-xs text-muted-foreground">
                   {new Date(typeof pkg.purchaseDate === 'number' ? pkg.purchaseDate : pkg.purchaseDate.toMillis()).toLocaleString('en-US', {
                     month: 'short',

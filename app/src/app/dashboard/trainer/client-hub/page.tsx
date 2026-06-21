@@ -10,8 +10,8 @@ import TrainerSidebar from '@/components/TrainerSidebar';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { Users, Search, Sparkles } from 'lucide-react';
 import { SessionPackage } from '@/types/session';
-import { fetchAllProducts, isSessionProduct } from '@/lib/stripe';
-import type { StripeProduct } from '@/types/stripe';
+import { getPaymentProvider, isSessionProduct, type Product } from '@/lib/payments';
+
 
 // Client data interface
 interface ClientData {
@@ -61,10 +61,10 @@ export default function ClientHubPage() {
   const [sessionTypeFilter, setSessionTypeFilter] = useState<string>('all');
   const [workoutActivityFilter, setWorkoutActivityFilter] = useState<string>('all');
   
-  // Stripe products for filter options
-  const [stripeProducts, setStripeProducts] = useState<StripeProduct[]>([]);
-  const [subscriptionProducts, setSubscriptionProducts] = useState<StripeProduct[]>([]);
-  const [sessionProducts, setSessionProducts] = useState<StripeProduct[]>([]);
+  // Provider catalog products for filter options (neutral, via active provider)
+  const [subscriptionProducts, setSubscriptionProducts] = useState<Product[]>([]);
+  const [sessionProducts, setSessionProducts] = useState<Product[]>([]);
+
 
   // Helper function to safely convert Firestore timestamps to Date
   const toSafeDate = (value: any): Date | null => {
@@ -188,33 +188,33 @@ export default function ClientHubPage() {
     fetchClients();
   }, [user, router, authLoading, canAccessTrainerDashboard]);
 
-  // Load Stripe products for filter options
+  // Load catalog products (via the active payment provider) for filter options.
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const products = await fetchAllProducts();
-        setStripeProducts(products);
-        
+        const products = await getPaymentProvider().fetchAllProducts();
+
         // Separate subscription products from session products
-        const subscriptions: StripeProduct[] = [];
-        const sessions: StripeProduct[] = [];
-        
-        products.forEach(product => {
+        const subscriptions: Product[] = [];
+        const sessions: Product[] = [];
+
+        products.forEach((product) => {
           if (isSessionProduct(product)) {
             sessions.push(product);
           } else {
             subscriptions.push(product);
           }
         });
-        
+
         setSubscriptionProducts(subscriptions);
         setSessionProducts(sessions);
       } catch (error) {
-        console.error('Error loading Stripe products:', error);
+        console.error('Error loading catalog products:', error);
       }
     };
     loadProducts();
   }, []);
+
 
   // Advanced filtering with all 6 filters
   useEffect(() => {
@@ -293,12 +293,15 @@ export default function ClientHubPage() {
       }
     }
 
-    // 5. Session Type filter
+    // 5. Session Type filter (match app product id; fall back to legacy stripe id)
     if (sessionTypeFilter !== 'all') {
-      filtered = filtered.filter(client => 
-        client.sessionPackages?.some(pkg => pkg.stripeProductId === sessionTypeFilter)
+      filtered = filtered.filter(client =>
+        client.sessionPackages?.some(
+          pkg => (pkg.productId || pkg.stripeProductId) === sessionTypeFilter
+        )
       );
     }
+
 
     // 6. Workout Activity filter
     if (workoutActivityFilter !== 'all') {

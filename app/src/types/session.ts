@@ -17,13 +17,22 @@ export interface SessionPackage {
   purchaseDate: number | Timestamp; // Timestamp as milliseconds or Firestore Timestamp
   expirationDate: number | Timestamp; // Timestamp as milliseconds or Firestore Timestamp
   expired: boolean;
-  stripePaymentIntentId: string;
-  stripePriceId: string;
-  stripeProductId?: string;
-  stripeProductName?: string; // Stripe product name stored at purchase time for historical accuracy
+  // Provider-neutral fields (current schema):
+  provider?: string;            // 'paypal' | 'stripe'
+  providerTransactionId?: string; // provider payment/capture id (idempotency key)
+  productId?: string;           // app product id (e.g. 'in_person_4pack')
+  priceId?: string;             // provider price/plan id (opaque)
+  productName?: string;         // product name stored at purchase time (historical)
   amount?: number;
   extendedBy?: SessionPackageExtension;
+  // Legacy Stripe-named fields — present only on pre-migration docs. Readers
+  // fall back to these; a cleanup script removes them after validation.
+  stripePaymentIntentId?: string;
+  stripePriceId?: string;
+  stripeProductId?: string;
+  stripeProductName?: string;
 }
+
 
 /**
  * Session Balance

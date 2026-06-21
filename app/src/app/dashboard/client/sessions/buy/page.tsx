@@ -7,8 +7,14 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser, db } from '@/lib/firebase';
 
-import { getSessionPricing, calculateSessionSavings } from '@/lib/stripe';
+import {
+  getPaymentProvider,
+  isSessionProduct,
+  buildSessionPricing,
+  calculateSessionSavings,
+} from '@/lib/payments';
 import { SERVICE_TIERS, type CheckoutItemKey } from '@/lib/constants';
+
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import SessionBalanceCard from '@/components/sessions/SessionBalanceCard';
@@ -38,10 +44,17 @@ export default function BuySessionsPage() {
   useEffect(() => {
     const loadPricing = async () => {
       try {
-        const pricing = await getSessionPricing();
+        // Pull from the ACTIVE payment provider (single source of truth) — same
+        // catalog that's charged, so displayed price always matches charged price.
+        const products = await getPaymentProvider({ mode: 'payment' }).fetchAllProducts();
+        const sessionProducts = products.filter(isSessionProduct);
+        const pricing = buildSessionPricing(sessionProducts);
         const pricingWithSavings = calculateSessionSavings(pricing);
+        // Show lowest quantity first (single before 4-pack).
+        pricingWithSavings.sort((a, b) => a.quantity - b.quantity);
         setSessionOptions(pricingWithSavings);
       } catch (error) {
+
         console.error('Error loading session pricing:', error);
         setSessionOptions([]);
       }

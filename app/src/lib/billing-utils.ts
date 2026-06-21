@@ -1,11 +1,14 @@
 /**
  * Billing Utilities
- * Standalone functions for fetching and processing billing/subscription data from Stripe
+ *
+ * Provider-NEUTRAL billing data, read from the `billing_customers/{uid}` store the
+ * payment webhook writes (transactions + subscriptions) plus the `users/{uid}` doc.
+ * No Stripe API call, no `stripe_customers` read — works for any provider (PayPal today).
  */
 
-import { doc, getDoc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '@/lib/firebase';
+import { doc, getDoc, collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
 
 export interface PaymentMethodDetails {
   type: string;
@@ -48,150 +51,74 @@ export interface BillingData {
  * @returns BillingData object with subscription, payment, and transaction info
  */
 export async function fetchClientBillingData(userId: string): Promise<BillingData> {
+  const empty: BillingData = {
+    subscriptions: [],
+    transactions: [],
+    currentPaymentMethod: null,
+    nextPaymentDate: null,
+    nextPaymentAmount: null,
+    stripeCustomerId: null,
+    hasActiveSubscription: false,
+  };
+
   try {
-    // Get Stripe customer ID from Firestore
-    const customerDocRef = doc(db, 'stripe_customers', userId);
-    const customerDoc = await getDoc(customerDocRef);
+    // Neutral billing customer doc (written by the payment webhook). Absent until
+    // the user's first payment — return empty rather than erroring.
+    const billingRef = doc(db, 'billing_customers', userId);
+    const billingSnap = await getDoc(billingRef);
+    const providerCustomerId = billingSnap.exists()
+      ? (billingSnap.data().providerCustomerId || null)
+      : null;
 
-    if (!customerDoc.exists()) {
-      console.log('[Billing Utils] No Stripe customer found for user:', userId);
+    // Transactions (neutral) — billing_customers/{uid}/transactions, newest first.
+    const txSnap = await getDocs(
+      query(collection(db, 'billing_customers', userId, 'transactions'), orderBy('date', 'desc'))
+    );
+    const transactions: Transaction[] = txSnap.docs.map((d) => {
+      const t = d.data() as any;
       return {
-        subscriptions: [],
-        transactions: [],
-        currentPaymentMethod: null,
-        nextPaymentDate: null,
-        nextPaymentAmount: null,
-        stripeCustomerId: null,
-        hasActiveSubscription: false,
+        id: d.id,
+        date: typeof t.date === 'number' ? t.date : (t.date?.seconds ?? 0),
+        productName: t.productName || 'Payment',
+        description: t.productName || 'Payment',
+        amount: t.amount ?? 0,
+        currency: t.currency ?? 'usd',
+        status: t.status ?? 'succeeded',
+        paymentMethod: t.provider ? (t.provider === 'paypal' ? 'PayPal' : t.provider) : 'Payment method',
+        receiptUrl: t.receiptUrl ?? null,
       };
+    });
+
+    // Subscription status + next-payment info from the user doc (kept in sync by
+    // fulfillment) plus the neutral subscription record for currentPeriodEnd.
+    const userSnap = await getDoc(doc(db, 'users', userId));
+    const userData = userSnap.exists() ? (userSnap.data() as any) : {};
+    const hasActiveSubscription = userData.subscriptionStatus === 'active';
+
+    let nextPaymentDate: Date | null = null;
+    let nextPaymentAmount: number | null = null;
+    const subsSnap = await getDocs(collection(db, 'billing_customers', userId, 'subscriptions'));
+    const subscriptions = subsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const activeSub = subscriptions.find((s: any) => s.status === 'active') || subscriptions[0];
+    if (activeSub && (activeSub as any).currentPeriodEnd) {
+      nextPaymentDate = new Date((activeSub as any).currentPeriodEnd * 1000);
     }
-
-    const customerData = customerDoc.data();
-    const customerId = customerData.stripeId;
-
-    if (!customerId) {
-      console.error('[Billing Utils] No stripeId found in customer document');
-      return {
-        subscriptions: [],
-        transactions: [],
-        currentPaymentMethod: null,
-        nextPaymentDate: null,
-        nextPaymentAmount: null,
-        stripeCustomerId: null,
-        hasActiveSubscription: false,
-      };
-    }
-
-    // Call the Cloud Function to get complete billing data
-    const getBillingHistory = httpsCallable(functions, 'getBillingHistory');
-    const result = await getBillingHistory({ customerId });
-
-    const data = result.data as any;
-
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to fetch billing history');
-    }
-
-    // Extract current payment method
-    let paymentMethod = null;
-    if (data.currentPaymentMethod) {
-      paymentMethod = data.currentPaymentMethod;
-    } else if (data.subscriptions?.[0]?.default_payment_method) {
-      paymentMethod = data.subscriptions[0].default_payment_method;
-    }
-
-    // Extract next payment info from active subscription
-    let nextPaymentDate = null;
-    let nextPaymentAmount = null;
-    let hasActiveSubscription = false;
-
-    if (data.subscriptions?.[0]) {
-      const sub = data.subscriptions[0];
-      hasActiveSubscription = sub.status === 'active';
-      
-      if (sub.current_period_end) {
-        nextPaymentDate = new Date(sub.current_period_end * 1000);
-      }
-      
-      // Calculate next payment amount from subscription items
-      const amount = sub.items?.data?.reduce((sum: number, item: any) => {
-        return sum + (item.price?.unit_amount || 0);
-      }, 0);
-      nextPaymentAmount = amount;
-    }
-
-    // Process transactions - invoices contain all payment data
-    const allTransactions: Transaction[] = [];
-
-    if (data.invoices) {
-      data.invoices.forEach((invoice: any) => {
-        // Get payment method details from payment_intent.latest_charge
-        const paymentMethodDetails = invoice.payment_intent?.latest_charge?.payment_method_details;
-        let pmDisplay = 'Payment method';
-
-        // Handle different payment method types
-        if (paymentMethodDetails?.card) {
-          const brand = paymentMethodDetails.card.brand;
-          const last4 = paymentMethodDetails.card.last4;
-          pmDisplay = `${brand.charAt(0).toUpperCase() + brand.slice(1)} •••• ${last4}`;
-        } else if (paymentMethodDetails?.link) {
-          const country = paymentMethodDetails.link.country;
-          pmDisplay = country ? `Link (${country})` : 'Link';
-        } else if (paymentMethodDetails?.type) {
-          pmDisplay = paymentMethodDetails.type.charAt(0).toUpperCase() +
-            paymentMethodDetails.type.slice(1);
-        }
-
-        // Extract product name from metadata or description
-        let productName = 'Subscription';
-        if (invoice.lines?.data && invoice.lines.data.length > 0) {
-          const lineItem = invoice.lines.data[0];
-          productName = lineItem.metadata?.tierName || lineItem.description || 'Subscription';
-        }
-
-        // Determine activity type
-        let activity = 'Subscription Payment';
-        if (invoice.billing_reason === 'subscription_create') {
-          activity = 'Subscription Created';
-        } else if (invoice.billing_reason === 'subscription_cycle') {
-          activity = 'Subscription Payment';
-        } else if (invoice.billing_reason === 'subscription_update') {
-          activity = 'Subscription Updated';
-        } else if (invoice.description) {
-          activity = invoice.description;
-        }
-
-        allTransactions.push({
-          id: invoice.id,
-          date: invoice.created,
-          productName: productName,
-          description: activity,
-          amount: invoice.amount_paid,
-          currency: invoice.currency,
-          status: invoice.status,
-          paymentMethod: pmDisplay,
-          receiptUrl: invoice.hosted_invoice_url || invoice.invoice_pdf,
-        });
-      });
-    }
-
-    // Sort by date (newest first)
-    allTransactions.sort((a, b) => b.date - a.date);
 
     return {
-      subscriptions: data.subscriptions || [],
-      transactions: allTransactions,
-      currentPaymentMethod: paymentMethod,
+      subscriptions,
+      transactions,
+      currentPaymentMethod: null, // PayPal exposes no stored card; provider funds the charge
       nextPaymentDate,
       nextPaymentAmount,
-      stripeCustomerId: customerId,
+      stripeCustomerId: providerCustomerId, // kept field name for back-compat; holds providerCustomerId
       hasActiveSubscription,
     };
   } catch (error) {
     console.error('[Billing Utils] Error fetching billing data:', error);
-    throw error;
+    return empty;
   }
 }
+
 
 /**
  * Format currency amount

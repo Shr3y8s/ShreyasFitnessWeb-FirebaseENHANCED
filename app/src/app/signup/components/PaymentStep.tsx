@@ -396,52 +396,35 @@ export default function PaymentStep(props: PaymentStepProps) {
           return;
         }
 
-        // Get product from Firestore
-        const productRef = doc(db, 'stripe_products', productId);
-        const productSnap = await getDoc(productRef);
-        
-        if (!productSnap.exists()) {
+        // Pull from the ACTIVE payment provider (single source of truth) so the
+        // displayed amount always matches what's charged — no stripe_products read.
+        const neutral = await getPaymentProvider({ mode: 'subscription' }).fetchProduct(productId);
+        if (!neutral) {
           setError('Product not found');
           return;
         }
 
-        const productData = productSnap.data();
-
-        // Get prices from subcollection
-        const pricesCollection = collection(db, 'stripe_products', productId, 'prices');
-        const pricesSnapshot = await getDocs(pricesCollection);
-        
-        if (pricesSnapshot.empty) {
-          setError('No prices available');
-          return;
-        }
-
-        // Build StripePrice array
-        const prices: StripePrice[] = [];
-        pricesSnapshot.forEach(doc => {
-          const priceData = doc.data();
-          prices.push({
-            id: doc.id,
-            amount: priceData.unit_amount || 0,
-            currency: priceData.currency || 'usd',
-            type: (priceData.type as 'recurring' | 'one_time') || 'one_time',
-            active: priceData.active !== false,
-            lookup_key: priceData.lookup_key ?? undefined
-          });
-        });
-
-
-        // Build StripeProduct
+        // Map neutral Product/Price → the StripeProduct shape this component uses.
         const product: StripeProduct = {
-          id: productId,
-          name: productData.name || 'Unknown Product',
-          description: productData.description,
-          active: productData.active || false,
-          prices: prices
+          id: neutral.id,
+          name: neutral.name || 'Unknown Product',
+          description: neutral.description,
+          active: neutral.active,
+          prices: neutral.prices.map((p) => ({
+            id: p.id,
+            amount: p.amount,
+            currency: p.currency,
+            type: p.type,
+            active: p.active,
+            lookup_key: p.lookupKey,
+          })),
         };
 
         // Use helper function for price selection
-        const price = selectSignupPrice(product);
+        const price = selectNeutralSignupPrice(neutral)
+          ? product.prices.find((pp) => pp.id === selectNeutralSignupPrice(neutral)!.id) || null
+          : selectSignupPrice(product);
+
         if (!price) {
           setError('No valid price found');
           return;
