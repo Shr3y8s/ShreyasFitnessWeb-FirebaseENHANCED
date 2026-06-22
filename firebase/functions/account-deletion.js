@@ -78,11 +78,17 @@ const CLIENT_DATA_REGISTRY = [
   {name: "Client Plans", kind: "query", collection: "clientPlans", field: "clientId", noTraces: "delete", gdpr: "preserve"},
   {name: "Client Stats", kind: "docId", collection: "clientStats", noTraces: "delete", gdpr: "preserve"},
   {name: "Goals", kind: "query", collection: "goals", field: "clientId", noTraces: "delete", gdpr: "preserve"},
-  {name: "Sessions", kind: "query", collection: "sessions", field: "userId", noTraces: "delete", gdpr: "preserve"},
+  // sessions docs are keyed by clientId (writer sets clientId:userId; client reads
+  // where clientId == uid). NOT userId — that field doesn't exist on session docs.
+  {name: "Sessions", kind: "query", collection: "sessions", field: "clientId", noTraces: "delete", gdpr: "preserve"},
+
   {name: "Daily Activities", kind: "docIdPrefix", collection: "dailyActivities", noTraces: "delete", gdpr: "preserve"},
 
   // ---- Communications / PII ----
-  {name: "Client Messages", kind: "query", collection: "client_messages", field: "clientId", noTraces: "delete", gdpr: "delete"},
+  // client_messages docs are keyed by senderId/recipientId (NO clientId field), so
+  // match BOTH and union — covers messages where the user is sender OR recipient.
+  {name: "Client Messages", kind: "queryOr", collection: "client_messages", fields: ["senderId", "recipientId"], noTraces: "delete", gdpr: "delete"},
+
   {name: "Notifications", kind: "query", collection: "notifications", field: "userId", noTraces: "delete", gdpr: "preserve"},
   {name: "Progress Photos Metadata", kind: "query", collection: "progressPhotos", field: "userId", noTraces: "delete", gdpr: "delete"},
   {name: "Login History", kind: "query", collection: "login_history", field: "userId", noTraces: "delete", gdpr: "delete"},
@@ -124,7 +130,9 @@ function describeEntry(entry, uid) {
   switch (entry.kind) {
     case "storagePrefix": return `storage:${tpl(entry.path, uid)}`;
     case "query": return `${entry.collection} where ${entry.field} == ${uid}`;
+    case "queryOr": return `${entry.collection} where (${entry.fields.join(" | ")}) == ${uid}`;
     case "docId": return `${entry.collection}/${uid}`;
+
     case "docIdPrefix": return `${entry.collection} (docId starts-with ${uid})`;
     case "subcollection": return `${tpl(entry.parent, uid)}/${entry.sub}`;
     default: return entry.name;
@@ -149,6 +157,21 @@ async function snapshotForEntry(entry, uid) {
   }
 }
 
+/**
+ * For a "queryOr" entry: run one `where(field == uid)` query per field, union the
+ * results by doc id (a doc matching multiple fields appears once). Returns an array
+ * of Firestore doc snapshots.
+ */
+async function queryOrDocs(entry, uid) {
+  const db = admin.firestore();
+  const byId = new Map();
+  for (const field of entry.fields) {
+    const snap = await db.collection(entry.collection).where(field, "==", uid).get();
+    for (const d of snap.docs) byId.set(d.id, d);
+  }
+  return Array.from(byId.values());
+}
+
 /** Count items for a registry entry without modifying anything (mock/scan). */
 async function countEntry(entry, uid) {
   if (entry.kind === "storagePrefix") {
@@ -160,11 +183,16 @@ async function countEntry(entry, uid) {
     const snap = await admin.firestore().collection(entry.collection).doc(uid).get();
     return {count: snap.exists ? 1 : 0, sample: snap.exists ? [uid] : []};
   }
+  if (entry.kind === "queryOr") {
+    const docs = (await queryOrDocs(entry, uid)).filter((d) => !isExcluded(entry, d));
+    return {count: docs.length, sample: docs.slice(0, 5).map((d) => d.id)};
+  }
   // query | docIdPrefix | subcollection
   const snapshot = await snapshotForEntry(entry, uid);
   const docs = (snapshot.docs || []).filter((d) => !isExcluded(entry, d));
   return {count: docs.length, sample: docs.slice(0, 5).map((d) => d.id)};
 }
+
 
 /** Whether a doc should be excluded (e.g. broadcast sentinel). */
 function isExcluded(entry, doc) {
@@ -206,11 +234,16 @@ async function deleteEntry(entry, uid) {
     }
     return 0;
   }
+  if (entry.kind === "queryOr") {
+    const docs = (await queryOrDocs(entry, uid)).filter((d) => !isExcluded(entry, d));
+    return deleteDocsChunked(docs);
+  }
   // query | docIdPrefix | subcollection
   const snapshot = await snapshotForEntry(entry, uid);
   const docs = (snapshot.docs || []).filter((d) => !isExcluded(entry, d));
   return deleteDocsChunked(docs);
 }
+
 
 // ============================================================================
 // Provider seam helpers (resolve adapter + cfg from the client's stored provider)
@@ -393,10 +426,11 @@ async function performAccountDeletion({
     // Block on upcoming scheduled sessions unless overridden.
     const upcomingSessionsSnapshot = await admin.firestore()
         .collection("sessions")
-        .where("userId", "==", targetUserId)
+        .where("clientId", "==", targetUserId)
         .where("status", "==", "scheduled")
         .where("scheduledTime", ">", admin.firestore.Timestamp.now())
         .get();
+
     if (!upcomingSessionsSnapshot.empty && !adminOverride) {
       throw new Error(
           `Cannot delete account with ${upcomingSessionsSnapshot.size} upcoming scheduled sessions. ` +
@@ -536,7 +570,7 @@ async function performAccountDeletion({
 
     const completedSessionsSnapshot = await admin.firestore()
         .collection("sessions")
-        .where("userId", "==", targetUserId)
+        .where("clientId", "==", targetUserId)
         .where("status", "==", "completed")
         .get();
 
@@ -606,26 +640,30 @@ async function performAccountDeletion({
       }
 
       // Legacy Stripe Customer Firestore footprint (doc + subcollections). No Stripe API.
-      if (stripeCustomerId) {
-        try {
-          let subItemsDeleted = 0;
-          for (const subName of ["subscriptions", "payments", "checkout_sessions"]) {
-            const subSnap = await admin.firestore().collection("stripe_customers").doc(targetUserId).collection(subName).get();
-            subItemsDeleted += await deleteDocsChunked(subSnap.docs);
-          }
-          const stripeRef = admin.firestore().collection("stripe_customers").doc(targetUserId);
-          let parentDeleted = 0;
-          if ((await stripeRef.get()).exists) {
-            await stripeRef.delete();
-            parentDeleted = 1;
-          }
+      // NOT gated on userData.stripeCustomerId: migrated accounts hold the Stripe id in
+      // billing_customers.providerCustomerId (users.stripeCustomerId is null), so we
+      // delete whenever the stripe_customers/{uid} footprint exists at all.
+      try {
+        let subItemsDeleted = 0;
+        for (const subName of ["subscriptions", "payments", "checkout_sessions"]) {
+          const subSnap = await admin.firestore().collection("stripe_customers").doc(targetUserId).collection(subName).get();
+          subItemsDeleted += await deleteDocsChunked(subSnap.docs);
+        }
+        const stripeRef = admin.firestore().collection("stripe_customers").doc(targetUserId);
+        let parentDeleted = 0;
+        if ((await stripeRef.get()).exists) {
+          await stripeRef.delete();
+          parentDeleted = 1;
+        }
+        if (parentDeleted + subItemsDeleted > 0) {
           steps.push({name: "Legacy Stripe Customer (Firestore + Subcollections)", itemsDeleted: parentDeleted + subItemsDeleted, status: "complete"});
           totalDeleted += parentDeleted + subItemsDeleted;
-        } catch (error) {
-          logger.error("Failed to delete legacy Stripe customer Firestore docs", {error: error.message});
-          steps.push({name: "Legacy Stripe Customer", status: "error", error: error.message});
         }
+      } catch (error) {
+        logger.error("Failed to delete legacy Stripe customer Firestore docs", {error: error.message});
+        steps.push({name: "Legacy Stripe Customer", status: "error", error: error.message});
       }
+
 
       // Remove from trainer's client list.
       if (userData.assignedTrainerId) {

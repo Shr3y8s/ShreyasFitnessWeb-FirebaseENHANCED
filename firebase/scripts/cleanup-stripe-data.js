@@ -30,7 +30,7 @@
  *     parent field anymore, so we remove it to avoid confusion. (No gate needed —
  *     subcollections are untouched.)
  *
- * Leaves `stripe_products` intact (the dormant Stripe adapter still references it).
+ * Leaves `stripe_products` intact (t"he dormant Stripe adapter still references it).
 
  *
  * Idempotent: re-running skips packages/docs already cleaned.
@@ -73,6 +73,11 @@ if (LIMIT_RAW !== null && (isNaN(LIMIT) || LIMIT < 1)) {
   process.exit(1);
 }
 
+// Optional: scope ALL parts to a single account. Great for a safe first run —
+// clean one uid, verify, then run unscoped. Omit to process every account.
+const ONLY_UID = getOpt("uid", null);
+
+
 // Legacy stripe* fields stripped from each session package.
 const STRIPE_PKG_FIELDS = [
   "stripePaymentIntentId",
@@ -87,9 +92,14 @@ const STRIPE_PKG_FIELDS = [
  */
 async function cleanupSessionPackages(db) {
   console.log("\n=== users.sessionPackages[] — strip legacy stripe* fields ===");
-  const snap = await db.collection("users").get();
+  // Scope to one user doc when --uid is set; else scan all users.
+  const userDocs = ONLY_UID
+    ? [await db.collection("users").doc(ONLY_UID).get()].filter((d) => d.exists)
+    : (await db.collection("users").get()).docs;
+  const snap = { docs: userDocs };
 
   let usersScanned = 0;
+
   let usersUpdated = 0;
   let pkgsStripped = 0;
   let pkgsSkippedUnmigrated = 0;
@@ -176,7 +186,11 @@ async function deleteDocsChunked(db, docs) {
  */
 async function cleanupStripeCustomers(db) {
   console.log("\n=== stripe_customers/{uid} — delete legacy docs (+ subcollections) ===");
-  const snap = await db.collection("stripe_customers").get();
+  const docs = ONLY_UID
+    ? [await db.collection("stripe_customers").doc(ONLY_UID).get()].filter((d) => d.exists)
+    : (await db.collection("stripe_customers").get()).docs;
+  const snap = { docs };
+
 
   let scanned = 0;
   let deletedDocs = 0;
@@ -240,7 +254,11 @@ async function cleanupStripeCustomers(db) {
  */
 async function cleanupBillingCustomerProvider(db) {
   console.log("\n=== billing_customers/{uid} — strip stale parent provider/migratedFromStripe ===");
-  const snap = await db.collection("billing_customers").get();
+  const docs = ONLY_UID
+    ? [await db.collection("billing_customers").doc(ONLY_UID).get()].filter((d) => d.exists)
+    : (await db.collection("billing_customers").get()).docs;
+  const snap = { docs };
+
 
   let scanned = 0;
   let updated = 0;
@@ -289,6 +307,7 @@ async function main() {
   const db = admin.firestore();
 
   console.log(`\nStripe data cleanup (Phase 5) — mode: ${COMMIT ? "COMMIT" : "DRY RUN"}`);
+  if (ONLY_UID) console.log(`  (scoped to single uid: ${ONLY_UID})`);
   if (SKIP_PACKAGES) console.log("  (skipping sessionPackages cleanup)");
   if (SKIP_CUSTOMERS) console.log("  (skipping stripe_customers cleanup)");
 
