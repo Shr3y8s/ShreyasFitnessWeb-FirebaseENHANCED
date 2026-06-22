@@ -56,7 +56,12 @@ Neutral schema:
 - [ ] (owner) smoke: buy session (PayPal) → neutral package fields; billing page; account-summary; client-hub filter; refund path
 
 ## Phase 5 — Cleanup (LAST, after prod validated)
-- [ ] `firebase/scripts/cleanup-stripe-data.js` (dry-run default, `--commit`): delete
-      `stripe_customers/{uid}` (+ subcollections) + old `sessionPackages[].stripe*` fields
+- [x] `firebase/scripts/cleanup-stripe-data.js` (dry-run default, `--commit`): delete
+      `stripe_customers/{uid}` (+ subcollections) + old `sessionPackages[].stripe*` fields.
+      Safety-gated: strips package `stripe*` only when neutral fields exist; deletes a
+      `stripe_customers/{uid}` doc only when `billing_customers/{uid}` exists. Supports
+      `--skip-packages` / `--skip-customers` / `--limit`.
 - [ ] (owner) run dev → verify → prod
-- [ ] (optional) leave `stripe_products` intact for the dormant Stripe adapter
+- [x] (optional) leave `stripe_products` intact for the dormant Stripe adapter
+
+

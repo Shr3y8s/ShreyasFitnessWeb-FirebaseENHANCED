@@ -1,91 +1,117 @@
 # Client Deletion Collection Checklist
 
+> **Single source of truth:** all simple client-owned data locations are listed in
+> the `CLIENT_DATA_REGISTRY` array at the top of
+> `firebase/functions/account-deletion.js`. All three deletion modes (mock /
+> no-traces / gdpr-clean) AND the orphan scan iterate that one list. This document
+> mirrors the registry for human reference — **the code is authoritative.**
+>
+> ⚠️ **DRIFT RULE:** when you add a feature that writes client-owned data to a NEW
+> collection / subcollection / storage prefix, add ONE entry to
+> `CLIENT_DATA_REGISTRY`. Do not hand-add per-mode delete code. Then run the orphan
+> scan (below) against a test account to confirm coverage.
+
 ## Complete List of Collections to Query/Delete
 
-Based on actual database schema (as of Mar 2026):
+Provider-neutral / PayPal (as of Jun 2026).
 
-### Storage Locations
-1. ✅ `progressPhotos/{userId}/` (camelCase)
-2. ✅ `nutritionScreenshots/{userId}/` (camelCase)
-3. ✅ `profile-photos/{userId}/` (hyphenated)
+### Storage Locations (registry: `storagePrefix`)
+1. ✅ `progressPhotos/{uid}/`
+2. ✅ `nutritionScreenshots/{uid}/`
+3. ✅ `profile-photos/{uid}/`
 
-### Firestore Collections (Top-Level)
-4. ✅ `clientPlans` - Query by clientId
-5. ✅ `clientStats` - Document ID = userId
-6. ✅ `client_messages` - Query by clientId
-7. ✅ `dailyActivities` - Query by documentId prefix (userId_date)
-8. ✅ `goals` - Query by clientId
-9. ✅ `notifications` - Query by userId
-10. ✅ `nutritionLogs/{userId}/mealPlans` - Document/subcollection
-11. ✅ `nutritionLogs/{userId}` - **Parent document** (must delete separately, Firestore doesn't cascade)
-12. ✅ `progressPhotos` - Query by userId (Firestore metadata references)
-13. ✅ `sessions` - Query by userId
-14. ✅ `stripe_customers/{userId}` - Document ID
-15. ✅ `stripe_customers/{userId}/subscriptions` - **Subcollection** (Firestore doesn't cascade-delete)
-16. ✅ `stripe_customers/{userId}/payments` - **Subcollection**
-17. ✅ `stripe_customers/{userId}/checkout_sessions` - **Subcollection**
-18. ✅ `users/{userId}` - Document ID
-19. ✅ `users/{userId}/activities` - Subcollection
-20. ✅ `weeklySurveys` - Query by clientId
-21. ✅ `workouts` - Query by clientId
-22. ✅ `login_history` - Query by userId
+### Firestore — registry-driven
+4. ✅ `users/{uid}/activities` — subcollection (gdpr: preserve)
+5. ✅ `workouts` — query `clientId == uid` (gdpr: preserve)
+6. ✅ `clientPlans` — query `clientId == uid` (gdpr: preserve)
+7. ✅ `clientStats` — docId == uid (gdpr: preserve)
+8. ✅ `goals` — query `clientId == uid` (gdpr: preserve)
+9. ✅ `sessions` — query `userId == uid` (gdpr: preserve)
+10. ✅ `dailyActivities` — docId starts-with `{uid}_` (gdpr: preserve)
+11. ✅ `client_messages` — query `clientId == uid` (gdpr: delete — PII)
+12. ✅ `notifications` — query `userId == uid` (gdpr: preserve)
+13. ✅ `progressPhotos` — query `userId == uid` (gdpr: delete — PII metadata)
+14. ✅ `login_history` — query `userId == uid` (gdpr: delete — PII)
+15. ✅ `clientNotifications` — query `clientId == uid` (gdpr: delete) **[NEW]** — excludes broadcast `clientId:"all"`
+16. ✅ `clientTasks` — query `clientId == uid` (gdpr: delete) **[NEW]** — excludes `"all"`
+17. ✅ `clientReminders` — query `clientId == uid` (gdpr: delete) **[NEW]** — excludes `"all"`
+18. ✅ `weeklySurveys/{uid}/responses` — subcollection (gdpr: delete) **[FIXED — was wrongly queried as a top-level collection]**
+19. ✅ `weeklySurveys/{uid}` — parent doc (gdpr: delete)
+20. ✅ `nutritionLogs/{uid}/mealPlans` — subcollection (gdpr: delete)
+21. ✅ `nutritionLogs/{uid}/meals` — subcollection (gdpr: delete) **[NEW]**
+22. ✅ `nutritionLogs/{uid}/habits` — subcollection (gdpr: delete) **[NEW]**
+23. ✅ `nutritionLogs/{uid}/coachNotes` — subcollection (gdpr: delete) **[NEW]**
+24. ✅ `nutritionLogs/{uid}` — parent doc (gdpr: delete)
+25. ✅ `users/{uid}/sessionPackages` — subcollection, vestigial/read-only safe no-op (gdpr: preserve) **[NEW]**
 
-### System Records
-23. ✅ Firebase Auth - Deleted in both modes
-24. ✅ Trainer client list references (admins.clients[] array) - arrayRemove
-
-### Pre-Deletion Checks (NEW - Mar 2026)
-25. ✅ **Stripe subscription cancellation**
-    - `gdpr-clean`: Blocks if active subscription (admin must cancel first); auto-cancels if `cancelAtPeriodEnd`
-    - `no-traces`: Auto-cancels any active subscription
-26. ✅ **Session credit handling**
-    - `gdpr-clean`: Blocks if `sessionBalance.available > 0` (admin must refund/acknowledge first)
-    - `no-traces`: Zeros out remaining credits and reports in results
+### Firestore — bespoke (not simple registry wipes)
+26. ✅ `billing_customers/{uid}` (+ `subscriptions`/`transactions` subcollections) — neutral PayPal billing. no-traces: delete; gdpr-clean: anonymize + preserve (financial records).
+27. ✅ `stripe_customers/{uid}` (+ `subscriptions`/`payments`/`checkout_sessions`) — **legacy**, Firestore-only delete (no Stripe API).
+28. ✅ `users/{uid}` — anonymized in gdpr-clean, deleted in no-traces.
+29. ✅ Firebase Auth — deleted in both real modes.
+30. ✅ Trainer client list reference (`admins.clients[]` arrayRemove).
 
 ## Deletion Mode Behavior
 
 ### no-traces (test accounts)
-- Deletes ALL data including financial records
-- Auto-cancels active Stripe subscriptions
-- Zeros out remaining session credits
-- Deletes `stripe_customers` subcollections (subscriptions, payments, checkout_sessions)
-- Deletes Stripe customer from Stripe API
-- Deletes user document entirely
+- Deletes every registry entry flagged `noTraces:'delete'` (everything except the
+  read-only sessionPackages subcollection, which is also deleted as a safe no-op).
+- Auto-cancels active subscription via the provider seam (fail-soft).
+- Zeros out remaining session credits.
+- Deletes `billing_customers` (+ subcollections) and the legacy `stripe_customers`
+  Firestore footprint (no Stripe API), removes the trainer-list reference, deletes
+  the user doc + Firebase Auth.
 
 ### gdpr-clean (real clients)
-- **Blocks** if active subscription or remaining session credits
-- Removes PII (photos, messages, login history, nutrition logs)
-- Anonymizes user document (preserves for business records)
-- Anonymizes Stripe customer (preserves for financial records)
-- Sets `gdprDeleted: true` on user document (filtered from trainer queries)
-- Deletes Firebase Auth
+- Blocks on upcoming scheduled sessions unless `adminOverride`.
+- Deletes every registry entry flagged `gdpr:'delete'` (PII: photos, messages,
+  login history, nutrition logs, weekly surveys, client notifications/tasks/reminders).
+- **Preserves** business/financial records flagged `gdpr:'preserve'` (workouts,
+  plans, stats, goals, sessions, daily activities, notifications, activity logs).
+- Anonymizes `billing_customers` (email→anonymized, blank name, `gdprDeleted:true`).
+- Anonymizes the user doc (`gdprDeleted:true`) and deletes Firebase Auth.
 
 ### mock (preview)
-- No data modified
-- Returns full inventory of what would be deleted
-- Includes subscription and session credit info for admin review
+- No writes. Iterates the registry + billing footprint and returns a full inventory
+  (per-entry counts + sample ids + each entry's gdpr disposition).
 
 ## Collections NOT Deleted (by design)
-- `activityFeed` - **Auto-expires (7-day TTL via scheduled cleanup). No cleanup action required during account deletion.**
-- `admins` - Admin/trainer accounts
-- `trainers` - Trainer accounts
-- `exercises` - Shared exercise library
-- `workoutTemplates` - Shared templates (not client-specific)
-- `training_locations` - Shared locations
-- `stripe_products` - Product catalog
-- `deleted_accounts` - Audit trail (always preserved)
-- `audit_logs` - Audit trail (always preserved)
-- `contact_form_submissions` - Public form (not user-linked)
-- `verifiedEmails` - Cleaned up by scheduled function
+- `activityFeed` — self-expires (7-day TTL scheduled cleanup).
+- `admins`, `trainers` — staff accounts.
+- `exercises`, `workoutTemplates`, `training_locations`, `stripe_products` — shared/catalog.
+- `deleted_accounts`, `audit_logs` — audit trail (always preserved).
+- `contact_form_submissions` — public form (not user-linked).
+- `verifiedEmails` — cleaned up by a scheduled function.
+
+## Orphan-Scan Verification (read-only)
+
+`firebase/scripts/bulk-delete-test-accounts.js --scan-uid=<uid>` iterates the SAME
+`CLIENT_DATA_REGISTRY` (+ billing/identity footprint + user doc) and reports any
+location with leftover data. It makes NO writes.
+
+- Run AFTER a **no-traces** deletion → expect ZERO findings.
+- Run AFTER a **gdpr-clean** deletion → business records (preserved) WILL show up;
+  that's expected. The user doc shows `gdprDeleted: true`.
+- Run against any live account to sanity-check coverage.
+
+```
+node firebase/scripts/bulk-delete-test-accounts.js --scan-uid=abc123
+```
 
 ## Implementation Notes
 
-- **clientPlans**: Top-level collection, query `where('clientId', '==', userId)`
-- **clientStats**: Top-level collection, doc ID = `userId`
-- **client_messages**: Top-level collection, query `where('clientId', '==', userId)`
-- **notifications**: Top-level collection, query `where('userId', '==', userId)`
-- **weeklySurveys**: Top-level collection, query `where('clientId', '==', userId)`
-- **progressPhotos**: Firestore collection with photo metadata, separate from storage files
-- **nutritionLogs**: Parent doc + `mealPlans` subcollection — must delete both
-- **stripe_customers**: Parent doc + 3 subcollections — Firestore doesn't cascade-delete subcollections
-- **dailyActivities**: Uses composite doc IDs `{userId}_{dateStr}` — queried by documentId prefix range
+- **Shared implementation:** `firebase/functions/account-deletion.js`
+  (`performAccountDeletion()` + `scanClientData()` + `CLIENT_DATA_REGISTRY`), reused
+  by the `deleteAccount` callable (admin UI) and the `bulk-delete-test-accounts.js`
+  script. One source of truth across deletion + verification.
+- **Provider is RECORD-level, never customer-level:** a client can run, e.g., a
+  Stripe subscription AND PayPal one-time sessions, so provider is owned per record:
+  `billing_customers/{uid}/subscriptions/{id}.provider` (subscription cancel) and
+  `billing_customers/{uid}/transactions/{id}.provider` (per-purchase refund). The
+  deletion path resolves the cancel/refund provider from those records and dispatches
+  via `PROVIDERS[provider]` with a capability check; zero Stripe SDK. It does NOT read
+  a parent `billing_customers/{uid}.provider` (that field is stale/removed by Phase 5).
+
+- **Bulk script:** dry-run by default; `--commit` to act; refuses with no filter;
+  `--email-regex` / `--unactivated` / `--created-before`; `--mode`, `--limit`,
+  `--paypal-env`; `--scan-uid` for read-only verification.

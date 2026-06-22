@@ -422,6 +422,13 @@ module.exports = {
   setFulfillmentHooks, // ../index.js injects parity side-effects (welcome email/goal/feed)
   handleEvent, // exported for unit testing
   PROVIDERS,
+
+  // Exported so other modules (e.g. account-deletion.js) can resolve PayPal cfg and
+  // bind PayPal secrets to their own callables/functions.
+  paypalEnvConfig,
+  normalizePaypalEnv,
+  PAYPAL_SECRETS,
 };
+
 
 
