@@ -48,9 +48,18 @@
  *   no-op (fail-soft); fine for pure test accounts.
  */
 
-const admin = require("firebase-admin");
+// IMPORTANT: resolve firebase-admin from the FUNCTIONS directory so this script and
+// the account-deletion.js helper it requires share ONE firebase-admin instance (and
+// thus one initialized app). The script dir has no node_modules of its own; without
+// this, the script's admin.initializeApp() and the helper's admin.firestore() would
+// hit two different module copies → "default Firebase app does not exist".
+const path = require("path");
+const admin = require(require.resolve("firebase-admin", {
+  paths: [path.join(__dirname, "..", "functions")],
+}));
 
 // ── CLI parsing ─────────────────────────────────────────────────────────────
+
 const argv = process.argv.slice(2);
 function getFlag(name) {
   return argv.includes(`--${name}`);
@@ -71,6 +80,19 @@ const EMAIL_REGEX_RAW = getOpt("email-regex");
 const ONLY_UNACTIVATED = getFlag("unactivated");
 const CREATED_BEFORE_RAW = getOpt("created-before");
 const SCAN_UID = getOpt("scan-uid");
+
+// Storage bucket for admin.initializeApp(). Without this, admin.storage().bucket()
+// (used by the storage registry entries) throws "Bucket name not specified" — which
+// would both error the scan's storage rows AND fail no-traces Storage-file deletes.
+// Precedence: --storage-bucket=, FIREBASE_STORAGE_BUCKET, NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+// then this project's default. A leading gs:// is stripped.
+const STORAGE_BUCKET = (
+  getOpt("storage-bucket") ||
+  process.env.FIREBASE_STORAGE_BUCKET ||
+  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  "shreyfitweb.firebasestorage.app"
+).replace(/^gs:\/\//, "");
+
 
 // ── Validation ──────────────────────────────────────────────────────────────
 // --scan-uid is a read-only verification path; it bypasses mode/filter checks.
@@ -136,9 +158,11 @@ function toDate(v) {
 }
 
 async function main() {
-  admin.initializeApp(
-      serviceAccount ? {credential: admin.credential.cert(serviceAccount)} : undefined
-  );
+  admin.initializeApp({
+    ...(serviceAccount ? {credential: admin.credential.cert(serviceAccount)} : {}),
+    storageBucket: STORAGE_BUCKET,
+  });
+
 
   // Require the helper AFTER admin.initializeApp() — it calls admin.firestore() etc.
   const {performAccountDeletion, scanClientData} = require("../functions/account-deletion");

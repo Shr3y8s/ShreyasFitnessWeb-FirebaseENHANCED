@@ -223,12 +223,13 @@ const paymentWebhook = onRequest({ region: "us-west1", secrets: PAYPAL_SECRETS }
 
   let events = [];
   try {
-    events = (await provider.parseEvent(verified.event)) || [];
+    events = (await provider.parseEvent(verified.event, verifyCtx)) || [];
   } catch (err) {
     logger.error("paymentWebhook: parseEvent threw", { providerName, error: err.message });
     res.status(400).send("Parse error");
     return;
   }
+
 
   try {
     for (const e of events) {
@@ -264,12 +265,13 @@ async function handlePaypalWebhook(req, res, env) {
   }
   let events = [];
   try {
-    events = (await provider.parseEvent(verified.event)) || [];
+    events = (await provider.parseEvent(verified.event, cfg)) || [];
   } catch (err) {
     logger.error("paypalWebhook: parseEvent threw", { env, error: err.message });
     res.status(400).send("Parse error");
     return;
   }
+
   try {
     for (const e of events) {
       await handleEvent("paypal", e);

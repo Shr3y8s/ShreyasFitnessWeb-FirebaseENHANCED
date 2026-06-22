@@ -196,12 +196,36 @@ function toMinorUnits(money) {
 }
 
 /**
- * Map a verified PayPal event → neutral PaymentEvent[] (design §3.2/§3.3).
+ * Fetch a subscription's plan_id via the PayPal REST API.
+ * A recurring-charge webhook (PAYMENT.SALE.COMPLETED) carries the SUBSCRIPTION id
+ * (billing_agreement_id) but NOT the plan_id / tier — so we dereference the
+ * subscription to recover its plan. Returns null on any failure (caller fail-soft).
+ * @param {string} subscriptionId  PayPal subscription id (I-xxxx)
+ * @param {object} ctx { clientId, clientSecret, base }
  */
-function parseEvent(event) {
+async function getSubscriptionPlanId(subscriptionId, ctx = {}) {
+  if (!subscriptionId) return null;
+  try {
+    const token = await getAccessToken(ctx);
+    const sub = await request("GET", `/v1/billing/subscriptions/${subscriptionId}`, token, null, ctx.base);
+    return sub?.plan_id || null;
+  } catch (err) {
+    logger.warn("getSubscriptionPlanId failed (falling back)", { subscriptionId, error: err.message });
+    return null;
+  }
+}
+
+/**
+ * Map a verified PayPal event → neutral PaymentEvent[] (design §3.2/§3.3).
+ * `ctx` is the per-request PayPal cfg ({base,clientId,clientSecret,...}); it's used
+ * for the subscription→plan lookup on recurring charges. async because that lookup
+ * hits the PayPal API. (The Stripe adapter's parseEvent ignores the extra arg.)
+ */
+async function parseEvent(event, ctx = {}) {
   const events = [];
   const type = event?.event_type;
   const r = event?.resource || {};
+
 
   switch (type) {
     // ---- Subscriptions ----
@@ -241,6 +265,17 @@ function parseEvent(event) {
 
     // ---- Recurring subscription payment (v1 Sale) → transaction record only ----
     case "PAYMENT.SALE.COMPLETED": {
+      // The Sale event carries the SUBSCRIPTION id (billing_agreement_id) but NOT
+      // the plan_id/tier. Dereference the subscription → plan_id → tier name so the
+      // transaction shows e.g. "Complete Transformation" instead of generic
+      // "Subscription". Fail-soft: any lookup miss keeps "Subscription".
+      let subProductName = "Subscription";
+      const subId = r.billing_agreement_id || null;
+      if (subId) {
+        const planId = await getSubscriptionPlanId(subId, ctx);
+        const tier = resolvePlanTier(planId);
+        if (tier.tierName) subProductName = tier.tierName;
+      }
       events.push({
         type: "payment.completed",
         userId: r.custom || r.custom_id || null,
@@ -251,11 +286,12 @@ function parseEvent(event) {
           amount: toMinorUnits(r.amount),
           currency: r.amount?.currency_code || r.amount?.currency || "usd",
           status: "succeeded",
-          productName: "Subscription",
+          productName: subProductName,
         },
       });
       break;
     }
+
     case "PAYMENT.SALE.REFUNDED":
     case "PAYMENT.CAPTURE.REFUNDED": {
       events.push({
