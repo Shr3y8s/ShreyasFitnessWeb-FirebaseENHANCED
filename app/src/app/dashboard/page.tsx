@@ -44,8 +44,13 @@ export default function DashboardWelcomePage() {
           // Un-activated client (e.g. signup whose payment failed/was abandoned) →
           // resume payment via the unified checkout, keyed by their selected tier.
           if (userData.role === 'client' && !userData.accountActivated) {
+            // return='/signup?step=plan' so checkout Back shows the 4-package step to
+            // re-pick (account exists → Continue updates tier + returns to checkout);
+            // next='/dashboard?payment=success' (Welcome landing after payment).
             // Fallback to /dashboard/client (not /dashboard) to avoid a self-redirect loop.
-            redirectToCheckoutForTier(router, userData.tier, '/dashboard', '/dashboard/client');
+            redirectToCheckoutForTier(router, userData.tier, '/signup?step=plan', '/dashboard/client', '/dashboard?payment=success');
+
+
             return;
           }
 

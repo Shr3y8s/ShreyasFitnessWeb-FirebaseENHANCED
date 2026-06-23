@@ -238,15 +238,21 @@ export function redirectToCheckoutForTier(
   router: { push: (href: string) => void },
   tier: string | undefined | null,
   returnPath = '/dashboard',
-  fallback = '/dashboard'
+  fallback = '/dashboard',
+  nextPath?: string
 ): void {
   const itemKey = tier ? getCheckoutKeyForProduct(tier) : null;
+  // `return` = Back/cancel target; `next` (optional) = after-PAYMENT target. For an
+  // un-activated client we pass return='/' (home — an un-guarded page, so Back won't
+  // bounce back into checkout) and next='/dashboard?payment=success' (Welcome landing).
+  const nextParam = nextPath ? `&next=${encodeURIComponent(nextPath)}` : '';
   router.push(
     itemKey
-      ? `/checkout?item=${itemKey}&return=${encodeURIComponent(returnPath)}`
+      ? `/checkout?item=${itemKey}&return=${encodeURIComponent(returnPath)}${nextParam}`
       : fallback
   );
 }
+
 
 
 

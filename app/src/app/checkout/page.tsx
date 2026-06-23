@@ -48,8 +48,18 @@ function CheckoutInner() {
   const { user, userData, loading: authLoading } = useAuth();
 
   const itemKey = searchParams.get('item');
+  // `return` = where Back/cancel goes. `next` = where to go AFTER successful
+  // payment (passed through to /checkout/success). They're DISTINCT: e.g. signup
+  // sets return=/signup?step=plan (Back → 4-package step) but next=
+  // /dashboard?payment=success (after payment → Welcome landing). `next` defaults
+  // to `return` when absent, so flows that don't set it are unchanged.
   const returnPath = useMemo(() => safeReturn(searchParams.get('return')), [searchParams]);
+  const nextPath = useMemo(
+    () => safeReturn(searchParams.get('next') ?? searchParams.get('return')),
+    [searchParams]
+  );
   const item = useMemo(() => getCheckoutItem(itemKey), [itemKey]);
+
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -118,10 +128,14 @@ function CheckoutInner() {
     );
   }
 
+  // Success page's "Continue" goes to `nextPath` (after-payment target), which may
+  // differ from the Back/cancel `returnPath` (e.g. signup: Back → plan step, but
+  // after payment → /dashboard?payment=success Welcome landing).
   const successUrl =
     typeof window !== 'undefined'
-      ? `${window.location.origin}/checkout/success?item=${itemKey}&return=${encodeURIComponent(returnPath)}`
+      ? `${window.location.origin}/checkout/success?item=${itemKey}&return=${encodeURIComponent(nextPath)}`
       : '';
+
   const cancelUrl =
     typeof window !== 'undefined' ? `${window.location.origin}${returnPath}` : returnPath;
 

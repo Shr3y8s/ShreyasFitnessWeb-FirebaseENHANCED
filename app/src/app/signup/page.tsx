@@ -84,14 +84,20 @@ export default function SignupPage() {
       });
     }
     
-    // If step parameter exists, start at that step
+    // If step parameter exists, start at that step. `step=plan` (returning from
+    // /checkout via the Back button) lands on the 4-package Plan step (step 4).
     if (stepParam) {
-      const step = parseInt(stepParam);
-      if (step === 2) {
-        setCurrentStep(2);
+      if (stepParam === 'plan') {
+        setCurrentStep(4);
+      } else {
+        const step = parseInt(stepParam);
+        if (step === 2) {
+          setCurrentStep(2);
+        }
       }
     }
   }, []);
+
 
   // Track authentication state and load existing data for package changes
   useEffect(() => {
@@ -111,13 +117,25 @@ export default function SignupPage() {
             const userData = userDoc.data();
             console.log("Loading existing user data for package change");
             
-            // Pre-fill form with existing data (not passwords)
+            // Pre-fill form with existing data (not passwords). Also rehydrate the
+            // selected tier so that when a just-created, un-activated user returns
+            // from /checkout via Back (?step=plan), the 4-package step renders with
+            // their prior pick highlighted and they can re-choose.
             setFormData(prev => ({
               ...prev,
               name: userData.name || '',
               email: userData.email || user.email || '',
-              phone: userData.phone || ''
+              phone: userData.phone || '',
+              tier: userData.tier
+                ? {
+                    id: userData.tier,
+                    name: userData.tierName || '',
+                    price: 0,
+                    features: [],
+                  }
+                : prev.tier,
             }));
+
           }
         } catch (error) {
           console.error("Error loading user data:", error);
@@ -183,7 +201,56 @@ export default function SignupPage() {
       return;
     }
 
-    // Validate all required fields
+    // Resolve the checkout item (app id → CHECKOUT_ITEMS key) before creating anything.
+    const itemKey = getCheckoutKeyForProduct(formData.tier.id);
+    if (!itemKey) {
+      setError('This plan is not available for checkout.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Two DISTINCT post-checkout destinations (the checkout page reads them as
+    // separate params so Back ≠ after-payment):
+    //   return → Back/cancel target = the signup Plan step (NOT /dashboard, which
+    //            would bounce an un-activated client back to /checkout = loop).
+    //   next   → after-PAYMENT target = /dashboard?payment=success, which triggers
+    //            the post-signup Welcome landing (plain /dashboard skips straight
+    //            to /dashboard/client and never shows Welcome).
+    const checkoutBack =
+      `/checkout?item=${itemKey}` +
+      `&return=${encodeURIComponent('/signup?step=plan')}` +
+      `&next=${encodeURIComponent('/dashboard?payment=success')}`;
+
+
+    // RE-ENTRY PATH (checked FIRST, before field validation): the user returned
+    // from /checkout via Back and may have picked a DIFFERENT package. Their
+    // account already exists and they're still authenticated, but the form's
+    // password isn't in state on re-entry — so we must NOT run the new-signup
+    // validation or recreate the account. Use the LIVE auth value (auth.currentUser)
+    // to avoid any dependency on the currentUser React-state timing. Just persist
+    // the (possibly new) tier and continue to checkout.
+    const existingUser = auth.currentUser;
+    if (existingUser) {
+      try {
+        await setDoc(
+          doc(db, 'users', existingUser.uid),
+          {
+            tier: formData.tier.id,
+            tierName: formData.tier.name,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        router.push(checkoutBack);
+      } catch (e) {
+        console.error('Failed to update tier on re-entry:', e);
+        setError((e as Error).message);
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // NEW SIGNUP: validate all required fields, then create the account.
     if (!formData.email || !formData.name || !formData.password) {
       setError('Please fill in all required fields');
       setIsSubmitting(false);
@@ -196,16 +263,9 @@ export default function SignupPage() {
       return;
     }
 
-    // Resolve the checkout item (app id → CHECKOUT_ITEMS key) before creating anything.
-    const itemKey = getCheckoutKeyForProduct(formData.tier.id);
-    if (!itemKey) {
-      setError('This plan is not available for checkout.');
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
       // reCAPTCHA (best-effort; not fatal if it fails to load).
+
       let recaptchaToken: string | null = null;
       try {
         await loadRecaptcha();
@@ -227,7 +287,15 @@ export default function SignupPage() {
         if (authError?.code === 'auth/email-already-in-use') {
           // Account exists (e.g. a prior signup whose payment failed). Send them to
           // log in, carrying the checkout target so they land straight on payment.
-          const nextUrl = `/checkout?item=${itemKey}&return=${encodeURIComponent('/dashboard')}`;
+          // return='/signup?step=plan' so checkout Back takes them to the 4-package
+          // step to re-pick (account already exists → Continue updates tier + returns
+          // to checkout); next='/dashboard?payment=success' (Welcome landing after pay).
+          const nextUrl =
+            `/checkout?item=${itemKey}` +
+            `&return=${encodeURIComponent('/signup?step=plan')}` +
+            `&next=${encodeURIComponent('/dashboard?payment=success')}`;
+
+
           setError('This email already has an account. Redirecting you to log in so you can finish your purchase…');
           setTimeout(() => router.push(`/login?next=${encodeURIComponent(nextUrl)}`), 2500);
         } else {
@@ -266,8 +334,9 @@ export default function SignupPage() {
       sessionStorage.removeItem('pendingSignup');
 
       // Hand off to the generic, reusable checkout (auth now guaranteed).
-      router.push(`/checkout?item=${itemKey}&return=${encodeURIComponent('/dashboard')}`);
+      router.push(checkoutBack);
     } catch (error) {
+
       console.error('Account creation / checkout handoff error:', error);
       setError((error as Error).message);
       setIsSubmitting(false);

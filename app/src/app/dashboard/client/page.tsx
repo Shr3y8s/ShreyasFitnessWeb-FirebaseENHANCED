@@ -92,7 +92,12 @@ export default function ClientDashboardPage() {
     // (matches /dashboard root guard). Falls back to /dashboard if tier unmapped.
     if (!userDataFromAuth.accountActivated) {
       console.log('[ClientDashboard] Account not activated, redirecting to checkout');
-      redirectToCheckoutForTier(router, userDataFromAuth.tier, '/dashboard');
+      // return='/signup?step=plan' so checkout Back shows the 4-package step to re-pick
+      // (account exists → Continue updates tier + returns to checkout);
+      // next='/dashboard?payment=success' (Welcome landing after payment).
+      redirectToCheckoutForTier(router, userDataFromAuth.tier, '/signup?step=plan', '/dashboard', '/dashboard?payment=success');
+
+
       return;
     }
 

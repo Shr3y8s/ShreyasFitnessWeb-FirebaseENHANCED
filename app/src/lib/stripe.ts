@@ -1,6 +1,7 @@
 // Stripe configuration for Next.js app
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { SERVICE_TIERS } from '@/lib/constants';
+
 
 // Product IDs valid for the CURRENT Stripe mode (test vs live). SERVICE_TIERS
 // resolves to TEST ids in dev (pk_test) and LIVE ids in prod (pk_live). Both
@@ -13,12 +14,25 @@ const CURRENT_MODE_PRODUCT_IDS = new Set<string>(Object.values(SERVICE_TIERS));
 // Get Stripe publishable key from environment variable
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
-if (!stripePublishableKey) {
-  throw new Error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
+// LAZY Stripe.js loader. Previously this module called `loadStripe()` at top
+// level, which injected the js.stripe.com script onto EVERY page that imports
+// this module (checkout/signup pull it in via the dormant Stripe payment
+// adapter) — printing the "test your Stripe.js integration over HTTP" notice
+// even though PayPal is the live processor and Stripe is retired. Defer loading
+// (and the missing-key check) until something actually invokes Stripe, so the
+// script never loads in the PayPal-only flow. Nothing references this today; the
+// dormant Stripe adapter is reactivatable via getStripe() if Stripe returns.
+let _stripePromise: Promise<Stripe | null> | null = null;
+export function getStripe(): Promise<Stripe | null> {
+  if (!_stripePromise) {
+    if (!stripePublishableKey) {
+      throw new Error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable');
+    }
+    _stripePromise = loadStripe(stripePublishableKey);
+  }
+  return _stripePromise;
 }
 
-// Initialize Stripe promise
-export const stripePromise = loadStripe(stripePublishableKey);
 
 // Modern Stripe Elements appearance configuration matching your brand
 export const appearance = {

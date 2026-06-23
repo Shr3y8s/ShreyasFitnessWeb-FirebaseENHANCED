@@ -6,7 +6,9 @@ import { AlertCircle, Check, ExternalLink } from 'lucide-react';
 import { FormData, ServiceTier as ServiceTierType } from '../page';
 import { getPaymentProvider, selectSignupPrice, type Product } from '@/lib/payments';
 import { getProductMarketing } from '@/lib/product-marketing';
+import { useAuth } from '@/lib/auth-context';
 import Link from 'next/link';
+
 
 interface ServiceTierStepProps {
   formData: FormData;
@@ -36,6 +38,16 @@ export default function ServiceTierStep({
   const [products, setProducts] = useState<EnhancedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>('');
+
+  // Hide the "Back" button for an already-authenticated, un-activated user who
+  // returned to this plan step from /checkout (login→checkout→Back). They only
+  // need to re-pick a plan + continue; they shouldn't navigate back into the
+  // Email/OTP/Details steps to change name/email/password mid-payment-resume
+  // (those are editable from the dashboard once activated). During a FRESH signup
+  // the user isn't authenticated until the very end, so `user` is null and Back
+  // shows normally.
+  const { user } = useAuth();
+
 
   // Fetch products from Firestore on mount
   useEffect(() => {
@@ -147,12 +159,15 @@ export default function ServiceTierStep({
           </div>
           <p>{loadError}</p>
         </div>
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={prevStep}>Back</Button>
+        <div className={user ? 'flex justify-end' : 'flex justify-between'}>
+          {!user && (
+            <Button variant="outline" onClick={prevStep}>Back</Button>
+          )}
           <Button onClick={() => window.location.reload()} variant="outline">
             Try Again
           </Button>
         </div>
+
       </div>
     );
   }
@@ -233,15 +248,17 @@ export default function ServiceTierStep({
         ))}
       </div>
       
-      <div className="flex justify-between mt-6">
-        <Button 
-          type="button" 
-          variant="outline"
-          onClick={prevStep}
-          disabled={isSubmitting}
-        >
-          Back
-        </Button>
+      <div className={`flex mt-6 ${user ? 'justify-end' : 'justify-between'}`}>
+        {!user && (
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={prevStep}
+            disabled={isSubmitting}
+          >
+            Back
+          </Button>
+        )}
         <Button 
           type="submit" 
           disabled={isSubmitting || !formData.tier}
@@ -249,6 +266,7 @@ export default function ServiceTierStep({
           {isSubmitting ? 'Processing...' : 'Continue'}
         </Button>
       </div>
+
     </form>
   );
 }
