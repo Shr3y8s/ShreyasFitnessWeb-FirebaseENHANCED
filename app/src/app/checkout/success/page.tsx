@@ -30,7 +30,12 @@ function safeReturn(raw: string | null): string {
   return raw;
 }
 
-const TIMEOUT_MS = 15000;
+// Soft fallback only. PayPal SANDBOX webhooks (BILLING.SUBSCRIPTION.ACTIVATED) can
+// lag ~60–90s; the button-subscription path fulfills via that webhook (no synchronous
+// fulfillment), so the wait must comfortably exceed sandbox lag to avoid a false
+// "still finalizing" message on the happy path. Production webhooks are much faster.
+const TIMEOUT_MS = 120000;
+
 
 function SuccessInner() {
   const router = useRouter();
@@ -95,7 +100,16 @@ function SuccessInner() {
     };
   }, [authLoading, user, item, router]);
 
-  const handleContinue = () => router.push(returnPath);
+  // On the confirmed-success path, Continue goes to the after-payment destination
+  // (e.g. /dashboard?payment=success → Welcome). But in the TIMEOUT state the
+  // payment is NOT yet confirmed — sending them to the success-gated destination
+  // would imply success and (for an un-activated account) bounce through the
+  // dashboard guard. So when unconfirmed we route to a neutral, un-guarded page
+  // (home) instead of asserting success. With synchronous fulfillment the happy
+  // path resolves to 'done' almost immediately, so 'timeout' is now rare.
+  const handleContinue = () =>
+    router.push(status === 'timeout' ? '/' : returnPath);
+
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-teal-50">

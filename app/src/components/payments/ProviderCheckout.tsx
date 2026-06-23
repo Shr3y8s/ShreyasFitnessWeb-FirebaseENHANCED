@@ -95,8 +95,18 @@ export function ProviderCheckout({
 
   const provider = getPaymentProvider({ mode });
   const isButton = provider.capabilities.buttonCheckout;
-  const isCardFields = !!provider.capabilities.cardFields && !!provider.renderCardFields;
+  const isSubscription = mode === 'subscription';
+  // ACDC inline hosted card fields are used ONLY for one-time purchases. For
+  // SUBSCRIPTIONS we deliberately do NOT use the inline card fields: headless
+  // vaulted-card subscriptions require PayPal's Reference Transactions capability
+  // (not enabled), so card subscribers instead use the dedicated "Debit or Credit
+  // Card" Smart Button (PayPal-hosted guest card checkout) rendered by
+  // renderCheckout — which needs no Reference Transactions. (See payment-processor
+  // notes: vault_id subscription create returns 400 without Reference Transactions.)
+  const isCardFields =
+    !!provider.capabilities.cardFields && !!provider.renderCardFields && !isSubscription;
   const isModal = isButton && cardMode === 'modal';
+
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cardContainerRef = useRef<HTMLDivElement>(null);

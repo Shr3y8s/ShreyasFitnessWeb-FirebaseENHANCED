@@ -246,11 +246,46 @@ export const paypalProvider: PaymentProvider = {
 
     }
 
+    // Render the default wallet buttons (PayPal, Pay Later / "Credit", Venmo).
     const buttons = paypal.Buttons(buttonConfig);
     if (buttons.isEligible && !buttons.isEligible()) {
       throw new Error('PayPal Buttons are not eligible to render in this context.');
     }
-    await buttons.render(opts.container);
+    const walletEl = document.createElement('div');
+    opts.container.appendChild(walletEl);
+    await buttons.render(walletEl);
+
+    // ALSO render a dedicated DEBIT/CREDIT CARD button (guest checkout — NO PayPal
+    // account required) so card payers have a clear, first-class entry point instead
+    // of having to discover the card option inside the PayPal popup. It uses the
+    // SAME createSubscription/createOrder + onApprove as the wallet buttons, so
+    // fulfillment is identical (subscription → BILLING.SUBSCRIPTION.ACTIVATED webhook;
+    // one-time → capturePaypalOrder). This is PayPal's HOSTED card flow (not our ACDC
+    // inline fields), so it works WITHOUT the Reference Transactions capability that
+    // headless vaulted-card subscriptions require. Eligibility-guarded + non-fatal:
+    // if the card funding source isn't eligible in this context we simply skip it
+    // (the wallet buttons' built-in guest-card option still covers card payment).
+    let cardButtons: { close?: () => void } | null = null;
+    try {
+      const CARD = paypal.FUNDING?.CARD;
+      if (CARD) {
+        const candidate = paypal.Buttons({
+          ...buttonConfig,
+          fundingSource: CARD,
+          // No `label` for a non-PayPal funding source; keep shape/layout only.
+          style: { layout: 'vertical', shape: 'rect' },
+        });
+        if (!candidate.isEligible || candidate.isEligible()) {
+          const cardEl = document.createElement('div');
+          cardEl.style.marginTop = '8px';
+          opts.container.appendChild(cardEl);
+          await candidate.render(cardEl);
+          cardButtons = candidate;
+        }
+      }
+    } catch {
+      // Non-fatal: the dedicated card button is an enhancement; wallet buttons remain.
+    }
 
     return () => {
       try {
@@ -258,8 +293,14 @@ export const paypalProvider: PaymentProvider = {
       } catch {
         // ignore — container may already be unmounted
       }
+      try {
+        cardButtons?.close?.();
+      } catch {
+        // ignore
+      }
     };
   },
+
 
   // ACDC hosted card fields — card-only checkout with NO PayPal account (FR-12).
   // Renders number/expiry/cvv into `container`; `submit()` validates + runs 3DS, then:
@@ -386,9 +427,31 @@ export const paypalProvider: PaymentProvider = {
 
     return {
       submit: async (billingAddress?: BillingAddress) => {
+        // GUARDRAIL: reject empty/invalid card fields BEFORE calling the server.
+        // PayPal CardFields exposes per-field validity via getState(); submitting
+        // an empty/invalid form would vault an unusable token (no card captured)
+        // and the server subscription create would then 400 on missing
+        // number/expiry. getState() is async and may be unavailable in older SDKs,
+        // so guard defensively and only block on a CONFIRMED-invalid form.
+        try {
+          if (typeof cardField.getState === 'function') {
+            const state = await cardField.getState();
+            if (state && state.isFormValid === false) {
+              throw new Error('Please complete all card fields before paying.');
+            }
+          }
+        } catch (e) {
+          // Only rethrow our own validation message; ignore getState() failures
+          // (don't block a real submit just because state introspection failed).
+          if (e instanceof Error && e.message.startsWith('Please complete')) {
+            throw e;
+          }
+        }
+
         // Runs validation + 3-D Secure; resolves on success, rejects on decline.
         // Pass the billing address (country + postal) for AVS when provided.
         if (billingAddress?.countryCode && billingAddress?.postalCode) {
+
           await cardField.submit({
             billingAddress: {
               countryCode: billingAddress.countryCode,

@@ -225,10 +225,22 @@ function CheckoutInner() {
                       Secure
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-3">
                     Choose how you&apos;d like to pay — PayPal, Pay Later, or any debit/credit
-                    card. No PayPal account required to pay by card.
+                    card.
                   </p>
+                  {/* Make the no-account card option explicit: the "Debit or Credit
+                      Card" button below is PayPal-hosted guest checkout (no PayPal
+                      login/account needed). */}
+                  <div className="flex items-start gap-2 mb-4 py-2.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+                    <CreditCard className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      <span className="font-semibold">No PayPal account needed.</span> Choose{' '}
+                      <span className="font-semibold">Debit or Credit Card</span> to pay with any
+                      card — PayPal just processes it securely.
+                    </span>
+                  </div>
+
 
                   {/* Provider method menu (wallet buttons + card-in-modal) */}
                   <ProviderCheckout

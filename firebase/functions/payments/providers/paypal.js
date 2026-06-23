@@ -496,9 +496,14 @@ async function createCardSetupToken(ctx = {}) {
  * Create a subscription billed to a vaulted CARD (ACDC). Exchanges the card setup
  * token → permanent payment token, then creates the Billing Plan subscription with
  * that vaulted payment source. `custom_id` carries the uid for the webhook.
+ * @param {string} setupToken  vault setup token id (from createCardSetupToken)
+ * @param {string} planId      PayPal billing plan id (P-xxxx)
+ * @param {string} customId    Firebase uid (carried as custom_id for the webhook)
+ * @param {string} email       buyer email — REQUIRED with card.vault_id (see below)
+ * @param {object} ctx         { clientId, clientSecret, base }
  * @returns the created subscription (id + status)
  */
-async function createSubscriptionWithCard(setupToken, planId, customId, ctx = {}) {
+async function createSubscriptionWithCard(setupToken, planId, customId, email, ctx = {}) {
   if (!setupToken) throw new Error("setupToken required");
   if (!planId) throw new Error("planId required");
   const token = await getAccessToken(ctx);
@@ -508,17 +513,102 @@ async function createSubscriptionWithCard(setupToken, planId, customId, ctx = {}
     payment_source: { token: { id: setupToken, type: "SETUP_TOKEN" } },
   }, ctx.base);
 
+  // DIAGNOSTIC: confirm the vault exchange actually returned a usable token id.
+  // If `paymentToken.id` is empty (card not captured / Vault disabled / empty
+  // fields), PayPal would ignore the `vault_id` and 400 asking for raw
+  // number/expiry — so we log id + status (NEVER full PAN) to disambiguate.
+  logger.info("createSubscriptionWithCard: vault payment-token", {
+    hasId: !!paymentToken?.id,
+    paymentTokenId: paymentToken?.id || null,
+    paymentTokenStatus: paymentToken?.status || null,
+  });
+
+  // GUARD: never POST an empty `card: {}` — fail with a clear cause instead of the
+  // confusing MISSING_REQUIRED_PARAMETER(number/expiry) 400.
+  if (!paymentToken?.id) {
+    throw new Error(
+      "Vault payment token has no id — the card was not captured (Vault may be disabled on the PayPal app, or the card fields were empty)."
+    );
+  }
+
   // 2) Create the subscription using the vaulted card as the payment source.
-  const subscription = await request("POST", "/v1/billing/subscriptions", token, {
+  //
+  // CRITICAL payload shape: the vaulted-card token id goes under
+  // `subscriber.payment_source.card.vault_id` (just the token id — NOT raw card
+  // fields, and NOT the top-level `payment_source.token` form).
+  //
+  // `subscriber.email_address` is REQUIRED here. Without it, PayPal does NOT
+  // interpret the nested `card` object as a vault REFERENCE — it falls back to
+  // treating `card` as an INLINE raw-card entry and rejects the request with
+  // 400 INVALID_REQUEST / MISSING_REQUIRED_PARAMETER for `card/number` and
+  // `card/expiry`. Supplying the email flips PayPal into vault-reference mode so it
+  // charges the vaulted card immediately and activates the subscription (status
+  // ACTIVE + first charge), emitting BILLING.SUBSCRIPTION.ACTIVATED. This is why
+  // Online Coaching (no setup fee) previously never activated.
+  //
+  // We intentionally omit `application_context` (return_url/cancel_url/user_action):
+  // those only apply to the redirect-approval flow and can push PayPal to expect a
+  // redirect; this token flow has no approval page.
+  const subscriptionBody = {
     plan_id: planId,
     custom_id: customId || undefined,
-    payment_source: {
-      token: { id: paymentToken.id, type: "PAYMENT_METHOD_TOKEN" },
+    subscriber: {
+      email_address: email || undefined,
+      payment_source: {
+        card: { vault_id: paymentToken.id },
+      },
     },
-  }, ctx.base);
+  };
+
+  // DIAGNOSTIC: log the EXACT body we send so we can confirm vault_id is populated
+  // (structured logger.info for the firebase MCP log reader + raw console.log).
+  logger.info("createSubscriptionWithCard: subscription request body", {
+    body: JSON.stringify(subscriptionBody, null, 2),
+  });
+  console.log("Subscription request body:", JSON.stringify(subscriptionBody, null, 2));
+
+  const subscription = await request("POST", "/v1/billing/subscriptions", token, subscriptionBody, ctx.base);
   return subscription;
 
 }
+
+
+/**
+ * Explicitly ACTIVATE a subscription that PayPal left in APPROVAL_PENDING
+ * (POST /v1/billing/subscriptions/{id}/activate). Used as a fallback when the
+ * synchronous create + GET-status confirmation still shows a non-ACTIVE status —
+ * we nudge PayPal to activate, then re-GET and only fulfill on confirmed ACTIVE.
+ * @param {string} subscriptionId  PayPal subscription id (I-xxxx)
+ * @param {object} ctx { clientId, clientSecret, base }
+ */
+async function activateSubscription(subscriptionId, ctx = {}) {
+  if (!subscriptionId) throw new Error("subscriptionId required");
+  const token = await getAccessToken(ctx);
+  await request(
+    "POST",
+    `/v1/billing/subscriptions/${subscriptionId}/activate`,
+    token,
+    { reason: "Activating subscription" },
+    ctx.base
+  );
+}
+
+
+/**
+ * Fetch a subscription's authoritative state from PayPal.
+ * Used for SYNCHRONOUS fulfillment confirmation (design: don't depend on webhook
+ * timing for the happy path): after creating the subscription we GET it and only
+ * fulfill when `status === 'ACTIVE'` (real first charge taken). Returns the full
+ * subscription object ({ id, status, billing_info, ... }).
+ * @param {string} subscriptionId  PayPal subscription id (I-xxxx)
+ * @param {object} ctx { clientId, clientSecret, base }
+ */
+async function getSubscription(subscriptionId, ctx = {}) {
+  if (!subscriptionId) throw new Error("subscriptionId required");
+  const token = await getAccessToken(ctx);
+  return request("GET", `/v1/billing/subscriptions/${subscriptionId}`, token, null, ctx.base);
+}
+
 
 
 
@@ -533,9 +623,18 @@ module.exports = {
 
   createCardSetupToken,
   createSubscriptionWithCard,
+  // exported under an explicit name so callers don't confuse it with
+  // fulfillment.activateSubscription (which writes accountActivated to Firestore).
+  activatePaypalSubscription: activateSubscription,
+  getSubscription,
+  resolveOneTimeByAmount, // used by capturePaypalOrder for synchronous fulfillment
+
 
   // exported for tests / reuse
+
   getAccessToken,
   resolvePlanTier,
   PLAN_TIER_MAP,
 };
+
+

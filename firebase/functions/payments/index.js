@@ -37,10 +37,17 @@ const PAYPAL_CLIENT_ID_LIVE = defineSecret("PAYPAL_CLIENT_ID_LIVE");
 const PAYPAL_CLIENT_SECRET_LIVE = defineSecret("PAYPAL_CLIENT_SECRET_LIVE");
 const PAYPAL_WEBHOOK_ID_LIVE = defineSecret("PAYPAL_WEBHOOK_ID_LIVE");
 
+// RESEND_API_KEY backs the welcome email sent on first activation (via the
+// onFirstActivation hook). Functions that FULFILL (the webhooks + the synchronous
+// callables below) must bind it or the welcome email fails with "Missing API key".
+const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+
 const PAYPAL_SANDBOX_SECRETS = [PAYPAL_CLIENT_ID_SANDBOX, PAYPAL_CLIENT_SECRET_SANDBOX, PAYPAL_WEBHOOK_ID_SANDBOX];
 const PAYPAL_LIVE_SECRETS = [PAYPAL_CLIENT_ID_LIVE, PAYPAL_CLIENT_SECRET_LIVE, PAYPAL_WEBHOOK_ID_LIVE];
 // Callables can be invoked for EITHER env, so they bind BOTH sets and pick per call.
-const PAYPAL_SECRETS = [...PAYPAL_SANDBOX_SECRETS, ...PAYPAL_LIVE_SECRETS];
+// RESEND_API_KEY is included so any fulfilling path can send the welcome email.
+const PAYPAL_SECRETS = [...PAYPAL_SANDBOX_SECRETS, ...PAYPAL_LIVE_SECRETS, RESEND_API_KEY];
+
 
 /**
  * Resolve the PayPal config (API base + credentials + webhook id) for an env.
@@ -284,16 +291,19 @@ async function handlePaypalWebhook(req, res, env) {
 }
 
 // SANDBOX webhook — register the sandbox PayPal dashboard webhook at this URL.
+// Binds RESEND_API_KEY too: the webhook fulfills (incl. the welcome email on
+// first activation) — without it the email fails with "Missing API key".
 const paypalWebhookSandbox = onRequest(
-  { region: "us-west1", secrets: PAYPAL_SANDBOX_SECRETS },
+  { region: "us-west1", secrets: [...PAYPAL_SANDBOX_SECRETS, RESEND_API_KEY] },
   (req, res) => handlePaypalWebhook(req, res, "sandbox")
 );
 
 // LIVE webhook — register the live PayPal dashboard webhook at this URL.
 const paypalWebhookLive = onRequest(
-  { region: "us-west1", secrets: PAYPAL_LIVE_SECRETS },
+  { region: "us-west1", secrets: [...PAYPAL_LIVE_SECRETS, RESEND_API_KEY] },
   (req, res) => handlePaypalWebhook(req, res, "production")
 );
+
 
 
 /**
@@ -343,13 +353,60 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
   const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
     const result = await PROVIDERS.paypal.captureOrder(orderId, cfg);
-    const status = result?.status || result?.purchase_units?.[0]?.payments?.captures?.[0]?.status;
+    const capture = result?.purchase_units?.[0]?.payments?.captures?.[0];
+    const status = result?.status || capture?.status;
+
+    // SYNCHRONOUS fulfillment (PayPal best practice): the capture response is the
+    // authoritative "money received" signal — fulfill immediately on COMPLETED
+    // instead of waiting on the PAYMENT.CAPTURE.COMPLETED webhook (which is slow/
+    // unreliable in sandbox). The webhook remains an idempotent backup:
+    // fulfillSessionPackage dedupes on providerTransactionId (the capture id), so a
+    // later webhook for the same capture is a no-op. We resolve the neutral product
+    // identity from the captured amount (same logic the webhook path uses).
+    if (status === "COMPLETED" && capture?.id) {
+      const minor = (() => {
+        const v = parseFloat(capture.amount?.value ?? "0");
+        return Math.round((Number.isNaN(v) ? 0 : v) * 100);
+      })();
+      const item = PROVIDERS.paypal.resolveOneTimeByAmount
+        ? PROVIDERS.paypal.resolveOneTimeByAmount(minor)
+        : null;
+      const productName = item ? item.label : "Training Sessions";
+      try {
+        await fulfillment.fulfillSessionPackage({
+          userId: uid,
+          provider: "paypal",
+          productId: item ? item.appId : null,
+          productName,
+          transactionId: capture.id,
+          amount: minor,
+          quantity: item ? item.quantity : undefined,
+        });
+        await fulfillment.writeTransactionRecord({
+          userId: uid,
+          provider: "paypal",
+          transaction: {
+            id: capture.id,
+            date: Math.floor(Date.now() / 1000),
+            amount: minor,
+            currency: capture.amount?.currency_code || "usd",
+            status: "succeeded",
+            productName,
+          },
+        });
+      } catch (e) {
+        // Fail-soft: the webhook backup will still fulfill. Don't fail the capture.
+        logger.error("capturePaypalOrder: synchronous fulfillment failed (webhook will retry)", { uid, orderId, error: e.message });
+      }
+    }
+
     return { ok: true, status: status || "COMPLETED" };
   } catch (err) {
     logger.error("capturePaypalOrder failed", { uid, orderId, error: err.message });
     throw new HttpsError("internal", "Failed to capture order.");
   }
 });
+
 
 /**
  * Callable: create a one-time PayPal Order SERVER-SIDE (ACDC card-fields flow).
@@ -402,13 +459,102 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
   if (!planId) throw new HttpsError("invalid-argument", "planId required.");
   const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
   try {
-    const sub = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planId, uid, cfg);
-    return { ok: true, subscriptionId: sub?.id, status: sub?.status };
+    // Resolve buyer email — REQUIRED by PayPal alongside `card.vault_id` (without it
+    // PayPal treats the vaulted card as inline raw-card entry and 400s for
+    // number/expiry). Prefer the auth token email; fall back to users/{uid}.email.
+    let email = req.auth?.token?.email || null;
+    if (!email) {
+      try {
+        const admin = require("firebase-admin");
+        const userSnap = await admin.firestore().collection("users").doc(uid).get();
+        email = userSnap.data()?.email || null;
+      } catch (e) {
+        logger.warn("createPaypalSubscriptionWithCard: could not resolve user email", { uid, error: e.message });
+      }
+    }
+
+    const created = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planId, uid, email, cfg);
+    const subscriptionId = created?.id;
+
+
+    // SYNCHRONOUS confirmation (PayPal best practice): don't trust the create
+    // response alone and don't wait on the BILLING.SUBSCRIPTION.ACTIVATED webhook
+    // (slow/unreliable in sandbox). Re-read the subscription's authoritative state
+    // from PayPal; only fulfill when status === 'ACTIVE' (real first charge taken).
+    // The webhook remains an idempotent backup (activateSubscription is write-once
+    // on accountActivated).
+    let status = created?.status || null;
+    let lastPayment = null;
+    if (subscriptionId) {
+      try {
+        let sub = await PROVIDERS.paypal.getSubscription(subscriptionId, cfg);
+        status = sub?.status || status;
+        lastPayment = sub?.billing_info?.last_payment || null;
+        logger.info("createPaypalSubscriptionWithCard: subscription status", {
+          uid,
+          subscriptionId,
+          planId,
+          status,
+          lastPayment,
+        });
+
+        // FALLBACK: if PayPal left the subscription in APPROVAL_PENDING (no amount
+        // due at creation, e.g. Online Coaching has no setup fee), explicitly nudge
+        // it to ACTIVATE, then re-read its authoritative state. We still gate
+        // fulfillment strictly on a confirmed ACTIVE status below (money-safety).
+        if (status && status !== "ACTIVE" && PROVIDERS.paypal.activatePaypalSubscription) {
+          try {
+            await PROVIDERS.paypal.activatePaypalSubscription(subscriptionId, cfg);
+            sub = await PROVIDERS.paypal.getSubscription(subscriptionId, cfg);
+            status = sub?.status || status;
+            lastPayment = sub?.billing_info?.last_payment || lastPayment;
+            logger.info("createPaypalSubscriptionWithCard: status after explicit activate", {
+              uid,
+              subscriptionId,
+              planId,
+              status,
+              lastPayment,
+            });
+          } catch (ae) {
+            logger.warn("createPaypalSubscriptionWithCard: explicit activate failed", { uid, subscriptionId, error: ae.message });
+          }
+        }
+
+        if (status === "ACTIVE") {
+          const tier = PROVIDERS.paypal.resolvePlanTier
+            ? PROVIDERS.paypal.resolvePlanTier(planId)
+            : {};
+          await fulfillment.activateSubscription(
+            {
+              userId: uid,
+              subscriptionId,
+              provider: "paypal",
+              status: "active",
+              priceId: planId,
+              productId: tier.tierId || null,
+              tierId: tier.tierId || null,
+              tierName: tier.tierName || null,
+              currentPeriodEnd: sub?.billing_info?.next_billing_time
+                ? Math.floor(Date.parse(sub.billing_info.next_billing_time) / 1000)
+                : undefined,
+            },
+            fulfillmentHooks
+          );
+        }
+      } catch (e) {
+
+        // Fail-soft: the ACTIVATED webhook backup will still fulfill if it arrives.
+        logger.error("createPaypalSubscriptionWithCard: status check/fulfill failed (webhook may retry)", { uid, subscriptionId, error: e.message });
+      }
+    }
+
+    return { ok: true, subscriptionId, status: status || "PENDING" };
   } catch (err) {
     logger.error("createPaypalSubscriptionWithCard failed", { uid, planId, error: err.message });
     throw new HttpsError("internal", "Failed to create subscription.");
   }
 });
+
 
 module.exports = {
   paymentWebhook,
