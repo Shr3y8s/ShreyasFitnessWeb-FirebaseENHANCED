@@ -46,6 +46,11 @@ export const stripeProvider: PaymentProvider = {
     hostedPortal: true,
     showsStoredCard: true,
     inAppCancel: true,
+    externalAdminDashboard: true,
+  },
+
+  getAdminDashboardUrl(): string {
+    return 'https://dashboard.stripe.com';
   },
 
   async fetchAllProducts(includeInactive = false): Promise<Product[]> {

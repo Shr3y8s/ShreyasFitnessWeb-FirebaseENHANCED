@@ -4,14 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { collection, collectionGroup, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { getPaymentProvider } from '@/lib/payments';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebar from '@/components/AdminSidebar';
 import { 
   DollarSign,
   Users,
   Clock,
-  AlertCircle,
   TrendingUp,
   CreditCard,
   MapPin,
@@ -28,7 +28,6 @@ export default function AdminDashboardPage() {
   const [mrr, setMrr] = useState(0);
   const [activeSubscriptions, setActiveSubscriptions] = useState(0);
   const [pendingAccounts, setPendingAccounts] = useState(0);
-  const [failedPayments, setFailedPayments] = useState(0);
   const [totalClients, setTotalClients] = useState(0);
   const [totalTrainers, setTotalTrainers] = useState(0);
 
@@ -59,38 +58,17 @@ export default function AdminDashboardPage() {
 
     const loadBusinessMetrics = async () => {
       try {
-        // Load MRR and active subscriptions
+        // MRR + active subscriptions come from the active payment provider via the
+        // neutral interface (no provider-specific Firestore reads in the page).
         try {
-          const subsQuery = query(
-            collectionGroup(db, 'subscriptions'),
-            where('status', '==', 'active')
-          );
-          const subsSnapshot = await getDocs(subsQuery);
-          let totalMrr = 0;
-          let activeSubsCount = 0;
-
-          subsSnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.items && data.items.length > 0) {
-              data.items.forEach((item: any) => {
-                const amount = (item.price?.unit_amount || 0) / 100;
-                const interval = item.price?.recurring?.interval || 'month';
-
-                let monthlyAmount = amount;
-                if (interval === 'year') {
-                  monthlyAmount = amount / 12;
-                }
-
-                totalMrr += monthlyAmount;
-                activeSubsCount++;
-              });
-            }
-          });
-
-          setMrr(totalMrr);
-          setActiveSubscriptions(activeSubsCount);
+          const provider = getPaymentProvider();
+          if (provider.capabilities.adminAnalytics && provider.getRevenueMetrics) {
+            const metrics = await provider.getRevenueMetrics();
+            setMrr(metrics.mrr / 100); // minor units → dollars
+            setActiveSubscriptions(metrics.activeSubscriptions);
+          }
         } catch (subError) {
-          console.log('Subscriptions data not available yet:', subError);
+          console.log('Revenue metrics not available yet:', subError);
         }
 
         // Load pending accounts
@@ -103,19 +81,6 @@ export default function AdminDashboardPage() {
           setPendingAccounts(pendingSnapshot.size);
         } catch (pendingError) {
           console.log('Pending accounts data not available yet:', pendingError);
-        }
-
-        // Load failed payments
-        try {
-          const failedInvoicesQuery = query(
-            collectionGroup(db, 'invoices'),
-            where('status', 'in', ['open', 'uncollectible']),
-            limit(50)
-          );
-          const failedSnapshot = await getDocs(failedInvoicesQuery);
-          setFailedPayments(failedSnapshot.size);
-        } catch (invoiceError) {
-          console.log('Invoice data not available yet:', invoiceError);
         }
 
         // Load total clients
@@ -194,7 +159,7 @@ export default function AdminDashboardPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Financial Overview
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link href="/dashboard/admin/revenue">
               <div className="bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3">
@@ -246,25 +211,6 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
 
-            <Link href="/dashboard/admin/revenue">
-              <div className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                failedPayments > 0 ? 'border-red-300 bg-red-50' : ''
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    failedPayments > 0 ? 'bg-red-100' : 'bg-gray-100'
-                  }`}>
-                    <AlertCircle className={`h-5 w-5 ${
-                      failedPayments > 0 ? 'text-red-600' : 'text-gray-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-600">Failed Payments</p>
-                    <p className="text-xl font-bold text-gray-900">{failedPayments}</p>
-                  </div>
-                </div>
-              </div>
-            </Link>
           </div>
         </div>
 

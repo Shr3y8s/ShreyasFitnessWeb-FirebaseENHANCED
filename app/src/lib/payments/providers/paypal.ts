@@ -159,6 +159,16 @@ export const paypalProvider: PaymentProvider = {
     hostedPortal: false,
     showsStoredCard: false,
     inAppCancel: true,
+    externalAdminDashboard: true,
+    adminAnalytics: true,
+  },
+
+  getAdminDashboardUrl(): string {
+    // Env-aware PayPal merchant dashboard (Activity → payments/subscriptions).
+    // sandbox vs live keyed off NEXT_PUBLIC_PAYPAL_ENV (same source as PAYPAL_ENV).
+    return PAYPAL_ENV === 'production'
+      ? 'https://www.paypal.com/billing/subscriptions'
+      : 'https://www.sandbox.paypal.com/billing/subscriptions';
   },
 
 
@@ -504,4 +514,109 @@ export const paypalProvider: PaymentProvider = {
     const cancel = httpsCallable(functions, 'cancelPaypalSubscription');
     await cancel({ subscriptionId, paypalEnv: PAYPAL_ENV });
   },
+
+  // ---- Admin/business analytics (read from the neutral Firestore store) ----
+
+  async getRevenueMetrics() {
+    // MRR + active-subscription count + revenue-by-tier, computed from the neutral
+    // active subscription records (billing_customers/{uid}/subscriptions, status==active).
+    // `amount` is the ACTUAL charged amount (minor units, post-discount); `interval`
+    // normalizes annual plans. One-time purchases never create a subscription record,
+    // so they can't pollute MRR.
+    const { collectionGroup, getDocs, query, where } = await import('firebase/firestore');
+    const { db } = await import('@/lib/firebase');
+
+    const snap = await getDocs(
+      query(collectionGroup(db, 'subscriptions'), where('status', '==', 'active'))
+    );
+
+    let mrr = 0;
+    let activeSubscriptions = 0;
+    const byTier = new Map<string, { revenueMonthly: number; count: number }>();
+
+    snap.forEach((doc) => {
+      const d = doc.data() as any;
+      if (typeof d.amount !== 'number') return; // neutral records carry `amount`
+      let monthly = d.amount;
+      if (d.interval === 'year') monthly = Math.round(monthly / 12);
+      mrr += monthly;
+      activeSubscriptions += 1;
+      const tierName = d.tierName || d.productId || 'Subscription';
+      const cur = byTier.get(tierName) || { revenueMonthly: 0, count: 0 };
+      byTier.set(tierName, { revenueMonthly: cur.revenueMonthly + monthly, count: cur.count + 1 });
+    });
+
+    const revenueByTier = Array.from(byTier.entries())
+      .map(([tierName, v]) => ({ tierName, revenueMonthly: v.revenueMonthly, count: v.count }))
+      .sort((a, b) => b.revenueMonthly - a.revenueMonthly);
+
+    return { mrr, activeSubscriptions, revenueByTier };
+  },
+
+  async getRecentTransactions(limit = 10) {
+    // Recent payments from the neutral transactions store, newest first. `type`
+    // (subscription | one_time) is written by the webhook/fulfillment so the UI can
+    // split subscription vs one-time revenue without provider-specific parsing.
+    const {
+      collectionGroup,
+      getDocs,
+      query,
+      orderBy,
+      limit: fbLimit,
+    } = await import('firebase/firestore');
+    const { db } = await import('@/lib/firebase');
+
+    const snap = await getDocs(
+      query(collectionGroup(db, 'transactions'), orderBy('date', 'desc'), fbLimit(limit))
+    );
+
+    return snap.docs.map((doc) => {
+      const d = doc.data() as any;
+      return {
+        id: doc.id,
+        date: typeof d.date === 'number' ? d.date : d.date?.seconds ?? 0,
+        amount: d.amount ?? 0,
+        currency: d.currency ?? 'usd',
+        status: d.status ?? 'succeeded',
+        productName: d.productName ?? 'Payment',
+        // Default unknown/legacy records to one_time (one-time captures predate the tag).
+        type: d.type === 'subscription' ? 'subscription' : 'one_time',
+      } as const;
+    });
+  },
+
+  async getActiveSubscription(userId: string) {
+    // Newest active subscription under the neutral store for this user, or null.
+    const { collection, getDocs, query, where } = await import('firebase/firestore');
+    const { db } = await import('@/lib/firebase');
+
+    const ref = collection(db, 'billing_customers', userId, 'subscriptions');
+    const snap = await getDocs(query(ref, where('status', '==', 'active')));
+    if (snap.empty) return null;
+
+    // Pick the most recently updated active sub if multiple exist.
+    const docs = snap.docs.map((doc) => ({ id: doc.id, data: doc.data() as any }));
+    docs.sort((a, b) => {
+      const ta = a.data.updatedAt?.seconds ?? 0;
+      const tb = b.data.updatedAt?.seconds ?? 0;
+      return tb - ta;
+    });
+    const { id, data: d } = docs[0];
+
+    const cpe = d.currentPeriodEnd;
+    const currentPeriodEnd =
+      typeof cpe === 'number' ? cpe : cpe?.seconds ?? null;
+
+    return {
+      subscriptionId: id,
+      status: d.status ?? 'active',
+      amount: typeof d.amount === 'number' ? d.amount : 0,
+      interval: d.interval === 'year' ? 'year' : 'month',
+      currentPeriodEnd,
+      tierName: d.tierName,
+      productId: d.productId,
+    };
+  },
 };
+
+

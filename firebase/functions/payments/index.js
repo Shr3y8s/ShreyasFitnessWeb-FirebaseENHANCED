@@ -109,6 +109,8 @@ async function handleEvent(providerName, e) {
           tierId: e.subscription?.tierId,
           tierName: e.subscription?.tierName,
           currentPeriodEnd: e.subscription?.currentPeriodEnd,
+          amount: e.subscription?.amount,
+          interval: e.subscription?.interval,
         },
         fulfillmentHooks
       );
@@ -445,6 +447,7 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
             currency: capture.amount?.currency_code || "usd",
             status: "succeeded",
             productName,
+            type: "one_time", // synchronous one-time capture
           },
         });
       } catch (e) {
@@ -590,6 +593,11 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
               currentPeriodEnd: sub?.billing_info?.next_billing_time
                 ? Math.floor(Date.parse(sub.billing_info.next_billing_time) / 1000)
                 : undefined,
+              // ACTUAL first-charge amount (post-discount), minor units → accurate MRR.
+              amount: lastPayment?.amount?.value
+                ? Math.round(parseFloat(lastPayment.amount.value) * 100)
+                : undefined,
+              interval: "month",
             },
             fulfillmentHooks
           );

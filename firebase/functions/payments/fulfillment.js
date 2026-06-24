@@ -56,6 +56,8 @@ async function writeSubscriptionRecord({
   priceId,
   productId,
   currentPeriodEnd,
+  amount,
+  interval,
 }) {
   if (!userId || !subscriptionId) return;
   const ref = admin
@@ -71,11 +73,19 @@ async function writeSubscriptionRecord({
       priceId: priceId ?? null,
       productId: productId ?? null,
       currentPeriodEnd: currentPeriodEnd ?? null,
+      // `amount` is the ACTUAL charged amount in minor units (post-discount), not
+      // catalog price — so revenue/MRR dashboards are accurate even with promos.
+      // `interval` ('month'|'year') lets MRR normalize annual plans. Only written
+      // when the caller knows them (activation/renewal); omitted on status-only
+      // cancel updates so we don't clobber a previously-stored amount.
+      ...(amount != null ? { amount } : {}),
+      ...(interval ? { interval } : {}),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
 }
+
 
 /**
  * Write a neutral transaction record (for the billing-history UI / NFR-2).
@@ -98,10 +108,14 @@ async function writeTransactionRecord({ userId, transaction, provider }) {
       status: transaction.status ?? "succeeded",
       productName: transaction.productName ?? "",
       receiptUrl: transaction.receiptUrl ?? null,
+      // `type` ('subscription' | 'one_time') lets admin analytics split recurring vs
+      // one-time revenue without provider-specific parsing. Default 'one_time'.
+      type: transaction.type === "subscription" ? "subscription" : "one_time",
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
   );
+
 }
 
 /**
@@ -205,6 +219,8 @@ async function activateSubscription(p, hooks = {}) {
     priceId: p.priceId,
     productId: p.productId,
     currentPeriodEnd: p.currentPeriodEnd,
+    amount: p.amount,
+    interval: p.interval,
   });
 
   logger.info("Subscription synced to user (neutral fulfillment)", {

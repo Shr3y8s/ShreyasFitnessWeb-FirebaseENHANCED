@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { User, Calendar, CreditCard, CircleCheckBig, Loader2 } from 'lucide-react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { getPaymentProvider } from '@/lib/payments';
+
 
 interface AccountSummaryProps {
   userId: string;
@@ -56,51 +58,46 @@ export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps
     fetchSessions();
   }, [userId]);
 
-  // Listen to subscription for next payment date
+  // Fetch next payment date via the provider-neutral PaymentProvider interface.
+  // The page never reads provider-specific subscription data directly; the active
+  // provider's adapter (PayPal) resolves the neutral active-subscription record.
   useEffect(() => {
     if (!userId) return;
 
-    const subsRef = collection(db, 'billing_customers', userId, 'subscriptions');
+    let cancelled = false;
 
-    
-    const unsubscribe = onSnapshot(subsRef, (snapshot) => {
-      if (snapshot.empty) {
-        setNextPayment('N/A');
-        setLoading(false);
-        return;
-      }
+    const fetchNextPayment = async () => {
+      try {
+        const provider = getPaymentProvider({ mode: 'subscription' });
+        const sub = await provider.getActiveSubscription?.(userId);
 
-      // Find active subscription
-      const activeSub = snapshot.docs.find(doc => doc.data().status === 'active');
-      
-      if (activeSub) {
-        const subData = activeSub.data();
-        const periodEnd = subData.currentPeriodEnd ?? subData.current_period_end;
+        if (cancelled) return;
 
-        
-        if (periodEnd) {
-          const date = new Date(periodEnd * 1000);
-          const formatted = date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
+        if (sub?.currentPeriodEnd) {
+          const date = new Date(sub.currentPeriodEnd * 1000);
+          const formatted = date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
           });
           setNextPayment(formatted);
         } else {
           setNextPayment('N/A');
         }
-      } else {
-        setNextPayment('N/A');
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+        if (!cancelled) setNextPayment('N/A');
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching subscription:', error);
-      setNextPayment('N/A');
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
+    fetchNextPayment();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
+
 
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm bg-secondary/30 flex flex-col h-full transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">

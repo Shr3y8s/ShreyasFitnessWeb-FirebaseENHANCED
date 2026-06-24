@@ -246,6 +246,11 @@ async function parseEvent(event, ctx = {}) {
             : null,
           tierId: tier.tierId || null,
           tierName: tier.tierName || null,
+          // ACTUAL charged amount (post-discount), minor units — for accurate MRR.
+          amount: r.billing_info?.last_payment?.amount
+            ? toMinorUnits(r.billing_info.last_payment.amount)
+            : null,
+          interval: "month",
         },
       });
       break;
@@ -323,6 +328,7 @@ async function parseEvent(event, ctx = {}) {
           currency: r.amount?.currency_code || r.amount?.currency || "usd",
           status: "succeeded",
           productName: subProductName,
+          type: "subscription", // recurring subscription charge
         },
       });
       break;
@@ -366,6 +372,7 @@ async function parseEvent(event, ctx = {}) {
           currency: r.amount?.currency_code || "usd",
           status: "succeeded",
           productName: appProductName,
+          type: "one_time", // one-time session-package purchase
         },
       });
       break;

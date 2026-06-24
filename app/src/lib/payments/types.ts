@@ -47,6 +47,48 @@ export interface Transaction {
 }
 
 /**
+ * Admin/business analytics shapes (provider-neutral). Pages render these without
+ * touching any provider-specific Firestore collection or payload — the active
+ * provider's adapter (capabilities.adminAnalytics) computes them.
+ */
+export interface RevenueMetrics {
+  /** Monthly recurring revenue in minor units (post-discount, annual normalized). */
+  mrr: number;
+  /** Count of active subscriptions. */
+  activeSubscriptions: number;
+  /** MRR broken down by tier/plan. `revenueMonthly` is minor units. */
+  revenueByTier: { tierName: string; revenueMonthly: number; count: number }[];
+}
+
+/** A recent payment row for the admin revenue dashboard. */
+export interface AdminTransaction {
+  id: string;
+  /** Epoch seconds. */
+  date: number;
+  /** Amount in minor units (cents). */
+  amount: number;
+  currency: string;
+  status: string;
+  productName: string;
+  /** Whether this charge was a subscription renewal or a one-time purchase. */
+  type: 'subscription' | 'one_time';
+}
+
+/** Neutral active-subscription summary for account/membership surfaces. */
+export interface NeutralActiveSubscription {
+  subscriptionId: string;
+  status: string;
+  /** Amount in minor units (cents). */
+  amount: number;
+  interval: 'month' | 'year';
+  /** Epoch seconds, or null. */
+  currentPeriodEnd: number | null;
+  tierName?: string;
+  productId?: string;
+}
+
+
+/**
  * What a provider can do, so a single UI can adapt without per-processor
  * branching. e.g. the billing page shows a "Manage billing" portal button only
  * when `hostedPortal` is true, and a stored-card block only when
@@ -73,7 +115,23 @@ export interface ProviderCapabilities {
   showsStoredCard: boolean;
   /** Provider supports canceling a subscription via API from our own UI. */
   inAppCancel: boolean;
+  /**
+   * Provider offers an external merchant/admin dashboard (payments, reports, refunds)
+   * the admin can open (Stripe ✅ PayPal ✅). When true the adapter implements
+   * `getAdminDashboardUrl`. Keeps the app UI free of hardcoded provider URLs.
+   */
+  externalAdminDashboard?: boolean;
+  /**
+   * Provider can compute admin/business analytics (MRR, active subs, revenue by
+   * tier, recent transactions) from its own data store. When true the adapter
+   * implements `getRevenueMetrics` + `getRecentTransactions`. PayPal ✅ (neutral
+   * Firestore store). Stripe ❌ here — Stripe is denied for live use on this app,
+   * so its adapter intentionally does not implement analytics.
+   */
+  adminAnalytics?: boolean;
 }
+
+
 
 /** Options for starting a checkout, provider-neutral. */
 export interface CheckoutOptions {
@@ -163,4 +221,27 @@ export interface PaymentProvider {
     restricted?: boolean;
   }): Promise<string>;
   cancelSubscription?(subscriptionId: string): Promise<void>;
+
+  /**
+   * External merchant/admin dashboard URL (payments, reports, refunds). Present when
+   * `capabilities.externalAdminDashboard` is true. Lets the admin UI render a single
+   * neutral "Open Payments Dashboard" link without hardcoding any provider URL.
+   */
+  getAdminDashboardUrl?(): string;
+
+  // ---- Admin/business analytics (capabilities.adminAnalytics) ----
+  // Implemented by providers that can compute analytics from their own store.
+  // Pages call these instead of querying provider-specific collections directly.
+
+  /** Revenue metrics: MRR, active subscription count, revenue-by-tier. */
+  getRevenueMetrics?(): Promise<RevenueMetrics>;
+
+  /** Most recent payments (default 10), newest first, tagged subscription/one_time. */
+  getRecentTransactions?(limit?: number): Promise<AdminTransaction[]>;
+
+  /** The user's current active subscription (neutral summary), or null. */
+  getActiveSubscription?(userId: string): Promise<NeutralActiveSubscription | null>;
 }
+
+
+

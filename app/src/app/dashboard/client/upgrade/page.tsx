@@ -247,7 +247,7 @@ export default function UpgradePage() {
 
             <div className="text-center mt-8">
               <p className="text-sm text-muted-foreground mb-4">
-                🔒 Secure checkout powered by Stripe • Cancel anytime
+                🔒 Secure checkout • Cancel anytime
               </p>
               <Button variant="ghost" onClick={() => router.push('/dashboard/client/membership')}>
                 ← Back to Membership

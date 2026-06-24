@@ -20,8 +20,8 @@ import {
   MessageSquare, 
   User,
   ArrowLeft,
-  ExternalLink,
   Shield,
+
   CreditCard,
   Receipt,
   CheckCircle2,
@@ -2598,19 +2598,10 @@ export default function ClientDetailPage() {
                                     </div>
                                   </>
                                 ) : null}
-                                {clientBillingData.stripeCustomerId && (
-                                  <div>
-                                    <a
-                                      href={`https://dashboard.stripe.com/customers/${clientBillingData.stripeCustomerId}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 font-medium"
-                                    >
-                                      View in Stripe
-                                      <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                  </div>
-                                )}
+                                {/* External provider customer deep-links removed:
+                                    the admin dashboard is provider-neutral and links
+                                    only through the PaymentProvider interface (see the
+                                    Revenue page's "Payments Dashboard"). */}
                               </div>
                             </div>
 

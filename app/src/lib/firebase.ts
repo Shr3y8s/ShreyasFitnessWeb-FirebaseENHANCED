@@ -111,32 +111,8 @@ interface SignInResult {
   error?: Error;
 }
 
-interface Subscription {
-  id: string;
-  status: string;
-  current_period_end: number;
-  items: {
-    data: {
-      price: {
-        id: string;
-        unit_amount: number;
-      };
-    }[];
-  };
-}
-
-interface PaymentMethod {
-  id: string;
-  type: string;
-  card?: {
-    brand: string;
-    last4: string;
-    exp_month: number;
-    exp_year: number;
-  };
-}
-
 // Firebase configuration using environment variables
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -317,43 +293,12 @@ export async function confirmPasswordReset(code: string, newPassword: string): P
   }
 }
 
-// Function to listen to subscription status changes
-export function listenToSubscriptionStatus(userId: string, callback: (subscriptions: Subscription[]) => void) {
-  if (!userId) return null;
-  
-  const userSubscriptionsRef = collection(db, 'stripe_customers', userId, 'subscriptions');
-  
-  return onSnapshot(userSubscriptionsRef, (snapshot) => {
-    const subscriptions: Subscription[] = [];
-    snapshot.forEach((doc) => {
-      subscriptions.push({
-        id: doc.id,
-        ...doc.data()
-      } as Subscription);
-    });
-    callback(subscriptions);
-  });
-}
-
-// Function to get user's payment methods
-export function listenToPaymentMethods(userId: string, callback: (paymentMethods: PaymentMethod[]) => void) {
-  if (!userId) return null;
-  
-  const paymentMethodsRef = collection(db, 'stripe_customers', userId, 'payment_methods');
-  
-  return onSnapshot(paymentMethodsRef, (snapshot) => {
-    const paymentMethods: PaymentMethod[] = [];
-    snapshot.forEach((doc) => {
-      paymentMethods.push({
-        id: doc.id,
-        ...doc.data()
-      } as PaymentMethod);
-    });
-    callback(paymentMethods);
-  });
-}
+// NOTE: Billing/subscription reads live behind the PaymentProvider interface
+// (`getPaymentProvider().getActiveSubscription()` / `getBillingHistory()`), so
+// this file no longer exposes provider-specific `stripe_customers` listeners.
 
 // PHASE 2: Exercise Library Management Functions
+
 
 export async function createExercise(exercise: Omit<Exercise, 'id' | 'createdAt' | 'updatedAt'>) {
   try {

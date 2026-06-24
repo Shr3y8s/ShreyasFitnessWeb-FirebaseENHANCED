@@ -6,26 +6,24 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, collectionGroup, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { getPaymentProvider } from '@/lib/payments';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import TrainerSidebar from '@/components/TrainerSidebar';
 import { AdminOnlySection } from '@/components/dashboard/AdminOnlySection';
 import UpcomingSessionsCard from '@/components/trainer/UpcomingSessionsCard';
-import { formatDistanceToNow } from 'date-fns';
 import { 
   Users,
-  Dumbbell,
   Plus,
   Calendar,
   TrendingUp,
-  BarChart3,
   Clock,
-  CheckCircle2,
   AlertCircle,
   DollarSign,
   CreditCard,
   Activity
 } from 'lucide-react';
+
 import { SERVICE_TIERS } from '@/lib/constants';
 import { formatDateISO } from '@/lib/date-utils';
 import DashboardActivityFeed from '@/components/trainer/activity-feed/DashboardActivityFeed';
@@ -53,7 +51,6 @@ export default function TrainerDashboardPage() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [mrr, setMrr] = useState(0);
   const [pendingAccountsCount, setPendingAccountsCount] = useState(0);
-  const [failedPaymentsCount, setFailedPaymentsCount] = useState(0);
   const [activeSubscriptionsCount, setActiveSubscriptionsCount] = useState(0);
 
   // Helper function to convert Firestore Timestamp or Date to milliseconds
@@ -188,38 +185,17 @@ export default function TrainerDashboardPage() {
 
     const loadFinancialMetrics = async () => {
       try {
-        // Load MRR from active subscriptions
+        // MRR + active subscriptions via the neutral payment-provider interface
+        // (no provider-specific Firestore reads in the page).
         try {
-          const subsQuery = query(
-            collectionGroup(db, 'subscriptions'),
-            where('status', '==', 'active')
-          );
-          const subsSnapshot = await getDocs(subsQuery);
-          let totalMrr = 0;
-          let activeSubsCount = 0;
-          
-          subsSnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (data.items && data.items.length > 0) {
-              data.items.forEach((item: any) => {
-                const amount = (item.price?.unit_amount || 0) / 100;
-                const interval = item.price?.recurring?.interval || 'month';
-                
-                let monthlyAmount = amount;
-                if (interval === 'year') {
-                  monthlyAmount = amount / 12;
-                }
-                
-                totalMrr += monthlyAmount;
-                activeSubsCount++;
-              });
-            }
-          });
-          
-          setMrr(totalMrr);
-          setActiveSubscriptionsCount(activeSubsCount);
+          const provider = getPaymentProvider();
+          if (provider.capabilities.adminAnalytics && provider.getRevenueMetrics) {
+            const metrics = await provider.getRevenueMetrics();
+            setMrr(metrics.mrr / 100); // minor units → dollars
+            setActiveSubscriptionsCount(metrics.activeSubscriptions);
+          }
         } catch (subError) {
-          console.log('Subscriptions data not available yet (indexes may still be building):', subError);
+          console.log('Revenue metrics not available yet:', subError);
         }
 
         // Load pending accounts count
@@ -232,19 +208,6 @@ export default function TrainerDashboardPage() {
           setPendingAccountsCount(pendingSnapshot.size);
         } catch (pendingError) {
           console.log('Pending accounts data not available yet (indexes may still be building):', pendingError);
-        }
-
-        // Load failed payments count
-        try {
-          const failedInvoicesQuery = query(
-            collectionGroup(db, 'invoices'),
-            where('status', 'in', ['open', 'uncollectible']),
-            limit(50)
-          );
-          const failedSnapshot = await getDocs(failedInvoicesQuery);
-          setFailedPaymentsCount(failedSnapshot.size);
-        } catch (invoiceError) {
-          console.log('Invoice data not available yet (indexes may still be building):', invoiceError);
         }
 
       } catch (error) {
@@ -457,26 +420,6 @@ export default function TrainerDashboardPage() {
                         {pendingAccountsCount}
                         {pendingAccountsCount > 10 && <span className="text-orange-600"> ⚠️</span>}
                       </p>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-
-              <Link href="/dashboard/trainer/business">
-                <div className={`bg-white rounded-lg border p-4 hover:shadow-md transition-shadow cursor-pointer ${
-                  failedPaymentsCount > 0 ? 'border-red-300 bg-red-50' : ''
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      failedPaymentsCount > 0 ? 'bg-red-100' : 'bg-gray-100'
-                    }`}>
-                      <AlertCircle className={`h-5 w-5 ${
-                        failedPaymentsCount > 0 ? 'text-red-600' : 'text-gray-400'
-                      }`} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-600">Failed Payments</p>
-                      <p className="text-xl font-bold text-gray-900">{failedPaymentsCount}</p>
                     </div>
                   </div>
                 </div>
