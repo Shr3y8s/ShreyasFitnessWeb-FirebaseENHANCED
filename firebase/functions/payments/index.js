@@ -456,12 +456,18 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
       }
     }
 
-    return { ok: true, status: status || "COMPLETED" };
+    // Return the capture id as `transactionId` so the client can navigate to the
+    // success page with an ABSOLUTE fulfillment signal (the success page matches
+    // sessionPackages[].providerTransactionId === this id). This avoids the
+    // baseline-rise race where synchronous fulfillment already incremented the
+    // session balance before the success page mounts.
+    return { ok: true, status: status || "COMPLETED", transactionId: capture?.id || null };
   } catch (err) {
     logger.error("capturePaypalOrder failed", { uid, orderId, error: err.message });
     throw new HttpsError("internal", "Failed to capture order.");
   }
 });
+
 
 
 /**

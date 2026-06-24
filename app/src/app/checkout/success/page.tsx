@@ -20,7 +20,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AuthHeader } from '@/components/AuthHeader';
 import { Footer } from '@/components/Footer';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2 } from 'lucide-react';
+
 
 
 /** `return` must be a same-site relative path; else fall back to /dashboard. */
@@ -43,8 +44,15 @@ function SuccessInner() {
   const { user, loading: authLoading } = useAuth();
 
   const itemKey = searchParams.get('item');
+  // `txn` = the provider transaction id (PayPal capture id) for one-time purchases.
+  // When present we resolve via an ABSOLUTE signal (a sessionPackages[] entry whose
+  // providerTransactionId matches) instead of the baseline-rise heuristic — the
+  // one-time capture path fulfills SYNCHRONOUSLY before this page mounts, so the
+  // balance has already risen and there's no "rise" left to observe.
+  const txn = searchParams.get('txn');
   const returnPath = useMemo(() => safeReturn(searchParams.get('return')), [searchParams]);
   const item = useMemo(() => getCheckoutItem(itemKey), [itemKey]);
+
 
   // 'waiting' = listening for fulfillment; 'done' = signal received;
   // 'timeout' = soft fallback (continue anyway).
@@ -73,9 +81,22 @@ function SuccessInner() {
           if (data.accountActivated === true) {
             setStatus('done');
           }
+        } else if (txn) {
+          // session_package WITH a known transaction id → ABSOLUTE match. The
+          // synchronous capture already wrote the package before this page mounted,
+          // so we look for its providerTransactionId rather than a balance rise
+          // (which would never be observed). Also matches the legacy
+          // stripePaymentIntentId for safety.
+          const packages: Array<{ providerTransactionId?: string; stripePaymentIntentId?: string }> =
+            data?.sessionPackages ?? [];
+          if (packages.some((p) => p.providerTransactionId === txn || p.stripePaymentIntentId === txn)) {
+            setStatus('done');
+          }
         } else {
-          // session_package → wait for sessionBalance.purchased to rise above the
-          // baseline captured on the first snapshot.
+          // session_package without a txn id (e.g. a provider/path that doesn't return
+          // one) → fall back to the baseline-rise heuristic: wait for
+          // sessionBalance.purchased to rise above the baseline captured on the first
+          // snapshot.
           const purchased = data?.sessionBalance?.purchased ?? 0;
           if (baselinePurchasedRef.current === null) {
             baselinePurchasedRef.current = purchased;
@@ -83,6 +104,7 @@ function SuccessInner() {
             setStatus('done');
           }
         }
+
       },
       () => {
         // On listener error, fall back to soft-continue.
@@ -100,15 +122,16 @@ function SuccessInner() {
     };
   }, [authLoading, user, item, router]);
 
-  // On the confirmed-success path, Continue goes to the after-payment destination
-  // (e.g. /dashboard?payment=success → Welcome). But in the TIMEOUT state the
-  // payment is NOT yet confirmed — sending them to the success-gated destination
-  // would imply success and (for an un-activated account) bounce through the
-  // dashboard guard. So when unconfirmed we route to a neutral, un-guarded page
-  // (home) instead of asserting success. With synchronous fulfillment the happy
-  // path resolves to 'done' almost immediately, so 'timeout' is now rare.
+  // CONFIRMED success → go to the after-payment destination (e.g.
+  // /dashboard?payment=success → Welcome). UNCONFIRMED (timeout/listener error) →
+  // we must NOT assert success: route to the GUARDED /dashboard (no ?payment=success)
+  // so the activation guard is the single source of truth — if the payment really
+  // went through (webhook just lagged), the guard lets them in the moment
+  // accountActivated flips; if not, it bounces them back to checkout to retry. We
+  // never grant access or imply success off a timeout.
   const handleContinue = () =>
-    router.push(status === 'timeout' ? '/' : returnPath);
+    router.push(status === 'done' ? returnPath : '/dashboard');
+
 
 
   return (
@@ -145,14 +168,24 @@ function SuccessInner() {
               </Button>
             </>
           ) : (
+            // UNCONFIRMED (timeout / listener error). We do NOT assert success here:
+            // no green check, no "payment complete". The payment may have gone through
+            // (webhook just lagged) or may have failed — we genuinely don't know yet,
+            // so we show a neutral "couldn't confirm yet" state and send the user
+            // through the GUARDED /dashboard, which admits them only once their account
+            // is actually activated (else bounces them back to checkout to retry).
             <>
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                <CheckCircle2 className="h-9 w-9 text-emerald-600" />
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <Clock className="h-9 w-9 text-amber-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Thanks for your payment!</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                We couldn&apos;t confirm your payment yet
+              </h2>
               <p className="text-sm text-gray-600 mb-6">
-                We&apos;re still finalizing your purchase — it may take a minute to appear.
-                You can continue now; everything will update automatically.
+                This can take a moment. If you were charged, your purchase will appear
+                automatically shortly — please don&apos;t pay again. You can continue and
+                we&apos;ll send you to the right place once it&apos;s confirmed. If it
+                still doesn&apos;t show up, contact support.
               </p>
               <Button
                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
@@ -162,6 +195,7 @@ function SuccessInner() {
               </Button>
             </>
           )}
+
         </CardContent>
       </Card>
       </div>

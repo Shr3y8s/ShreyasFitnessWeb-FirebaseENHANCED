@@ -184,15 +184,18 @@ export interface PaymentProvider {
    * Button-checkout providers (capabilities.buttonCheckout === true) mount in-place
    * payment buttons into `container` instead of redirecting. `onApproved` fires
    * after buyer approval (UI feedback only — the webhook is the source of truth for
-   * fulfillment). Returns an unmount/cleanup function.
+   * fulfillment). For one-time captures it receives the provider transaction id
+   * (the capture id) so the success page can match an ABSOLUTE fulfillment signal
+   * instead of waiting for a balance to change. Returns an unmount/cleanup function.
    */
   renderCheckout?(
     opts: CheckoutOptions & {
       container: HTMLElement;
-      onApproved: () => void;
+      onApproved: (transactionId?: string) => void;
       onError?: (e: unknown) => void;
     }
   ): Promise<() => void>;
+
 
   /**
    * Card-fields providers (capabilities.cardFields === true) render hosted, in-page

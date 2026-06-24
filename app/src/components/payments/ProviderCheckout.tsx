@@ -95,17 +95,20 @@ export function ProviderCheckout({
 
   const provider = getPaymentProvider({ mode });
   const isButton = provider.capabilities.buttonCheckout;
-  const isSubscription = mode === 'subscription';
-  // ACDC inline hosted card fields are used ONLY for one-time purchases. For
-  // SUBSCRIPTIONS we deliberately do NOT use the inline card fields: headless
-  // vaulted-card subscriptions require PayPal's Reference Transactions capability
-  // (not enabled), so card subscribers instead use the dedicated "Debit or Credit
-  // Card" Smart Button (PayPal-hosted guest card checkout) rendered by
-  // renderCheckout — which needs no Reference Transactions. (See payment-processor
-  // notes: vault_id subscription create returns 400 without Reference Transactions.)
-  const isCardFields =
-    !!provider.capabilities.cardFields && !!provider.renderCardFields && !isSubscription;
+  // DISABLED (2026-06): our own ACDC inline hosted card fields (the in-page
+  // number/expiry/cvv form + its modal) are turned OFF on ALL paths. They worked for
+  // one-time purchases but NOT for subscriptions (headless vaulted-card subscriptions
+  // require PayPal's Reference Transactions capability, which is not enabled), so
+  // exposing them only for one-time was confusing. The single card option everywhere
+  // is now PayPal's dedicated "Debit or Credit Card" Smart Button (PayPal-hosted guest
+  // card checkout, NO account needed) rendered by renderCheckout — which needs no
+  // Reference Transactions. To re-enable ACDC later, restore this to:
+  //   !!provider.capabilities.cardFields && !!provider.renderCardFields && mode !== 'subscription'
+  // (the renderCardFields adapter + createPaypalOrder/…CardSetupToken/…SubscriptionWithCard
+  // callables are intentionally left intact for that reversal.)
+  const isCardFields = false;
   const isModal = isButton && cardMode === 'modal';
+
 
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -132,10 +135,25 @@ export function ProviderCheckout({
 
 
 
+  // Navigate to the success page, appending the provider transaction id (capture id)
+  // as `txn` when the one-time capture path returns it. The success page uses `txn`
+  // to match an ABSOLUTE fulfillment signal (sessionPackages[].providerTransactionId)
+  // instead of waiting for the session balance to rise — which the synchronous
+  // capture has already done before the page mounts.
+  const navigateToSuccess = (transactionId?: string) => {
+    if (transactionId) {
+      const sep = successUrl.includes('?') ? '&' : '?';
+      window.location.href = `${successUrl}${sep}txn=${encodeURIComponent(transactionId)}`;
+    } else {
+      window.location.href = successUrl;
+    }
+  };
+
   const buildOpts = (
     resolvedUserId: string,
     extraMetadata?: Record<string, string>
   ): CheckoutOptions => ({
+
     userId: resolvedUserId,
     email,
     priceId,
@@ -178,11 +196,12 @@ export function ProviderCheckout({
         const cleanup = await provider.renderCheckout({
           ...opts,
           container: mountEl,
-          onApproved: () => {
-            window.location.href = successUrl;
+          onApproved: (transactionId) => {
+            navigateToSuccess(transactionId);
           },
           onError: (e) => onError?.(e),
         });
+
         // If we were unmounted while the SDK was loading, tear the buttons back down.
         if (cancelled) {
           try { cleanup(); } catch { /* ignore */ }
@@ -329,14 +348,15 @@ export function ProviderCheckout({
           ...opts,
           container: mountEl,
 
-          onApproved: () => {
-            window.location.href = successUrl;
+          onApproved: (transactionId) => {
+            navigateToSuccess(transactionId);
           },
           onError: (e) => {
             setProcessing(false);
             onError?.(e);
           },
         });
+
         // Also mount ACDC hosted card fields (card-only, no PayPal account) into
         // their own isolated child node, alongside the wallet buttons.
         if (isCardFields && provider.renderCardFields && cardContainerRef.current) {

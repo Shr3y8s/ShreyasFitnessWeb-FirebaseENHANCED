@@ -111,13 +111,33 @@ export default function DashboardWelcomePage() {
       console.error('[Dashboard] Error listening to payment status:', error);
     });
 
-    // Timeout fallback: If webhook takes too long (15 seconds), proceed anyway
-    const timeoutId = setTimeout(() => {
-      console.log('[Dashboard] Webhook timeout - proceeding to welcome screen');
-      setWaitingForWebhook(false);
-      window.history.replaceState({}, '', '/dashboard');
-      window.location.reload();
+    // Timeout fallback: if the webhook hasn't confirmed activation in time, we must
+    // NOT assume success / fall through to the Welcome screen for an un-activated
+    // account. Re-read the latest user doc; if STILL not activated, send them through
+    // the activation guard (resume checkout). Only proceed to Welcome once the
+    // payment is actually confirmed (accountActivated === true).
+    const timeoutId = setTimeout(async () => {
+      console.log('[Dashboard] Webhook timeout - verifying activation before proceeding');
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        const data = snap.data() || {};
+        if (data.accountActivated === true) {
+          // Confirmed after all — drop the waiting flag; auth-context's listener has
+          // updated userData in place, so we render the Welcome screen.
+          setWaitingForWebhook(false);
+          return;
+        }
+        // Unconfirmed → do not grant access. Resume payment via the unified checkout,
+        // keyed by their selected tier (same guard the page uses on initial load).
+        console.log('[Dashboard] Still not activated after timeout - redirecting to checkout');
+        redirectToCheckoutForTier(router, data.tier, '/signup?step=plan', '/dashboard/client', '/dashboard?payment=success');
+      } catch (e) {
+        console.error('[Dashboard] Timeout activation check failed:', e);
+        // On error, fail safe: keep them OUT of the dashboard (back to checkout).
+        redirectToCheckoutForTier(router, userData?.tier, '/signup?step=plan', '/dashboard/client', '/dashboard?payment=success');
+      }
     }, 15000);
+
 
     return () => {
       unsubscribe();
@@ -193,7 +213,21 @@ export default function DashboardWelcomePage() {
       </div>
     );
   }
-  
+
+  // DEFENSE-IN-DEPTH: the Welcome screen is a post-payment, authenticated surface —
+  // it must NEVER render for an un-activated account, even for a render frame. If we
+  // somehow reach here un-activated (e.g. a timing window where the waiter cleared
+  // before activation), don't show Welcome; the effect's guard is redirecting to
+  // checkout, so render a neutral "Redirecting…" placeholder instead.
+  if (!userData.accountActivated) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="text-stone-600">Redirecting...</div>
+      </div>
+    );
+  }
+
   // Use the WelcomeScreen component (has coach intro and "don't show again" option)
   return <WelcomeScreen onContinue={handleContinueToDashboard} />;
+
 }

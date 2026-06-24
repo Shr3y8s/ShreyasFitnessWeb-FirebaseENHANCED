@@ -192,10 +192,11 @@ export const paypalProvider: PaymentProvider = {
   async renderCheckout(
     opts: CheckoutOptions & {
       container: HTMLElement;
-      onApproved: () => void;
+      onApproved: (transactionId?: string) => void;
       onError?: (e: unknown) => void;
     }
   ): Promise<() => void> {
+
     if (!PAYPAL_CLIENT_ID) {
       throw new Error(
         'NEXT_PUBLIC_PAYPAL_CLIENT_ID is not set (PAYPAL_ENV=' + PAYPAL_ENV + ').'
@@ -245,14 +246,20 @@ export const paypalProvider: PaymentProvider = {
       buttonConfig.onApprove = async (data: any) => {
         // Capture SERVER-SIDE via callable. The browser SDK's actions.order.capture()
         // is unreliable for guest-card orders (permission_denied / Insufficient
-        // privileges); our Functions credentials capture reliably. The webhook
-        // (PAYMENT.CAPTURE.COMPLETED) does fulfillment.
+        // privileges); our Functions credentials capture reliably. The callable also
+        // fulfills synchronously and returns the capture id as `transactionId` — we
+        // pass it to onApproved so the success page can match an ABSOLUTE fulfillment
+        // signal (sessionPackages[].providerTransactionId === id) instead of waiting
+        // for the balance to change. The PAYMENT.CAPTURE.COMPLETED webhook is the
+        // idempotent backup.
         const { httpsCallable } = await import('firebase/functions');
         const { functions } = await import('@/lib/firebase');
         const capture = httpsCallable(functions, 'capturePaypalOrder');
-        await capture({ orderId: data?.orderID, paypalEnv: PAYPAL_ENV });
-        opts.onApproved();
+        const res = await capture({ orderId: data?.orderID, paypalEnv: PAYPAL_ENV });
+        const transactionId = (res?.data as { transactionId?: string } | undefined)?.transactionId;
+        opts.onApproved(transactionId);
       };
+
 
     }
 
