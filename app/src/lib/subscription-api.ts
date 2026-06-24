@@ -2,6 +2,7 @@
 
 import { httpsCallable } from 'firebase/functions';
 import { functions } from './firebase';
+import { PAYPAL_ENV } from './constants';
 
 /**
  * Subscription Management API
@@ -32,7 +33,7 @@ export const cancelSubscription = async (
 ): Promise<SubscriptionAPIResponse> => {
   const cancelFn = httpsCallable(functions, 'cancelSubscription');
   try {
-    const result = await cancelFn(data);
+    const result = await cancelFn({ ...data, paypalEnv: PAYPAL_ENV });
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Cancel subscription error:', error);
@@ -52,7 +53,7 @@ export const pauseSubscription = async (
 ): Promise<SubscriptionAPIResponse> => {
   const pauseFn = httpsCallable(functions, 'pauseSubscription');
   try {
-    const result = await pauseFn(data);
+    const result = await pauseFn({ ...data, paypalEnv: PAYPAL_ENV });
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Pause subscription error:', error);
@@ -70,7 +71,7 @@ export const pauseSubscription = async (
 export const resumeSubscription = async (): Promise<SubscriptionAPIResponse> => {
   const resumeFn = httpsCallable(functions, 'resumeSubscription');
   try {
-    const result = await resumeFn({});
+    const result = await resumeFn({ paypalEnv: PAYPAL_ENV });
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Resume subscription error:', error);
@@ -88,7 +89,7 @@ export const resumeSubscription = async (): Promise<SubscriptionAPIResponse> => 
 export const reactivateSubscription = async (): Promise<SubscriptionAPIResponse> => {
   const reactivateFn = httpsCallable(functions, 'reactivateSubscription');
   try {
-    const result = await reactivateFn({});
+    const result = await reactivateFn({ paypalEnv: PAYPAL_ENV });
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Reactivate subscription error:', error);

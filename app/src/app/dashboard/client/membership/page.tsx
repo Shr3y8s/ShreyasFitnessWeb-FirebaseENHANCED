@@ -86,6 +86,24 @@ export default function MembershipPage() {
     if (!userData) return;
 
     // STEP 1: Update subscription status and membership type
+    //
+    // SUBSCRIPTION STATE MODEL (provider-neutral; see payment-processor design §3):
+    // The UI status shown to the client is DERIVED from several user-doc fields —
+    // there is no single "status" field. Roles:
+    //   • subscriptionStatus (string: active/canceled/paused/past_due)
+    //       = PROVIDER-SYNCED source of truth, written by webhooks
+    //         (BILLING.SUBSCRIPTION.SUSPENDED→paused / ACTIVATED→active / CANCELLED→canceled)
+    //         and by the Stripe trigger. Also what trainer/admin queries + scheduled
+    //         jobs filter on.
+    //   • subscriptionPaused (bool) + cancelAtPeriodEnd (bool)
+    //       = LOCAL INTENT flags, set synchronously by the pause/cancel callables so
+    //         the UI reflects the action instantly (before any webhook arrives).
+    //         cancelAtPeriodEnd also encodes "still active now, will cancel at period
+    //         end" — a state the status enum alone can't express.
+    //   • pausedAt / resumedAt / canceledAt / reactivatedAt / pauseResumesAt
+    //       = AUDIT TRAIL + display only (Recent Activity lines + the "resumes on…" /
+    //         "available until…" dates). They do NOT drive current status.
+    // Derivation priority below: paused → canceled(local flag or provider) → active.
     if (userData.subscriptionId) {
       let status = 'active';  // Default status
       

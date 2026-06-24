@@ -428,7 +428,7 @@ async function performAccountDeletion({
         .collection("sessions")
         .where("clientId", "==", targetUserId)
         .where("status", "==", "scheduled")
-        .where("scheduledTime", ">", admin.firestore.Timestamp.now())
+        .where("scheduledDate", ">", admin.firestore.Timestamp.now())
         .get();
 
     if (!upcomingSessionsSnapshot.empty && !adminOverride) {

@@ -251,8 +251,7 @@ async function parseEvent(event, ctx = {}) {
       break;
     }
     case "BILLING.SUBSCRIPTION.CANCELLED":
-    case "BILLING.SUBSCRIPTION.EXPIRED":
-    case "BILLING.SUBSCRIPTION.SUSPENDED": {
+    case "BILLING.SUBSCRIPTION.EXPIRED": {
       events.push({
         type: "subscription.canceled",
         userId: r.custom_id || null,
@@ -263,23 +262,60 @@ async function parseEvent(event, ctx = {}) {
       break;
     }
 
-    // ---- Recurring subscription payment (v1 Sale) → transaction record only ----
+    // SUSPENDED is a PAUSE, not a cancellation. PayPal fires this both when our
+    // pauseSubscription callable calls /suspend AND when PayPal suspends a sub
+    // itself (e.g. repeated failed payments). It MUST NOT hard-cancel or clear the
+    // subscriptionId — the sub stays recoverable (resume = /activate). We emit a
+    // distinct neutral `subscription.paused` so the dispatcher sets status=paused
+    // and the membership "paused" flag while preserving subscriptionId.
+    case "BILLING.SUBSCRIPTION.SUSPENDED": {
+      events.push({
+        type: "subscription.paused",
+        userId: r.custom_id || null,
+        subscriptionId: r.id,
+        subscription: { status: "paused" },
+      });
+      break;
+    }
+
+
+    // ---- Recurring subscription payment (v1 Sale) → transaction + renewal sync ----
     case "PAYMENT.SALE.COMPLETED": {
       // The Sale event carries the SUBSCRIPTION id (billing_agreement_id) but NOT
-      // the plan_id/tier. Dereference the subscription → plan_id → tier name so the
-      // transaction shows e.g. "Complete Transformation" instead of generic
-      // "Subscription". Fail-soft: any lookup miss keeps "Subscription".
+      // the plan_id/tier/custom_id/next_billing_time. Dereference the subscription
+      // once to recover: tier name (for the transaction label), the uid
+      // (custom_id — the Sale event's own `custom` is often absent), and the next
+      // billing date (to roll the membership "Next Billing" / currentPeriodEnd
+      // forward on each renewal). Fail-soft: any lookup miss keeps generic values.
       let subProductName = "Subscription";
+      let renewalUserId = r.custom || r.custom_id || null;
+      let nextBillingEpoch = null;
       const subId = r.billing_agreement_id || null;
       if (subId) {
-        const planId = await getSubscriptionPlanId(subId, ctx);
-        const tier = resolvePlanTier(planId);
-        if (tier.tierName) subProductName = tier.tierName;
+        try {
+          const token = await getAccessToken(ctx);
+          const sub = await request("GET", `/v1/billing/subscriptions/${subId}`, token, null, ctx.base);
+          const tier = resolvePlanTier(sub?.plan_id);
+          if (tier.tierName) subProductName = tier.tierName;
+          if (sub?.custom_id) renewalUserId = sub.custom_id;
+          if (sub?.billing_info?.next_billing_time) {
+            nextBillingEpoch = toEpoch(sub.billing_info.next_billing_time);
+          }
+        } catch (err) {
+          logger.warn("PAYMENT.SALE.COMPLETED subscription lookup failed (fail-soft)", { subId, error: err.message });
+        }
       }
       events.push({
         type: "payment.completed",
-        userId: r.custom || r.custom_id || null,
+        userId: renewalUserId,
         isSessionPackage: false,
+        // Renewal marker so the dispatcher rolls user-doc billing fields forward
+        // (lastPaymentDate / lastPaymentAmount / currentPeriodEnd) for the dashboard.
+        subscriptionRenewal: {
+          userId: renewalUserId,
+          amount: toMinorUnits(r.amount),
+          currentPeriodEnd: nextBillingEpoch,
+        },
         transaction: {
           id: r.id,
           date: toEpoch(r.create_time),
@@ -291,6 +327,7 @@ async function parseEvent(event, ctx = {}) {
       });
       break;
     }
+
 
     case "PAYMENT.SALE.REFUNDED":
     case "PAYMENT.CAPTURE.REFUNDED": {
@@ -372,7 +409,28 @@ async function cancelSubscription(subscriptionId, ctx = {}) {
 }
 
 /**
+ * Suspend (pause) a PayPal subscription (POST /v1/billing/subscriptions/{id}/suspend).
+ * Billing stops until the subscription is /activate'd again. Backs the neutral
+ * `pauseSubscription` callable's PayPal branch. PayPal has no native auto-resume
+ * date, so a scheduled function re-activates at the stored `pauseResumesAt`.
+ * @param {string} subscriptionId
+ * @param {object} ctx { clientId, clientSecret, base }
+ */
+async function suspendSubscription(subscriptionId, ctx = {}) {
+  if (!subscriptionId) throw new Error("subscriptionId required");
+  const token = await getAccessToken(ctx);
+  await request(
+    "POST",
+    `/v1/billing/subscriptions/${subscriptionId}/suspend`,
+    token,
+    { reason: "Paused by customer" },
+    ctx.base
+  );
+}
+
+/**
  * Capture a one-time PayPal Order SERVER-SIDE (Orders API v2).
+
  *
  * The browser SDK's `actions.order.capture()` is unreliable for unbranded/guest-card
  * orders (returns ack: permission_denied / "Insufficient privileges"). Our server
@@ -617,9 +675,11 @@ module.exports = {
   verifySignature,
   parseEvent,
   cancelSubscription,
+  suspendSubscription,
   captureOrder,
   refundCapture,
   createOrder,
+
 
   createCardSetupToken,
   createSubscriptionWithCard,

@@ -61,8 +61,6 @@ export default function BillingPage() {
   const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [canceling, setCanceling] = useState(false);
-  const [cancelSuccess, setCancelSuccess] = useState(false);
 
   // Capability-driven rendering (design §5). Stripe → hosted portal + stored card;
   // PayPal → neutral history store, no card block, in-app cancel (no portal link).
@@ -324,32 +322,6 @@ export default function BillingPage() {
     }
   };
 
-  const handleCancelSubscription = async () => {
-    const subscriptionId = (userData as any)?.subscriptionId;
-    if (!subscriptionId) {
-      setError('No active subscription found to cancel.');
-      return;
-    }
-    if (!provider.cancelSubscription) {
-      setError('Cancellation is not available for this provider.');
-      return;
-    }
-    if (!window.confirm('Cancel your subscription? You will lose access at the end of the current period.')) {
-      return;
-    }
-    setCanceling(true);
-    setError(null);
-    try {
-      await provider.cancelSubscription(subscriptionId);
-      setCancelSuccess(true);
-    } catch (e) {
-      console.error('[Billing] Cancel subscription failed', e);
-      setError('Failed to cancel subscription. Please try again or contact support.');
-    } finally {
-      setCanceling(false);
-    }
-  };
-
   const formatCurrency = (amount: number, currency: string = 'usd') => {
 
     return new Intl.NumberFormat('en-US', {
@@ -474,40 +446,10 @@ export default function BillingPage() {
                       <div>
                         <p className="font-semibold text-lg text-foreground">Paid with PayPal</p>
                         <p className="text-sm text-muted-foreground">
-                          Your PayPal account funds your subscription. Manage your funding source in PayPal.
+                          Your PayPal account funds your purchases. Manage your funding source in PayPal.
                         </p>
                       </div>
                     </div>
-
-                    {caps.inAppCancel && (userData as any)?.subscriptionId &&
-                      (userData as any)?.subscriptionStatus !== 'canceled' && (
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                        <div>
-                          <p className="font-medium text-foreground">Subscription</p>
-                          <p className="text-sm text-muted-foreground">
-                            {cancelSuccess
-                              ? 'Cancellation requested — access continues until the end of your billing period.'
-                              : 'Cancel anytime. Access continues until the end of your current billing period.'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={handleCancelSubscription}
-                          disabled={canceling || cancelSuccess}
-                          className="px-5 py-2.5 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors font-medium"
-                        >
-                          {canceling ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              <span>Canceling...</span>
-                            </>
-                          ) : cancelSuccess ? (
-                            <span>Cancellation Requested</span>
-                          ) : (
-                            <span>Cancel Subscription</span>
-                          )}
-                        </button>
-                      </div>
-                    )}
                   </div>
                 ) : currentPaymentMethod ? (
 

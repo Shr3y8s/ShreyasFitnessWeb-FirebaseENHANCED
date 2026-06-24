@@ -146,6 +146,22 @@ async function activateSubscription(p, hooks = {}) {
     updateData.subscriptionId = subscriptionId;
   }
 
+  // Mirror billing fields onto the USER doc so the membership dashboard can render
+  // "Recent Activity" + "Next Billing" without reading the billing_customers
+  // subcollection. (The neutral subscription record is still written below.)
+  // - `lastPaymentDate`: when a charge was taken. On `active` we stamp now (first
+  //   charge at activation, or a renewal); the membership page derives Next Billing
+  //   = lastPaymentDate + 1 month and shows the "Subscription started" line from it.
+  // - `currentPeriodEnd`: provider's next_billing_time (passed in as epoch seconds),
+  //   used for the "canceled — access until …" display.
+  if (status === "active") {
+    updateData.lastPaymentDate = admin.firestore.FieldValue.serverTimestamp();
+  }
+  if (p.currentPeriodEnd != null) {
+    updateData.currentPeriodEnd = admin.firestore.Timestamp.fromMillis(p.currentPeriodEnd * 1000);
+  }
+
+
   // Sync tier from event metadata when present.
   if (p.tierId && p.tierName) {
     updateData.tier = p.tierId;

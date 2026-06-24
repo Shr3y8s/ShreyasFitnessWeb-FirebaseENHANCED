@@ -115,6 +115,34 @@ async function handleEvent(providerName, e) {
       break;
 
 
+    case "subscription.paused":
+      // PayPal BILLING.SUBSCRIPTION.SUSPENDED → keep the subscription recoverable.
+      // Sync the neutral subscription record + user doc to a `paused` status and set
+      // the membership pause flag, but PRESERVE subscriptionId so resume (/activate)
+      // still works. (If our own pauseSubscription callable initiated this, these
+      // fields are already set; the webhook just keeps PayPal-initiated suspensions
+      // — e.g. failed-payment — consistent.)
+      try {
+        const admin = require("firebase-admin");
+        await fulfillment.writeSubscriptionRecord({
+          userId: e.userId,
+          subscriptionId: e.subscriptionId,
+          provider: providerName,
+          status: "paused",
+        });
+        if (e.userId) {
+          await admin.firestore().collection("users").doc(e.userId).update({
+            subscriptionStatus: "paused",
+            subscriptionPaused: true,
+            pausedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      } catch (err) {
+        logger.error("subscription.paused sync failed", { userId: e.userId, error: err.message });
+      }
+      break;
+
     case "subscription.canceled":
       // A status-only cancel still flows through activateSubscription so the
       // user doc + neutral record stay consistent; a hard delete uses deactivate.
@@ -146,6 +174,30 @@ async function handleEvent(providerName, e) {
           quantity: e.quantity,
         });
       }
+      // Recurring subscription RENEWAL: roll the membership dashboard's billing
+      // fields forward on the user doc (lastPaymentDate / lastPaymentAmount /
+      // currentPeriodEnd). The first charge is handled at activation; this keeps
+      // "Next Billing" + the paid line correct on every renewal.
+      if (e.subscriptionRenewal?.userId) {
+        try {
+          const admin = require("firebase-admin");
+          const update = {
+            lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          };
+          if (e.subscriptionRenewal.amount != null) {
+            update.lastPaymentAmount = e.subscriptionRenewal.amount;
+          }
+          if (e.subscriptionRenewal.currentPeriodEnd != null) {
+            update.currentPeriodEnd = admin.firestore.Timestamp.fromMillis(
+              e.subscriptionRenewal.currentPeriodEnd * 1000
+            );
+          }
+          await admin.firestore().collection("users").doc(e.subscriptionRenewal.userId).update(update);
+        } catch (err) {
+          logger.error("subscription renewal user-doc sync failed (non-fatal)", { userId: e.subscriptionRenewal.userId, error: err.message });
+        }
+      }
       if (e.transaction) {
         await fulfillment.writeTransactionRecord({
           userId: e.userId,
@@ -154,6 +206,7 @@ async function handleEvent(providerName, e) {
         });
       }
       break;
+
 
     case "payment.refunded":
       if (e.transaction) {

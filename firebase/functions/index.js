@@ -388,7 +388,7 @@ exports.createPaymentMethodPortalSession = onCall({
  */
 exports.cancelSubscription = onCall({
   region: sharedConfig.region,
-  secrets: [stripeKey],
+  secrets: [stripeKey, ...PAYPAL_SECRETS],
   cors: true,
 }, async (request) => {
   try {
@@ -420,37 +420,76 @@ exports.cancelSubscription = onCall({
       throw new Error("No active subscription found");
     }
 
-    // Initialize Stripe
-    const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2024-09-30.acacia",
-    });
+    // Provider detection: PayPal subscription ids are `I-…`; Stripe are `sub_…`.
+    const isPaypal = String(subscriptionId).startsWith("I-") || userData.provider === "paypal";
 
-    // Cancel subscription at period end
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: true,
-    });
+    let currentPeriodEndSec;
+    if (isPaypal) {
+      // PayPal has NO native "cancel at period end". We replicate Stripe's UX with a
+      // LOCAL flag (cancelAtPeriodEnd) and keep access until currentPeriodEnd; a
+      // scheduled function performs the real PayPal /cancel at that date. Reactivate
+      // simply clears the flag (no PayPal call needed since we never canceled).
+      const existingEnd = userData.currentPeriodEnd?.toMillis
+        ? userData.currentPeriodEnd.toMillis()
+        : null;
+      const lastPaymentMs = userData.lastPaymentDate?.toMillis
+        ? userData.lastPaymentDate.toMillis()
+        : null;
+      const fallback = (lastPaymentMs ? new Date(lastPaymentMs) : new Date());
+      if (!existingEnd) fallback.setMonth(fallback.getMonth() + 1);
+      currentPeriodEndSec = Math.floor((existingEnd || fallback.getTime()) / 1000);
 
-    logger.info("Subscription canceled in Stripe", {
-      userId,
-      subscriptionId,
-      currentPeriodEnd: subscription.current_period_end,
-    });
+      await userRef.update({
+        cancelAtPeriodEnd: true,
+        canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+        currentPeriodEnd: admin.firestore.Timestamp.fromMillis(currentPeriodEndSec * 1000),
+        // Persist the PayPal env so the scheduled finalizer (which has no request
+        // context) can resolve the correct credentials when it performs the real
+        // /cancel at period end.
+        paypalEnv: paymentsModule.normalizePaypalEnv(request.data?.paypalEnv),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-    // Update Firestore
-    await userRef.update({
-      cancelAtPeriodEnd: true,
-      canceledAt: admin.firestore.FieldValue.serverTimestamp(),
-      currentPeriodEnd: admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      logger.info("PayPal subscription marked cancel-at-period-end (local flag)", {
+        userId,
+        subscriptionId,
+        currentPeriodEnd: currentPeriodEndSec,
+      });
+    } else {
+      // Initialize Stripe
+      const stripe = require("stripe")(stripeKey.value(), {
+        apiVersion: "2024-09-30.acacia",
+      });
 
-    logger.info("Subscription cancellation synced to Firestore", {
-      userId,
-      subscriptionId,
-    });
+      // Cancel subscription at period end
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true,
+      });
+      currentPeriodEndSec = subscription.current_period_end;
+
+      logger.info("Subscription canceled in Stripe", {
+        userId,
+        subscriptionId,
+        currentPeriodEnd: currentPeriodEndSec,
+      });
+
+      // Update Firestore
+      await userRef.update({
+        cancelAtPeriodEnd: true,
+        canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+        currentPeriodEnd: admin.firestore.Timestamp.fromMillis(currentPeriodEndSec * 1000),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      logger.info("Subscription cancellation synced to Firestore", {
+        userId,
+        subscriptionId,
+      });
+    }
 
     // Return success with access end date
-    const accessUntil = new Date(subscription.current_period_end * 1000);
+    const accessUntil = new Date(currentPeriodEndSec * 1000);
+
 
     // ACTIVITY FEED: Write subscription_canceled event
     writeActivityEvent({
@@ -471,10 +510,11 @@ exports.cancelSubscription = onCall({
       success: true,
       message: "Subscription canceled successfully",
       accessUntil: accessUntil.toISOString(),
-      currentPeriodEnd: subscription.current_period_end,
+      currentPeriodEnd: currentPeriodEndSec,
     };
   } catch (error) {
     logger.error("Error canceling subscription", {
+
       error: error.message,
       stack: error.stack,
       userId: request.auth?.uid,
@@ -494,7 +534,7 @@ exports.cancelSubscription = onCall({
  */
 exports.pauseSubscription = onCall({
   region: sharedConfig.region,
-  secrets: [stripeKey],
+  secrets: [stripeKey, ...PAYPAL_SECRETS],
   cors: true,
 }, async (request) => {
   try {
@@ -533,10 +573,7 @@ exports.pauseSubscription = onCall({
       throw new Error("No active subscription found");
     }
 
-    // Initialize Stripe
-    const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2024-09-30.acacia",
-    });
+    const isPaypal = String(subscriptionId).startsWith("I-") || userData.provider === "paypal";
 
     // Calculate resume date (add full months from now)
     const now = new Date();
@@ -546,20 +583,36 @@ exports.pauseSubscription = onCall({
     resumeDate.setHours(0, 0, 0, 0);
     const resumeTimestamp = Math.floor(resumeDate.getTime() / 1000);
 
-    // Pause subscription in Stripe using pause_collection
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      pause_collection: {
-        behavior: "mark_uncollectible",
-        resumes_at: resumeTimestamp,
-      },
-    });
+    if (isPaypal) {
+      // PayPal: suspend the subscription now. PayPal has no native auto-resume date,
+      // so the scheduled `processScheduledPaypalSubscriptionActions` re-activates it
+      // (/activate) at `pauseResumesAt`.
+      const cfg = paymentsModule.paypalEnvConfig(
+        paymentsModule.normalizePaypalEnv(request.data?.paypalEnv)
+      );
+      await paymentsModule.PROVIDERS.paypal.suspendSubscription(subscriptionId, cfg);
+      logger.info("PayPal subscription suspended", { userId, subscriptionId, resumesAt: resumeTimestamp });
+    } else {
+      // Initialize Stripe
+      const stripe = require("stripe")(stripeKey.value(), {
+        apiVersion: "2024-09-30.acacia",
+      });
 
-    logger.info("Subscription paused in Stripe", {
-      userId,
-      subscriptionId,
-      resumesAt: resumeTimestamp,
-      resumeDate: resumeDate.toISOString(),
-    });
+      // Pause subscription in Stripe using pause_collection
+      await stripe.subscriptions.update(subscriptionId, {
+        pause_collection: {
+          behavior: "mark_uncollectible",
+          resumes_at: resumeTimestamp,
+        },
+      });
+
+      logger.info("Subscription paused in Stripe", {
+        userId,
+        subscriptionId,
+        resumesAt: resumeTimestamp,
+        resumeDate: resumeDate.toISOString(),
+      });
+    }
 
     // Update Firestore
     await userRef.update({
@@ -567,8 +620,12 @@ exports.pauseSubscription = onCall({
       pausedAt: admin.firestore.FieldValue.serverTimestamp(),
       pauseResumesAt: admin.firestore.Timestamp.fromDate(resumeDate),
       pauseDuration: duration,
+      // Persist the PayPal env so the scheduled auto-resume (which has no request
+      // context) can resolve the correct credentials when it re-activates the sub.
+      ...(isPaypal ? { paypalEnv: paymentsModule.normalizePaypalEnv(request.data?.paypalEnv) } : {}),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
 
     logger.info("Subscription pause synced to Firestore", {
       userId,
@@ -600,7 +657,7 @@ exports.pauseSubscription = onCall({
  */
 exports.resumeSubscription = onCall({
   region: sharedConfig.region,
-  secrets: [stripeKey],
+  secrets: [stripeKey, ...PAYPAL_SECRETS],
   cors: true,
 }, async (request) => {
   try {
@@ -634,22 +691,34 @@ exports.resumeSubscription = onCall({
       throw new Error("Subscription is not paused");
     }
 
-    // Initialize Stripe
-    const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2024-09-30.acacia",
-    });
+    const isPaypal = String(subscriptionId).startsWith("I-") || userData.provider === "paypal";
 
-    // Resume subscription in Stripe by removing pause_collection
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      pause_collection: "",
-    });
+    if (isPaypal) {
+      // PayPal: re-activate the suspended subscription.
+      const cfg = paymentsModule.paypalEnvConfig(
+        paymentsModule.normalizePaypalEnv(request.data?.paypalEnv)
+      );
+      await paymentsModule.PROVIDERS.paypal.activatePaypalSubscription(subscriptionId, cfg);
+      logger.info("PayPal subscription re-activated (resume)", { userId, subscriptionId });
+    } else {
+      // Initialize Stripe
+      const stripe = require("stripe")(stripeKey.value(), {
+        apiVersion: "2024-09-30.acacia",
+      });
 
-    logger.info("Subscription resumed in Stripe", {
-      userId,
-      subscriptionId,
-    });
+      // Resume subscription in Stripe by removing pause_collection
+      await stripe.subscriptions.update(subscriptionId, {
+        pause_collection: "",
+      });
+
+      logger.info("Subscription resumed in Stripe", {
+        userId,
+        subscriptionId,
+      });
+    }
 
     // Update Firestore
+
     await userRef.update({
       subscriptionPaused: false,
       resumedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -720,22 +789,32 @@ exports.reactivateSubscription = onCall({
       throw new Error("Subscription is not canceled");
     }
 
-    // Initialize Stripe
-    const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2024-09-30.acacia",
-    });
+    const isPaypal = String(subscriptionId).startsWith("I-") || userData.provider === "paypal";
 
-    // Reactivate subscription in Stripe by removing cancel_at_period_end
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: false,
-    });
+    if (isPaypal) {
+      // PayPal cancel-at-period-end is a LOCAL flag only (the real PayPal /cancel
+      // runs at period end via the scheduled function). So reactivation just clears
+      // the flag — no PayPal API call needed since the subscription is still active.
+      logger.info("PayPal subscription reactivated (cleared local cancel flag)", { userId, subscriptionId });
+    } else {
+      // Initialize Stripe
+      const stripe = require("stripe")(stripeKey.value(), {
+        apiVersion: "2024-09-30.acacia",
+      });
 
-    logger.info("Subscription reactivated in Stripe", {
-      userId,
-      subscriptionId,
-    });
+      // Reactivate subscription in Stripe by removing cancel_at_period_end
+      await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: false,
+      });
+
+      logger.info("Subscription reactivated in Stripe", {
+        userId,
+        subscriptionId,
+      });
+    }
 
     // Update Firestore
+
     await userRef.update({
       cancelAtPeriodEnd: false,
       reactivatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -3570,6 +3649,112 @@ exports.capturePaypalOrder = paymentsModule.capturePaypalOrder;
 exports.createPaypalOrder = paymentsModule.createPaypalOrder;
 exports.createPaypalCardSetupToken = paymentsModule.createPaypalCardSetupToken;
 exports.createPaypalSubscriptionWithCard = paymentsModule.createPaypalSubscriptionWithCard;
+
+/**
+ * SCHEDULED: finalize PayPal subscription lifecycle workarounds (spec P2.3).
+ *
+ * PayPal has no native "cancel at period end" or "auto-resume after N months", so
+ * the cancel/pause callables only set LOCAL flags + suspend; this hourly job applies
+ * the real PayPal action once the stored date arrives:
+ *
+ *  (a) CANCEL AT PERIOD END — users with `cancelAtPeriodEnd === true` whose
+ *      `currentPeriodEnd` has passed: call PayPal `/cancel` for real, then clean the
+ *      user doc (delete subscriptionId, status canceled) so they can re-subscribe.
+ *
+ *  (b) AUTO-RESUME — users with `subscriptionPaused === true` whose `pauseResumesAt`
+ *      has passed: call PayPal `/activate` to resume billing, then clear the pause
+ *      flags. (A user who resumes early via the resume callable already cleared these,
+ *      so they won't match.)
+ *
+ * Each user's stored `paypalEnv` selects the correct credentials. Errors are per-user
+ * isolated so one failure doesn't block the rest; PayPal calls are idempotent enough
+ * that a re-run after a transient failure is safe.
+ */
+exports.processScheduledPaypalSubscriptionActions = onSchedule({
+  schedule: "every 1 hours",
+  timeZone: "UTC",
+  region: sharedConfig.region,
+  secrets: PAYPAL_SECRETS,
+}, async (event) => {
+  const now = admin.firestore.Timestamp.now();
+  const db = admin.firestore();
+  const paypal = paymentsModule.PROVIDERS.paypal;
+  let canceled = 0;
+  let resumed = 0;
+
+  // (a) Cancel-at-period-end finalization.
+  try {
+    const cancelSnap = await db
+      .collection("users")
+      .where("cancelAtPeriodEnd", "==", true)
+      .where("currentPeriodEnd", "<=", now)
+      .get();
+
+    for (const doc of cancelSnap.docs) {
+      const u = doc.data();
+      const subscriptionId = u.subscriptionId;
+      // Only PayPal subs are handled here; Stripe cancels itself at period end.
+      const isPaypal = subscriptionId && (String(subscriptionId).startsWith("I-") || u.provider === "paypal");
+      if (!isPaypal) continue;
+
+      try {
+        const cfg = paymentsModule.paypalEnvConfig(paymentsModule.normalizePaypalEnv(u.paypalEnv));
+        await paypal.cancelSubscription(subscriptionId, cfg);
+        // Clean the user doc so they can re-subscribe (mirrors deactivateSubscription).
+        await doc.ref.update({
+          subscriptionId: admin.firestore.FieldValue.delete(),
+          subscriptionStatus: "canceled",
+          subscriptionEndedAt: admin.firestore.FieldValue.serverTimestamp(),
+          cancelAtPeriodEnd: false,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        canceled++;
+        logger.info("[ScheduledPaypal] Canceled subscription at period end", { userId: doc.id, subscriptionId });
+      } catch (err) {
+        logger.error("[ScheduledPaypal] cancel-at-period-end failed", { userId: doc.id, subscriptionId, error: err.message });
+      }
+    }
+  } catch (err) {
+    logger.error("[ScheduledPaypal] cancel query failed", { error: err.message });
+  }
+
+  // (b) Auto-resume finalization.
+  try {
+    const resumeSnap = await db
+      .collection("users")
+      .where("subscriptionPaused", "==", true)
+      .where("pauseResumesAt", "<=", now)
+      .get();
+
+    for (const doc of resumeSnap.docs) {
+      const u = doc.data();
+      const subscriptionId = u.subscriptionId;
+      const isPaypal = subscriptionId && (String(subscriptionId).startsWith("I-") || u.provider === "paypal");
+      if (!isPaypal) continue;
+
+      try {
+        const cfg = paymentsModule.paypalEnvConfig(paymentsModule.normalizePaypalEnv(u.paypalEnv));
+        await paypal.activatePaypalSubscription(subscriptionId, cfg);
+        await doc.ref.update({
+          subscriptionPaused: false,
+          resumedAt: admin.firestore.FieldValue.serverTimestamp(),
+          pauseResumesAt: admin.firestore.FieldValue.delete(),
+          pauseDuration: admin.firestore.FieldValue.delete(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        resumed++;
+        logger.info("[ScheduledPaypal] Auto-resumed paused subscription", { userId: doc.id, subscriptionId });
+      } catch (err) {
+        logger.error("[ScheduledPaypal] auto-resume failed", { userId: doc.id, subscriptionId, error: err.message });
+      }
+    }
+  } catch (err) {
+    logger.error("[ScheduledPaypal] resume query failed", { error: err.message });
+  }
+
+  logger.info("[ScheduledPaypal] Complete", { canceled, resumed });
+  return { success: true, canceled, resumed };
+});
 
 
 
