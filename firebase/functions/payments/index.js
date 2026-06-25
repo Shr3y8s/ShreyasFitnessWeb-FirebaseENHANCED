@@ -18,6 +18,13 @@ const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https")
 const { defineSecret } = require("firebase-functions/params");
 const { logger } = require("firebase-functions");
 const fulfillment = require("./fulfillment");
+const discounts = require("./discounts");
+
+// Server-side one-time prices (minor units) — mirror the adapter's ONETIME_AMOUNTS.
+// Used to resolve the ORIGINAL amount for discount preview/apply so the client never
+// supplies an amount. (Subscriptions are Phase 2 — preview returns not_applicable.)
+const ONETIME_PRICE_MINOR = { IN_PERSON: 7500, IN_PERSON_4PACK: 24000 };
+
 
 // PayPal secrets (Secret Manager). Declared here so the functions below can read
 // them via process.env at runtime. Set with:
@@ -207,10 +214,33 @@ async function handleEvent(providerName, e) {
           provider: providerName,
         });
       }
+      // Discount redemption (Feature 2): when the capture carried a code, record it
+      // (transactional + idempotent on the capture id) so usage counts are accurate.
+      if (e.discountRedemption?.code) {
+        try {
+          const dr = e.discountRedemption;
+          await discounts.recordRedemption({
+            codeId: dr.code,
+            userId: dr.userId,
+            mode: dr.mode || "payment",
+            productId: dr.productId,
+            originalAmount: dr.originalAmount,
+            discountedAmount: dr.discountedAmount,
+            amountOff:
+              dr.originalAmount != null && dr.discountedAmount != null
+                ? dr.originalAmount - dr.discountedAmount
+                : null,
+            transactionId: dr.transactionId,
+          });
+        } catch (err) {
+          logger.error("discount redemption recording failed (non-fatal)", { error: err.message });
+        }
+      }
       break;
 
 
     case "payment.refunded":
+
       if (e.transaction) {
         await fulfillment.writeTransactionRecord({
           userId: e.userId,
@@ -423,9 +453,19 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
         const v = parseFloat(capture.amount?.value ?? "0");
         return Math.round((Number.isNaN(v) ? 0 : v) * 100);
       })();
-      const item = PROVIDERS.paypal.resolveOneTimeByAmount
-        ? PROVIDERS.paypal.resolveOneTimeByAmount(minor)
-        : null;
+      // Resolve product identity. PREFER the threaded custom_id token (productId +
+      // code) so a DISCOUNTED capture resolves correctly — the discounted amount no
+      // longer matches the catalog amount. Fall back to amount inference (no code).
+      const parsedSync = PROVIDERS.paypal.parseOrderCustomId
+        ? PROVIDERS.paypal.parseOrderCustomId(capture.custom_id)
+        : { productId: null, code: null, originalAmount: null };
+      let item =
+        parsedSync.productId && PROVIDERS.paypal.resolveOneTimeByAppId
+          ? PROVIDERS.paypal.resolveOneTimeByAppId(parsedSync.productId)
+          : null;
+      if (!item && PROVIDERS.paypal.resolveOneTimeByAmount) {
+        item = PROVIDERS.paypal.resolveOneTimeByAmount(minor);
+      }
       const productName = item ? item.label : "Training Sessions";
       try {
         await fulfillment.fulfillSessionPackage({
@@ -450,7 +490,22 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
             type: "one_time", // synchronous one-time capture
           },
         });
+        // Record the discount redemption (idempotent on capture id; the webhook
+        // backup also attempts it and dedupes on the same capture id).
+        if (parsedSync.code) {
+          await discounts.recordRedemption({
+            codeId: parsedSync.code,
+            userId: uid,
+            mode: "payment",
+            productId: item ? item.appId : null,
+            originalAmount: parsedSync.originalAmount ?? (item ? item.amount : null),
+            discountedAmount: minor,
+            amountOff: parsedSync.originalAmount != null ? parsedSync.originalAmount - minor : null,
+            transactionId: capture.id,
+          });
+        }
       } catch (e) {
+
         // Fail-soft: the webhook backup will still fulfill. Don't fail the capture.
         logger.error("capturePaypalOrder: synchronous fulfillment failed (webhook will retry)", { uid, orderId, error: e.message });
       }
@@ -480,14 +535,243 @@ const createPaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }
   const priceId = req.data?.priceId;
   if (!priceId) throw new HttpsError("invalid-argument", "priceId required.");
   const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
+
+  // DISCOUNT (Feature 2): when a code is supplied, re-validate it + recompute the
+  // discounted amount SERVER-SIDE (the client never sets the amount). The original
+  // amount comes from our server price map; the floored discounted amount is passed
+  // to the adapter's createOrder, which also threads the productId + code through
+  // custom_id so the capture path records the redemption + resolves the product.
+  const rawCode = req.data?.discountCode;
+  const orderOpts = {};
+  if (rawCode) {
+    const originalMinor = ONETIME_PRICE_MINOR[priceId];
+    if (originalMinor == null) {
+      throw new HttpsError("invalid-argument", "Unknown one-time item for discount.");
+    }
+    try {
+      const codeDoc = await discounts.getCode(rawCode);
+      const perUser = codeDoc
+        ? await discounts.countUserRedemptions(codeDoc.id, uid)
+        : 0;
+      const v = discounts.validateCode(
+        codeDoc,
+        { productId: null, mode: "payment", priceId, userId: uid },
+        perUser
+      );
+      if (!v.valid) {
+        throw new HttpsError("failed-precondition", `Discount code ${v.reason}.`);
+      }
+      const computed = discounts.computeDiscountedAmount(codeDoc, originalMinor);
+      if (computed.freeComp) {
+        // Free comps bypass PayPal entirely (Phase 2 path). Not used in phase-1
+        // paid checkout — reject here so a $0 order is never sent to PayPal.
+        throw new HttpsError("failed-precondition", "This code is a free comp, not a paid discount.");
+      }
+      orderOpts.discountedAmountMinor = computed.discountedAmount;
+      orderOpts.discountCode = codeDoc.id;
+    } catch (e) {
+      if (e instanceof HttpsError) throw e;
+      logger.error("createPaypalOrder: discount validation failed", { uid, priceId, error: e.message });
+      throw new HttpsError("internal", "Failed to validate discount.");
+    }
+  }
+
   try {
-    const orderId = await PROVIDERS.paypal.createOrder(priceId, uid, cfg);
+    const orderId = await PROVIDERS.paypal.createOrder(priceId, uid, cfg, orderOpts);
     return { ok: true, orderId };
   } catch (err) {
     logger.error("createPaypalOrder failed", { uid, priceId, error: err.message });
     throw new HttpsError("internal", "Failed to create order.");
   }
 });
+
+/**
+ * Callable: validate + PREVIEW a discount code (Feature 2, read-only). Resolves the
+ * server-side original amount, validates the code, and returns a neutral
+ * DiscountPreview. Records NO redemption and changes no counts. Phase 1 supports
+ * one-time items; subscriptions return { valid:false, reason:'not_applicable' }.
+ */
+const previewDiscount = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const code = req.data?.code;
+  const priceId = req.data?.priceId;
+  const mode = req.data?.mode === "subscription" ? "subscription" : "payment";
+  const productId = req.data?.productId || null;
+  if (!code || !priceId) throw new HttpsError("invalid-argument", "code and priceId required.");
+
+  // Phase 1: one-time only. Subscriptions (Phase 2) aren't discountable yet.
+  const originalMinor = ONETIME_PRICE_MINOR[priceId];
+  const empty = { originalAmount: 0, discountedAmount: 0, amountOff: 0 };
+  if (mode !== "payment" || originalMinor == null) {
+    return { valid: false, reason: "not_applicable", ...empty };
+  }
+
+  try {
+    const codeDoc = await discounts.getCode(code);
+    const perUser = codeDoc ? await discounts.countUserRedemptions(codeDoc.id, uid) : 0;
+    const v = discounts.validateCode(codeDoc, { productId, mode, priceId, userId: uid }, perUser);
+    if (!v.valid) {
+      return { valid: false, reason: v.reason, originalAmount: originalMinor, discountedAmount: originalMinor, amountOff: 0 };
+    }
+    const c = discounts.computeDiscountedAmount(codeDoc, originalMinor);
+    return {
+      valid: true,
+      code: codeDoc.id,
+      originalAmount: originalMinor,
+      discountedAmount: c.discountedAmount,
+      amountOff: c.amountOff,
+      freeComp: c.freeComp,
+      label: c.label,
+    };
+  } catch (err) {
+    logger.error("previewDiscount failed", { uid, code, error: err.message });
+    return { valid: false, reason: "error", ...empty };
+  }
+});
+
+// ---- Admin discount-code management (Feature 2, phase 1: create/list/deactivate) ----
+
+/** Throws unless the caller is an admin (admins/{uid}.role == 'admin'). */
+async function assertAdmin(uid) {
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const admin = require("firebase-admin");
+  const snap = await admin.firestore().collection("admins").doc(uid).get();
+  if (!snap.exists || snap.data()?.role !== "admin") {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+}
+
+/** Callable: create/overwrite a discount code (admin only). */
+const createDiscountCode = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const d = req.data || {};
+  const id = discounts.normalizeCode(d.code);
+  if (!id) throw new HttpsError("invalid-argument", "code required.");
+  if (d.type !== "percentage" && d.type !== "fixed" && d.freeComp !== true) {
+    throw new HttpsError("invalid-argument", "type must be 'percentage' or 'fixed' (or freeComp).");
+  }
+  const doc = {
+    code: id,
+    type: d.type === "fixed" ? "fixed" : "percentage",
+    value: Number(d.value) || 0,
+    active: d.active !== false,
+    expiresAt: d.expiresAt ? admin.firestore.Timestamp.fromMillis(Number(d.expiresAt)) : null,
+    maxRedemptions: d.maxRedemptions != null ? Number(d.maxRedemptions) : null,
+    redemptionCount: 0,
+    perUserLimit: d.perUserLimit != null ? Number(d.perUserLimit) : null,
+    appliesTo: d.appliesTo || null,
+    minChargeFloor: d.minChargeFloor != null ? Number(d.minChargeFloor) : discounts.DEFAULT_MIN_CHARGE_FLOOR,
+    freeComp: d.freeComp === true,
+    discountScope: d.discountScope || "one_time",
+    fallbackPlanIds: d.fallbackPlanIds || null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdBy: req.auth.uid,
+  };
+  await admin.firestore().collection("discount_codes").doc(id).set(doc, { merge: true });
+  return { ok: true, id };
+});
+
+/** Callable: list discount codes (admin only). */
+const listDiscountCodes = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const snap = await admin.firestore().collection("discount_codes").get();
+  const codes = snap.docs.map((doc) => {
+    const x = doc.data() || {};
+    return {
+      id: doc.id,
+      code: x.code || doc.id,
+      type: x.type,
+      value: x.value,
+      active: x.active !== false,
+      expiresAt: x.expiresAt?.toMillis ? x.expiresAt.toMillis() : null,
+      maxRedemptions: x.maxRedemptions ?? null,
+      redemptionCount: x.redemptionCount || 0,
+      perUserLimit: x.perUserLimit ?? null,
+      minChargeFloor: x.minChargeFloor ?? discounts.DEFAULT_MIN_CHARGE_FLOOR,
+      freeComp: x.freeComp === true,
+      discountScope: x.discountScope || "one_time",
+      appliesTo: x.appliesTo || null,
+    };
+  });
+  return { ok: true, codes };
+});
+
+/** Callable: activate/deactivate a discount code (admin only). */
+const setDiscountCodeActive = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const id = discounts.normalizeCode(req.data?.code);
+  if (!id) throw new HttpsError("invalid-argument", "code required.");
+  await admin.firestore().collection("discount_codes").doc(id).set(
+    { active: req.data?.active !== false, updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+  return { ok: true, id };
+});
+
+/**
+ * Callable: edit an EXISTING discount code's mutable fields (admin only).
+ * The code string is the document identity (and is referenced by redemptions), so it
+ * CANNOT be changed here — only type/value/floor/limits/expiry/freeComp/active/scope.
+ * Critically this NEVER touches `redemptionCount`, `code`, `createdAt`, or `createdBy`
+ * (unlike createDiscountCode, which resets redemptionCount to 0). Only fields PRESENT
+ * in req.data are updated, so partial edits are safe.
+ */
+const updateDiscountCode = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const d = req.data || {};
+  const id = discounts.normalizeCode(d.code);
+  if (!id) throw new HttpsError("invalid-argument", "code required.");
+
+  const ref = admin.firestore().collection("discount_codes").doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Discount code not found.");
+
+  // Build an update with ONLY the provided, editable fields (never code/count/created*).
+  const update = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  if (d.type !== undefined) {
+    if (d.type !== "percentage" && d.type !== "fixed") {
+      throw new HttpsError("invalid-argument", "type must be 'percentage' or 'fixed'.");
+    }
+    update.type = d.type;
+  }
+  if (d.value !== undefined) update.value = Number(d.value) || 0;
+  if (d.active !== undefined) update.active = d.active !== false;
+  if (d.expiresAt !== undefined) {
+    update.expiresAt = d.expiresAt
+      ? admin.firestore.Timestamp.fromMillis(Number(d.expiresAt))
+      : null;
+  }
+  if (d.maxRedemptions !== undefined) {
+    update.maxRedemptions = d.maxRedemptions != null && d.maxRedemptions !== ""
+      ? Number(d.maxRedemptions)
+      : null;
+  }
+  if (d.perUserLimit !== undefined) {
+    update.perUserLimit = d.perUserLimit != null && d.perUserLimit !== ""
+      ? Number(d.perUserLimit)
+      : null;
+  }
+  if (d.minChargeFloor !== undefined) {
+    update.minChargeFloor = d.minChargeFloor != null
+      ? Number(d.minChargeFloor)
+      : discounts.DEFAULT_MIN_CHARGE_FLOOR;
+  }
+  if (d.freeComp !== undefined) update.freeComp = d.freeComp === true;
+  if (d.discountScope !== undefined) update.discountScope = d.discountScope || "one_time";
+  if (d.appliesTo !== undefined) update.appliesTo = d.appliesTo || null;
+  if (d.fallbackPlanIds !== undefined) update.fallbackPlanIds = d.fallbackPlanIds || null;
+
+  await ref.set(update, { merge: true });
+  return { ok: true, id };
+});
+
+
 
 /**
  * Callable: create a vault SETUP TOKEN so the client's ACDC card fields can vault a
@@ -633,8 +917,16 @@ module.exports = {
   createPaypalCardSetupToken,
   createPaypalSubscriptionWithCard,
 
+  // Discount codes (Feature 2, phase 1)
+  previewDiscount,
+  createDiscountCode,
+  listDiscountCodes,
+  setDiscountCodeActive,
+  updateDiscountCode,
+
 
   setFulfillmentHooks, // ../index.js injects parity side-effects (welcome email/goal/feed)
+
   handleEvent, // exported for unit testing
   PROVIDERS,
 

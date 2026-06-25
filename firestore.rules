@@ -423,10 +423,24 @@ service cloud.firestore {
       }
     }
 
+    // DISCOUNT CODES (Feature 2 — discount codes). Server-only: the code
+    // definitions (type/value/limits/floor) and the redemption ledger must NOT be
+    // readable or writable by clients — they are validated/applied exclusively via
+    // auth-gated Cloud Functions (previewDiscount + the order/capture callables),
+    // and managed by admin-gated callables. Admin SDK bypasses these rules.
+    // (design §2.3 — NFR-1: clients cannot enumerate codes or influence amounts.)
+    match /discount_codes/{codeId} {
+      allow read, write: if false;
+    }
+    match /discount_redemptions/{redemptionId} {
+      allow read, write: if false;
+    }
+
     // Stripe Products - Public read access
     match /stripe_products/{document=**} {
       allow read: if true;  // Allow public reads for product/price info
     }
+
     
     // CollectionGroup rules for Stripe subcollections (for business dashboard analytics)
     match /{path=**}/subscriptions/{subscriptionId} {

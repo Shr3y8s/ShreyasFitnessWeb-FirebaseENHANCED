@@ -17,38 +17,43 @@ the neutral-interface rule (no wallet name in app/pages/components — only the 
 
 ---
 
-# PHASE 1 — Venmo
+# PHASE 1 — Venmo  ✅ COMPLETE (verified in sandbox 2026-06-24)
+
+> Implemented + checked in. Also delivered alongside: a controlled, boxed
+> payment-method layout (Card → PayPal → More ways to pay), checkout right-side
+> accepted-methods sidebar, and enlarged Google Pay / Apple Pay logos.
 
 ## T1 — Enable Venmo funding
 
-- [ ] **T1.1** In `app/src/lib/payments/providers/paypal.ts` `loadPayPal(...)`, add
+- [x] **T1.1** In `app/src/lib/payments/providers/paypal.ts` `loadPayPal(...)`, add
       `enableFunding: 'venmo'` to the single `loadScript` options (do NOT add a second
       load — NFR-3).
-- [ ] **T1.2** (Optional) Render a dedicated, eligibility-guarded `FUNDING.VENMO`
-      button in `renderCheckout`, mirroring the existing guarded `FUNDING.CARD`
-      pattern (non-fatal if not eligible); extend the cleanup closure to close it.
+- [x] **T1.2** Venmo renders via its own eligibility-guarded `FUNDING.VENMO` button in
+      the "More ways to pay" boxed section of `renderCheckout` (each funding source
+      rendered explicitly for controlled order); cleanup closes all instances.
 
 ## T2 — Verify fulfillment + discounts (SANDBOX)
 
-- [ ] **T2.1** Confirm a Venmo **one-time** purchase captures + fulfills via the
+- [x] **T2.1** Confirm a Venmo **one-time** purchase captures + fulfills via the
       existing `capturePaypalOrder` + `PAYMENT.CAPTURE.COMPLETED` path.
-- [ ] **T2.2** Confirm a Venmo **subscription** activates via the existing
+- [x] **T2.2** Confirm a Venmo **subscription** activates via the existing
       create + synchronous confirmation + `BILLING.SUBSCRIPTION.ACTIVATED` path.
-- [ ] **T2.3** Confirm a non-eligible context omits Venmo without breaking the PayPal/
+- [x] **T2.3** Confirm a non-eligible context omits Venmo without breaking the PayPal/
       card buttons (FR-2).
-- [ ] **T2.4** (If Feature 2 phase 1 is in) Confirm a discounted Venmo one-time charges
-      the server-set discounted amount (FR-4).
+- [ ] **T2.4** (Deferred to Feature 2 phase 1) Confirm a discounted Venmo one-time
+      charges the server-set discounted amount (FR-4).
 
 ## T3 — Logos & neutral copy
 
-- [ ] **T3.1** Add a Venmo mark to `PaymentMethodLogos` where appropriate.
-- [ ] **T3.2** Confirm no app page/component references `venmo` (adapter-only — G2).
+- [x] **T3.1** Add a Venmo mark to `PaymentMethodLogos` where appropriate.
+- [x] **T3.2** Confirm no app page/component references `venmo` (adapter-only — G2).
 
 ## T4 — Phase 1 acceptance
 
-- [ ] **T4.1** Venmo renders + completes (one-time + subscription) in sandbox.
-- [ ] **T4.2** Non-eligibility non-fatal; no regression to existing buttons (NFR-2).
-- [ ] **T4.3** Neutral-interface audit clean.
+- [x] **T4.1** Venmo renders + completes (one-time + subscription) in sandbox.
+- [x] **T4.2** Non-eligibility non-fatal; no regression to existing buttons (NFR-2).
+- [x] **T4.3** Neutral-interface audit clean.
+
 
 ---
 

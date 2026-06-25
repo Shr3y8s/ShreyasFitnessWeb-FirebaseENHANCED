@@ -22,7 +22,9 @@ import {
   selectSignupPrice,
   selectSessionPrice,
 } from '@/lib/payments';
+import type { DiscountPreview } from '@/lib/payments';
 import { getCheckoutItem } from '@/lib/constants';
+
 import { ProviderCheckout } from '@/components/payments/ProviderCheckout';
 import { PaymentMethodLogos } from '@/components/payments/PaymentMethodLogos';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,6 +69,15 @@ function CheckoutInner() {
   const [amount, setAmount] = useState<number>(0); // minor units
   const [priceType, setPriceType] = useState<'recurring' | 'one_time'>('one_time');
   const [checkoutPriceId, setCheckoutPriceId] = useState<string>('');
+  // Discount preview (Feature 2). ProviderCheckout reports the validated preview up
+  // here so the Order Summary is the single source of price truth; null = no code.
+  const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
+  // Checkout stage reported by ProviderCheckout. Payment-only chrome (the "Payment
+  // Options" header + accepted-methods sidebar) shows only on the 'payment' stage so
+  // Stage 1 (discount entry) stays clean. Defaults to 'payment' for non-discount flows.
+  const [checkoutStage, setCheckoutStage] = useState<'discount' | 'payment'>('payment');
+
+
 
   // Auth guard — /checkout requires an authenticated user (callers ensure this).
   useEffect(() => {
@@ -195,7 +206,10 @@ function CheckoutInner() {
               </div>
             ) : (
               <>
-                {/* Item summary */}
+                {/* Item summary — the single source of price truth. When a discount
+                    code is applied (ProviderCheckout reports it via onPreviewChange)
+                    this block updates IN PLACE to a subtotal / discount / total
+                    breakdown. No code → the plain price (unchanged). */}
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-5 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
@@ -207,47 +221,88 @@ function CheckoutInner() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-emerald-600">
-                        {formatCurrency(amount)}
-                      </div>
+                      {discountPreview ? (
+                        <>
+                          <div className="text-base text-gray-500 line-through">
+                            {formatCurrency(discountPreview.originalAmount)}
+                          </div>
+                          <div className="text-2xl font-bold text-emerald-600">
+                            {formatCurrency(discountPreview.discountedAmount)}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-2xl font-bold text-emerald-600">
+                          {formatCurrency(amount)}
+                        </div>
+                      )}
                       {priceType === 'recurring' && (
                         <div className="text-xs text-gray-600">per month</div>
                       )}
                     </div>
                   </div>
+
+                  {/* Discount line-items — shown only when a code is applied. */}
+                  {discountPreview && (
+                    <div className="mt-4 pt-4 border-t border-emerald-200 space-y-1.5 text-sm">
+                      <div className="flex items-center justify-between text-gray-700">
+                        <span>Subtotal</span>
+                        <span>{formatCurrency(discountPreview.originalAmount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-emerald-700">
+                        <span>
+                          {discountPreview.code}
+                          {discountPreview.label ? ` (${discountPreview.label})` : ''}
+                        </span>
+                        <span>−{formatCurrency(discountPreview.amountOff)}</span>
+                      </div>
+                      <div className="flex items-center justify-between font-semibold text-gray-900 pt-1.5 border-t border-emerald-100">
+                        <span>Total today</span>
+                        <span>{formatCurrency(discountPreview.discountedAmount)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Payment Options section */}
+
+                {/* Payment section. The "Payment Options" header + the no-account
+                    callout + the accepted-methods sidebar are PAYMENT-stage chrome —
+                    they're hidden during the discount stage (two-stage swap) so Stage 1
+                    shows only "Have a discount code?" + Continue. ProviderCheckout
+                    reports its stage via onStageChange. */}
                 <div className="pt-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-base font-semibold text-gray-900">Payment Options</h3>
-                    <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                      <Lock className="h-3 w-3" />
-                      Secure
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Choose how you&apos;d like to pay — PayPal, Pay Later, or any debit/credit
-                    card.
-                  </p>
-                  {/* Make the no-account card option explicit: the "Debit or Credit
-                      Card" button below is PayPal-hosted guest checkout (no PayPal
-                      login/account needed). */}
-                  <div className="flex items-start gap-2 mb-4 py-2.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
-                    <CreditCard className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                    <span>
-                      <span className="font-semibold">No PayPal account needed.</span> Choose{' '}
-                      <span className="font-semibold">Debit or Credit Card</span> to pay with any
-                      card — PayPal just processes it securely.
-                    </span>
-                  </div>
+                  {checkoutStage === 'payment' && (
+                    <>
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-base font-semibold text-gray-900">Payment Options</h3>
+                        <span className="inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                          <Lock className="h-3 w-3" />
+                          Secure
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Choose how you&apos;d like to pay — PayPal, Pay Later, or any debit/credit
+                        card.
+                      </p>
+                      {/* Make the no-account card option explicit: the "Debit or Credit
+                          Card" button below is PayPal-hosted guest checkout (no PayPal
+                          login/account needed). */}
+                      <div className="flex items-start gap-2 mb-4 py-2.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+                        <CreditCard className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <span>
+                          <span className="font-semibold">No PayPal account needed.</span> Choose{' '}
+                          <span className="font-semibold">Debit or Credit Card</span> to pay with any
+                          card — PayPal just processes it securely.
+                        </span>
+                      </div>
+                    </>
+                  )}
 
 
                   {/* Two columns on desktop: payment buttons (left) + accepted-methods
                       sidebar (right). Stacks to a single column on mobile so the logos
                       fall below the buttons on narrow screens. */}
                   <div className="grid md:grid-cols-[1fr_auto] gap-6 md:gap-8">
-                    {/* Provider method menu (wallet buttons + card-in-modal) */}
+                    {/* Provider method menu (Stage 1 discount field → Stage 2 wallet buttons) */}
                     <div>
                       <ProviderCheckout
                         mode={item!.mode}
@@ -257,27 +312,34 @@ function CheckoutInner() {
                         successUrl={successUrl}
                         cancelUrl={cancelUrl}
                         cardMode="modal"
-                        payLabel={`Pay ${formatCurrency(amount)}`}
+                        amount={amount}
+                        payLabel={`Pay ${formatCurrency(discountPreview ? discountPreview.discountedAmount : amount)}`}
+                        onPreviewChange={setDiscountPreview}
+                        onStageChange={setCheckoutStage}
                         metadata={{
 
                           userId: user?.uid || '',
                           item: itemKey || '',
                           type: item!.fulfillment,
+                          productId: item!.productId,
                         }}
                         onError={(e) =>
                           setError((e as Error)?.message || 'Payment failed. Please try again.')
                         }
                       />
+
                     </div>
 
-                    {/* Accepted methods — right sidebar on desktop (left divider),
-                        full-width below the buttons on mobile (top divider). */}
-                    <div className="md:w-56 md:border-l md:border-gray-200 md:pl-6 border-t border-gray-200 pt-5 md:pt-0 md:border-t-0">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        We accept all major credit/debit cards and wallets
-                      </p>
-                      <PaymentMethodLogos />
-                    </div>
+                    {/* Accepted methods — payment-stage only (right sidebar on desktop,
+                        full-width below the buttons on mobile). */}
+                    {checkoutStage === 'payment' && (
+                      <div className="md:w-56 md:border-l md:border-gray-200 md:pl-6 border-t border-gray-200 pt-5 md:pt-0 md:border-t-0">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          We accept all major credit/debit cards and wallets
+                        </p>
+                        <PaymentMethodLogos />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -288,6 +350,7 @@ function CheckoutInner() {
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
                   Secure payment • Your info is encrypted
                 </div>
+
 
 
               </>

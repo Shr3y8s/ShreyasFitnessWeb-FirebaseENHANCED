@@ -129,9 +129,41 @@ export interface ProviderCapabilities {
    * so its adapter intentionally does not implement analytics.
    */
   adminAnalytics?: boolean;
+  /**
+   * Provider supports app-managed discount codes (Feature 2). When true the
+   * adapter implements `previewDiscount` and honors `CheckoutOptions.discountCode`.
+   * PayPal ✅ (our own server-side discount system). Stripe ❌ here (no-op).
+   */
+  discounts?: boolean;
 }
 
 
+
+
+/**
+ * A validated discount preview, provider-neutral (Feature 2 — discount codes).
+ * Amounts are minor units (cents). The app shows this for display only; the
+ * SERVER always re-validates + recomputes the charged amount at order-create time
+ * (a tampered client can never change what is charged).
+ */
+export interface DiscountPreview {
+  valid: boolean;
+  /** Present when invalid: 'not_found' | 'inactive' | 'expired' | 'limit_reached'
+   *  | 'per_user_limit' | 'not_applicable' | 'not_supported' | 'error'. */
+  reason?: string;
+  /** Canonical code echoed back (uppercased). */
+  code?: string;
+  /** Original amount (minor units). */
+  originalAmount: number;
+  /** Discounted amount actually charged (minor units, post-floor). */
+  discountedAmount: number;
+  /** Amount off (minor units). */
+  amountOff: number;
+  /** True when this is a free comp (no processor charge — Phase 2). */
+  freeComp?: boolean;
+  /** Human label, e.g. "25% off" / "$10.00 off" / "$25% off (min $1.00)". */
+  label?: string;
+}
 
 /** Options for starting a checkout, provider-neutral. */
 export interface CheckoutOptions {
@@ -144,7 +176,14 @@ export interface CheckoutOptions {
   successUrl: string;
   cancelUrl: string;
   metadata?: Record<string, string>;
+  /**
+   * Optional validated discount code (Feature 2). The adapter forwards it to the
+   * server, which re-validates it and creates the order/subscription at the
+   * discounted amount. The client never sets the amount itself.
+   */
+  discountCode?: string;
 }
+
 
 /** Result of starting checkout. `url` is set when the flow is a redirect. */
 export interface CheckoutResult {
@@ -177,6 +216,20 @@ export interface PaymentProvider {
   fetchAllProducts(includeInactive?: boolean): Promise<Product[]>;
   fetchProduct(productId: string): Promise<Product | null>;
 
+  /**
+   * Validate + preview a discount code for an item (capabilities.discounts).
+   * Server-backed and READ-ONLY (records no redemption). Returns a neutral
+   * DiscountPreview for display; the server independently recomputes the charged
+   * amount at order-create time. Stripe returns { valid:false, reason:'not_supported' }.
+   */
+  previewDiscount?(opts: {
+    code: string;
+    productId: string;
+    mode: 'subscription' | 'payment';
+    priceId: string;
+  }): Promise<DiscountPreview>;
+
+
   // Checkout — opens an overlay, redirects, or returns a URL to follow.
   startCheckout(opts: CheckoutOptions): Promise<CheckoutResult>;
 
@@ -192,9 +245,14 @@ export interface PaymentProvider {
     opts: CheckoutOptions & {
       container: HTMLElement;
       onApproved: (transactionId?: string) => void;
+      /** Fires the instant buyer approval returns (popup closes), BEFORE the server
+       *  capture/activation await — lets the UI show a "Finalizing payment…" state
+       *  during the otherwise-blank gap until navigation. */
+      onProcessing?: () => void;
       onError?: (e: unknown) => void;
     }
   ): Promise<() => void>;
+
 
 
   /**

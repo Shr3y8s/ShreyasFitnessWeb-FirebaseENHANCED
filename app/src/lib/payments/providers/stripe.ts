@@ -19,7 +19,9 @@ import type {
   Transaction,
   CheckoutOptions,
   CheckoutResult,
+  DiscountPreview,
 } from '../types';
+
 
 /** Map a Stripe-shaped product to the neutral domain model. */
 function toNeutralProduct(p: StripeProduct): Product {
@@ -47,11 +49,27 @@ export const stripeProvider: PaymentProvider = {
     showsStoredCard: true,
     inAppCancel: true,
     externalAdminDashboard: true,
+    // App-managed discount codes (Feature 2) are a PayPal-only capability here.
+    // Stripe is denied for live use on this app, so its adapter is a no-op.
+    discounts: false,
+  },
+
+  // No-op preview so the neutral interface stays type-safe even if a caller
+  // (incorrectly) asks Stripe for a discount. Records nothing; always invalid.
+  async previewDiscount(): Promise<DiscountPreview> {
+    return {
+      valid: false,
+      reason: 'not_supported',
+      originalAmount: 0,
+      discountedAmount: 0,
+      amountOff: 0,
+    };
   },
 
   getAdminDashboardUrl(): string {
     return 'https://dashboard.stripe.com';
   },
+
 
   async fetchAllProducts(includeInactive = false): Promise<Product[]> {
     const products = await stripeFetchAllProducts(includeInactive);

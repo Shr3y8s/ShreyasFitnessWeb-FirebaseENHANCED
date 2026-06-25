@@ -169,7 +169,32 @@ export const paypalProvider: PaymentProvider = {
     inAppCancel: true,
     externalAdminDashboard: true,
     adminAnalytics: true,
+    discounts: true, // app-managed discount codes (Feature 2)
   },
+
+  // Validate + preview a discount code for an item (READ-ONLY; records nothing).
+  // Backed by the `previewDiscount` callable, which resolves the original amount
+  // server-side, validates the code, and returns the floored discounted amount.
+  // The server independently recomputes the charged amount at order-create time.
+  async previewDiscount(opts: {
+    code: string;
+    productId: string;
+    mode: 'subscription' | 'payment';
+    priceId: string;
+  }) {
+    const { httpsCallable } = await import('firebase/functions');
+    const { functions } = await import('@/lib/firebase');
+    const fn = httpsCallable(functions, 'previewDiscount');
+    const res = await fn({
+      code: opts.code,
+      productId: opts.productId,
+      mode: opts.mode,
+      priceId: opts.priceId,
+      paypalEnv: PAYPAL_ENV,
+    });
+    return res.data as import('../types').DiscountPreview;
+  },
+
 
   getAdminDashboardUrl(): string {
     // Env-aware PayPal merchant dashboard (Activity → payments/subscriptions).
@@ -201,9 +226,11 @@ export const paypalProvider: PaymentProvider = {
     opts: CheckoutOptions & {
       container: HTMLElement;
       onApproved: (transactionId?: string) => void;
+      onProcessing?: () => void;
       onError?: (e: unknown) => void;
     }
   ): Promise<() => void> {
+
 
     if (!PAYPAL_CLIENT_ID) {
       throw new Error(
@@ -220,11 +247,14 @@ export const paypalProvider: PaymentProvider = {
     const buttonConfig: Record<string, any> = {
       style: { layout: 'vertical', shape: 'rect', label: 'paypal' },
       onApprove: () => {
-        // UI feedback only — the webhook fulfills.
+        // Approval returned (popup closed) → show the "Finalizing…" state, then the
+        // webhook fulfills (activation). UI feedback only.
+        opts.onProcessing?.();
         opts.onApproved();
       },
       onError: (e: unknown) => opts.onError?.(e),
     };
+
 
     if (isSubscription) {
       buttonConfig.createSubscription = (_data: unknown, actions: any) =>
@@ -234,25 +264,37 @@ export const paypalProvider: PaymentProvider = {
         });
     } else {
       const oneTime = oneTimeAmount(opts.priceId);
+
       if (!oneTime) {
         throw new Error(`Unknown one-time PayPal item: ${opts.priceId}`);
       }
-      buttonConfig.createOrder = (_data: unknown, actions: any) =>
-        actions.order.create({
-          intent: 'CAPTURE',
-          purchase_units: [
-            {
-              amount: {
-                currency_code: 'USD',
-                value: (oneTime.amount / 100).toFixed(2),
-              },
-              description: oneTime.label,
-              custom_id: opts.userId, // webhook maps order → user
-            },
-          ],
+      // Create the order SERVER-SIDE via the callable (NOT actions.order.create).
+      // The server resolves the amount from the priceId, re-validates any
+      // discountCode, computes the floored discounted amount, and threads the
+      // productId + code through custom_id — so a DISCOUNTED order is created at the
+      // correct amount and the capture path can record the redemption + resolve the
+      // product. The client never sets the amount. (Feature 2 — discount codes.)
+      buttonConfig.createOrder = async () => {
+        const { httpsCallable } = await import('firebase/functions');
+        const { functions } = await import('@/lib/firebase');
+        const createOrder = httpsCallable(functions, 'createPaypalOrder');
+        const res = await createOrder({
+          priceId: opts.priceId,
+          userId: opts.userId,
+          discountCode: opts.discountCode,
+          paypalEnv: PAYPAL_ENV,
         });
+        const orderId = (res?.data as { orderId?: string } | undefined)?.orderId;
+        if (!orderId) throw new Error('Failed to create PayPal order.');
+        return orderId;
+      };
       buttonConfig.onApprove = async (data: any) => {
+        // Approval returned (popup closed) → show the "Finalizing…" state during the
+        // server capture below so the page is never left blank.
+        opts.onProcessing?.();
+
         // Capture SERVER-SIDE via callable. The browser SDK's actions.order.capture()
+
         // is unreliable for guest-card orders (permission_denied / Insufficient
         // privileges); our Functions credentials capture reliably. The callable also
         // fulfills synchronously and returns the capture id as `transactionId` — we
@@ -442,11 +484,13 @@ export const paypalProvider: PaymentProvider = {
         const data = await callable('createPaypalOrder', {
           priceId: opts.priceId,
           userId: opts.userId,
+          discountCode: opts.discountCode, // Feature 2: server re-validates + applies
           paypalEnv: PAYPAL_ENV,
         });
         if (!data?.orderId) throw new Error('Failed to create PayPal order.');
         return data.orderId as string;
       };
+
       cardFieldConfig.onApprove = async (data: { orderID?: string }) => {
         // Capture server-side (guest-card client capture is unreliable — FR-11).
         await callable('capturePaypalOrder', { orderId: data?.orderID, paypalEnv: PAYPAL_ENV });

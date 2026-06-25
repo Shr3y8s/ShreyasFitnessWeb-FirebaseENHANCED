@@ -26,7 +26,9 @@ import {
   LayoutDashboard,
   LogOut,
   Inbox,
+  Tag,
 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 
@@ -128,9 +130,22 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={pathname === '/dashboard/admin/discount-codes' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/admin/discount-codes">
+                    <Tag className="w-4 h-4" />
+                    <span className="font-medium">Discount Management</span>
+                  </Link>
+
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
 
         {/* Business Operations Section */}
         <SidebarGroup className="-mb-2">

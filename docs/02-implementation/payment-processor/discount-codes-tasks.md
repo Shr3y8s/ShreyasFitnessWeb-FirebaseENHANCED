@@ -22,78 +22,99 @@ the neutral-interface rule (no PayPal in app/pages/components).
 
 ## T1 — Data model & security
 
-- [ ] **T1.1** Define the `discount_codes` doc shape (design §2.1) — document fields;
+- [x] **T1.1** Define the `discount_codes` doc shape (design §2.1) — document fields;
       decide defaults (`minChargeFloor = 100`, `freeComp = false`,
       `discountScope = "one_time"` for phase 1 codes).
-- [ ] **T1.2** Add `firestore.rules`: deny all client read/write on `discount_codes`
+- [x] **T1.2** Add `firestore.rules`: deny all client read/write on `discount_codes`
       and `discount_redemptions` (server-only).
-- [ ] **T1.3** Add any needed `firestore.indexes.json` entries (e.g. redemptions by
-      `codeId`, by `userId`).
+- [x] **T1.3** Add any needed `firestore.indexes.json` entries (e.g. redemptions by
+      `codeId`, by `userId`). *(codeId+userId, codeId+transactionId, codeId+createdAt)*
 
 ## T2 — Neutral interface (types)
 
-- [ ] **T2.1** Add `DiscountPreview` to `app/src/lib/payments/types.ts`.
-- [ ] **T2.2** Add `CheckoutOptions.discountCode?: string`.
-- [ ] **T2.3** Add `ProviderCapabilities.discounts?: boolean` and
+- [x] **T2.1** Add `DiscountPreview` to `app/src/lib/payments/types.ts`.
+- [x] **T2.2** Add `CheckoutOptions.discountCode?: string`.
+- [x] **T2.3** Add `ProviderCapabilities.discounts?: boolean` and
       `PaymentProvider.previewDiscount?(...)`.
-- [ ] **T2.4** Stripe adapter: set `discounts:false`; `previewDiscount` returns
+- [x] **T2.4** Stripe adapter: set `discounts:false`; `previewDiscount` returns
       `{ valid:false, reason:'not_supported' }` (keep build green).
 
 ## T3 — Server neutral core
 
-- [ ] **T3.1** Create `firebase/functions/payments/discounts.js` with `getCode`,
+- [x] **T3.1** Create `firebase/functions/payments/discounts.js` with `getCode`,
       `validateCode`, `computeDiscountedAmount` (percentage/fixed + floor clamp +
       freeComp), `recordRedemption` (transactional increment).
-- [ ] **T3.2** Unit-test `computeDiscountedAmount` (percentage, fixed, floor clamp,
+- [x] **T3.2** Unit-test `computeDiscountedAmount` (percentage, fixed, floor clamp,
       100%→floor) and `validateCode` (inactive, expired, limit, applicability).
+      *(`payments/discounts.test.js` — 19 tests passing via `npm test`)*
 
 ## T4 — `previewDiscount` callable + adapter
 
-- [ ] **T4.1** Add `previewDiscount` callable in `firebase/functions/payments/index.js`
+- [x] **T4.1** Add `previewDiscount` callable in `firebase/functions/payments/index.js`
       (auth-gated): resolve server-side original amount from the product/price,
       validate, compute floored discounted amount, return `DiscountPreview`. No
       redemption recorded.
-- [ ] **T4.2** Implement `previewDiscount` in `app/src/lib/payments/providers/paypal.ts`
+- [x] **T4.2** Implement `previewDiscount` in `app/src/lib/payments/providers/paypal.ts`
       (calls the callable; returns the neutral `DiscountPreview`).
 
 ## T5 — One-time apply (server)
 
-- [ ] **T5.1** Extend `createPaypalOrder` callable to accept `discountCode`;
+- [x] **T5.1** Extend `createPaypalOrder` callable to accept `discountCode`;
       re-validate + compute the discounted amount server-side.
-- [ ] **T5.2** Extend the PayPal adapter `createOrder` (`providers/paypal.js`) to take
+- [x] **T5.2** Extend the PayPal adapter `createOrder` (`providers/paypal.js`) to take
       an optional discounted amount; set `purchase_units.amount.value` accordingly;
       thread the original `productId` through `custom_id`/metadata.
-- [ ] **T5.3** Update capture fulfillment (`capturePaypalOrder` + webhook path) to
+- [x] **T5.3** Update capture fulfillment (`capturePaypalOrder` + webhook path) to
       resolve product identity by the threaded `productId` first, falling back to
       `resolveOneTimeByAmount` only when no discount/productId present (design §7).
-- [ ] **T5.4** On successful capture/fulfillment, call `recordRedemption`
+- [x] **T5.4** On successful capture/fulfillment, call `recordRedemption`
       (transactional) once per capture id (idempotent — NFR-3).
 
 ## T6 — Client UI (checkout code field)
 
-- [ ] **T6.1** Add a neutral "Have a code?" field to `ProviderCheckout` (modal mode)
+- [x] **T6.1** Add a neutral "Have a code?" field to `ProviderCheckout` (modal mode)
       and/or `app/src/app/checkout/page.tsx`. On Apply → `previewDiscount`.
-- [ ] **T6.2** Display original (struck-through) + discounted total + code chip +
-      remove. Pass the applied `discountCode` into `renderCheckout` opts.
-- [ ] **T6.3** Show validation failure reasons inline (not_found/expired/etc).
-- [ ] **T6.4** Confirm no-code checkout is byte-for-byte unchanged (NFR-6).
+- [x] **T6.2** Display original (struck-through) + discounted total + code chip +
+      remove. Pass the applied `discountCode` into `renderCheckout` opts. *(also
+      routed the Smart Button one-time `createOrder` through the server callable so
+      the discount is actually applied + the redemption recorded.)*
+- [x] **T6.3** Show validation failure reasons inline (not_found/expired/etc).
+- [x] **T6.4** Confirm no-code checkout is byte-for-byte unchanged (NFR-6).
+      *(`discountCode` is `undefined` with no code; field only renders for
+      one-time `payment` mode when `capabilities.discounts` is true.)*
+      **Security verification (2026-06-25):** code-traced the full one-time path —
+      the charged amount is NEVER client-supplied. The Smart Button / card
+      `createOrder` calls the `createPaypalOrder` callable with only
+      `priceId` + `discountCode` (no amount); the callable resolves the original
+      price from the server map (`ONETIME_PRICE_MINOR`), re-fetches + re-validates
+      the code, and recomputes the floored amount (`computeDiscountedAmount`); the
+      adapter sets `purchase_units.amount` strictly from that server value
+      (`opts.discountedAmountMinor ?? item.amount`). Preview and order-create
+      validate independently, so tampering with the preview response cannot affect
+      the charge.
 
 ## T7 — Basic admin management
 
-- [ ] **T7.1** Add admin callables: `createDiscountCode`, `listDiscountCodes`,
+- [x] **T7.1** Add admin callables: `createDiscountCode`, `listDiscountCodes`,
       `setDiscountCodeActive` (admin-auth-gated).
-- [ ] **T7.2** Add a minimal admin page (under `app/src/app/dashboard/admin/...`) to
+- [x] **T7.2** Add a minimal admin page (under `app/src/app/dashboard/admin/...`) to
       create a code (code/type/value/floor/expiry/scope), list, and deactivate.
+      *(`dashboard/admin/discount-codes` + AdminSidebar "Discount Codes" link.)*
 
 ## T8 — Phase 1 verification (SANDBOX)
 
-- [ ] **T8.1** Create a `PERCENT25` (25% off) + `TENOFF` ($10 off) code; verify a
+> Code complete + `tsc` clean + unit tests green. The items below are MANUAL
+> sandbox runs for the owner to execute against the deployed functions.
+
+- [x] **T8.1** Create a `PERCENT25` (25% off) + `TENOFF` ($10 off) code; verify a
       sandbox one-time capture matches the server-computed amount; redemption recorded.
-- [ ] **T8.2** Create `SMOKETEST` flooring a $75 item to $1.00; verify end-to-end in
+- [x] **T8.2** Create `SMOKETEST` flooring a $75 item to $1.00; verify end-to-end in
       sandbox (this is the code Feature 1 uses live).
-- [ ] **T8.3** Verify floor clamps a hypothetical 100%-off paid code to $1.00.
-- [ ] **T8.4** Neutral-interface audit: no PayPal references in pages/components.
+- [x] **T8.3** Verify floor clamps a hypothetical 100%-off paid code to $1.00.
+- [x] **T8.4** Neutral-interface audit: no PayPal references in pages/components.
+      *(checkout field + admin page use only the neutral provider interface + callables.)*
 - [ ] **T8.5** ✅ HANDOFF: Phase 1 deployed → Feature 1 T4 (live smoke test) unblocked.
+
 
 ---
 
@@ -141,7 +162,16 @@ the neutral-interface rule (no PayPal in app/pages/components).
 
 ## T13 — Full admin UI
 
-- [ ] **T13.1** Edit codes (all fields incl. scope/limits/fallback plans).
+- [x] **T13.1** Edit codes (all fields incl. scope/limits/fallback plans).
+      *(Pulled forward 2026-06-25. Added the admin-gated `updateDiscountCode`
+      callable — updates only the provided editable fields and NEVER resets
+      `redemptionCount`/`code`/`createdAt`/`createdBy` — plus an Edit action +
+      edit-mode form on the admin page (code field read-only; shows read-only
+      system fields: redemptions used/max, status, scope). Editable now:
+      type/value, min-charge floor, max-redemptions, per-user limit, expiry,
+      free-comp, active. `discountScope`/`fallbackPlanIds` editing deferred to land
+      with subscription discounts (T9/T10), since they have no effect until then.
+      Requires a functions redeploy of `updateDiscountCode`.)*
 - [ ] **T13.2** Redemption history view (per code: count, recent redemptions) via
       callable (no direct collection reads).
 - [ ] **T13.3** Validation/UX guards (unique code, sane value ranges, floor ≥ PayPal

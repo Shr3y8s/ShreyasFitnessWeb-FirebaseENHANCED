@@ -354,18 +354,39 @@ async function parseEvent(event, ctx = {}) {
 
     // ---- One-time order capture (Orders API v2) → session package ----
     case "PAYMENT.CAPTURE.COMPLETED": {
-      // Resolve the neutral product identity from the captured amount ($75 / $240).
       const minor = toMinorUnits(r.amount);
-      const item = resolveOneTimeByAmount(minor);
+      // Resolve product identity. PREFER the threaded custom_id token (uid +
+      // productId + discount code) so a DISCOUNTED capture still resolves the right
+      // product — the captured amount no longer matches the catalog amount once a
+      // discount is applied. Fall back to amount→product inference for the legacy
+      // no-discount path (custom_id is the bare uid there).
+      const parsedCustom = parseOrderCustomId(r.custom_id);
+      const captureUserId = parsedCustom.userId || r.custom_id || null;
+      let item = parsedCustom.productId ? resolveOneTimeByAppId(parsedCustom.productId) : null;
+      if (!item) item = resolveOneTimeByAmount(minor);
       const appProductName = item ? item.label : "Training Sessions";
       events.push({
         type: "payment.completed",
-        userId: r.custom_id || null,
+        userId: captureUserId,
         isSessionPackage: true, // our only PayPal one-time items are session packages
         productId: item ? item.appId : null, // provider-neutral app product id
         productName: appProductName,
         quantity: item ? item.quantity : undefined,
+        // Discount redemption marker (Phase 1): when the order carried a code, the
+        // dispatcher records the redemption on fulfillment (idempotent on capture id).
+        discountRedemption: parsedCustom.code
+          ? {
+              code: parsedCustom.code,
+              userId: captureUserId,
+              mode: "payment",
+              productId: item ? item.appId : null,
+              originalAmount: parsedCustom.originalAmount ?? (item ? item.amount : null),
+              discountedAmount: minor,
+              transactionId: r.id,
+            }
+          : null,
         transaction: {
+
           id: r.id,
           date: toEpoch(r.create_time),
           amount: minor,
@@ -519,6 +540,42 @@ function resolveOneTimeByAmount(minorUnits) {
   return null;
 }
 
+/** Resolve a one-time item by its neutral app product id (e.g. "in_person_4pack"). */
+function resolveOneTimeByAppId(appId) {
+  if (!appId) return null;
+  for (const v of Object.values(ONETIME_AMOUNTS)) {
+    if (v.appId === appId) return v;
+  }
+  return null;
+}
+
+/**
+ * Parse an order `custom_id`. For discounted orders we thread a compact JSON token
+ * {u:uid, p:appProductId, c:code, o:originalMinor}; for the legacy no-discount path
+ * it's the bare uid string. Returns a normalized
+ * { userId, productId, code, originalAmount }.
+ */
+function parseOrderCustomId(customId) {
+  if (!customId || typeof customId !== "string") {
+    return { userId: null, productId: null, code: null, originalAmount: null };
+  }
+  if (customId.startsWith("{")) {
+    try {
+      const o = JSON.parse(customId);
+      return {
+        userId: o.u || null,
+        productId: o.p || null,
+        code: o.c || null,
+        originalAmount: typeof o.o === "number" ? o.o : null,
+      };
+    } catch {
+      // Fall through to bare-uid handling.
+    }
+  }
+  return { userId: customId, productId: null, code: null, originalAmount: null };
+}
+
+
 
 /**
  * Create a one-time PayPal Order SERVER-SIDE (ACDC card-fields flow). The amount is
@@ -526,23 +583,46 @@ function resolveOneTimeByAmount(minorUnits) {
  * the uid so the webhook maps the capture → user.
  * @returns the created order id
  */
-async function createOrder(priceId, customId, ctx = {}) {
+async function createOrder(priceId, customId, ctx = {}, opts = {}) {
   const item = ONETIME_AMOUNTS[priceId];
   if (!item) throw new Error(`Unknown one-time item: ${priceId}`);
   const token = await getAccessToken(ctx);
+
+  // Amount: server-resolved. When a validated discount is applied the caller passes
+  // `discountedAmountMinor` (already floored/computed server-side via discounts.js);
+  // otherwise we use the catalog amount. The client NEVER supplies the amount.
+  const amountMinor =
+    opts.discountedAmountMinor != null ? opts.discountedAmountMinor : item.amount;
+
+  // Thread the neutral app productId (and discount code) through custom_id as a
+  // compact JSON token so the capture path can resolve the product WITHOUT relying
+  // on amount→product inference (which breaks once a discount changes the amount).
+  // Falls back to the bare uid for the no-discount path (back-compat).
+  const orderCustomId =
+    opts.discountedAmountMinor != null || opts.discountCode
+      ? JSON.stringify({
+          u: customId || null, // the uid (createOrder's customId param)
+          p: item.appId,
+          c: opts.discountCode || null,
+          o: item.amount, // original amount (minor units) for redemption records
+        }).slice(0, 127) // PayPal custom_id max length is 127 chars
+      : customId || undefined;
+
   const order = await request("POST", "/v2/checkout/orders", token, {
     intent: "CAPTURE",
     purchase_units: [
       {
-        amount: { currency_code: "USD", value: (item.amount / 100).toFixed(2) },
+        amount: { currency_code: "USD", value: (amountMinor / 100).toFixed(2) },
         description: item.label,
-        custom_id: customId || undefined,
+        custom_id: orderCustomId,
       },
     ],
   }, ctx.base);
+
   return order.id;
 
 }
+
 
 /**
  * Create a vault SETUP TOKEN for a card (ACDC subscription flow). The client's
@@ -695,6 +775,9 @@ module.exports = {
   activatePaypalSubscription: activateSubscription,
   getSubscription,
   resolveOneTimeByAmount, // used by capturePaypalOrder for synchronous fulfillment
+  resolveOneTimeByAppId, // resolve product by neutral app id (discounted captures)
+  parseOrderCustomId, // decode the threaded uid/productId/code custom_id token
+
 
 
   // exported for tests / reuse

@@ -21,8 +21,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { getPaymentProvider } from '@/lib/payments';
-import type { CheckoutOptions, BillingAddress } from '@/lib/payments';
+import type { CheckoutOptions, BillingAddress, DiscountPreview } from '@/lib/payments';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tag, X } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
@@ -68,13 +71,33 @@ interface ProviderCheckoutProps {
    */
   cardMode?: 'inline' | 'modal';
   /**
+   * Base (pre-discount) amount in minor units (cents). Used to show "You'll be
+   * charged $X" on the payment stage when no discount is applied. Optional.
+   */
+  amount?: number;
+  /**
+   * Fired whenever the applied discount preview changes (apply → the validated
+   * DiscountPreview; remove/clear → null). Lets the page's Order Summary reflect the
+   * discounted breakdown (subtotal / discount / total) as the single source of truth.
+   */
+  onPreviewChange?: (preview: DiscountPreview | null) => void;
+  /**
+   * Fired whenever the internal checkout stage changes ('discount' → 'payment' and
+   * back via "Change"). Lets the page show payment-only chrome (e.g. the "Payment
+   * Options" header) only on the payment stage. Subscriptions/non-discount providers
+   * report 'payment' on mount.
+   */
+  onStageChange?: (stage: 'discount' | 'payment') => void;
+  /**
    * Fired before the processor call. May be async and may return `{ userId }`
+
    * (e.g. after creating the Firebase account + reCAPTCHA). Also the place to emit
    * GA4 begin_checkout. Throw to abort checkout. In modal mode it runs once on mount.
    */
   onBeforeCheckout?: () => BeforeCheckoutResult | Promise<BeforeCheckoutResult>;
   onError?: (e: unknown) => void;
 }
+
 
 export function ProviderCheckout({
   mode,
@@ -89,9 +112,14 @@ export function ProviderCheckout({
   disabled = false,
   className,
   cardMode = 'inline',
+  amount,
+  onPreviewChange,
+  onStageChange,
   onBeforeCheckout,
   onError,
 }: ProviderCheckoutProps) {
+
+
 
   const provider = getPaymentProvider({ mode });
   const isButton = provider.capabilities.buttonCheckout;
@@ -121,6 +149,12 @@ export function ProviderCheckout({
   const [processing, setProcessing] = useState(false);
   const [buttonsMounted, setButtonsMounted] = useState(false);
   const [cardSubmitting, setCardSubmitting] = useState(false);
+  // True once buyer approval returns (popup closed) and we're awaiting the server
+  // capture/activation + navigation. Drives a full-cover "Finalizing your payment…"
+  // overlay so the page is never left blank during that gap. Stays true through the
+  // navigation (we never set it back to false on the happy path).
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+
 
   // Modal-mode state
   const [walletMounting, setWalletMounting] = useState(isModal);
@@ -131,6 +165,99 @@ export function ProviderCheckout({
   // Billing address (AVS) — collected as our own inputs, passed into card submit().
   const [billingCountry, setBillingCountry] = useState('US');
   const [billingPostal, setBillingPostal] = useState('');
+
+  // ----- Discount code (Feature 2) — neutral, server-validated -----
+  // Phase 1 supports ONE-TIME items only. The field shows when the active provider
+  // advertises `capabilities.discounts` AND the checkout is a one-time payment.
+  // On Apply we call the adapter's previewDiscount (READ-ONLY); the applied code is
+  // threaded into buildOpts so the wallet/card create-order callable re-validates +
+  // applies it server-side (the client never sets the amount).
+  const discountsSupported = !!provider.capabilities.discounts && mode === 'payment';
+  const [codeInput, setCodeInput] = useState('');
+  const [appliedCode, setAppliedCode] = useState<string | undefined>(undefined);
+  const [preview, setPreview] = useState<DiscountPreview | null>(null);
+  const [discountChecking, setDiscountChecking] = useState(false);
+  const [discountError, setDiscountError] = useState<string>('');
+
+  // Two-stage swap (design): when discounts are supported the card opens on the
+  // DISCOUNT stage (code field + Continue) and the payment buttons are NOT mounted.
+  // Clicking Continue swaps to the PAYMENT stage (buttons mount once with the final
+  // amount → no flicker). "Change" goes back. When discounts aren't supported
+  // (subscriptions / non-discount providers) we open straight on PAYMENT so that
+  // flow is byte-for-byte unchanged.
+  const [stage, setStage] = useState<'discount' | 'payment'>(
+    discountsSupported ? 'discount' : 'payment'
+  );
+
+  // Report the current stage to the page so it can show payment-only chrome (the
+  // "Payment Options" header + accepted-methods sidebar) only on the payment stage.
+  // Fires on mount + whenever the stage swaps.
+  useEffect(() => {
+    onStageChange?.(stage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+
+
+  const fmtCents = (cents: number) =>
+
+    `$${(Math.max(0, cents) / 100).toFixed(2)}`;
+
+  // Map a neutral failure reason → a friendly inline message.
+  const reasonMessage = (reason?: string): string => {
+    switch (reason) {
+      case 'not_found': return "That code isn't valid.";
+      case 'inactive': return 'That code is no longer active.';
+      case 'expired': return 'That code has expired.';
+      case 'limit_reached': return 'That code has reached its redemption limit.';
+      case 'per_user_limit': return "You've already used that code.";
+      case 'not_applicable': return "That code doesn't apply to this item.";
+      case 'not_supported': return 'Discount codes are not available here.';
+      default: return "We couldn't apply that code. Please try again.";
+    }
+  };
+
+  const applyDiscount = async () => {
+    const code = codeInput.trim();
+    if (!code || !provider.previewDiscount) return;
+    setDiscountChecking(true);
+    setDiscountError('');
+    try {
+      const result = await provider.previewDiscount({
+        code,
+        productId: metadata?.type === 'subscription' ? '' : (metadata?.productId || ''),
+        mode,
+        priceId,
+      });
+      if (!result.valid) {
+        setPreview(null);
+        setAppliedCode(undefined);
+        onPreviewChange?.(null);
+        setDiscountError(reasonMessage(result.reason));
+        return;
+      }
+      setPreview(result);
+      setAppliedCode(result.code || code.toUpperCase());
+      // Let the page's Order Summary reflect the discounted breakdown.
+      onPreviewChange?.(result);
+    } catch {
+      setPreview(null);
+      setAppliedCode(undefined);
+      onPreviewChange?.(null);
+      setDiscountError("We couldn't apply that code. Please try again.");
+    } finally {
+      setDiscountChecking(false);
+    }
+  };
+
+  const removeDiscount = () => {
+    setAppliedCode(undefined);
+    setPreview(null);
+    setCodeInput('');
+    setDiscountError('');
+    onPreviewChange?.(null);
+  };
+
+
 
 
 
@@ -161,7 +288,12 @@ export function ProviderCheckout({
     successUrl,
     cancelUrl,
     metadata: { ...(metadata ?? {}), ...(extraMetadata ?? {}) },
+    // Applied discount code (Feature 2). The adapter forwards it to the server
+    // create-order callable, which re-validates + applies it (client never sets the
+    // amount). Undefined when no code is applied → byte-for-byte unchanged checkout.
+    discountCode: appliedCode,
   });
+
 
   // ----- MODAL MODE: mount wallet buttons immediately on first render -----
   // Strict-Mode-safe: no one-shot ref guard (that left the wallet container empty
@@ -169,13 +301,17 @@ export function ProviderCheckout({
   // mount and the guard blocked the real remount). Instead each run owns its mount
   // node + cleanup, and a `cancelled` flag drops a render that resolves post-unmount.
   useEffect(() => {
-    if (!isModal || !provider.renderCheckout) return;
+    // Only mount once we're on the PAYMENT stage (two-stage swap). On the discount
+    // stage the buttons are not rendered; switching back via "Change" returns to the
+    // discount stage and this effect's cleanup unmounts the buttons.
+    if (!isModal || stage !== 'payment' || !provider.renderCheckout) return;
 
     let cancelled = false;
     let localCleanup: (() => void) | null = null;
     let mountEl: HTMLDivElement | null = null;
 
     setWalletMounting(true);
+
     (async () => {
       try {
         const before = await onBeforeCheckout?.();
@@ -196,11 +332,18 @@ export function ProviderCheckout({
         const cleanup = await provider.renderCheckout({
           ...opts,
           container: mountEl,
+          onProcessing: () => setPaymentProcessing(true),
           onApproved: (transactionId) => {
             navigateToSuccess(transactionId);
           },
-          onError: (e) => onError?.(e),
+          onError: (e) => {
+            // Approval failed/cancelled before fulfillment — drop the overlay so the
+            // buttons are usable again.
+            setPaymentProcessing(false);
+            onError?.(e);
+          },
         });
+
 
         // If we were unmounted while the SDK was loading, tear the buttons back down.
         if (cancelled) {
@@ -223,8 +366,13 @@ export function ProviderCheckout({
       try { mountEl?.remove(); } catch { /* ignore */ }
       cleanupRef.current = null;
     };
+    // Re-mount the wallet buttons when entering the payment stage or when the applied
+    // discount code changes so the create-order callable runs again at the new
+    // (discounted) amount. Leaving the payment stage (Change) runs cleanup → unmount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isModal, priceId]);
+  }, [isModal, stage, priceId, appliedCode]);
+
+
 
 
   // ----- MODAL MODE: mount ACDC card fields when the modal opens -----
@@ -348,14 +496,17 @@ export function ProviderCheckout({
           ...opts,
           container: mountEl,
 
+          onProcessing: () => setPaymentProcessing(true),
           onApproved: (transactionId) => {
             navigateToSuccess(transactionId);
           },
           onError: (e) => {
+            setPaymentProcessing(false);
             setProcessing(false);
             onError?.(e);
           },
         });
+
 
         // Also mount ACDC hosted card fields (card-only, no PayPal account) into
         // their own isolated child node, alongside the wallet buttons.
@@ -391,10 +542,170 @@ export function ProviderCheckout({
     }
   };
 
-  // ----- MODAL MODE render: wallet inline + card-in-modal -----
+  // ----- STAGE 1 (discount): code field + Apply + Continue -----
+  // The numeric breakdown (subtotal / discount / total) lives in the page's Order
+  // Summary (driven by onPreviewChange). Here we only own the input, the applied
+  // code chip, and the Continue gate that swaps to the payment stage.
+  const discountStage = (
+    <div>
+      {!appliedCode ? (
+        <>
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
+            <Tag className="h-4 w-4 text-emerald-600" />
+            Have a discount code?
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              value={codeInput}
+              onChange={(e) => {
+                setCodeInput(e.target.value);
+                if (discountError) setDiscountError('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyDiscount();
+                }
+              }}
+              placeholder="Enter discount code"
+              className="flex-1 uppercase"
+              disabled={discountChecking}
+              autoCapitalize="characters"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={applyDiscount}
+              disabled={discountChecking || !codeInput.trim()}
+            >
+              {discountChecking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+            </Button>
+          </div>
+          {discountError && (
+            <p className="mt-1.5 text-sm text-red-600">{discountError}</p>
+          )}
+        </>
+      ) : (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                <Tag className="h-3 w-3" />
+                {appliedCode}
+              </span>
+              {preview?.label && (
+                <span className="text-sm text-emerald-800">{preview.label}</span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={removeDiscount}
+              className="inline-flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-900"
+              aria-label="Remove discount code"
+            >
+              <X className="h-4 w-4" />
+              Remove
+            </button>
+          </div>
+          {preview && (
+            <div className="mt-2 flex items-baseline gap-2 text-sm">
+              <span className="text-gray-500 line-through">
+                {fmtCents(preview.originalAmount)}
+              </span>
+              <span className="font-semibold text-emerald-700">
+                {fmtCents(preview.discountedAmount)}
+              </span>
+              <span className="text-emerald-700">
+                (you save {fmtCents(preview.amountOff)})
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Continue gate — swaps to the payment stage (mounts the buttons ONCE with
+          the final amount). Doubles as "Continue without a code" when none applied. */}
+      <Button
+        type="button"
+        className="w-full mt-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+        disabled={disabled || discountChecking}
+        onClick={() => setStage('payment')}
+      >
+        {appliedCode ? 'Continue' : 'Continue without a code'}
+      </Button>
+    </div>
+  );
+
+  // ----- STAGE 2 (payment): charged-amount summary + Change link, then buttons -----
+  // The amount charged is unambiguous here: discounted total when a code is applied,
+  // else the base `amount` prop (omitted if the page didn't pass one).
+  const chargeAmountCents = preview ? preview.discountedAmount : amount;
+  const paymentSummary = (
+    <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm">
+      <div className="flex items-center gap-2 text-gray-700">
+        {appliedCode ? (
+          <>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+              <Tag className="h-3 w-3" />
+              {appliedCode}
+            </span>
+            <span>
+              You&apos;ll be charged{' '}
+              <span className="font-semibold text-gray-900">
+                {chargeAmountCents != null ? fmtCents(chargeAmountCents) : 'the listed price'}
+              </span>
+            </span>
+          </>
+        ) : (
+          <span>
+            You&apos;ll be charged{' '}
+            <span className="font-semibold text-gray-900">
+              {chargeAmountCents != null ? fmtCents(chargeAmountCents) : 'the listed price'}
+            </span>
+          </span>
+        )}
+      </div>
+      {discountsSupported && (
+        <button
+          type="button"
+          onClick={() => setStage('discount')}
+          className="text-sm font-medium text-emerald-700 hover:text-emerald-900"
+        >
+          {appliedCode ? 'Change' : 'Have a code?'}
+        </button>
+      )}
+    </div>
+  );
+
+  // ----- MODAL MODE render: two-stage swap (discount → payment) -----
   if (isModal) {
+    // STAGE 1 — discount entry + Continue. Payment buttons are NOT mounted yet.
+    if (stage === 'discount') {
+      return discountStage;
+    }
+
+    // STAGE 2 — payment. The discount field/Continue are gone; the charged-amount
+    // summary + Change link sit above the wallet buttons (which mount once here).
     return (
       <>
+        {/* Finalizing overlay — covers the screen the instant buyer approval returns
+            (popup closes) and stays up through the server capture/activation +
+            navigation, so the page is never left blank. */}
+        {paymentProcessing && (
+          <div
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mb-4" />
+            <p className="text-lg font-semibold text-gray-900">Finalizing your payment…</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Please don&apos;t close or refresh this window.
+            </p>
+          </div>
+        )}
+        {discountsSupported && paymentSummary}
+
         {/* Wallet Smart Buttons render here. PayPal injects high-z-index iframes, so
             we HIDE this container while the card modal is open — otherwise the wallet
             buttons float over the Radix dialog (overlap bug). */}
@@ -403,6 +714,7 @@ export function ProviderCheckout({
           className={className}
           style={cardModalOpen ? { visibility: 'hidden', height: 0, overflow: 'hidden' } : undefined}
         />
+
         {walletMounting && (
 
           <div className="flex items-center justify-center py-3 text-muted-foreground">
@@ -410,6 +722,7 @@ export function ProviderCheckout({
             Loading payment options…
           </div>
         )}
+
         {isCardFields && (
           <>
             <Button
@@ -584,8 +897,24 @@ export function ProviderCheckout({
   if (isButton) {
     return (
       <>
+        {/* Finalizing overlay — same as modal mode: covers the gap between buyer
+            approval (popup closed) and navigation so the page is never blank. */}
+        {paymentProcessing && (
+          <div
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mb-4" />
+            <p className="text-lg font-semibold text-gray-900">Finalizing your payment…</p>
+            <p className="text-sm text-gray-600 mt-1">
+              Please don&apos;t close or refresh this window.
+            </p>
+          </div>
+        )}
         {!buttonsMounted && (
           <Button onClick={handleClick} disabled={disabled || processing} className={className}>
+
             {processing ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

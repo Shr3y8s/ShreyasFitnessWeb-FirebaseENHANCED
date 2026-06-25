@@ -3647,7 +3647,15 @@ exports.cancelPaypalSubscription = paymentsModule.cancelPaypalSubscription;
 exports.capturePaypalOrder = paymentsModule.capturePaypalOrder;
 // ACDC card-fields (card-only checkout, no PayPal account) — FR-12 / Phase 3.6
 exports.createPaypalOrder = paymentsModule.createPaypalOrder;
+// Discount codes (Feature 2, phase 1)
+exports.previewDiscount = paymentsModule.previewDiscount;
+exports.createDiscountCode = paymentsModule.createDiscountCode;
+exports.listDiscountCodes = paymentsModule.listDiscountCodes;
+exports.setDiscountCodeActive = paymentsModule.setDiscountCodeActive;
+exports.updateDiscountCode = paymentsModule.updateDiscountCode;
+
 exports.createPaypalCardSetupToken = paymentsModule.createPaypalCardSetupToken;
+
 exports.createPaypalSubscriptionWithCard = paymentsModule.createPaypalSubscriptionWithCard;
 
 /**
