@@ -137,9 +137,17 @@ function loadPayPal(intent: 'subscription' | 'capture'): Promise<any> {
     clientId: PAYPAL_CLIENT_ID,
     components: 'buttons,card-fields',
     currency: 'USD',
+    // Enable Venmo as a funding source (US buyers, eligible contexts only). The
+    // @paypal/paypal-js loader maps `enableFunding` → the SDK's `enable-funding`
+    // query param. Venmo renders as an additional wallet button when eligible; it
+    // uses the SAME createOrder/createSubscription + onApprove config as the other
+    // buttons, so capture/activation + any discounted amount apply unchanged.
+    // (Feature 3 — additional payment methods, phase 1.)
+    enableFunding: 'venmo',
     // sandbox vs live is determined by the client id; intent toggles vault flow.
     intent: intent === 'subscription' ? 'subscription' : 'capture',
   };
+
   if (intent === 'subscription') {
     options.vault = true;
   }
@@ -263,60 +271,109 @@ export const paypalProvider: PaymentProvider = {
 
     }
 
-    // Render the default wallet buttons (PayPal, Pay Later / "Credit", Venmo).
-    const buttons = paypal.Buttons(buttonConfig);
-    if (buttons.isEligible && !buttons.isEligible()) {
-      throw new Error('PayPal Buttons are not eligible to render in this context.');
-    }
-    const walletEl = document.createElement('div');
-    opts.container.appendChild(walletEl);
-    await buttons.render(walletEl);
+    // Render funding sources as SEPARATE buttons in a CONTROLLED ORDER, each in its
+    // own LABELED, OUTLINED box (Feature 3 — payment methods):
+    //   1. "Pay with Card"   — PayPal-hosted guest checkout (NO PayPal account). Its
+    //                          built-in "Powered by PayPal" tagline now reads as part
+    //                          of this clearly-labeled box (not a stray line).
+    //   2. "Pay with PayPal" — PayPal + Pay Later/Credit (PayPal picks the exact Pay
+    //                          Later vs Credit label/offer itself; we can't override it)
+    //   3. "More ways to pay"— Venmo (Apple/Google Pay slot in here later)
+    // The combined auto-layout doesn't let us order the buttons, so we render each
+    // funding source explicitly. Every funding source is eligibility-guarded and
+    // non-fatal; a section box is only added if at least one of its buttons rendered
+    // (so we never show an empty labeled box). All buttons share the SAME
+    // createOrder/createSubscription + onApprove config, so fulfillment is identical.
+    const FUNDING = paypal.FUNDING || {};
+    const closers: Array<() => void> = [];
+    let renderedAny = false;
 
-    // ALSO render a dedicated DEBIT/CREDIT CARD button (guest checkout — NO PayPal
-    // account required) so card payers have a clear, first-class entry point instead
-    // of having to discover the card option inside the PayPal popup. It uses the
-    // SAME createSubscription/createOrder + onApprove as the wallet buttons, so
-    // fulfillment is identical (subscription → BILLING.SUBSCRIPTION.ACTIVATED webhook;
-    // one-time → capturePaypalOrder). This is PayPal's HOSTED card flow (not our ACDC
-    // inline fields), so it works WITHOUT the Reference Transactions capability that
-    // headless vaulted-card subscriptions require. Eligibility-guarded + non-fatal:
-    // if the card funding source isn't eligible in this context we simply skip it
-    // (the wallet buttons' built-in guest-card option still covers card payment).
-    let cardButtons: { close?: () => void } | null = null;
-    try {
-      const CARD = paypal.FUNDING?.CARD;
-      if (CARD) {
-        const candidate = paypal.Buttons({
-          ...buttonConfig,
-          fundingSource: CARD,
-          // No `label` for a non-PayPal funding source; keep shape/layout only.
-          style: { layout: 'vertical', shape: 'rect' },
-        });
-        if (!candidate.isEligible || candidate.isEligible()) {
-          const cardEl = document.createElement('div');
-          cardEl.style.marginTop = '8px';
-          opts.container.appendChild(cardEl);
-          await candidate.render(cardEl);
-          cardButtons = candidate;
+    // Build a labeled, outlined section box, render the given funding sources into it,
+    // and append it to the checkout container ONLY if something rendered.
+    const renderSection = async (
+      label: string,
+      items: Array<{ fundingSource: unknown; extraStyle?: Record<string, unknown> }>
+    ): Promise<boolean> => {
+      // Box: rounded rectangle outline with a small uppercase label at the top.
+      const box = document.createElement('div');
+      box.style.cssText =
+        'border:1px solid #e5e7eb;border-radius:12px;padding:14px 14px 10px;margin-top:' +
+        (renderedAny ? '14px' : '0') + ';background:#fff;';
+      const lbl = document.createElement('div');
+      lbl.textContent = label;
+      lbl.style.cssText =
+        'font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#6b7280;margin-bottom:10px;';
+      box.appendChild(lbl);
+      const buttonsWrap = document.createElement('div');
+      box.appendChild(buttonsWrap);
+      // Attach to the live DOM first — PayPal's render() expects an in-DOM target.
+      opts.container.appendChild(box);
+
+      let any = false;
+      for (const { fundingSource, extraStyle } of items) {
+        if (!fundingSource) continue;
+        try {
+          const candidate = paypal.Buttons({
+            ...buttonConfig,
+            fundingSource,
+            style: { layout: 'vertical', shape: 'rect', ...(extraStyle || {}) },
+          });
+          if (candidate.isEligible && !candidate.isEligible()) continue;
+          const el = document.createElement('div');
+          el.style.marginTop = any ? '8px' : '0';
+          buttonsWrap.appendChild(el);
+          await candidate.render(el);
+          closers.push(() => {
+            try { candidate.close?.(); } catch { /* ignore */ }
+          });
+          any = true;
+        } catch {
+          // Non-fatal — skip this funding source, keep the rest.
         }
       }
-    } catch {
-      // Non-fatal: the dedicated card button is an enhancement; wallet buttons remain.
+
+      if (!any) {
+        box.remove(); // no eligible button → don't show an empty labeled box
+        return false;
+      }
+      renderedAny = true;
+      return true;
+    };
+
+    // 1) Card (top) — guest, no PayPal account. HOSTED card flow — works WITHOUT the
+    //    Reference Transactions capability vaulted-card subs require.
+    await renderSection('Pay with Card', [{ fundingSource: FUNDING.CARD }]);
+    // 2) PayPal family — branded PayPal button + Pay Later/Credit.
+    await renderSection('Pay with PayPal', [
+      { fundingSource: FUNDING.PAYPAL, extraStyle: { label: 'paypal' } },
+      { fundingSource: FUNDING.PAYLATER },
+    ]);
+    // 3) Wallets — Venmo (US-eligible contexts only; non-eligible = simply omitted).
+    await renderSection('More ways to pay', [{ fundingSource: FUNDING.VENMO }]);
+
+    // Fallback: if NOTHING rendered (e.g. funding constants unavailable), render the
+    // combined auto-layout so checkout is never empty.
+    if (!renderedAny) {
+      const buttons = paypal.Buttons(buttonConfig);
+      if (buttons.isEligible && !buttons.isEligible()) {
+        throw new Error('PayPal Buttons are not eligible to render in this context.');
+      }
+      const walletEl = document.createElement('div');
+      opts.container.appendChild(walletEl);
+      await buttons.render(walletEl);
+      closers.push(() => {
+        try { buttons.close?.(); } catch { /* ignore */ }
+      });
     }
 
     return () => {
-      try {
-        buttons.close?.();
-      } catch {
-        // ignore — container may already be unmounted
-      }
-      try {
-        cardButtons?.close?.();
-      } catch {
-        // ignore
+      for (const close of closers) {
+        try { close(); } catch { /* ignore — container may already be unmounted */ }
       }
     };
   },
+
+
 
 
   // ACDC hosted card fields — card-only checkout with NO PayPal account (FR-12).

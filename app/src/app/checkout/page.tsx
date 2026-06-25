@@ -154,7 +154,8 @@ function CheckoutInner() {
           </p>
         </div>
 
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-3xl mx-auto">
+
         <Button
           variant="ghost"
           size="sm"
@@ -242,35 +243,44 @@ function CheckoutInner() {
                   </div>
 
 
-                  {/* Provider method menu (wallet buttons + card-in-modal) */}
-                  <ProviderCheckout
-                    mode={item!.mode}
-                    priceId={checkoutPriceId}
-                    userId={user?.uid}
-                    email={userData?.email || user?.email || undefined}
-                    successUrl={successUrl}
-                    cancelUrl={cancelUrl}
-                    cardMode="modal"
-                    payLabel={`Pay ${formatCurrency(amount)}`}
-                    metadata={{
+                  {/* Two columns on desktop: payment buttons (left) + accepted-methods
+                      sidebar (right). Stacks to a single column on mobile so the logos
+                      fall below the buttons on narrow screens. */}
+                  <div className="grid md:grid-cols-[1fr_auto] gap-6 md:gap-8">
+                    {/* Provider method menu (wallet buttons + card-in-modal) */}
+                    <div>
+                      <ProviderCheckout
+                        mode={item!.mode}
+                        priceId={checkoutPriceId}
+                        userId={user?.uid}
+                        email={userData?.email || user?.email || undefined}
+                        successUrl={successUrl}
+                        cancelUrl={cancelUrl}
+                        cardMode="modal"
+                        payLabel={`Pay ${formatCurrency(amount)}`}
+                        metadata={{
 
-                      userId: user?.uid || '',
-                      item: itemKey || '',
-                      type: item!.fulfillment,
-                    }}
-                    onError={(e) =>
-                      setError((e as Error)?.message || 'Payment failed. Please try again.')
-                    }
-                  />
+                          userId: user?.uid || '',
+                          item: itemKey || '',
+                          type: item!.fulfillment,
+                        }}
+                        onError={(e) =>
+                          setError((e as Error)?.message || 'Payment failed. Please try again.')
+                        }
+                      />
+                    </div>
 
-                  {/* Accepted methods — separator + caption + brand logo chips */}
-                  <div className="mt-6 pt-5 border-t border-gray-200">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      We accept all major credit/debit cards and wallets
-                    </p>
-                    <PaymentMethodLogos />
+                    {/* Accepted methods — right sidebar on desktop (left divider),
+                        full-width below the buttons on mobile (top divider). */}
+                    <div className="md:w-56 md:border-l md:border-gray-200 md:pl-6 border-t border-gray-200 pt-5 md:pt-0 md:border-t-0">
+                      <p className="text-sm text-muted-foreground mb-4">
+                        We accept all major credit/debit cards and wallets
+                      </p>
+                      <PaymentMethodLogos />
+                    </div>
                   </div>
                 </div>
+
 
 
 

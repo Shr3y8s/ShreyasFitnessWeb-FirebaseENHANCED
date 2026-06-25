@@ -17,10 +17,22 @@ const PayPalMark = () => (
   </span>
 );
 
+// Venmo brand wordmark (inline, no asset). Venmo's brand blue is #008CFF; the
+// wordmark is conventionally lowercase italic. Display-only chip — the functional
+// Venmo button is rendered by the PayPal SDK (enable-funding=venmo) at checkout.
+const VenmoMark = () => (
+  <span className="text-[15px] font-bold italic leading-none text-[#008CFF]">
+    venmo
+  </span>
+);
+
+
 type CardMethod = { label: string; type: 'Visa' | 'Mastercard' | 'Amex' | 'Discover' };
 type WalletMethod =
-  | { label: string; custom: 'paypal' }
-  | { label: string; img: string };
+  | { label: string; custom: 'paypal' | 'venmo' }
+  | { label: string; img: string; imgClassName?: string };
+
+
 
 const CARD_METHODS: CardMethod[] = [
   { label: 'Visa', type: 'Visa' },
@@ -31,9 +43,22 @@ const CARD_METHODS: CardMethod[] = [
 
 const WALLET_METHODS: WalletMethod[] = [
   { label: 'PayPal', custom: 'paypal' },
-  { label: 'Google Pay', img: '/payment-icons/google-pay-mark_800.svg' },
-  { label: 'Apple Pay', img: '/payment-icons/Apple_Pay_Mark_RGB_041619.svg' },
+  { label: 'Venmo', custom: 'venmo' },
+  // The official Google Pay mark SVG has heavy built-in padding, so it renders tiny
+  // at the shared cap — scale it up to visually match the PayPal/Venmo wordmarks.
+  {
+    label: 'Google Pay',
+    img: '/payment-icons/google-pay-mark_800.svg',
+    imgClassName: 'h-9 w-auto max-w-[60px] object-contain',
+  },
+  {
+    label: 'Apple Pay',
+    img: '/payment-icons/Apple_Pay_Mark_RGB_041619.svg',
+    imgClassName: 'h-8 w-auto max-w-[56px] object-contain',
+  },
 ];
+
+
 
 function Chip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -60,14 +85,20 @@ function WalletChip({ method }: { method: WalletMethod }) {
   return (
     <Chip label={method.label}>
       {'custom' in method ? (
-        <PayPalMark />
+        method.custom === 'venmo' ? <VenmoMark /> : <PayPalMark />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={method.img} alt={method.label} className="max-h-7 max-w-[52px] object-contain" />
+        <img
+          src={method.img}
+          alt={method.label}
+          className={method.imgClassName ?? 'max-h-7 max-w-[52px] object-contain'}
+        />
       )}
+
     </Chip>
   );
 }
+
 
 /**
  * Accepted-payment brand logos.
