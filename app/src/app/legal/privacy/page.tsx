@@ -7,25 +7,31 @@ import { Footer } from '@/components/Footer';
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <MarketingNav />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-        <article className="bg-white rounded-xl shadow-lg p-8 md:p-12">
+        <article className="bg-white/90 backdrop-blur rounded-2xl shadow-xl ring-1 ring-emerald-100 p-8 md:p-12">
           {/* Title */}
           <div className="mb-8 pb-6 border-b border-gray-200">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy Policy</h1>
-            <p className="text-gray-600">
-              <strong>Effective Date:</strong> January 1, 2026<br />
-              <strong>Last Updated:</strong> October 29, 2025
-            </p>
+            <span className="inline-flex items-center gap-2 px-3 py-1 mb-4 rounded-full text-xs font-semibold uppercase tracking-wide text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200">
+              🔒 Privacy
+            </span>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
+            <div className="h-1 w-24 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 mb-4" />
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700"><strong>Effective:</strong> June 25, 2026</span>
+              <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700"><strong>Updated:</strong> June 25, 2026</span>
+              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800"><strong>Version</strong> 2.0</span>
+            </div>
           </div>
+
 
           {/* Introduction */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              SHREY.FIT ("we," "us," or "our") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform ("Service").
+              Shrey.Fit, a sole proprietorship operated by Shreyas Annapureddy ("Shrey.Fit," "we," "us," or "our"), based in the State of Washington, United States, respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform and website at shrey.fit (the "Service").
             </p>
             <p className="text-gray-700 leading-relaxed font-semibold">
               Please read this Privacy Policy carefully. By using our Service, you consent to the practices described in this policy.
@@ -35,7 +41,7 @@ export default function PrivacyPolicyPage() {
           {/* 1. Information We Collect */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Information We Collect</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">1.1 Information You Provide</h3>
             <div className="space-y-4">
               <div>
@@ -43,7 +49,7 @@ export default function PrivacyPolicyPage() {
                 <ul className="list-disc pl-6 space-y-1 text-gray-700">
                   <li>Name, email address, phone number</li>
                   <li>Date of birth, gender</li>
-                  <li>Password (encrypted)</li>
+                  <li>Password (stored only in hashed/encrypted form)</li>
                 </ul>
               </div>
 
@@ -70,8 +76,8 @@ export default function PrivacyPolicyPage() {
               <div>
                 <p className="font-semibold text-gray-800 mb-2">Payment Information:</p>
                 <ul className="list-disc pl-6 space-y-1 text-gray-700">
-                  <li>Credit card information (processed by Stripe, not stored by us)</li>
-                  <li>Billing address and purchase history</li>
+                  <li>Payment details processed by our payment processor (we do not store full card numbers)</li>
+                  <li>Billing information and purchase history</li>
                 </ul>
               </div>
             </div>
@@ -80,47 +86,45 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc pl-6 space-y-1 text-gray-700">
               <li>Usage data (pages visited, features used)</li>
               <li>Device information (IP address, browser, OS)</li>
-              <li>Location information (approximate from IP)</li>
-              <li>Cookies and tracking technologies</li>
+              <li>Login/security information (timestamps, approximate location from IP)</li>
+              <li>Cookies and similar technologies</li>
             </ul>
           </section>
 
           {/* 2. How We Use Your Information */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">2. How We Use Your Information</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">To Provide Our Service:</h3>
             <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
               <li>Create and manage your account</li>
-              <li>Process payments and subscriptions</li>
-              <li>Deliver customized workout programs</li>
-              <li>Track your progress</li>
-              <li>Enable communication with trainers</li>
+              <li>Process payments, subscriptions, and session packages</li>
+              <li>Deliver customized workout and nutrition programs</li>
+              <li>Track your progress and enable trainer communication</li>
+              <li>Provide customer support</li>
             </ul>
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">To Improve Our Service:</h3>
             <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
-              <li>Analyze usage patterns</li>
-              <li>Identify bugs and issues</li>
-              <li>Develop new features</li>
-              <li>Conduct research and analytics</li>
+              <li>Analyze usage patterns and diagnose issues</li>
+              <li>Develop new features and conduct internal analytics</li>
             </ul>
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">To Communicate With You:</h3>
             <ul className="list-disc pl-6 space-y-1 text-gray-700">
-              <li>Send workout reminders and progress updates</li>
-              <li>Provide customer support</li>
-              <li>Send administrative messages</li>
+              <li>Send verification codes, account/billing notices, and reminders (transactional/service messages)</li>
+              <li>Provide customer support and security alerts</li>
+              <li>With your consent, send marketing communications you can opt out of anytime</li>
             </ul>
           </section>
 
-          {/* Data Sharing */}
+          {/* 4. Data Sharing */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">4. How We Share Your Information</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">With Your Trainer</h3>
             <p className="text-gray-700 leading-relaxed mb-3">
-              We share relevant information with your assigned trainer including:
+              We share relevant information with your assigned trainer, including:
             </p>
             <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
               <li>Name and contact information</li>
@@ -129,17 +133,20 @@ export default function PrivacyPolicyPage() {
               <li>Emergency contact details</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Service Providers</h3>
-            <p className="text-gray-700 leading-relaxed mb-2">We share information with:</p>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">Service Providers (Sub-Processors)</h3>
+            <p className="text-gray-700 leading-relaxed mb-2">We share information with trusted third parties who process data on our behalf:</p>
             <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
-              <li><strong>Stripe:</strong> Payment processing</li>
-              <li><strong>Firebase/Google Cloud:</strong> Data storage and infrastructure</li>
-              <li><strong>Analytics Providers:</strong> Usage analytics (anonymized)</li>
+              <li><strong>PayPal:</strong> payment processing</li>
+              <li><strong>Google Firebase / Google Cloud:</strong> hosting, database, authentication, file storage</li>
+              <li><strong>Resend:</strong> transactional and notification email delivery</li>
+              <li><strong>Google Maps Platform:</strong> address autocomplete</li>
+              <li><strong>Google reCAPTCHA:</strong> bot/abuse prevention at signup</li>
+              <li><strong>Google Analytics:</strong> usage analytics (aggregated/pseudonymized)</li>
             </ul>
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
               <p className="text-green-800 font-semibold">
-                ✓ We will NEVER sell your personal information to third parties.
+                ✓ We do NOT sell your personal information, and we do NOT "share" it for cross-context behavioral advertising.
               </p>
             </div>
           </section>
@@ -147,7 +154,7 @@ export default function PrivacyPolicyPage() {
           {/* 5. Your Privacy Rights */}
           <section className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Your Privacy Rights</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Access</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
               Request a copy of your personal data and review what information we have.
@@ -160,19 +167,19 @@ export default function PrivacyPolicyPage() {
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Erasure ("Right to be Forgotten")</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
-              Request deletion of your personal data using the "Delete Account" feature. We will delete within 30 days.
+              Request deletion of your personal data using the "Delete Account" feature. We delete personal data within 30 days, except financial/transaction records retained for legal compliance.
             </p>
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">Right to Object</h3>
             <p className="text-gray-700 leading-relaxed">
-              Object to processing for marketing purposes. Opt out of marketing communications anytime.
+              Object to processing for marketing purposes. Opt out of marketing communications anytime. To exercise any right, contact <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">privacy@shrey.fit</a>.
             </p>
           </section>
 
-          {/* Data Retention */}
+          {/* 6. Data Retention */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Data Retention</h2>
-            
+
             <h3 className="text-xl font-semibold text-gray-800 mb-3">Active Accounts</h3>
             <p className="text-gray-700 leading-relaxed mb-4">
               We retain your data while your account is active (profile, workouts, messages, etc.).
@@ -180,24 +187,24 @@ export default function PrivacyPolicyPage() {
 
             <h3 className="text-xl font-semibold text-gray-800 mb-3">After Account Deletion</h3>
             <ul className="list-disc pl-6 space-y-1 text-gray-700">
-              <li>Personal data: Deleted within 30 days</li>
-              <li>Payment records: Retained for 7 years (legal requirement)</li>
-              <li>Aggregated data: May be retained indefinitely</li>
-              <li>Backup data: Deleted within 90 days</li>
+              <li>Personal data: deleted within 30 days</li>
+              <li>Financial/transaction records: retained as required by law (generally up to 7 years)</li>
+              <li>Aggregated/anonymized data: may be retained indefinitely</li>
+              <li>Backups: purged within ~90 days</li>
             </ul>
           </section>
 
-          {/* Data Security */}
+          {/* 7. Data Security */}
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Data Security</h2>
             <p className="text-gray-700 leading-relaxed mb-3">
               We implement industry-standard security measures:
             </p>
             <ul className="list-disc pl-6 space-y-2 text-gray-700 mb-4">
-              <li><strong>Encryption:</strong> TLS/SSL in transit, AES-256 at rest</li>
-              <li><strong>Authentication:</strong> Secure Firebase Auth with password hashing</li>
-              <li><strong>Access Controls:</strong> Limited employee access with permissions</li>
-              <li><strong>Regular Audits:</strong> Security audits and updates</li>
+              <li><strong>Encryption:</strong> TLS in transit, encryption at rest</li>
+              <li><strong>Authentication:</strong> secure Firebase Authentication with password hashing</li>
+              <li><strong>Access Controls:</strong> least-privilege permissions</li>
+              <li><strong>Breach notification:</strong> we notify affected users and authorities as required by law (e.g., within 72 hours under the GDPR)</li>
             </ul>
             <p className="text-gray-700 leading-relaxed font-semibold">
               Important: No method of transmission or storage is 100% secure. While we strive to protect your data, we cannot guarantee absolute security.
@@ -207,10 +214,10 @@ export default function PrivacyPolicyPage() {
           {/* GDPR & CCPA */}
           <section className="mb-8 bg-purple-50 border-l-4 border-purple-500 p-6 rounded-lg">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Privacy Rights by Region</h2>
-            
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">European Union (GDPR)</h3>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">European Union / UK (GDPR)</h3>
             <p className="text-gray-700 leading-relaxed mb-3">
-              If you are in the EU, you have rights under GDPR including:
+              If you are in the EU/EEA/UK, you have rights under the GDPR including:
             </p>
             <ul className="list-disc pl-6 space-y-1 text-gray-700 mb-4">
               <li>Right to Access (Article 15)</li>
@@ -219,14 +226,14 @@ export default function PrivacyPolicyPage() {
               <li>Right to Data Portability (Article 20)</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">California (CCPA)</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">California (CCPA/CPRA)</h3>
             <p className="text-gray-700 leading-relaxed mb-3">
               California residents have additional rights:
             </p>
             <ul className="list-disc pl-6 space-y-1 text-gray-700">
               <li>Right to Know what personal information is collected</li>
-              <li>Right to Delete your personal information</li>
-              <li>Right to Opt-Out of sale (we don't sell data)</li>
+              <li>Right to Delete and Correct your personal information</li>
+              <li>Right to Opt-Out of sale/sharing (we do not sell or share)</li>
               <li>Right to Non-Discrimination</li>
             </ul>
           </section>
@@ -239,31 +246,32 @@ export default function PrivacyPolicyPage() {
             </p>
             <ul className="space-y-2 text-gray-700">
               <li>
-                <strong>Privacy Inquiries:</strong>{' '}
-                <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
-                  privacy@shrey.fit
-                </a>
-              </li>
-              <li>
-                <strong>Data Requests:</strong>{' '}
+                <strong>Privacy &amp; Data Requests:</strong>{' '}
                 <a href="mailto:privacy@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
                   privacy@shrey.fit
                 </a>{' '}
-                (Response time: 30 days)
+                (our designated Privacy Contact)
               </li>
               <li>
-                <strong>Data Protection Officer:</strong>{' '}
-                <a href="mailto:dpo@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
-                  dpo@shrey.fit
+                <strong>Support:</strong>{' '}
+                <a href="mailto:support@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
+                  support@shrey.fit
                 </a>
               </li>
+              <li>
+                <strong>Legal:</strong>{' '}
+                <a href="mailto:legal@shrey.fit" className="text-blue-600 hover:text-blue-700 underline">
+                  legal@shrey.fit
+                </a>
+              </li>
+              <li><strong>Mailing address:</strong> available upon request to privacy@shrey.fit</li>
             </ul>
           </section>
 
           {/* Summary */}
           <section className="mb-8 border-2 border-gray-300 p-6 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Summary</h2>
-            
+
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">What We Collect:</h3>
@@ -271,7 +279,7 @@ export default function PrivacyPolicyPage() {
                   <li>✓ Account and profile information</li>
                   <li>✓ Fitness and health data</li>
                   <li>✓ Usage and device information</li>
-                  <li>✓ Payment info (via Stripe)</li>
+                  <li>✓ Payment info (via PayPal)</li>
                 </ul>
               </div>
 
@@ -290,8 +298,8 @@ export default function PrivacyPolicyPage() {
                 <ul className="text-sm text-gray-700 space-y-1">
                   <li>✓ Industry-standard encryption</li>
                   <li>✓ Secure Firebase infrastructure</li>
-                  <li>✓ Regular security audits</li>
-                  <li>✓ Employee training</li>
+                  <li>✓ Access controls</li>
+                  <li>✓ Breach notification</li>
                 </ul>
               </div>
 
@@ -299,9 +307,9 @@ export default function PrivacyPolicyPage() {
                 <h3 className="font-semibold text-gray-800 mb-2">We Do NOT:</h3>
                 <ul className="text-sm text-gray-700 space-y-1">
                   <li>✗ Sell your information</li>
-                  <li>✗ Share without consent</li>
+                  <li>✗ Share for behavioral ads</li>
                   <li>✗ Use for unrelated purposes</li>
-                  <li>✗ Store credit cards ourselves</li>
+                  <li>✗ Store full card numbers</li>
                 </ul>
               </div>
             </div>
@@ -309,24 +317,16 @@ export default function PrivacyPolicyPage() {
 
           {/* Footer Info */}
           <div className="text-center text-gray-600 text-sm pt-8 border-t border-gray-200">
-            <p className="mb-2"><strong>Last Updated:</strong> October 29, 2025</p>
-            <p className="mb-4"><strong>Version:</strong> 1.0</p>
+            <p className="mb-2"><strong>Last Updated:</strong> June 25, 2026</p>
+            <p className="mb-4"><strong>Version:</strong> 2.0</p>
             <p>
               <Link href="/legal/terms" className="text-blue-600 hover:text-blue-700 underline">Terms of Service</Link>
               {' | '}
               <Link href="/" className="text-blue-600 hover:text-blue-700 underline">Back to Home</Link>
             </p>
           </div>
-
-          {/* Note */}
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-            <p className="font-semibold mb-2">📄 Full Privacy Policy Available</p>
-            <p>
-              This page highlights key sections of our Privacy Policy. For the complete document, please see:{' '}
-              <code className="bg-blue-100 px-2 py-1 rounded">docs/03-legal/privacy-policy.md</code>
-            </p>
-          </div>
         </article>
+
       </main>
 
       <Footer />

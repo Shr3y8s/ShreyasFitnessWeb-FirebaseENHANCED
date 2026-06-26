@@ -1,15 +1,16 @@
 # Privacy Policy
 
-**Effective Date:** January 1, 2026  
-**Last Updated:** October 29, 2025
+**Effective Date:** June 25, 2026
+**Last Updated:** June 25, 2026
+**Version:** 2.0
 
 ---
 
 ## Introduction
 
-The Shreyas Method ("we," "us," or "our") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform ("Service").
+Shrey.Fit, a sole proprietorship operated by Shreyas Annapureddy ("Shrey.Fit," "we," "us," or "our"), based in the State of Washington, United States, respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our fitness coaching platform and website at shrey.fit (the "Service").
 
-**Please read this Privacy Policy carefully.** By using our Service, you consent to the practices described in this policy.
+**Please read this Privacy Policy carefully.** By using our Service, you consent to the practices described in this policy. This Privacy Policy is incorporated into our [Terms of Service](/legal/terms).
 
 ---
 
@@ -23,647 +24,264 @@ The Shreyas Method ("we," "us," or "our") respects your privacy and is committed
 - Phone number
 - Date of birth
 - Gender
-- Password (encrypted)
+- Password (stored only in hashed/encrypted form)
 
 **Profile Information:**
 - Profile photo
-- Physical address (street, city, state, country, zip code)
+- Physical address (street, city, state, country, zip)
 - Emergency contact details
 - Medical notes and health information
 
 **Payment Information:**
-- Credit card information (processed by Stripe, not stored by us)
-- Billing address
-- Purchase history
+- Payment details processed by our payment processor (we do not store full card numbers)
+- Billing information and purchase history
 
 **Fitness Information:**
 - Fitness goals
-- Workout history
+- Workout history and performance data
 - Progress measurements
-- Exercise performance data
-- Photos (progress pictures)
+- Progress photos
 
-**Communication:**
+**Communications:**
 - Messages with trainers
 - Support requests
 - Feedback and survey responses
 
 **Preferences:**
-- Notification settings
-- Communication preferences
+- Notification and communication preferences
 - Subscription preferences
 
 ### 1.2 Information We Collect Automatically
 
-**Usage Information:**
-- Pages visited
-- Features used
-- Time spent on platform
-- Click patterns
-- Session duration
+**Usage Information:** pages visited, features used, time spent, interaction patterns, session duration.
 
-**Device Information:**
-- IP address
-- Browser type and version
-- Operating system
-- Device type (mobile, tablet, desktop)
-- Screen resolution
-- User agent
+**Device Information:** IP address, browser type/version, operating system, device type, screen resolution, user agent.
 
-**Location Information:**
-- Approximate location (from IP address)
-- Precise location (if you grant permission)
+**Login/Security Information:** login timestamps, approximate location derived from IP, and device details used for security monitoring.
 
-**Cookies and Tracking:**
-- Session cookies
-- Preference cookies
-- Analytics cookies
-- See our Cookie Policy for details
+**Cookies and Similar Technologies:** session and preference cookies, and (with consent where required) analytics cookies. See Section 12.
 
 ### 1.3 Information from Third Parties
 
-**Stripe (Payment Processing):**
-- Payment transaction details
-- Payment method information
-- Fraud prevention data
-
-**Google Services:**
-- Google Maps API (for address autocomplete)
-- Google Analytics (for usage analytics)
+- **PayPal (payment processing):** transaction details, payment status, and fraud-prevention signals.
+- **Google services:** Google Maps Platform (address autocomplete) and Google Analytics (usage analytics), subject to Google's terms.
 
 ---
 
 ## 2. How We Use Your Information
 
-### 2.1 Primary Uses
-
-**To Provide Our Service:**
+### 2.1 To Provide the Service
 - Create and manage your account
-- Process payments and subscriptions
+- Process payments, subscriptions, and session packages
 - Assign you to a trainer
-- Deliver customized workout programs
-- Track your progress
-- Enable communication with trainers
+- Deliver customized workout and nutrition programs
+- Track progress and enable trainer communication
 - Provide customer support
 
-**To Improve Our Service:**
-- Analyze usage patterns
-- Identify bugs and issues
-- Develop new features
-- Enhance user experience
-- Conduct research and analytics
+### 2.2 To Improve the Service
+- Analyze usage patterns, diagnose issues, develop features, and conduct internal analytics.
 
-**To Communicate With You:**
-- Send workout reminders
-- Notify about new assignments
-- Share progress updates
-- Respond to inquiries
-- Send administrative messages
-- Provide customer support
+### 2.3 To Communicate With You
+- Send verification codes, account/billing notices, workout and check-in reminders, and security alerts (transactional/service messages); and
+- With your consent, send marketing communications you can opt out of at any time.
 
-**To Ensure Safety and Security:**
-- Prevent fraud
-- Detect and prevent abuse
-- Enforce our Terms of Service
-- Comply with legal obligations
-- Protect our rights and property
-
-### 2.2 Marketing (With Your Consent)
-
-- Send newsletters
-- Share fitness tips and content
-- Announce new features
-- Offer promotions and discounts
-- Request feedback and reviews
-
-**You can opt out of marketing communications at any time.**
+### 2.4 For Safety, Security, and Compliance
+- Prevent fraud and abuse, enforce our Terms, comply with legal obligations, and protect our rights and the safety of users.
 
 ---
 
-## 3. Legal Basis for Processing (GDPR)
+## 3. Legal Bases for Processing (GDPR/UK GDPR)
 
-For users in the European Union, we process your personal data based on:
-
-**Contract Performance:**
-- Processing necessary to fulfill our contract with you (provide Service)
-
-**Legitimate Interest:**
-- Improve our Service
-- Prevent fraud and abuse
-- Analyze usage patterns
-- Marketing (with opt-out option)
-
-**Consent:**
-- Marketing communications
-- Optional data collection
-- Cookies (non-essential)
-
-**Legal Obligation:**
-- Comply with tax and accounting requirements
-- Respond to legal requests
-- Enforce our rights
+For users in the EU/EEA/UK, we process personal data on these bases:
+- **Contract performance:** to provide the Service you request.
+- **Legitimate interests:** to secure, maintain, and improve the Service and prevent fraud (balanced against your rights).
+- **Consent:** for marketing, non-essential cookies, and optional data; you may withdraw consent at any time.
+- **Legal obligation:** to meet tax, accounting, and other legal requirements.
 
 ---
 
 ## 4. How We Share Your Information
 
 ### 4.1 With Your Trainer
+We share relevant information with your assigned trainer, including your name and contact details, fitness goals and progress, medical information you provide, emergency contacts, and messages. Trainers are expected to keep this information confidential and use it only to provide the Service.
 
-We share relevant information with your assigned trainer:
-- Name and contact information
-- Fitness goals and preferences
-- Workout history and progress
-- Medical information you provide
-- Emergency contact details
-- Messages and communications
+### 4.2 With Service Providers (Sub-Processors)
+We share information with trusted third parties who process data on our behalf, under contractual confidentiality and data-protection obligations:
 
-**Your trainer is bound by confidentiality obligations.**
+| Provider | Purpose | Data involved |
+|---|---|---|
+| **PayPal** | Payment processing | Payment, billing, transaction data |
+| **Google Firebase / Google Cloud** | Hosting, database, authentication, file storage | Account, app, and uploaded data |
+| **Resend** | Transactional and notification email delivery | Name, email address, message content |
+| **Google Maps Platform** | Address autocomplete | Address input (server-side) |
+| **Google reCAPTCHA** | Bot/abuse prevention at signup | Device/usage signals |
+| **Google Analytics** | Usage analytics | Usage and device data (aggregated/pseudonymized) |
 
-### 4.2 Service Providers
-
-We share information with trusted third parties who help us operate our Service:
-
-**Stripe (Payment Processing):**
-- Payment information
-- Billing address
-- Transaction details
-
-**Firebase/Google Cloud (Infrastructure):**
-- All data stored on our platform
-- Authentication information
-- Storage of files and images
-
-**Email Service Provider (Future):**
-- Email address
-- Name
-- Communication preferences
-
-**Analytics Providers:**
-- Usage data
-- Device information
-- Aggregated, anonymized data
-
-**All service providers are contractually obligated to protect your data.**
+We may update this list as our infrastructure evolves; material changes will be reflected here.
 
 ### 4.3 Legal Requirements
-
-We may disclose your information if required by law:
-- Court orders or subpoenas
-- Government requests
-- Law enforcement inquiries
-- Legal proceedings
-- To protect our rights or safety
-- To prevent fraud or abuse
+We may disclose information when required by law — e.g., to comply with a subpoena, court order, or lawful government/law-enforcement request, or to protect our rights, property, or the safety of users.
 
 ### 4.4 Business Transfers
-
-If we are involved in a merger, acquisition, or sale of assets:
-- Your information may be transferred
-- You will be notified via email
-- Privacy Policy terms will continue to apply
+If we are involved in a merger, acquisition, or sale of assets, your information may be transferred. We will notify you and the transferee will be bound by this Privacy Policy or a substantially similar one.
 
 ### 4.5 With Your Consent
+We share information for testimonials, case studies, or marketing only with your explicit consent.
 
-We may share your information with your explicit consent for:
-- Testimonials or case studies (with your approval)
-- Marketing materials (with your permission)
-- Social media posts (with your authorization)
-
-**We will never sell your personal information to third parties.**
+**We do not sell your personal information, and we do not "share" it for cross-context behavioral advertising as defined under California law.**
 
 ---
 
 ## 5. Your Privacy Rights
 
-### 5.1 Access and Portability
+Depending on your location, you may have the right to:
+- **Access** a copy of your personal data;
+- **Correct** inaccurate data;
+- **Delete** your data ("right to be forgotten"), subject to legal-retention exceptions;
+- **Port** your data (receive it in a structured, machine-readable format — use "Download My Data" in your profile);
+- **Restrict or object** to certain processing, including marketing;
+- **Withdraw consent** at any time; and
+- **Lodge a complaint** with a supervisory authority.
 
-**Right to Access:**
-- Request a copy of your personal data
-- Review what information we have
-- Verify accuracy of your data
-
-**Right to Data Portability:**
-- Download your data in a structured format (JSON)
-- Transfer your data to another service
-- Use "Download My Data" feature in your profile
-
-### 5.2 Correction and Deletion
-
-**Right to Correction:**
-- Update inaccurate information
-- Edit your profile data
-- Correct errors in your records
-
-**Right to Erasure ("Right to be Forgotten"):**
-- Request deletion of your personal data
-- Use "Delete Account" feature
-- We will delete within 30 days
-
-**Exceptions:** We may retain some data to comply with legal obligations, resolve disputes, or enforce our Terms.
-
-### 5.3 Restriction and Objection
-
-**Right to Restrict Processing:**
-- Limit how we use your data
-- Pause certain processing activities
-- Challenge accuracy of data
-
-**Right to Object:**
-- Object to processing for marketing
-- Object to automated decision-making
-- Opt out of profiling
-
-### 5.4 Withdraw Consent
-
-You can withdraw consent at any time:
-- Update notification preferences
-- Unsubscribe from marketing emails
-- Revoke specific permissions
-- Close your account
-
-### 5.5 Complaint
-
-You have the right to file a complaint with a supervisory authority:
-- EU: Contact your national Data Protection Authority
-- California: Contact California Attorney General
-- Other: Contact your local privacy regulator
+To exercise these rights, use the in-app tools where available or contact **privacy@shrey.fit**. We will respond within the timeframe required by applicable law (generally 30 days; up to 45 days for CCPA/CPRA requests, extendable as permitted). We will not discriminate against you for exercising your rights.
 
 ---
 
 ## 6. Data Retention
 
 ### 6.1 Active Accounts
+We retain your data while your account is active: profile information, workout history, and messages are retained while the account exists; payment/transaction records are retained as required by law (generally up to 7 years).
 
-We retain your data while your account is active:
-- Profile information: Indefinitely (while account exists)
-- Workout history: Indefinitely
-- Messages: Indefinitely
-- Payment records: 7 years (legal requirement)
-
-### 6.2 Closed/Deleted Accounts
-
-**After Cancellation (Account Remains):**
-- All data retained
-- Account accessible (read-only)
-- Can reactivate anytime
-
-**After Account Deletion:**
-- Personal data: Deleted within 30 days
-- Payment records: Retained for 7 years (legal requirement)
-- Aggregated data: May be retained indefinitely
-- Backup data: Deleted within 90 days
+### 6.2 After Account Deletion
+- **Personal data:** deleted within 30 days, except as noted below.
+- **Financial/transaction records:** retained for the period required for legal, tax, and accounting compliance (generally up to 7 years).
+- **Backups:** purged on our regular backup cycle (generally within 90 days).
+- **Aggregated/anonymized data:** may be retained indefinitely (no longer identifies you).
 
 ### 6.3 Inactive Accounts
-
-If your account is inactive for 3+ years:
-- We may send reminder emails
-- We may delete your account after notification
-- You will have 90 days to reactivate
+If an account is inactive for an extended period, we may notify you and, after a reasonable notice period, delete or anonymize the account.
 
 ---
 
 ## 7. Data Security
 
-### 7.1 Security Measures
-
-We implement industry-standard security measures:
-
-**Technical Safeguards:**
-- Encryption in transit (TLS/SSL)
-- Encryption at rest (AES-256)
-- Secure authentication (Firebase Auth)
-- Password hashing (bcrypt)
-- Regular security updates
-
-**Administrative Safeguards:**
-- Access controls and permissions
-- Employee training
-- Background checks for staff
-- Confidentiality agreements
-- Regular security audits
-
-**Physical Safeguards:**
-- Secure data centers (Google Cloud)
-- Access controls
-- Surveillance and monitoring
+### 7.1 Safeguards
+We use industry-standard measures, including:
+- **Technical:** encryption in transit (TLS), encryption at rest, secure authentication (Firebase Authentication), password hashing, and regular updates;
+- **Administrative:** access controls, least-privilege permissions, and confidentiality expectations for anyone with access; and
+- **Physical:** reliance on Google Cloud's secure, monitored data centers.
 
 ### 7.2 No Absolute Security
+No method of transmission or storage is 100% secure. You are responsible for choosing a strong password, keeping it confidential, not sharing your account, and logging out of shared devices.
 
-**Important:** No method of transmission or storage is 100% secure. While we strive to protect your data, we cannot guarantee absolute security.
-
-**You are responsible for:**
-- Choosing a strong password
-- Keeping your password confidential
-- Not sharing your account
-- Logging out of shared devices
-
-### 7.3 Data Breach Notification
-
-If a data breach occurs:
-- We will notify you within 72 hours (GDPR requirement)
-- We will inform affected parties
-- We will take steps to mitigate harm
-- We will report to relevant authorities
+### 7.3 Breach Notification
+If a data breach affecting your personal data occurs, we will notify affected users and relevant authorities as required by applicable law (e.g., within 72 hours under the GDPR where applicable) and take steps to mitigate harm.
 
 ---
 
 ## 8. International Data Transfers
 
-### 8.1 Data Location
-
-Your data is stored in:
-- Google Cloud Platform data centers
-- Primary location: United States
-- Backup locations: May include other countries
-
-### 8.2 EU-US Data Transfers
-
-For EU users, we ensure adequate protection:
-- Standard Contractual Clauses (SCCs)
-- Equivalent level of protection
-- Compliance with GDPR requirements
-
-### 8.3 Your Rights Remain
-
-Regardless of where your data is stored:
-- Your privacy rights still apply
-- GDPR protections still apply (EU users)
-- CCPA protections still apply (California users)
+Your data is primarily stored and processed in the **United States** on Google Cloud infrastructure. If you access the Service from outside the U.S., your data will be transferred to and processed in the U.S. For EU/EEA/UK users, we rely on appropriate safeguards such as Standard Contractual Clauses where required. Your privacy rights continue to apply regardless of where your data is processed.
 
 ---
 
 ## 9. Children's Privacy
 
-### 9.1 Age Requirement
-
-Our Service is not intended for children under 18:
-- We do not knowingly collect data from children
-- Users must be 18+ to create an account
-- Parental consent required for users under 18 (if permitted)
-
-### 9.2 If We Discover Child Data
-
-If we learn we have collected data from a child:
-- We will delete it immediately
-- We will notify parents/guardians
-- We will close the account
-
-**If you believe we have collected child data, contact us immediately.**
+Our Service is intended for users **18 and older**. We do not knowingly collect personal information from anyone under 18, and (consistent with COPPA) we never knowingly collect data from children under 13. If we learn we have collected data from someone under 18, we will delete it and close the account. If you believe a minor has provided us information, contact **privacy@shrey.fit**.
 
 ---
 
-## 10. California Privacy Rights (CCPA)
+## 10. California Privacy Rights (CCPA/CPRA)
 
-### 10.1 California Residents
+If you are a California resident, you have the right to:
+- **Know/Access** the categories and specific pieces of personal information we collect, the sources, the purposes, and the categories of third parties with whom we share it;
+- **Delete** your personal information, subject to legal exceptions;
+- **Correct** inaccurate personal information;
+- **Opt out of sale/sharing** — **we do not sell or share** personal information for cross-context behavioral advertising; and
+- **Non-discrimination** for exercising your rights.
 
-If you are a California resident, you have additional rights:
-
-**Right to Know:**
-- Categories of personal information collected
-- Sources of personal information
-- Purpose for collecting personal information
-- Third parties with whom we share data
-
-**Right to Delete:**
-- Request deletion of your personal information
-- Subject to legal exceptions
-
-**Right to Opt-Out:**
-- We do not sell personal information
-- You can opt out of marketing
-
-**Right to Non-Discrimination:**
-- We will not discriminate for exercising your rights
-- Same service quality regardless
-
-### 10.2 Exercising Your Rights
-
-To exercise your CCPA rights:
-- Email: privacy@shreyasmethod.com
-- Subject: "CCPA Request"
-- Include: Name, email, specific request
-- Response time: 45 days
-
-### 10.3 "Do Not Sell"
-
-**We do not sell your personal information.**
-
-We have not sold personal information in the past 12 months.
+To exercise these rights, email **privacy@shrey.fit** with "California Privacy Request" and your account email. We may need to verify your identity before responding. We have not sold or shared personal information in the preceding 12 months.
 
 ---
 
-## 11. European Privacy Rights (GDPR)
+## 11. European Privacy Rights (GDPR/UK GDPR)
 
-### 11.1 EU Residents
+If you are in the EU/EEA/UK, you have the rights described in Section 5, corresponding to GDPR Articles 15–22 and Article 7 (withdrawal of consent), and the right to lodge a complaint with your local supervisory authority (see the European Data Protection Board members list at https://edpb.europa.eu). Our legal bases for processing are described in Section 3.
 
-If you are in the European Union, you have rights under GDPR:
-
-**Right to Access (Article 15)**
-**Right to Rectification (Article 16)**
-**Right to Erasure (Article 17)**
-**Right to Restrict Processing (Article 18)**
-**Right to Data Portability (Article 20)**
-**Right to Object (Article 21)**
-**Right to Withdraw Consent (Article 7)**
-
-### 11.2 Legal Basis
-
-We process your data based on:
-- Contract performance (Article 6(1)(b))
-- Legitimate interest (Article 6(1)(f))
-- Consent (Article 6(1)(a))
-- Legal obligation (Article 6(1)(c))
-
-### 11.3 Data Protection Officer
-
-Contact our Data Protection Officer:
-- Email: dpo@shreyasmethod.com
-- Response time: 30 days
-
-### 11.4 Supervisory Authority
-
-You can file a complaint with your national authority:
-- Find your authority: https://edpb.europa.eu/about-edpb/board/members_en
+**Privacy Contact:** We are not legally required to appoint a Data Protection Officer, but our designated privacy contact for all data-protection matters is **privacy@shrey.fit**.
 
 ---
 
 ## 12. Cookies and Tracking
 
-### 12.1 Types of Cookies We Use
-
-**Essential Cookies (Required):**
-- Authentication (keep you logged in)
-- Security (prevent fraud)
-- Preferences (remember your settings)
-
-**Analytics Cookies (With Consent):**
-- Google Analytics (usage patterns)
-- Hotjar (heatmaps, session recordings)
-- Performance monitoring
-
-**Marketing Cookies (With Consent):**
-- Ad platforms (if we run ads)
-- Social media pixels
-- Conversion tracking
+### 12.1 Types of Cookies
+- **Essential (required):** authentication/session, security, and preference cookies needed for the Service to function.
+- **Analytics (with consent where required):** Google Analytics and performance monitoring to understand usage.
+- **Marketing (only if/when used, with consent):** any future advertising or conversion-tracking technologies.
 
 ### 12.2 Managing Cookies
-
-You can control cookies through:
-- Browser settings (block/delete cookies)
-- Cookie consent banner
-- Privacy settings in your profile
-
-**Note:** Disabling essential cookies may affect functionality.
+You can control cookies through your browser settings and, where presented, our cookie-consent controls. Disabling essential cookies may impair functionality.
 
 ### 12.3 Do Not Track
-
-We do not currently respond to Do Not Track (DNT) signals.
+We do not currently respond to browser "Do Not Track" signals, as there is no common industry standard.
 
 ---
 
 ## 13. Third-Party Links
 
-Our Service may contain links to third-party websites:
-- We are not responsible for their privacy practices
-- Read their privacy policies
-- Third-party sites have their own terms
-
-Examples:
-- Social media platforms
-- External resources
-- Partner websites
+The Service may link to third-party sites or services. We are not responsible for their privacy practices. Review their policies before providing information.
 
 ---
 
 ## 14. Changes to This Privacy Policy
 
-### 14.1 Notification of Changes
-
-We may update this Privacy Policy:
-- Material changes: 30 days advance notice
-- Minor changes: Effective immediately
-- Notification via email and in-app message
-
-### 14.2 Your Choices
-
-After a change:
-- Continued use = acceptance of new policy
-- You may delete your account if you disagree
-- Changes posted on this page with updated date
-
-### 14.3 Version History
-
-We maintain a history of policy versions:
-- Available upon request
-- Shows what changed and when
+We may update this Privacy Policy. For material changes, we will provide notice by email and/or in-app or website notice at least 30 days in advance where required; minor changes are effective on posting. The "Last Updated" date reflects the latest revision. Continued use after changes take effect constitutes acceptance.
 
 ---
 
 ## 15. Contact Us
 
-### 15.1 Privacy Questions
+- **Privacy questions and data requests:** privacy@shrey.fit
+- **General support:** support@shrey.fit
+- **Legal:** legal@shrey.fit
+- **Billing:** billing@shrey.fit
+- **Mailing address:** Available upon request to privacy@shrey.fit
 
-For privacy-related questions:
-- Email: privacy@shreyasmethod.com
-- Subject: "Privacy Inquiry"
-- Response time: 5 business days
-
-### 15.2 Data Requests
-
-To exercise your privacy rights:
-- Email: privacy@shreyasmethod.com
-- Subject: "Data Request"
-- Include: Name, email, specific request
-- Response time: 30 days
-
-### 15.3 Data Protection Officer
-
-Contact our DPO:
-- Email: dpo@shreyasmethod.com
-- For GDPR-related matters
-
-### 15.4 Mailing Address
-
-The Shreyas Method  
-[Your Business Address]  
-[City, State ZIP]  
-United States
+We aim to acknowledge privacy inquiries within 5 business days and to fulfill rights requests within the timeframe required by applicable law.
 
 ---
 
 ## 16. Additional Information
 
-### 16.1 Automated Decision Making
-
-We do not use automated decision-making or profiling that significantly affects you.
-
-**Limited Automation:**
-- Workout recommendations (based on your goals)
-- Progress insights (based on your data)
-- Trainer matching (based on availability)
-
-**You always have trainer oversight and can request human review.**
+### 16.1 Automated Decision-Making
+We do not engage in automated decision-making that produces legal or similarly significant effects about you. Limited automation (e.g., workout recommendations, progress insights, trainer matching) always operates under human trainer oversight, and you may request human review.
 
 ### 16.2 Sensitive Data
-
-We collect some sensitive data with your consent:
-- Health information (medical conditions, injuries)
-- Biometric data (measurements, photos)
-
-**This data is:**
-- Encrypted and securely stored
-- Only shared with your trainer
-- Used solely for fitness coaching
-- Deleted upon account deletion
+With your consent, we collect certain sensitive data (health/medical notes, body measurements, and progress photos). This data is encrypted, shared only with your assigned trainer, used solely to provide coaching, and deleted upon account deletion (subject to legal-retention exceptions).
 
 ### 16.3 Marketing Opt-Out
-
-To opt out of marketing:
-- Click "Unsubscribe" in any email
-- Update preferences in your profile
-- Email: unsubscribe@shreyasmethod.com
-- We will process within 10 business days
+To opt out of marketing, use the unsubscribe link in any marketing email or update your profile preferences. Transactional/service messages (e.g., verification codes, billing notices, security alerts) are not promotional and may still be sent.
 
 ---
 
 ## Summary
 
-**What We Collect:**
-- Account and profile information
-- Fitness and health data
-- Usage and device information
-- Payment information (via Stripe)
+**What we collect:** account/profile information, fitness and health data, usage/device information, and payment information (via PayPal).
 
-**How We Use It:**
-- Provide fitness coaching services
-- Communicate with you
-- Improve our platform
-- Ensure security and prevent fraud
+**How we use it:** to provide coaching, communicate with you, improve the platform, and ensure security and compliance.
 
-**Your Rights:**
-- Access, correct, and delete your data
-- Download your data (portability)
-- Opt out of marketing
-- File complaints with authorities
+**Your rights:** access, correct, delete, and export your data; opt out of marketing; and complain to a regulator.
 
-**Security:**
-- Industry-standard encryption
-- Secure infrastructure (Firebase/Google Cloud)
-- Regular security audits
-- Employee training
+**Security:** encryption in transit and at rest, secure Firebase/Google Cloud infrastructure, and access controls.
 
-**We Do NOT:**
-- Sell your personal information
-- Share data without consent (except as described)
-- Use data for unrelated purposes
+**We do NOT:** sell your personal information, share it for cross-context behavioral advertising, or use it for unrelated purposes.
 
 ---
 
-**Last Updated:** October 29, 2025  
-**Version:** 1.0
+**Effective Date:** June 25, 2026
+**Last Updated:** June 25, 2026
+**Version:** 2.0
 
-For questions or to exercise your rights, contact: privacy@shreyasmethod.com
-
----
+For questions or to exercise your rights, contact: privacy@shrey.fit
 
 **End of Privacy Policy**
