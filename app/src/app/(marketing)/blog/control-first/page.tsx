@@ -30,7 +30,7 @@ export default function ControlFirstBlog() {
   return (
     <BlogPost 
       title="The Control-First Approach Most Trainers Miss"
-      date="July 26, 2025"
+      date="June 10, 2026"
       nextPost={{ href: '/blog/mind-muscle', title: 'Next' }}
       relatedPosts={relatedPosts}
     >

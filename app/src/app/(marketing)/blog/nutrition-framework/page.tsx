@@ -13,7 +13,7 @@ export default function NutritionFrameworkBlog() {
   ];
 
   return (
-    <BlogPost title="The 'Less Is More' Nutrition Framework" date="April 20, 2025" prevPost={{ href: '/blog/sustainable-approach', title: 'Previous' }} nextPost={{ href: '/blog/forty-sixty-rule', title: 'Next' }} relatedPosts={relatedPosts}>
+    <BlogPost title="The 'Less Is More' Nutrition Framework" date="April 20, 2026" prevPost={{ href: '/blog/sustainable-approach', title: 'Previous' }} nextPost={{ href: '/blog/forty-sixty-rule', title: 'Next' }} relatedPosts={relatedPosts}>
       <p>If you've ever tried to improve your nutrition, you've likely encountered the overwhelming complexity of modern diet advice. Macros, micros, meal timing, supplements—it's enough to make anyone give up before they even begin.</p>
       
       <PullQuote>"The nutrition approach that works best isn't the one that's theoretically 'perfect'—it's the one you can actually follow consistently."</PullQuote>

@@ -67,7 +67,7 @@ export default function BlogPage() {
               <span className="featured-tag">Featured</span>
             </div>
             <div className="featured-text">
-              <span className="article-date">August 18, 2025</span>
+              <span className="article-date">June 25, 2026</span>
               <h2>The 40/60 Rule: Why What You Do Outside the Gym Matters Most</h2>
               <p>What if I told you that your workouts—even the most intense ones—account for only about 40% of your results? After years of working with clients, I&apos;ve discovered that what you do during the other 23 hours of your day matters more than what you do during your workout hour.</p>
               <p>Learn how small daily choices about movement, food, and your environment have a greater impact on your fitness results than your workouts alone, and how to optimize the 60% that happens outside the gym.</p>
@@ -86,7 +86,7 @@ export default function BlogPage() {
                 <i className="fas fa-seedling"></i>
               </div>
               <div className="blog-content">
-                <span className="article-date">July 26, 2025</span>
+                <span className="article-date">June 10, 2026</span>
                 <h3>The Control-First Approach Most Trainers Miss</h3>
                 <p>Master control and proper form before chasing heavy weights. This approach builds better muscle connection, prevents injuries, and delivers superior results compared to the typical &quot;lift heavy&quot; mentality most trainers push.</p>
                 <div className="blog-meta">
@@ -102,7 +102,7 @@ export default function BlogPage() {
                 <i className="fas fa-balance-scale"></i>
               </div>
               <div className="blog-content">
-                <span className="article-date">June 24, 2025</span>
+                <span className="article-date">May 22, 2026</span>
                 <h3>Why I Never Let Clients Chase Numbers</h3>
                 <p>Developing a strong mind-muscle connection is far more important than lifting heavy weights. Learn to feel each exercise in the target muscles rather than just moving weight from point A to point B.</p>
                 <div className="blog-meta">
@@ -118,7 +118,7 @@ export default function BlogPage() {
                 <i className="fas fa-calendar-check"></i>
               </div>
               <div className="blog-content">
-                <span className="article-date">May 22, 2025</span>
+                <span className="article-date">May 8, 2026</span>
                 <h3>The Sustainable Approach I Learned After Years of Failure</h3>
                 <p>Consistency with a &quot;good enough&quot; program you enjoy will always beat sporadic adherence to the &quot;perfect&quot; program you dread. Find workouts you actually look forward to rather than those that look impressive on paper.</p>
                 <div className="blog-meta">
@@ -134,7 +134,7 @@ export default function BlogPage() {
                 <i className="fas fa-apple-alt"></i>
               </div>
               <div className="blog-content">
-                <span className="article-date">April 20, 2025</span>
+                <span className="article-date">April 20, 2026</span>
                 <h3>The &apos;Less Is More&apos; Nutrition Framework</h3>
                 <p>Simplify nutrition by focusing on a few key principles rather than complex rules. Prioritize protein, focus on whole foods, and follow the 80/20 rule for sustainable eating habits that don&apos;t require obsession.</p>
                 <div className="blog-meta">

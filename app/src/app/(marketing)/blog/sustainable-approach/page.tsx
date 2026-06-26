@@ -13,7 +13,7 @@ export default function SustainableApproachBlog() {
   ];
 
   return (
-    <BlogPost title="The Sustainable Approach I Learned After Years of Failure" date="May 22, 2025" prevPost={{ href: '/blog/mind-muscle', title: 'Previous' }} nextPost={{ href: '/blog/nutrition-framework', title: 'Next' }} relatedPosts={relatedPosts}>
+    <BlogPost title="The Sustainable Approach I Learned After Years of Failure" date="May 8, 2026" prevPost={{ href: '/blog/mind-muscle', title: 'Previous' }} nextPost={{ href: '/blog/nutrition-framework', title: 'Next' }} relatedPosts={relatedPosts}>
       <p>I spent years jumping from one "perfect" workout program to another, always convinced that the next one would finally deliver the results I wanted. I'd start each new program with enthusiasm, only to abandon it a few weeks later when life got in the way or when I simply couldn't maintain the rigid schedule it demanded.</p>
       
       <PullQuote>"The 'perfect' workout program that you hate doing is completely worthless."</PullQuote>

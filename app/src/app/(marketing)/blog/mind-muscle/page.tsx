@@ -30,7 +30,7 @@ export default function MindMuscleBlog() {
   return (
     <BlogPost 
       title="Why I Never Let Clients Chase Numbers"
-      date="June 24, 2025"
+      date="May 22, 2026"
       prevPost={{ href: '/blog/control-first', title: 'Previous' }}
       nextPost={{ href: '/blog/sustainable-approach', title: 'Next' }}
       relatedPosts={relatedPosts}
