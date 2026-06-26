@@ -1,507 +1,482 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import {
+  Search,
+  Flag,
+  Dumbbell,
+  Medal,
+  ClipboardList,
+  TrendingUp,
+  DollarSign,
+  HelpCircle,
+  MessageCircle,
+  type LucideIcon,
+} from 'lucide-react';
+
+/* ------------------------------------------------------------------ */
+/* FAQ data — edit answers here. `popular` flags the "Most Asked" badge. */
+/* JSX answers keep links/emphasis; search matches on `keywords` + question. */
+/* ------------------------------------------------------------------ */
+type FAQItem = {
+  q: string;
+  a: React.ReactNode;
+  keywords: string;
+  popular?: boolean;
+};
+type FAQCategory = {
+  id: string;
+  title: string;
+  icon: LucideIcon;
+  items: FAQItem[];
+};
+
+const FAQ_DATA: FAQCategory[] = [
+  {
+    id: 'getting-started',
+    title: 'Getting Started',
+    icon: Flag,
+    items: [
+      {
+        q: 'How do I get started with training?',
+        keywords: 'start begin sign up consultation onboarding assessment',
+        a: (
+          <>
+            <p className="font-semibold text-emerald-800">
+              Getting started doesn&apos;t have to be overwhelming — I&apos;ve made the process simple.
+            </p>
+            <p>
+              The first step is scheduling a{' '}
+              <Link href="/connect#schedule-content" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+                free consultation
+              </Link>{' '}
+              where I&apos;ll answer your questions about services and pricing and we&apos;ll see if we&apos;re a good fit.
+            </p>
+            <p>
+              After you sign up for a package or membership, we&apos;ll schedule a comprehensive assessment to review your
+              health history, set goals, and build your personalized program.
+            </p>
+            <p>
+              <strong>Ready?</strong>{' '}
+              <Link href="/connect#schedule-content" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+                Schedule your free consultation today.
+              </Link>
+            </p>
+          </>
+        ),
+      },
+      {
+        q: 'Do I need to be fit already to start training?',
+        keywords: 'beginner fitness level experience new out of shape',
+        a: (
+          <>
+            <p className="font-semibold text-emerald-800">No fitness experience required!</p>
+            <p>
+              I specialize in working with people at all fitness levels, including complete beginners. Every program
+              meets you exactly where you are and progresses at a pace that&apos;s right for you.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: 'What happens during the comprehensive assessment?',
+        keywords: 'assessment evaluation first session intake health history',
+        a: (
+          <p>
+            After you sign up, we&apos;ll schedule a comprehensive assessment of about 60 minutes. It includes a detailed
+            discussion of your health history, fitness background, specific goals, and lifestyle so I can tailor your plan.
+          </p>
+        ),
+      },
+      {
+        q: 'What should I wear and bring to my training sessions?',
+        keywords: 'wear bring clothing shoes water towel equipment',
+        a: (
+          <p>
+            Wear comfortable athletic clothing and supportive shoes appropriate for your workout. Bring a water bottle, a
+            small towel, and any specific equipment we&apos;ve discussed (for home training).
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'training',
+    title: 'Training Information',
+    icon: Dumbbell,
+    items: [
+      {
+        q: 'Where do in-person sessions take place?',
+        keywords: 'location gym seattle home in-person where',
+        a: (
+          <p>
+            I offer training at partnered gyms throughout the Seattle area, as well as home training for clients with
+            basic equipment. We&apos;ll determine the exact location during your consultation based on your preferences
+            and proximity.
+          </p>
+        ),
+      },
+      {
+        q: 'What equipment do I need for online coaching?',
+        keywords: 'equipment online coaching home gym minimal',
+        a: (
+          <p>
+            Equipment needs vary based on your goals and what you have access to. I can design programs using minimal or
+            no equipment, or for fully-equipped home or commercial gyms.
+          </p>
+        ),
+      },
+      {
+        q: 'How often will we meet for training?',
+        keywords: 'frequency how often sessions per week schedule',
+        a: (
+          <p>
+            Frequency depends on your goals, availability, and budget. Most clients see the best results with 2–3
+            sessions per week, but I offer flexible scheduling options.
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'services',
+    title: 'Services & Specialties',
+    icon: Medal,
+    items: [
+      {
+        q: 'Do you offer nutrition planning?',
+        keywords: 'nutrition diet meal plan eating macros',
+        a: (
+          <>
+            <p className="font-semibold text-emerald-800">Yes!</p>
+            <p>
+              Nutrition is a crucial part of reaching your goals, and I provide practical guidance that works with your
+              lifestyle. My approach builds sustainable habits rather than restrictive diets.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: 'Do you work with clients who have injuries or medical conditions?',
+        keywords: 'injury injuries medical condition rehab cleared doctor',
+        a: (
+          <p>
+            Yes, as long as you&apos;ve been cleared for exercise by your healthcare provider. Please share any health
+            concerns during our initial consultation so I can program safely around them.
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'policies',
+    title: 'Policies & Logistics',
+    icon: ClipboardList,
+    items: [
+      {
+        q: 'What is your cancellation policy?',
+        keywords: 'cancellation cancel session 24 hours notice fee',
+        a: (
+          <p>
+            I require 24 hours&apos; notice for session cancellations. Sessions cancelled with less notice may be subject
+            to a fee. Emergencies happen, so exceptions can be made on a case-by-case basis.
+          </p>
+        ),
+      },
+      {
+        q: 'How are payments handled?',
+        keywords: 'payment paypal venmo card credit debit billing secure',
+        a: (
+          <p>
+            Payments are processed securely through PayPal, which lets you pay with major credit and debit cards or your
+            PayPal/Venmo account — you don&apos;t need a PayPal account to check out with a card. One-time session
+            packages are paid at purchase, and memberships are billed monthly. We never store your full card number.
+          </p>
+        ),
+      },
+      {
+        q: 'Can I pause or cancel my membership anytime?',
+        keywords: 'pause cancel membership subscription month-to-month contract',
+        a: (
+          <p>
+            Yes. Memberships are month-to-month with no long-term contract. You can <strong>pause</strong> for 1–3 months
+            or <strong>cancel</strong> anytime from your profile under &quot;Account &amp; Data Management.&quot; When you
+            cancel, you keep access until the end of your current billing period, and you can re-subscribe later. See our{' '}
+            <Link href="/legal/terms" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+              Terms of Service
+            </Link>{' '}
+            for details.
+          </p>
+        ),
+      },
+      {
+        q: 'What is your refund policy?',
+        keywords: 'refund money back cancel prorate session credits',
+        a: (
+          <p>
+            Memberships are billed for the current period and aren&apos;t prorated when you cancel, and session packages
+            expire 60 days after purchase. If you delete your account, up to two unused, non-expired session credits may
+            be refunded at the rate you paid. We also handle billing errors and unauthorized charges in good faith. Full
+            details are in our{' '}
+            <Link href="/legal/terms" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+              Terms of Service
+            </Link>
+            , or email{' '}
+            <a href="mailto:billing@shrey.fit" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+              billing@shrey.fit
+            </a>
+            .
+          </p>
+        ),
+      },
+      {
+        q: 'Is my personal and health information private?',
+        keywords: 'privacy data security health information gdpr ccpa delete',
+        a: (
+          <p>
+            Absolutely. Your information is encrypted, shared only with your assigned coach, and never sold. You can
+            access, export, or delete your data anytime from your profile. Learn more in our{' '}
+            <Link href="/legal/privacy" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+              Privacy Policy
+            </Link>{' '}
+            or email{' '}
+            <a href="mailto:privacy@shrey.fit" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+              privacy@shrey.fit
+            </a>
+            .
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'results',
+    title: 'Results & Expectations',
+    icon: TrendingUp,
+    items: [
+      {
+        q: 'How quickly will I see results?',
+        keywords: 'results how fast quickly timeline progress',
+        a: (
+          <>
+            <p className="font-semibold text-emerald-800">Every fitness journey is unique.</p>
+            <p>
+              Your results depend on your starting point, goals, consistency, and genetics. We&apos;ll track metrics
+              beyond appearance so you can see progress clearly and stay motivated throughout your journey.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: 'What kind of results can I expect?',
+        keywords: 'results expect benefits energy sleep strength confidence',
+        a: (
+          <p>
+            Beyond physical changes, clients typically experience improved energy, better sleep, enhanced mood, increased
+            strength and endurance, better posture, reduced pain, and greater confidence.
+          </p>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'pricing',
+    title: 'Pricing & Packages',
+    icon: DollarSign,
+    items: [
+      {
+        q: 'What do your services cost?',
+        keywords: 'cost price pricing how much packages plans',
+        popular: true,
+        a: (
+          <>
+            <p className="font-semibold text-emerald-800">
+              All new clients receive a{' '}
+              <Link href="/connect#schedule-content" className="underline underline-offset-2 hover:text-emerald-900">
+                free consultation
+              </Link>{' '}
+              where I&apos;ll walk you through pricing for the option that fits you best.
+            </p>
+            <p>I offer three ways to work together:</p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>
+                <strong>In-Person Training:</strong> pay per session, with a discounted multi-session pack available
+              </li>
+              <li>
+                <strong>Online Coaching:</strong> a monthly membership that includes all remote coaching services
+              </li>
+              <li>
+                <strong>Complete Transformation:</strong> our premium monthly package combining online coaching with
+                in-person sessions
+              </li>
+            </ul>
+            <p>
+              Current prices for every option are shown on the{' '}
+              <Link href="/services" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+                Services page
+              </Link>{' '}
+              and again at checkout before you pay.
+            </p>
+          </>
+        ),
+      },
+      {
+        q: 'Do you offer package deals or discounts?',
+        keywords: 'discount deal package referral save promo',
+        a: (
+          <p>
+            Yes — I offer several ways to save on your fitness investment, including discounted session packs and referral
+            bonuses.
+          </p>
+        ),
+      },
+      {
+        q: 'Is there a contract requirement?',
+        keywords: 'contract commitment month to month long term',
+        a: (
+          <p>
+            My options are designed to be flexible while encouraging the consistency needed for real results. Online
+            Coaching is month-to-month with no long-term contract required.
+          </p>
+        ),
+      },
+    ],
+  },
+];
 
 export default function FAQPage() {
-  useEffect(() => {
-    // Small delay to ensure DOM is ready after client-side navigation
-    const timer = setTimeout(() => {
-      // FAQ accordion functionality
-      const faqQuestions = document.querySelectorAll('.faq-question');
-      const allAnswers = document.querySelectorAll('.faq-answer');
-      
-      // Initially hide all answers
-      allAnswers.forEach(answer => {
-        (answer as HTMLElement).style.display = 'none';
-      });
-      
-      // Add click handlers
-      faqQuestions.forEach(question => {
-        question.addEventListener('click', (e) => {
-          const target = e.currentTarget as HTMLElement;
-          const answer = target.nextElementSibling as HTMLElement;
-          const icon = target.querySelector('.toggle-icon i');
-          
-          // Close all other answers
-          allAnswers.forEach(otherAnswer => {
-            if (otherAnswer !== answer) {
-              (otherAnswer as HTMLElement).style.display = 'none';
-            }
-          });
-          
-          // Toggle all icons
-          document.querySelectorAll('.toggle-icon i').forEach(otherIcon => {
-            if (otherIcon !== icon) {
-              otherIcon.className = 'fas fa-plus';
-            }
-          });
-          
-          // Toggle this answer
-          if (answer.style.display === 'none' || answer.style.display === '') {
-            answer.style.display = 'block';
-            answer.style.padding = '20px';
-            answer.style.height = 'auto';
-            answer.style.maxHeight = 'none';
-            answer.style.overflow = 'visible';
-            answer.style.backgroundColor = '#fff';
-            answer.style.color = '#333';
-            answer.style.lineHeight = '1.7';
-            if (icon) icon.className = 'fas fa-minus';
-          } else {
-            answer.style.display = 'none';
-            if (icon) icon.className = 'fas fa-plus';
-          }
-        });
-      });
-      
-      // Modal functionality
-      const infoButton = document.getElementById('faq-info-button');
-      const infoModal = document.getElementById('faq-info-modal');
-      const modalBackdrop = document.getElementById('faq-modal-backdrop');
-      const modalClose = document.querySelector('.faq-modal-close');
-      
-      const closeModal = () => {
-        if (infoModal) infoModal.style.display = 'none';
-        if (modalBackdrop) modalBackdrop.style.display = 'none';
-        document.body.style.overflow = '';
-      };
-      
-      if (infoButton) {
-        infoButton.addEventListener('click', () => {
-          if (infoModal) infoModal.style.display = 'block';
-          if (modalBackdrop) modalBackdrop.style.display = 'block';
-          document.body.style.overflow = 'hidden';
-        });
-      }
-      
-      if (modalClose) {
-        modalClose.addEventListener('click', closeModal);
-      }
-      
-      if (modalBackdrop) {
-        modalBackdrop.addEventListener('click', closeModal);
-      }
-      
-      // Search functionality
-      const searchInput = document.querySelector('#faq-search-input') as HTMLInputElement;
-      const searchButton = document.querySelector('#search-button');
-      const faqItems = document.querySelectorAll('.faq-item');
-      const faqCategories = document.querySelectorAll('.faq-categories h2');
-      
-      const performSearch = () => {
-        const searchTerm = searchInput?.value.toLowerCase().trim() || '';
-        let resultsFound = false;
-        
-        faqItems.forEach(item => {
-          const questionText = item.querySelector('.faq-question h3')?.textContent?.toLowerCase() || '';
-          const answerText = item.querySelector('.faq-answer')?.textContent?.toLowerCase() || '';
-          
-          if (searchTerm === '' || questionText.includes(searchTerm) || answerText.includes(searchTerm)) {
-            (item as HTMLElement).style.display = 'block';
-            resultsFound = true;
-          } else {
-            (item as HTMLElement).style.display = 'none';
-          }
-        });
-        
-        // Show/hide categories
-        faqCategories.forEach(category => {
-          const nextContainer = category.nextElementSibling;
-          let hasVisibleItems = false;
-          
-          const categoryItems = nextContainer?.querySelectorAll('.faq-item');
-          categoryItems?.forEach(item => {
-            if ((item as HTMLElement).style.display !== 'none') {
-              hasVisibleItems = true;
-            }
-          });
-          
-          (category as HTMLElement).style.display = hasVisibleItems ? 'flex' : 'none';
-          if (nextContainer) {
-            (nextContainer as HTMLElement).style.display = hasVisibleItems ? 'block' : 'none';
-          }
-        });
-      };
-      
-      if (searchInput) {
-        searchInput.addEventListener('input', performSearch);
-      }
-      if (searchButton) {
-        searchButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          performSearch();
-        });
-      }
-      
-      // Category navigation
-      const categoryLinks = document.querySelectorAll('.category-link');
-      categoryLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          
-          categoryLinks.forEach(l => l.classList.remove('active'));
-          link.classList.add('active');
-          
-          const targetId = link.getAttribute('href')?.substring(1);
-          if (targetId) {
-            const target = document.getElementById(targetId);
-            target?.scrollIntoView({ behavior: 'smooth' });
-          }
-        });
-      });
-      
-      // Floating help button
-      const helpButton = document.getElementById('show-help-popup');
-      const helpPopup = document.getElementById('faq-question-popup');
-      const closePopup = document.getElementById('close-faq-popup');
-      
-      if (helpButton && helpPopup) {
-        helpButton.addEventListener('click', () => {
-          helpPopup.classList.add('active');
-        });
-      }
-      
-      if (closePopup && helpPopup) {
-        closePopup.addEventListener('click', () => {
-          helpPopup.classList.remove('active');
-        });
-      }
-    }, 100); // Small delay for DOM readiness after navigation
+  const [query, setQuery] = useState('');
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
-  
+  // Filter categories/items by the search query (question + keywords).
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return FAQ_DATA;
+    return FAQ_DATA.map((cat) => ({
+      ...cat,
+      items: cat.items.filter(
+        (it) => it.q.toLowerCase().includes(q) || it.keywords.toLowerCase().includes(q)
+      ),
+    })).filter((cat) => cat.items.length > 0);
+  }, [query]);
+
+  const noResults = filtered.length === 0;
+
   return (
-    <div className="marketing-content min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <link rel="stylesheet" href="/css/styles.css" />
-      <link rel="stylesheet" href="/css/faq.css" />
-      <style>{`
-        .marketing-content .page-header,
-        .marketing-content .faq-page { background: transparent !important; }
-      `}</style>
-      
-      {/* Page Header */}
-      <section className="page-header">
-
-        <div className="container">
-          <h1>Frequently Asked Questions</h1>
-          
-          {/* FAQ Search */}
-          <div className="faq-search">
-            <input type="text" id="faq-search-input" placeholder="Search questions..." />
-            <button id="search-button"><i className="fas fa-search"></i></button>
-          </div>
-          
-          {/* FAQ Category Navigation */}
-          <div className="faq-categories-nav">
-            <a className="category-link active" href="#getting-started">Getting Started</a>
-            <a className="category-link" href="#training">Training Info</a>
-            <a className="category-link" href="#services">Services</a>
-            <a className="category-link" href="#policies">Policies</a>
-            <a className="category-link" href="#results">Results</a>
-            <a className="category-link" href="#pricing">Pricing</a>
-          </div>
-          
-          {/* Info Button */}
-          <button id="faq-info-button" className="faq-info-btn" aria-label="About this FAQ">
-            <i className="fas fa-info-circle"></i> About this FAQ
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <main className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
+            <HelpCircle className="size-3.5" /> FAQ
+          </span>
+          <h1 className="text-4xl font-bold text-gray-900">Frequently Asked Questions</h1>
+          <div className="mx-auto mt-3 h-1 w-24 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+          <p className="mx-auto mt-4 max-w-2xl text-gray-600">
+            Answers to common questions about training, services, and policies. Can&apos;t find what you&apos;re looking
+            for?{' '}
+            <Link href="/connect#message" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+              Reach out
+            </Link>
+            .
+          </p>
         </div>
-      </section>
-      
-      {/* FAQ Info Modal */}
-      <div id="faq-info-modal" className="faq-modal">
-        <div className="faq-modal-content">
-          <span className="faq-modal-close">&times;</span>
-          <h2>About this FAQ</h2>
-          <p>Here you&apos;ll find answers to common questions about my training services, methods, and policies. If you don&apos;t find the answer you&apos;re looking for, don&apos;t hesitate to <Link href="/connect">reach out</Link>.</p>
+
+        {/* Search */}
+        <div className="relative mx-auto mb-10 max-w-xl">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search questions…"
+            aria-label="Search frequently asked questions"
+            className="w-full rounded-full border border-gray-200 bg-white/90 py-3 pl-12 pr-4 text-gray-900 shadow-sm outline-none ring-emerald-200 transition focus:border-emerald-400 focus:ring-2"
+          />
         </div>
-      </div>
-      <div id="faq-modal-backdrop" className="faq-modal-backdrop"></div>
 
-      {/* FAQ Content */}
-      <section className="faq-page">
-        <div className="container">
-          <div className="faq-categories">
-            <h2 id="getting-started">
-              <span className="category-icon"><i className="fas fa-flag-checkered"></i></span>
-              Getting Started
-            </h2>
-            <div className="faq-container">
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>How do I get started with training?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <div className="faq-important">
-                    <strong>Don&apos;t worry - getting started doesn&apos;t have to be overwhelming!</strong> I&apos;ve designed a simple process to make your fitness journey as smooth as possible.
-                  </div>
-                  <p>The initial step is scheduling a <Link href="/connect#schedule-content" className="answer-highlight">free consultation</Link> where I&apos;ll answer your basic questions about my services, pricing options, and determine if we&apos;re a good fit to work together.</p>
-                  <p>After you&apos;ve booked a training package or membership, we&apos;ll schedule a <span className="answer-highlight">comprehensive assessment session</span> where we&apos;ll conduct a detailed health history review, set specific goals, and create your personalized fitness program.</p>
-                  <p><strong>Ready to get started?</strong> <Link href="/connect#schedule-content">Schedule your free consultation today!</Link></p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Do I need to be fit already to start training?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <div className="faq-important">
-                    <strong>No fitness experience required!</strong> I specialize in working with people at <span className="answer-highlight">all fitness levels</span>, including complete beginners.
-                  </div>
-                  <p>My programs are designed to meet you exactly where you are and help you progress at an appropriate pace for your current fitness level.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>What happens during the comprehensive assessment?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>After you&apos;ve signed up for a training package or membership, we&apos;ll schedule a comprehensive assessment session. This session lasts approximately 60 minutes and includes a detailed discussion about your health history, fitness background, specific goals, and lifestyle.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>What should I wear and bring to my training sessions?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>For training sessions, wear comfortable athletic clothing and supportive shoes appropriate for your workout. Bring a water bottle, a small towel, and any specific equipment we&apos;ve discussed (if applicable for home training).</p>
-                </div>
-              </div>
-            </div>
-
-            <h2 id="training">
-              <span className="category-icon"><i className="fas fa-dumbbell"></i></span>
-              Training Information
-            </h2>
-            <div className="faq-container">
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Where do in-person sessions take place?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>I offer training at partnered gyms throughout the Seattle area, as well as home training for clients who have basic equipment. The exact location will be determined during our consultation based on your preferences and proximity.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>What equipment do I need for online coaching?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Equipment requirements for online coaching vary based on your goals and what you have access to. I can design programs using minimal or no equipment, or for fully-equipped home or commercial gyms.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>How often will we meet for training?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>The frequency of sessions depends on your goals, availability, and budget. Most clients see best results with 2-3 sessions per week, but I offer flexible scheduling options.</p>
-                </div>
-              </div>
-            </div>
-
-            <h2 id="services">
-              <span className="category-icon"><i className="fas fa-medal"></i></span>
-              Services and Specialties
-            </h2>
-            <div className="faq-container">
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Do you offer nutrition planning?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <div className="faq-important">
-                    <strong>Yes!</strong> Nutrition is a crucial part of achieving your fitness goals, and I provide <span className="answer-highlight">practical nutrition guidance</span> that works with your lifestyle and training program.
-                  </div>
-                  <p>My approach focuses on building sustainable habits rather than restrictive diets. We&apos;ll work together to find nutrition strategies that support your training and fit your real life.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Do you work with clients who have injuries or medical conditions?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Yes, I work with clients who have various injuries and medical conditions, as long as they&apos;ve been cleared for exercise by their healthcare provider. Please discuss any health concerns during our initial consultation.</p>
-                </div>
-              </div>
-            </div>
-
-            <h2 id="policies">
-              <span className="category-icon"><i className="fas fa-clipboard-list"></i></span>
-              Policies and Logistics
-            </h2>
-            <div className="faq-container">
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>What is your cancellation policy?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>I require 24 hours notice for session cancellations. Sessions cancelled with less than 24 hours notice may be subject to a cancellation fee. I understand that emergencies happen, so exceptions can be made on a case-by-case basis.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>How are payments handled?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Payments are processed securely through PayPal, which lets you pay with major credit and debit cards or your PayPal/Venmo account — you don&apos;t need a PayPal account to check out with a card. One-time session packages are paid at purchase, and memberships are billed monthly. We never store your full card number.</p>
-                </div>
-              </div>
-
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Can I pause or cancel my membership anytime?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Yes. Memberships are month-to-month with no long-term contract. You can <strong>pause</strong> your subscription for 1–3 months or <strong>cancel</strong> anytime right from your profile under &quot;Account &amp; Data Management.&quot; When you cancel, you keep access until the end of your current billing period, and you&apos;re welcome to re-subscribe later. See our <Link href="/legal/terms" className="answer-highlight">Terms of Service</Link> for full details.</p>
-                </div>
-              </div>
-
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>What is your refund policy?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Memberships are billed for the current period and aren&apos;t prorated when you cancel, and session packages expire 60 days after purchase. If you delete your account, up to two unused, non-expired session credits may be refunded at the rate you paid. We also handle billing errors and unauthorized charges in good faith. Full details are in our <Link href="/legal/terms" className="answer-highlight">Terms of Service</Link>, or email <a href="mailto:billing@shrey.fit" className="answer-highlight">billing@shrey.fit</a>.</p>
-                </div>
-              </div>
-
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Is my personal and health information private?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Absolutely. Your information is encrypted, shared only with your assigned coach, and never sold. You can access, export, or delete your data anytime from your profile. Learn more in our <Link href="/legal/privacy" className="answer-highlight">Privacy Policy</Link> or email <a href="mailto:privacy@shrey.fit" className="answer-highlight">privacy@shrey.fit</a>.</p>
-                </div>
-              </div>
-            </div>
-
-            <h2 id="results">
-              <span className="category-icon"><i className="fas fa-chart-line"></i></span>
-              Results & Expectations
-            </h2>
-            <div className="faq-container">
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>How quickly will I see results?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <div className="faq-callout">
-                    <strong>Every fitness journey is unique</strong> - your results will depend on your starting point, goals, consistency, and genetics.
-                  </div>
-                  <p>During our work together, I&apos;ll help you track various metrics beyond just appearance to help you see your progress clearly and stay motivated throughout your journey.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>What kind of results can I expect?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Beyond physical changes, clients typically experience improved energy levels, better sleep quality, enhanced mood, increased strength and endurance, better posture, reduced pain, and greater confidence.</p>
-                </div>
-              </div>
-            </div>
-
-            <h2 id="pricing">
-              <span className="category-icon"><i className="fas fa-dollar-sign"></i></span>
-              Pricing & Packages
-            </h2>
-            <div className="faq-container">
-              <div className="faq-item popular-question">
-                <div className="faq-question">
-                  <h3>What do your services cost?</h3>
-                  <span className="popular-badge">Most Asked</span>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <div className="faq-important">
-                    All new clients receive a <Link href="/connect#schedule-content" className="answer-highlight">free consultation</Link> where I&apos;ll walk you through pricing based on your specific goals and the option that fits you best.
-                  </div>
-                  <p>I offer three ways to work together:</p>
-                  <ul className="enhanced-list">
-                    <li><strong>In-Person Training:</strong> pay per session, with a discounted multi-session pack available</li>
-                    <li><strong>Online Coaching:</strong> a monthly membership that includes all remote coaching services</li>
-                    <li><strong>Complete Transformation:</strong> our premium monthly package combining online coaching with in-person sessions</li>
-                  </ul>
-                  <p>Current prices for every option are shown on the <Link href="/services" className="answer-highlight">Services page</Link> and again at checkout before you pay.</p>
-
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Do you offer package deals or discounts?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>Yes, I offer several ways to save on your fitness investment including package deals and referral bonuses.</p>
-                </div>
-              </div>
-              
-              <div className="faq-item">
-                <div className="faq-question">
-                  <h3>Is there a contract requirement?</h3>
-                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
-                </div>
-                <div className="faq-answer">
-                  <p>My service options are designed to be flexible while encouraging the consistency needed for real results. Online Coaching is month-to-month with no long-term contract required.</p>
-                </div>
-              </div>
-            </div>
+        {/* No results */}
+        {noResults && (
+          <div className="rounded-2xl border border-gray-200 bg-white/90 p-10 text-center shadow-sm">
+            <p className="text-gray-600">
+              No questions match &quot;{query}&quot;.{' '}
+              <button onClick={() => setQuery('')} className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+                Clear search
+              </button>{' '}
+              or{' '}
+              <Link href="/connect#message" className="text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+                contact me directly
+              </Link>
+              .
+            </p>
           </div>
-          
-          {/* Floating Help Button */}
-          <div className="floating-help-button" id="show-help-popup">
-            <i className="fas fa-question-circle"></i>
-            <span>Need Help?</span>
-          </div>
-          
-          {/* FAQ Question Popup */}
-          <div id="faq-question-popup" className="consultation-popup">
-            <div className="popup-content">
-              <span className="popup-close" id="close-faq-popup">&times;</span>
-              <div className="popup-icon-container">
-                <div className="popup-icon">
-                  <i className="fas fa-question-circle"></i>
+        )}
+
+        {/* Categories */}
+        <div className="space-y-6">
+          {filtered.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <section
+                key={cat.id}
+                id={cat.id}
+                className="scroll-mt-24 overflow-hidden rounded-2xl border border-emerald-100 bg-white/90 shadow-sm backdrop-blur"
+              >
+                <div className="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
+                    <Icon className="size-4" />
+                  </span>
+                  <h2 className="text-lg font-bold text-gray-900">{cat.title}</h2>
                 </div>
-              </div>
-              <h3>Still Have Questions?</h3>
-              <p>If you couldn&apos;t find the answer you were looking for, feel free to reach out directly.</p>
-              <div className="popup-buttons">
-                <Link href="/connect#message" className="btn-primary popup-btn">Contact Me</Link>
-              </div>
-            </div>
-          </div>
+
+                <Accordion type="single" collapsible className="px-6">
+                  {cat.items.map((item, idx) => (
+                    <AccordionItem key={idx} value={`${cat.id}-${idx}`}>
+                      <AccordionTrigger className="text-base font-semibold text-gray-900 hover:no-underline">
+                        <span className="flex items-center gap-2 pr-2 text-left">
+                          {item.q}
+                          {item.popular && (
+                            <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-600">
+                              Most Asked
+                            </Badge>
+                          )}
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3 text-[15px] leading-relaxed text-gray-700">
+                        {item.a}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </section>
+            );
+          })}
         </div>
-      </section>
+
+        {/* Still have questions CTA */}
+        <div className="mt-10 rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-8 text-center">
+          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
+            <MessageCircle className="size-6" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">Still have questions?</h3>
+          <p className="mx-auto mt-2 max-w-md text-gray-600">
+            If you couldn&apos;t find the answer you were looking for, reach out and I&apos;ll get back to you personally.
+          </p>
+          <Link
+            href="/connect#message"
+            className="mt-5 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 font-semibold text-white shadow-md transition hover:from-emerald-700 hover:to-teal-700"
+          >
+            Contact Me
+          </Link>
+        </div>
+      </main>
     </div>
   );
 }
