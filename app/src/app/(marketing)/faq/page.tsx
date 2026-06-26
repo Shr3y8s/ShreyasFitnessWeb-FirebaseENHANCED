@@ -175,12 +175,17 @@ export default function FAQPage() {
   }, []);
   
   return (
-    <div className="marketing-content">
+    <div className="marketing-content min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <link rel="stylesheet" href="/css/styles.css" />
       <link rel="stylesheet" href="/css/faq.css" />
+      <style>{`
+        .marketing-content .page-header,
+        .marketing-content .faq-page { background: transparent !important; }
+      `}</style>
       
       {/* Page Header */}
       <section className="page-header">
+
         <div className="container">
           <h1>Frequently Asked Questions</h1>
           
@@ -235,7 +240,7 @@ export default function FAQPage() {
                   <div className="faq-important">
                     <strong>Don&apos;t worry - getting started doesn&apos;t have to be overwhelming!</strong> I&apos;ve designed a simple process to make your fitness journey as smooth as possible.
                   </div>
-                  <p>The initial step is scheduling a <Link href="/connect#schedule-content" className="answer-highlight">complimentary 15-minute consultation</Link> where I&apos;ll answer your basic questions about my services, pricing options, and determine if we&apos;re a good fit to work together.</p>
+                  <p>The initial step is scheduling a <Link href="/connect#schedule-content" className="answer-highlight">free consultation</Link> where I&apos;ll answer your basic questions about my services, pricing options, and determine if we&apos;re a good fit to work together.</p>
                   <p>After you&apos;ve booked a training package or membership, we&apos;ll schedule a <span className="answer-highlight">comprehensive assessment session</span> where we&apos;ll conduct a detailed health history review, set specific goals, and create your personalized fitness program.</p>
                   <p><strong>Ready to get started?</strong> <Link href="/connect#schedule-content">Schedule your free consultation today!</Link></p>
                 </div>
@@ -361,7 +366,37 @@ export default function FAQPage() {
                   <span className="toggle-icon"><i className="fas fa-plus"></i></span>
                 </div>
                 <div className="faq-answer">
-                  <p>I accept various payment methods including credit/debit cards and digital payment platforms. Payments are typically collected at the beginning of each training package or on a monthly basis for ongoing clients.</p>
+                  <p>Payments are processed securely through PayPal, which lets you pay with major credit and debit cards or your PayPal/Venmo account — you don&apos;t need a PayPal account to check out with a card. One-time session packages are paid at purchase, and memberships are billed monthly. We never store your full card number.</p>
+                </div>
+              </div>
+
+              <div className="faq-item">
+                <div className="faq-question">
+                  <h3>Can I pause or cancel my membership anytime?</h3>
+                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
+                </div>
+                <div className="faq-answer">
+                  <p>Yes. Memberships are month-to-month with no long-term contract. You can <strong>pause</strong> your subscription for 1–3 months or <strong>cancel</strong> anytime right from your profile under &quot;Account &amp; Data Management.&quot; When you cancel, you keep access until the end of your current billing period, and you&apos;re welcome to re-subscribe later. See our <Link href="/legal/terms" className="answer-highlight">Terms of Service</Link> for full details.</p>
+                </div>
+              </div>
+
+              <div className="faq-item">
+                <div className="faq-question">
+                  <h3>What is your refund policy?</h3>
+                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
+                </div>
+                <div className="faq-answer">
+                  <p>Memberships are billed for the current period and aren&apos;t prorated when you cancel, and session packages expire 60 days after purchase. If you delete your account, up to two unused, non-expired session credits may be refunded at the rate you paid. We also handle billing errors and unauthorized charges in good faith. Full details are in our <Link href="/legal/terms" className="answer-highlight">Terms of Service</Link>, or email <a href="mailto:billing@shrey.fit" className="answer-highlight">billing@shrey.fit</a>.</p>
+                </div>
+              </div>
+
+              <div className="faq-item">
+                <div className="faq-question">
+                  <h3>Is my personal and health information private?</h3>
+                  <span className="toggle-icon"><i className="fas fa-plus"></i></span>
+                </div>
+                <div className="faq-answer">
+                  <p>Absolutely. Your information is encrypted, shared only with your assigned coach, and never sold. You can access, export, or delete your data anytime from your profile. Learn more in our <Link href="/legal/privacy" className="answer-highlight">Privacy Policy</Link> or email <a href="mailto:privacy@shrey.fit" className="answer-highlight">privacy@shrey.fit</a>.</p>
                 </div>
               </div>
             </div>
@@ -408,13 +443,16 @@ export default function FAQPage() {
                 </div>
                 <div className="faq-answer">
                   <div className="faq-important">
-                    All new clients receive a <Link href="/connect#schedule-content" className="answer-highlight">free consultation</Link> where I&apos;ll provide detailed pricing options based on your specific goals and requirements.
+                    All new clients receive a <Link href="/connect#schedule-content" className="answer-highlight">free consultation</Link> where I&apos;ll walk you through pricing based on your specific goals and the option that fits you best.
                   </div>
+                  <p>I offer three ways to work together:</p>
                   <ul className="enhanced-list">
-                    <li><strong>In-Person Training:</strong> $70/session</li>
-                    <li><strong>Online Coaching:</strong> $249/month (includes all remote coaching services)</li>
-                    <li><strong>Complete Transformation:</strong> $249/month + $60/session (our premium package)</li>
+                    <li><strong>In-Person Training:</strong> pay per session, with a discounted multi-session pack available</li>
+                    <li><strong>Online Coaching:</strong> a monthly membership that includes all remote coaching services</li>
+                    <li><strong>Complete Transformation:</strong> our premium monthly package combining online coaching with in-person sessions</li>
                   </ul>
+                  <p>Current prices for every option are shown on the <Link href="/services" className="answer-highlight">Services page</Link> and again at checkout before you pay.</p>
+
                 </div>
               </div>
               
