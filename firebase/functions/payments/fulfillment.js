@@ -416,19 +416,47 @@ async function fulfillSessionPackage(p, hooks = {}) {
     });
   });
 
-  // Write-once account activation for package-only buyers.
+  // Write-once account activation for package-only buyers. Also assign a trainer
+  // on first activation if none assigned — one-time / in-person buyers need a coach
+  // for Coach Chat + session scheduling, exactly like first-subscription clients
+  // (mirrors activateSubscription's auto-assignment). Ported back after the neutral
+  // fulfillment migration dropped the legacy one-time trainer-assignment block.
   const freshDoc = await userRef.get();
   const freshData = freshDoc.exists ? freshDoc.data() || {} : {};
   let firstActivation = false;
+  let assignedTrainerId = freshData.assignedTrainerId;
   if (freshDoc.exists && !freshData.accountActivated) {
-    await userRef.update({
+    const activationUpdate = {
       accountActivated: true,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+
+    // Assign a trainer if none assigned yet.
+    if (!freshData.assignedTrainerId) {
+      const adminsSnapshot = await admin
+        .firestore()
+        .collection("admins")
+        .limit(1)
+        .get();
+      if (!adminsSnapshot.empty) {
+        const trainerDoc = adminsSnapshot.docs[0];
+        const trainerData = trainerDoc.data();
+        activationUpdate.assignedTrainerId = trainerDoc.id;
+        activationUpdate.assignedTrainerCollection = "admins";
+        activationUpdate.assignedTrainerName = trainerData.name || "Your Coach";
+        activationUpdate.assignedAt = admin.firestore.FieldValue.serverTimestamp();
+        assignedTrainerId = trainerDoc.id;
+      } else {
+        logger.warn("No trainer found in admins collection (session package)", { userId });
+      }
+    }
+
+    await userRef.update(activationUpdate);
     firstActivation = true;
   }
 
   logger.info("Session package created (neutral fulfillment)", { userId, quantity, provider, transactionId });
+
 
   // Parity side effects (welcome email / activity feed) via hook — ONLY on first
   // activation, so repeat webhooks for the same buyer don't re-send. One-time
@@ -440,8 +468,9 @@ async function fulfillSessionPackage(p, hooks = {}) {
         userId,
         userData: freshData,
         tierId: undefined,
-        trainerId: freshData.assignedTrainerId,
+        trainerId: assignedTrainerId,
       });
+
     } catch (e) {
       logger.error("onFirstActivation hook failed (non-fatal, session package)", { userId, error: e.message });
     }

@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { redirectToCheckoutForTier } from '@/lib/constants';
+import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+
 import { Loader2, Camera, Upload, CheckCircle, XCircle, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -120,6 +122,11 @@ export default function MonthlyPhotosPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have progress photos.
+  if (userData && !getClientFeatureAccess(userData.tier).logging) {
+    return <FeatureLockedShell feature="logging" />;
+  }
+
   if (authLoading || !userData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -127,6 +134,7 @@ export default function MonthlyPhotosPage() {
       </div>
     );
   }
+
 
   return (
     <SidebarProvider>

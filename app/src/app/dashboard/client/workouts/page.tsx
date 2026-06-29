@@ -12,10 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, CheckCircle, Loader2 } from 'lucide-react';
 import { Workout } from '@/types/workout';
 import { WorkoutAssignmentCard } from '@/components/workouts/WorkoutAssignmentCard';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+import { getClientFeatureAccess } from '@/lib/constants';
 
 export default function ClientWorkoutsPage() {
   const router = useRouter();
   const { userData, user } = useAuth();
+
   const [upcomingWorkouts, setUpcomingWorkouts] = useState<Workout[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +94,11 @@ export default function ClientWorkoutsPage() {
     };
   }, [user]);
 
+  // Tier gating: in-person clients don't have coach-assigned workouts.
+  if (userData && !getClientFeatureAccess(userData.tier).workouts) {
+    return <FeatureLockedShell feature="workouts" />;
+  }
+
   if (loading) {
     return (
       <SidebarProvider>
@@ -111,6 +119,7 @@ export default function ClientWorkoutsPage() {
       </SidebarProvider>
     );
   }
+
 
   return (
     <SidebarProvider>

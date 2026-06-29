@@ -14,6 +14,9 @@ import { CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { cn, formatTimeAgo } from '@/lib/utils';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+import { getClientFeatureAccess } from '@/lib/constants';
+
 
 interface ClientTask {
   id: string;
@@ -189,6 +192,11 @@ export default function ClientTasksPage() {
     </div>
   );
 
+  // Tier gating: in-person clients don't have coach-assigned tasks.
+  if (userData && !getClientFeatureAccess(userData.tier).tasks) {
+    return <FeatureLockedShell feature="tasks" />;
+  }
+
   return (
     <SidebarProvider>
       <ClientSidebar
@@ -200,6 +208,7 @@ export default function ClientTasksPage() {
         <div className="p-6 max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold">My Tasks</h1>
+
             <p className="text-muted-foreground text-sm mt-1">Tasks assigned by your coach</p>
           </div>
 

@@ -10,10 +10,13 @@ import { Card } from '@/components/ui/card';
 import { Target, Star } from 'lucide-react';
 import { Goal, getCategoryMetadata, calculateGoalCompletion } from '@/types/goals';
 import { getClientGoals } from '@/lib/goals-api';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+import { getClientFeatureAccess } from '@/lib/constants';
 
 export default function ClientGoalsPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
+
   const [loading, setLoading] = useState(true);
   const [activeGoals, setActiveGoals] = useState<Goal[]>([]);
 
@@ -52,6 +55,11 @@ export default function ClientGoalsPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have goals & milestones.
+  if (userData && !getClientFeatureAccess(userData.tier).goals) {
+    return <FeatureLockedShell feature="goals" />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
@@ -59,6 +67,7 @@ export default function ClientGoalsPage() {
       </div>
     );
   }
+
 
   return (
     <SidebarProvider>

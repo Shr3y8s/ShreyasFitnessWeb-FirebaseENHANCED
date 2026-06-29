@@ -46,6 +46,8 @@ import {
 } from '@/components/ui/sidebar';
 import { useClientNotifications } from '@/context/ClientNotificationsContext';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
+import { getClientFeatureAccess } from '@/lib/constants';
+
 
 interface ServiceTier {
   id: string;
@@ -227,8 +229,14 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
   const billingUpdatesCount = unreadNotifs.filter(
     (n) => n.type === 'upcoming_payment'
   ).length;
-  
+
+  // Tier-based feature access (single source of truth — see
+  // docs/02-implementation/tier-feature-gating/). In-person clients only see
+  // Dashboard, Training (Buy + Schedule), Support, and Account.
+  const access = getClientFeatureAccess(userData?.tier);
+
   return (
+
     <Sidebar variant="floating" className={theme === 'forest' ? 'forest-sidebar' : ''}>
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity">
@@ -257,6 +265,7 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
         </SidebarGroup>
 
           {/* Tasks Section */}
+          {access.tasks && (
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
@@ -276,8 +285,10 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          )}
 
           {/* Planning Section */}
+        {access.plan && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Planning</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -298,11 +309,10 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Logging Section */}
-
-
-
+        {access.logging && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Logging</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -339,12 +349,15 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
+
 
         {/* Training Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Training</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {access.workouts && (
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/workouts' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/workouts">
@@ -358,8 +371,10 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/sessions/buy' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+
 
                   <Link href="/dashboard/client/sessions/buy">
                     <CreditCard className="w-4 h-4" />
@@ -380,6 +395,7 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {access.checkins && (
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/checkins' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/checkins">
@@ -388,12 +404,15 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
         {/* Nutrition Section */}
+        {access.nutrition && (
         <SidebarGroup>
+
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Nutrition</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -414,12 +433,15 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
 
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Progress Section */}
+        {(access.progress || access.goals) && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Progress</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              {access.progress && (
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/progress' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
                   <Link href="/dashboard/client/progress">
@@ -428,6 +450,8 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              )}
+              {access.goals && (
               <SidebarMenuItem>
                 <SidebarMenuButton asChild className={pathname === '/dashboard/client/goals' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
 
@@ -442,11 +466,14 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
         {/* Support Section */}
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">Support</SidebarGroupLabel>
           <SidebarGroupContent>

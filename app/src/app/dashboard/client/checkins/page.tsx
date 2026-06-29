@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { useAuth } from '@/lib/auth-context';
 import { signOutUser } from '@/lib/firebase';
-import { CALENDLY_URLS } from '@/lib/constants';
+import { CALENDLY_URLS, getClientFeatureAccess } from '@/lib/constants';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -188,6 +190,11 @@ export default function WeeklyCheckinsPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have weekly check-ins.
+  if (userData && !getClientFeatureAccess(userData.tier).checkins) {
+    return <FeatureLockedShell feature="checkins" />;
+  }
+
   if (loading) {
   return (
     <>
@@ -209,6 +216,7 @@ export default function WeeklyCheckinsPage() {
                 <h1 className="text-3xl font-bold mb-2">Weekly Check-ins</h1>
                 <p className="text-muted-foreground">Loading your check-in schedule...</p>
               </div>
+
               <Skeleton className="h-64" />
               <Skeleton className="h-96" />
           </div>

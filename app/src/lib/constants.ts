@@ -127,6 +127,99 @@ export function hasOnlineCoaching(tier: string | undefined): boolean {
 }
 
 
+// ========== CLIENT FEATURE ACCESS (tier-based UI gating) ==========
+// See docs/02-implementation/tier-feature-gating/. The dashboard feature set a
+// client can see is derived ONLY from the FEATURE_MATRIX below (single source of
+// truth). Gating is UI-only by design: every gated route reads per-user data that
+// firestore.rules already scopes to request.auth.uid, so there is NO data-exposure
+// risk — an in-person client can't see anyone else's data and has none of their own
+// behind these screens. The sidebar, page guards, and dashboard-home branching all
+// read from getClientFeatureAccess().
+
+/** Dashboard features that can be gated by tier. */
+export interface ClientFeatureAccess {
+  fullDashboard: boolean;     // full home layout vs simplified in-person home
+  tasks: boolean;             // My Tasks
+  plan: boolean;              // My Plan
+  logging: boolean;           // Daily Activities + Weekly Survey + Progress Photos
+  workouts: boolean;          // My Workouts
+  checkins: boolean;          // Weekly Check-ins
+  nutrition: boolean;         // Nutrition Hub
+  progress: boolean;          // Progress
+  goals: boolean;             // Goals & Milestones
+  buySessions: boolean;       // Buy 1-on-1 Sessions
+  scheduleSessions: boolean;  // Schedule 1-on-1
+  support: boolean;           // Your Trainer + Coach Chat + Resources
+  account: boolean;           // Profile + Security + Membership + Billing
+}
+
+/** Convenience key type for guards/pages. */
+export type ClientFeatureKey = keyof ClientFeatureAccess;
+
+// In-person group (single session + 4-pack): sessions + support + account only.
+const IN_PERSON_ACCESS: ClientFeatureAccess = {
+  fullDashboard: false,
+  tasks: false,
+  plan: false,
+  logging: false,
+  workouts: false,
+  checkins: false,
+  nutrition: false,
+  progress: false,
+  goals: false,
+  buySessions: true,
+  scheduleSessions: true,
+  support: true,
+  account: true,
+};
+
+// Coaching group (OC + CT today): full dashboard access.
+const FULL_ACCESS: ClientFeatureAccess = {
+  fullDashboard: true,
+  tasks: true,
+  plan: true,
+  logging: true,
+  workouts: true,
+  checkins: true,
+  nutrition: true,
+  progress: true,
+  goals: true,
+  buySessions: true,
+  scheduleSessions: true,
+  support: true,
+  account: true,
+};
+
+/**
+ * Per-tier feature matrix — the single source of truth for client feature access.
+ *
+ * OC and CT are SEPARATE rows on purpose: they are identical today but free to
+ * diverge later (e.g. a CT-only feature) by editing just CT's row. We spread into
+ * fresh objects so the two rows are equal by value, never shared by reference.
+ *
+ * Typed as an exhaustive Record<AppProductId, …> so adding a new product forces a
+ * compile error here until its access row is defined.
+ */
+const FEATURE_MATRIX: Record<AppProductId, ClientFeatureAccess> = {
+  in_person: { ...IN_PERSON_ACCESS },
+  in_person_4pack: { ...IN_PERSON_ACCESS },
+  online_coaching: { ...FULL_ACCESS },
+  complete_transformation: { ...FULL_ACCESS },
+};
+
+/**
+ * Resolve the feature-access row for a tier (an AppProductId stored on user.tier).
+ * Unknown/missing tier → most-restrictive (in-person) row (safe default — never
+ * accidentally grants full access). Returns a fresh object so callers can't mutate
+ * the shared matrix rows.
+ */
+export function getClientFeatureAccess(tier?: string | null): ClientFeatureAccess {
+  const row = FEATURE_MATRIX[tier as AppProductId];
+  return row ? { ...row } : { ...IN_PERSON_ACCESS };
+}
+
+
+
 // ========== PAYPAL CONFIG (Billing Plans + one-time amounts) ==========
 // PayPal launch processor. See docs/02-implementation/payment-processor/
 // payment-processor-design.md §7.1.

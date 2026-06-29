@@ -674,11 +674,7 @@ export default function BillingPage() {
                   <div className="text-sm text-blue-900">
                     <p className="font-medium mb-1">Need help with billing?</p>
                     <p>
-                      Contact your coach through the{' '}
-                      <a href="/dashboard/client/messages" className="font-medium underline hover:text-blue-700">
-                        Coach Inbox
-                      </a>
-                      {' '}or email us at{' '}
+                      Email us at{' '}
                       <a href="mailto:billing@shrey.fit" className="font-medium underline hover:text-blue-700">
                         billing@shrey.fit
                       </a>

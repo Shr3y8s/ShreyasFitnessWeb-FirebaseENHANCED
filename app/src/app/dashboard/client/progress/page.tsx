@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { redirectToCheckoutForTier } from '@/lib/constants';
+import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
 
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+
 import { signOutUser } from '@/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -60,6 +62,11 @@ export default function ProgressPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have progress tracking.
+  if (!authLoading && userData && !getClientFeatureAccess(userData.tier).progress) {
+    return <FeatureLockedShell feature="progress" />;
+  }
+
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -67,6 +74,7 @@ export default function ProgressPage() {
       </div>
     );
   }
+
 
   return (
     <SidebarProvider>

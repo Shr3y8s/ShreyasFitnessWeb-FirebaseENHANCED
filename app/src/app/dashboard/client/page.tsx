@@ -30,7 +30,8 @@ import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { getClientPlan } from '@/lib/plan-api';
 import { getDailyActivity, toggleHabit } from '@/lib/activity-api';
 import { getTodayLocal } from '@/lib/date-utils';
-import { redirectToCheckoutForTier } from '@/lib/constants';
+import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
+
 
 
 import type { DailyActivityData } from '@/types/activity';
@@ -488,7 +489,137 @@ export default function ClientDashboardPage() {
     setupGoal.isActive && 
     !allMilestonesComplete;
 
+  // Tier-based feature access (see docs/02-implementation/tier-feature-gating/).
+  // In-person clients (single session + 4-pack) get a simplified home with only
+  // the pieces meaningful to them; coaching clients keep the full layout.
+  const access = getClientFeatureAccess(userDataFromAuth?.tier);
+
+  if (!access.fullDashboard) {
+    return (
+      <SidebarProvider>
+        <ClientSidebar
+          userName={userDataFromAuth?.name}
+          userTier={userDataFromAuth?.tier}
+          userProfilePhoto={userDataFromAuth?.profilePhotoSmall || undefined}
+          onLogout={handleLogout}
+          theme={theme}
+        />
+        <SidebarInset>
+          <div className={`${theme === 'forest' ? 'client-dashboard' : 'min-h-screen bg-background text-foreground'} p-4 sm:p-6 lg:p-8`}>
+            <div className="max-w-5xl mx-auto space-y-6">
+              {/* Header */}
+              <WelcomeHeader
+                name={userDataFromAuth?.name || 'there'}
+                theme={theme}
+                onCycleTheme={cycleTheme}
+              />
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ perspective: '1000px' }}>
+                {/* Upcoming session card */}
+                <InteractiveCard>
+                  <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm hover:shadow-glow transition-shadow">
+                    {loadingNextSession ? (
+                      <CardContent className="text-center py-12">
+                        <div className="text-4xl mb-3">⏳</div>
+                        <p className="text-muted-foreground">Loading session...</p>
+                      </CardContent>
+                    ) : nextSession ? (
+                      <UpcomingWorkoutReminder
+                        workout={{
+                          sessionType: nextSession.sessionType as 'training' | 'checkin' | 'onboarding',
+                          date: formatSessionDateTime(nextSession.scheduledDate),
+                          time: '',
+                          location: nextSessionLocation,
+                        }}
+                      />
+                    ) : (
+                      <CardContent className="text-center py-12">
+                        <div className="text-4xl mb-3">📅</div>
+                        <h3 className="text-lg font-semibold mb-2">No Upcoming Sessions</h3>
+                        <p className="text-muted-foreground mb-4">Schedule your next training session</p>
+                        <a
+                          href="/dashboard/client/sessions/schedule"
+                          className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                        >
+                          Book Session
+                        </a>
+                      </CardContent>
+                    )}
+                  </Card>
+                </InteractiveCard>
+
+                {/* Buy + Schedule CTAs */}
+                <InteractiveCard>
+                  <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm h-full">
+                    <CardContent className="py-8 space-y-4">
+                      <h3 className="text-lg font-semibold">Your Sessions</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Buy 1-on-1 training sessions and schedule your next workout with your trainer.
+                      </p>
+                      <div className="flex flex-col gap-3">
+                        <a
+                          href="/dashboard/client/sessions/buy"
+                          className="inline-block text-center bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                        >
+                          Buy Sessions
+                        </a>
+                        <a
+                          href="/dashboard/client/sessions/schedule"
+                          className="inline-block text-center border border-primary text-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
+                        >
+                          Schedule 1-on-1
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </InteractiveCard>
+
+                {/* Support / trainer */}
+                <InteractiveCard>
+                  <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm h-full">
+                    <CardContent className="py-8 space-y-4">
+                      <h3 className="text-lg font-semibold">Need a hand?</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Message your trainer or explore upgrading to Online Coaching for a full plan,
+                        nutrition, and progress tracking.
+                      </p>
+                      <div className="flex flex-col gap-3">
+                        <a
+                          href="/dashboard/client/messages"
+                          className="inline-block text-center bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                        >
+                          Message Your Coach
+                        </a>
+                        <a
+                          href="/dashboard/client/upgrade"
+                          className="inline-block text-center border border-primary text-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
+                        >
+                          Explore Online Coaching
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </InteractiveCard>
+              </div>
+
+              {/* Account summary */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <InteractiveCard>
+                  <AccountSummary
+                    userId={user?.uid || ''}
+                    accountCreatedAt={userDataFromAuth?.createdAt}
+                  />
+                </InteractiveCard>
+              </div>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
   return (
+
     <SidebarProvider>
       <ClientSidebar
         userName={userDataFromAuth?.name}

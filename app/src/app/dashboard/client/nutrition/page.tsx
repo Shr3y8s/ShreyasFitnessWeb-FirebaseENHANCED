@@ -25,6 +25,9 @@ import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
 import { getTodayLocal, getDaysAgo } from '@/lib/date-utils';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+import { getClientFeatureAccess } from '@/lib/constants';
+
 
 const mealCategories: MealCategory[] = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
 
@@ -649,6 +652,11 @@ export default function NutritionPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have the Nutrition Hub.
+  if (!getClientFeatureAccess(userData?.tier).nutrition) {
+    return <FeatureLockedShell feature="nutrition" />;
+  }
+
   if (loading || !nutritionApproach) {
     return (
       <SidebarProvider>
@@ -669,6 +677,7 @@ export default function NutritionPage() {
       </SidebarProvider>
     );
   }
+
 
   return (
     <SidebarProvider>

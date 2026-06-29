@@ -3,11 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { redirectToCheckoutForTier } from '@/lib/constants';
+import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
 
 import { signOutUser } from '@/lib/firebase';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
+
 import { ClipboardList, Loader2, Calendar, TrendingUp, Dumbbell, Apple } from 'lucide-react';
 import { CurrentPlan } from '@/components/dashboard/current-plan';
 import { YourVision } from '@/components/plan/your-vision';
@@ -72,6 +74,11 @@ export default function PlanPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have a coach-built plan.
+  if (!authLoading && userData && !getClientFeatureAccess(userData.tier).plan) {
+    return <FeatureLockedShell feature="plan" />;
+  }
+
   if (loading || authLoading) {
     return (
       <SidebarProvider>
@@ -92,6 +99,7 @@ export default function PlanPage() {
       </SidebarProvider>
     );
   }
+
 
   // Check if plan has any configured sections
   const hasPlanData = plan && (plan.vision || plan.stepGoal || plan.lissCardio || plan.weeklyFocus);

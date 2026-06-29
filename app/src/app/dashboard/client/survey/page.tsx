@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { redirectToCheckoutForTier } from '@/lib/constants';
+import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
 
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 import { Loader2 } from 'lucide-react';
 import { QualitativeFeedback } from '@/components/client-progress/qualitative-feedback';
+
 
 export default function WeeklySurveyPage() {
   const router = useRouter();
@@ -47,6 +49,11 @@ export default function WeeklySurveyPage() {
     }
   };
 
+  // Tier gating: in-person clients don't have weekly surveys.
+  if (userData && !getClientFeatureAccess(userData.tier).logging) {
+    return <FeatureLockedShell feature="logging" />;
+  }
+
   if (authLoading || !userData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -54,6 +61,7 @@ export default function WeeklySurveyPage() {
       </div>
     );
   }
+
 
   return (
     <SidebarProvider>

@@ -71,9 +71,13 @@ export default function ClientMessagesPage() {
         const assignedTrainerId = userData?.assignedTrainerId;
         const assignedTrainerCollection = userData?.assignedTrainerCollection;
         
-        // Strict mode: Both fields are now required (no fallback)
+        // No trainer assigned yet is an EXPECTED state (e.g. a brand-new in-person
+        // client before their first session purchase auto-assigns a coach). The UI
+        // below renders a friendly "No Coach Assigned" screen, so log at warn level
+        // — not error — to avoid tripping the dev error overlay for a normal case.
         if (!assignedTrainerId || !assignedTrainerCollection) {
-          console.error('[ClientMessages] Missing trainer assignment fields', {
+          console.warn('[ClientMessages] No trainer assigned yet', {
+
             userId: user.uid,
             hasAssignedTrainerId: !!assignedTrainerId,
             hasAssignedTrainerCollection: !!assignedTrainerCollection,
@@ -91,15 +95,9 @@ export default function ClientMessagesPage() {
           
           if (trainerDoc.exists()) {
             const admin = trainerDoc.data();
-            
-            console.log('[ClientMessages] Found coach:', {
-              id: trainerDoc.id,
-              name: admin.name,
-              email: admin.email,
-              profilePhotoSmall: admin.profilePhotoSmall
-            });
-            
+
             setTrainerData({
+
               id: trainerDoc.id,
               name: admin.name || 'Your Coach',
               email: admin.email || '',

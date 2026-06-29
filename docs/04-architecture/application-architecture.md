@@ -481,6 +481,29 @@ exports.processVideo = functions.storage
 
 ## Security Model
 
+### Tier-Based Feature Gating (UI-only, by design)
+
+The client dashboard gates which features each client sees by their subscription
+tier (`user.tier`, an `AppProductId`). In-person clients (`in_person`,
+`in_person_4pack`) see only Buy/Schedule sessions, Support, and Account; coaching
+clients (`online_coaching`, `complete_transformation`) see the full dashboard.
+
+- **Single source of truth:** `getClientFeatureAccess(tier)` + the `FEATURE_MATRIX`
+  in `app/src/lib/constants.ts`. OC and CT are modeled as **separate rows** (equal
+  today, free to diverge later). The sidebar (`client-sidebar.tsx`), per-page guards
+  (`FeatureLockedShell` / `FeatureGuard` → `UpgradeUpsell`), and the dashboard-home
+  branch all read from it. Unknown/missing tier defaults to the most-restrictive row.
+- **UI-only by design — no data-exposure risk.** Gating is implemented purely in the
+  UI. Every gated feature reads per-user data that `firestore.rules` already scopes
+  to `request.auth.uid` (e.g. `plans`, `workouts`, `nutritionLogs`, `goals`,
+  `weeklySurveys`, `progressPhotos`, `dailyActivityLogs`). An in-person client cannot
+  read anyone else's data and has none of their own behind these screens, so backend
+  / Firestore-rules tier enforcement would add cost and complexity with **zero**
+  security benefit. This is a no-risk decision, not an accepted gap.
+- **Deep-links** to a gated route render a soft "Upgrade to Online Coaching" upsell
+  panel (no redirect). See `docs/02-implementation/tier-feature-gating/`.
+
+
 ### Environment Variables
 
 #### Next.js Environment Variable Rules
