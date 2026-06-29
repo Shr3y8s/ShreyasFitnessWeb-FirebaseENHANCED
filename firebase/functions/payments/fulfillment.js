@@ -83,10 +83,13 @@ async function writeSubscriptionRecord({
   currentPeriodEnd,
   amount,
   interval,
+  intervalCount,
+  months,
   paymentMethod,
 }) {
   userId = normalizeUserId(userId);
   if (!userId || !subscriptionId) return;
+
   const ref = admin
     .firestore()
     .collection("billing_customers")
@@ -119,7 +122,13 @@ async function writeSubscriptionRecord({
       // cancel updates so we don't clobber a previously-stored amount.
       ...(amount != null ? { amount } : {}),
       ...(interval ? { interval } : {}),
+      // `intervalCount`/`months` (prepay-plans Phase A): the billing cadence
+      // (1 monthly, 3 quarterly). Authoritative for cadence-aware MRR (amount ÷ months)
+      // + "next billing" math. Only written when known so a status-only update keeps them.
+      ...(intervalCount != null ? { intervalCount } : {}),
+      ...(months != null ? { months } : {}),
       // `paymentMethod` { label, brand?, last4?, kind } — the instrument funding this
+
       // subscription (card brand+last4, or "PayPal"/"Venmo" wallet). PayPal doesn't
       // expose Apple/Google Pay or credit-vs-debit, so those fall back to card/wallet.
       // Only written when known so a status-only update doesn't clobber it.
@@ -286,8 +295,11 @@ async function activateSubscription(p, hooks = {}) {
     currentPeriodEnd: p.currentPeriodEnd,
     amount: p.amount,
     interval: p.interval,
+    intervalCount: p.intervalCount,
+    months: p.months,
     paymentMethod: p.paymentMethod,
   });
+
 
   logger.info("Subscription synced to user (neutral fulfillment)", {
     userId,

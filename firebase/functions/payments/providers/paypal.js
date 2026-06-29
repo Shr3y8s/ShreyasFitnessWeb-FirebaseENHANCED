@@ -54,21 +54,26 @@ function apiBaseForEnv(env) {
 // `tierId` is the provider-neutral APP PRODUCT ID (app/src/lib/constants.ts
 // APP_PRODUCTS) stored in `user.tier`. Plan ids are globally unique, so one merged
 // map works for both envs; both sandbox and live plans map to the SAME app id.
+// `intervalCount` is the billing cadence (1 = monthly; Phase B adds 3 = quarterly).
+// Defaults to 1 in the resolvers when absent, so existing/legacy entries are monthly.
 const PLAN_TIER_MAP = {
-  // sandbox (2-cycle base plans, minted 2026-06-27)
-  "P-1UL86855135904642NJAFK4I": { tierId: "online_coaching", tierName: "Online Coaching" },
-  "P-28C55086862794508NJAFK4I": { tierId: "complete_transformation", tierName: "Complete Transformation" },
-  // live (2-cycle base plans, re-minted 2026-06-28)
-  "P-4EM46614UA100974ENJA7U3A": { tierId: "online_coaching", tierName: "Online Coaching" },
-  "P-8D877538ML425510RNJA7U3I": { tierId: "complete_transformation", tierName: "Complete Transformation" },
+  // sandbox (2-cycle base plans, minted 2026-06-27) — monthly
+  "P-1UL86855135904642NJAFK4I": { tierId: "online_coaching", tierName: "Online Coaching", intervalCount: 1 },
+  "P-28C55086862794508NJAFK4I": { tierId: "complete_transformation", tierName: "Complete Transformation", intervalCount: 1 },
+  // live (2-cycle base plans, re-minted 2026-06-28) — monthly
+  "P-4EM46614UA100974ENJA7U3A": { tierId: "online_coaching", tierName: "Online Coaching", intervalCount: 1 },
+  "P-8D877538ML425510RNJA7U3I": { tierId: "complete_transformation", tierName: "Complete Transformation", intervalCount: 1 },
 };
 
 
 
 function resolvePlanTier(planId) {
   if (!planId) return {};
-  return PLAN_TIER_MAP[planId] || {};
+  const m = PLAN_TIER_MAP[planId];
+  if (!m) return {};
+  return { ...m, intervalCount: m.intervalCount || 1 };
 }
+
 
 /**
  * Registry-backed tier resolution (subscription-management-design.md §2, FR-3).
@@ -87,15 +92,17 @@ function resolvePlanTier(planId) {
 async function resolvePlanTierAsync(planId) {
   if (!planId) return {};
   const local = PLAN_TIER_MAP[planId];
-  if (local) return local;
+  if (local) return { ...local, intervalCount: local.intervalCount || 1 };
   try {
     const admin = require("firebase-admin");
     const snap = await admin.firestore().collection("paypalPlans").doc(planId).get();
     if (snap.exists) {
       const d = snap.data() || {};
-      if (d.tierId) return { tierId: d.tierId, tierName: d.tierName || null };
+      // intervalCount defaults to 1 (monthly) when the registry doc predates Phase A.
+      if (d.tierId) return { tierId: d.tierId, tierName: d.tierName || null, intervalCount: d.intervalCount || 1 };
     }
   } catch (e) {
+
     logger.warn("resolvePlanTierAsync registry lookup failed; using in-code map", {
       planId,
       error: e.message,
@@ -314,9 +321,15 @@ async function parseEvent(event, ctx = {}) {
           tierName: tier.tierName || null,
           // ACTUAL charged amount (post-discount), minor units — for accurate MRR.
           amount: firstChargeMinor,
+          // Billing cadence (prepay-plans Phase A): `interval` stays for back-compat;
+          // `intervalCount`/`months` are authoritative for cadence-aware MRR + "next
+          // billing" math. intervalCount defaults to 1 (monthly) from resolvePlanTier.
           interval: "month",
+          intervalCount: tier.intervalCount || 1,
+          months: tier.intervalCount || 1,
           ...(subPaymentMethod ? { paymentMethod: subPaymentMethod } : {}),
         },
+
         ...(subPaymentMethod ? { paymentMethod: subPaymentMethod } : {}),
         // When the subscription carried a discount code (Smart Button path), record
         // the redemption on activation (idempotent on the subscription id). The card
@@ -812,6 +825,8 @@ async function createOrder(priceId, customId, ctx = {}, opts = {}) {
  *   @param {number} opts.regularMinor     regular price, minor units (seq 2 on intro)
  *   @param {number} [opts.trialCycles=1]  how many cycles the intro price applies
  *   @param {string} [opts.intervalUnit="MONTH"]
+ *   @param {number} [opts.intervalCount=1] cadence; MUST match the base plan's
+ *     interval_count (1 monthly, 3 quarterly) or PayPal rejects the override.
  */
 function buildPriceOverride(opts = {}) {
   const scope = opts.scope === "intro" ? "intro" : opts.scope === "recurring" ? "recurring" : null;
@@ -824,7 +839,11 @@ function buildPriceOverride(opts = {}) {
     return null;
   }
   const fmt = (m) => (Math.max(0, Math.round(m)) / 100).toFixed(2);
-  const freq = { interval_unit: opts.intervalUnit || "MONTH", interval_count: 1 };
+  const freq = {
+    interval_unit: opts.intervalUnit || "MONTH",
+    interval_count: opts.intervalCount || 1,
+  };
+
   const trialCycles = opts.trialCycles && opts.trialCycles > 0 ? Math.round(opts.trialCycles) : 1;
   const price = (m) => ({ fixed_price: { value: fmt(m), currency_code: "USD" } });
 
@@ -1157,7 +1176,11 @@ async function listPlans(productId, ctx = {}) {
  * month, while the 2-cycle shape lets a create-time `plan.billing_cycles` override
  * apply an intro discount to seq 1 only — PayPal can only REPRICE existing cycles,
  * never ADD one, so the base plan must already be 2-cycle.
- * @param {object} spec { productId, name, description?, amountMinor, currency?, intervalUnit? }
+ * The billing cadence is set by `spec.intervalCount` (default 1 = monthly). A
+ * quarterly plan passes 3, which PayPal bills every 3 months. Both cycles share the
+ * same frequency so the 2-cycle discount-override model keeps working (the override
+ * must use the SAME interval_count — see buildPriceOverride).
+ * @param {object} spec { productId, name, description?, amountMinor, currency?, intervalUnit?, intervalCount? }
  */
 async function createPlan(spec = {}, ctx = {}) {
   const { productId, name, amountMinor } = spec;
@@ -1166,6 +1189,7 @@ async function createPlan(spec = {}, ctx = {}) {
   if (amountMinor == null) throw new Error("amountMinor required");
   const currency = spec.currency || "USD";
   const intervalUnit = spec.intervalUnit || "MONTH";
+  const intervalCount = spec.intervalCount || 1; // 1 = monthly, 3 = quarterly, 12 = annual
   const token = await getAccessToken(ctx);
   const price = { value: (amountMinor / 100).toFixed(2), currency_code: currency };
   const body = {
@@ -1178,21 +1202,22 @@ async function createPlan(spec = {}, ctx = {}) {
         // TRIAL cycle (seq 1) — same price as REGULAR; exists so an intro discount
         // override can reprice it without adding a cycle. total_cycles:1 → PayPal
         // auto-reverts to the REGULAR cycle after one period.
-        frequency: { interval_unit: intervalUnit, interval_count: 1 },
+        frequency: { interval_unit: intervalUnit, interval_count: intervalCount },
         tenure_type: "TRIAL",
         sequence: 1,
         total_cycles: 1,
         pricing_scheme: { fixed_price: price },
       },
       {
-        // REGULAR cycle (seq 2) — the ongoing monthly charge. total_cycles:0 = infinite.
-        frequency: { interval_unit: intervalUnit, interval_count: 1 },
+        // REGULAR cycle (seq 2) — the ongoing recurring charge. total_cycles:0 = infinite.
+        frequency: { interval_unit: intervalUnit, interval_count: intervalCount },
         tenure_type: "REGULAR",
         sequence: 2,
         total_cycles: 0,
         pricing_scheme: { fixed_price: price },
       },
     ],
+
     payment_preferences: {
       auto_bill_outstanding: true,
       setup_fee: { value: "0", currency_code: currency },

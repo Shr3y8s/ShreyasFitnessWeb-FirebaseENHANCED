@@ -175,16 +175,25 @@ export default function MembershipPage() {
     });
   };
 
-  // Calculate next billing date (lastPaymentDate + 1 month)
+  // Calculate next billing date (lastPaymentDate + N months). N = the billing
+  // cadence in months (prepay-plans Phase A): 1 monthly (default), 3 quarterly.
+  // Only a FALLBACK — the UI prefers PayPal's currentPeriodEnd when present.
   const getNextBillingDate = () => {
     if (!userData?.lastPaymentDate) return 'N/A';
-    
+
+    const months =
+      typeof (userData as { months?: number }).months === 'number' && (userData as { months?: number }).months! > 0
+        ? (userData as { months?: number }).months!
+        : typeof (userData as { intervalCount?: number }).intervalCount === 'number' && (userData as { intervalCount?: number }).intervalCount! > 0
+          ? (userData as { intervalCount?: number }).intervalCount!
+          : 1;
     const lastPayment = userData.lastPaymentDate.toDate();
     const nextBilling = new Date(lastPayment);
-    nextBilling.setMonth(nextBilling.getMonth() + 1);
-    
+    nextBilling.setMonth(nextBilling.getMonth() + months);
+
     return formatDate(nextBilling);
   };
+
 
   // Handle successful cancellation - set loading state, let Firestore update UI
   const handleCancelSuccess = (accessUntil: string) => {

@@ -31,14 +31,68 @@ export type AppProductId =
   | 'complete_transformation';
 
 
+// ========== BILLING PERIOD (cadence as a first-class variable) ==========
+// See docs/02-implementation/payment-processor/prepay-plans-design.md §2.
+// `user.tier` (AppProductId) defines WHAT you get; a BillingPeriod defines HOW
+// OFTEN you pay. They are orthogonal — quarterly Online Coaching is still
+// `tier = online_coaching`, so feature gating / check-in eligibility are untouched.
+//
+// Phase A (prepay-plans-tasks.md): this model is introduced and threaded everywhere
+// the old hardcoded `interval: 'month'` assumption lived, but ONLY the monthly option
+// is populated, so behavior is identical. Phase B adds the quarterly option.
+
+export type BillingIntervalUnit = 'MONTH'; // room for 'WEEK' | 'YEAR' later
+export type BillingPeriodLabel = 'monthly' | 'quarterly' | 'annual';
+
+export interface BillingPeriod {
+  intervalUnit: BillingIntervalUnit; // 'MONTH'
+  intervalCount: number;             // 1 (monthly) | 3 (quarterly) | 12 (annual)
+}
+
+/** Canonical periods. */
+export const PERIOD_MONTHLY: BillingPeriod = { intervalUnit: 'MONTH', intervalCount: 1 };
+export const PERIOD_QUARTERLY: BillingPeriod = { intervalUnit: 'MONTH', intervalCount: 3 };
+
+/** Number of months a period spans (identity today since unit is MONTH). */
+export function periodMonths(p: Pick<BillingPeriod, 'intervalCount'>): number {
+  return p.intervalCount;
+}
+
+/** intervalCount → human label. */
+export function periodLabel(count: number): BillingPeriodLabel {
+  if (count === 3) return 'quarterly';
+  if (count === 12) return 'annual';
+  return 'monthly';
+}
+
+/** PayPal plan keys (resolved sandbox/live in PAYPAL_PLANS). Quarterly keys are
+ * reserved here for Phase B; their plan ids are populated then. */
+export type PaypalPlanKey =
+  | 'ONLINE_COACHING'
+  | 'COMPLETE_TRANSFORMATION'
+  | 'ONLINE_COACHING_QUARTERLY'
+  | 'COMPLETE_TRANSFORMATION_QUARTERLY';
+
+/** A purchasable billing cadence for a subscription product. */
+export interface BillingOption {
+  period: BillingPeriod;
+  /** Key into PAYPAL_PLANS (resolved to a plan id env-side in the adapter). */
+  planKey: PaypalPlanKey;
+  /** Total charged per period, MINOR units (e.g. 54000 = $540/quarter). */
+  amount: number;
+}
+
 
 export interface AppProduct {
   id: AppProductId;
   name: string;
   kind: 'subscription' | 'one_time';
-  /** Price in MINOR units (cents) — the amount shown AND charged. */
+  /** Price in MINOR units (cents) — the amount shown AND charged. For subscriptions
+   * this is the MONTHLY anchor price; see `billingOptions` for per-cadence pricing. */
   amount: number;
   interval?: 'month';
+  /** Available billing cadences (subscriptions only). Phase A = monthly only. */
+  billingOptions?: BillingOption[];
   /** One-time fee charged with the first subscription cycle (CT first session). */
   setupFee?: number;
   /** True for tiers that include weekly check-ins (Online Coaching family). */
@@ -46,6 +100,7 @@ export interface AppProduct {
   /** Sessions granted for one-time session packages (1, 4). */
   sessionsIncluded?: number;
 }
+
 
 export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
   in_person: {
@@ -72,6 +127,11 @@ export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
     amount: 20000, // $200/mo
     interval: 'month',
     hasCheckins: true,
+    // Phase A: monthly only. Phase B adds the quarterly option (planKey
+    // ONLINE_COACHING_QUARTERLY, amount 54000 = $540/qtr at 10% off).
+    billingOptions: [
+      { period: PERIOD_MONTHLY, planKey: 'ONLINE_COACHING', amount: 20000 },
+    ],
   },
   complete_transformation: {
     id: 'complete_transformation',
@@ -81,6 +141,11 @@ export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
 
     interval: 'month',
     hasCheckins: true,
+    // Phase A: monthly only. Phase B adds the quarterly option (planKey
+    // COMPLETE_TRANSFORMATION_QUARTERLY, amount 67500 = $675/qtr at 10% off).
+    billingOptions: [
+      { period: PERIOD_MONTHLY, planKey: 'COMPLETE_TRANSFORMATION', amount: 25000 },
+    ],
   },
 };
 
@@ -90,6 +155,29 @@ export function getAppProduct(id: string | undefined | null): AppProduct | null 
   if (!id) return null;
   return (APP_PRODUCTS as Record<string, AppProduct>)[id] ?? null;
 }
+
+// ========== BILLING OPTION HELPERS ==========
+
+/** All billing cadences for a product (empty for one-time products). */
+export function getBillingOptions(id: string | undefined | null): BillingOption[] {
+  const p = getAppProduct(id);
+  return p?.billingOptions ?? [];
+}
+
+/** Find a product's billing option by intervalCount (1 = monthly, 3 = quarterly). */
+export function getBillingOption(
+  id: string | undefined | null,
+  intervalCount: number
+): BillingOption | null {
+  return getBillingOptions(id).find((o) => o.period.intervalCount === intervalCount) ?? null;
+}
+
+/** The default (monthly) billing option for a product, or the first available. */
+export function defaultBillingOption(id: string | undefined | null): BillingOption | null {
+  const opts = getBillingOptions(id);
+  return opts.find((o) => o.period.intervalCount === 1) ?? opts[0] ?? null;
+}
+
 
 // ========== SERVICE TIERS (app product ids) ==========
 // Back-compat alias: many screens compare `user.tier` against `SERVICE_TIERS.X`.

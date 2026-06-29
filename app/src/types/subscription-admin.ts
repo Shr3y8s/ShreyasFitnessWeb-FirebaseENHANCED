@@ -72,7 +72,10 @@ export interface AllSubscriptionRow {
   tierName: string | null;
   amountMinor: number | null;
   interval: 'month' | 'year' | string;
+  /** Billing cadence (prepay-plans Phase A): 1 = monthly, 3 = quarterly. Default 1. */
+  intervalCount?: number;
   currentPeriodEnd: number | null; // epoch ms (next billing)
+
   startedAt: number | null;        // epoch ms
   cancelAtPeriodEnd: boolean;
 }

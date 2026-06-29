@@ -491,8 +491,15 @@ export default function AdminSubscriptionsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm">{fmtDateLong(s.startedAt)}</TableCell>
-                          <TableCell className="text-right">{fmtCents(s.amountMinor)}</TableCell>
+                          <TableCell className="text-right">
+                            {fmtCents(s.amountMinor)}
+                            {/* Cadence (prepay-plans Phase A): 3 = quarterly, else monthly. */}
+                            <span className="text-xs text-muted-foreground ml-1">
+                              {s.intervalCount === 3 ? '/qtr' : s.intervalCount === 12 ? '/yr' : '/mo'}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-sm">{fmtDateLong(s.currentPeriodEnd)}</TableCell>
+
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

@@ -30,10 +30,23 @@ const ONETIME_PRICE_MINOR = { IN_PERSON: 7500, IN_PERSON_4PACK: 24000 };
 // amount for subscription discount preview/apply so the client never supplies an
 // amount. Both tiers bill $250/mo; CT additionally has a $60 setup fee which a
 // first-cycle discount does NOT touch (business decision 2026-06-25).
+// Keyed by (tierId, intervalCount). intervalCount 1 = monthly (Phase A); Phase B
+// adds 3 = quarterly (OC 54000, CT 67500 at the 10% default). `subscriptionPriceMinor`
+// resolves the FULL-PERIOD original amount the discount applies to; it defaults the
+// count to 1 (monthly) so existing callers are unchanged.
 const SUBSCRIPTION_PRICE_MINOR = {
-  online_coaching: 20000, // $200/mo
-  complete_transformation: 25000, // $250/mo
+  online_coaching: { 1: 20000 }, // $200/mo
+  complete_transformation: { 1: 25000 }, // $250/mo
 };
+
+/** Full-period subscription price (minor units) for a (tier, cadence). null if unknown. */
+function subscriptionPriceMinor(tierId, intervalCount = 1) {
+  const byPeriod = tierId ? SUBSCRIPTION_PRICE_MINOR[tierId] : null;
+  if (!byPeriod) return null;
+  const v = byPeriod[intervalCount || 1];
+  return v == null ? null : v;
+}
+
 
 
 
@@ -161,8 +174,10 @@ async function resolveSubscriptionPlan(basePlanId, uid, rawCode) {
     ? PROVIDERS.paypal.resolvePlanTier(basePlanId)
     : {};
   const tierId = tier.tierId;
-  const regularMinor = tierId ? SUBSCRIPTION_PRICE_MINOR[tierId] : undefined;
+  // Cadence-aware original price (prepay-plans Phase A): default monthly today.
+  const regularMinor = subscriptionPriceMinor(tierId, tier.intervalCount || 1);
   if (!tierId || regularMinor == null) {
+
     return { error: new HttpsError("invalid-argument", "Unknown subscription plan for discount.") };
   }
   try {
@@ -821,8 +836,9 @@ const previewDiscount = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, 
     const tier = PROVIDERS.paypal.resolvePlanTier
       ? PROVIDERS.paypal.resolvePlanTier(priceId)
       : {};
-    originalMinor = tier.tierId ? SUBSCRIPTION_PRICE_MINOR[tier.tierId] : undefined;
+    originalMinor = subscriptionPriceMinor(tier.tierId, tier.intervalCount || 1) ?? undefined;
   }
+
   if (originalMinor == null) {
     return { valid: false, reason: "not_applicable", ...empty };
   }
@@ -1155,8 +1171,9 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
   if (req.data?.discountCode) {
     const t = PROVIDERS.paypal.resolvePlanTier ? PROVIDERS.paypal.resolvePlanTier(planId) : {};
     const codeDoc = await discounts.getCode(req.data.discountCode);
-    const regularMinor = t.tierId ? SUBSCRIPTION_PRICE_MINOR[t.tierId] : null;
+    const regularMinor = subscriptionPriceMinor(t.tierId, t.intervalCount || 1);
     if (codeDoc) {
+
       const computed = discounts.computeDiscountedAmount(codeDoc, regularMinor || 0);
       discountCtx = {
         code: codeDoc.id,
@@ -1533,8 +1550,10 @@ const createPaypalPlan = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS },
   const cfg = paypalEnvConfig(env);
   const currency = d.currency || "USD";
   try {
+    // intervalCount (prepay-plans Phase A): 1 = monthly (default), 3 = quarterly.
+    const intervalCount = Number(d.intervalCount) > 0 ? Math.round(Number(d.intervalCount)) : 1;
     const planId = await PROVIDERS.paypal.createPlan(
-      { productId, name, amountMinor, currency, intervalUnit: d.interval || "MONTH" },
+      { productId, name, amountMinor, currency, intervalUnit: d.interval || "MONTH", intervalCount },
       cfg
     );
     await upsertPlanRegistry(planId, {
@@ -1543,11 +1562,13 @@ const createPaypalPlan = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS },
       tierName: d.tierName || null,
       amountMinor: Number(amountMinor),
       currency,
+      intervalCount,
       status: "ACTIVE",
       env,
       name,
       createdAt: require("firebase-admin").firestore.FieldValue.serverTimestamp(),
     });
+
     return { ok: true, planId };
   } catch (err) {
     logger.error("createPaypalPlan failed", { productId, name, error: err.message });
@@ -1824,7 +1845,11 @@ const listAllSubscriptions = onCall({ region: "us-west1" }, async (req) => {
       tierName: d.tierName || userTierName || null,
       amountMinor: typeof d.amount === "number" ? d.amount : null,
       interval: d.interval || "month",
+      // Billing cadence (prepay-plans Phase A): 1 = monthly (default for legacy rows),
+      // 3 = quarterly. The admin list renders this as "Monthly"/"Quarterly".
+      intervalCount: typeof d.intervalCount === "number" ? d.intervalCount : 1,
       currentPeriodEnd:
+
         typeof cpe === "number" ? cpe * 1000 : cpe?.toMillis ? cpe.toMillis() : null,
       // Set-once createdAt is the true "started" date for new subs; fall back to
       // updatedAt for legacy records written before createdAt existed (so the column

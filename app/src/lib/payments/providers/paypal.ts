@@ -672,8 +672,21 @@ export const paypalProvider: PaymentProvider = {
     snap.forEach((doc) => {
       const d = doc.data() as any;
       if (typeof d.amount !== 'number') return; // neutral records carry `amount`
-      let monthly = d.amount;
-      if (d.interval === 'year') monthly = Math.round(monthly / 12);
+      // Cadence-aware MRR (prepay-plans Phase A): normalize the charged amount to a
+      // monthly figure. `months` (or intervalCount) = 1 monthly, 3 quarterly, 12
+      // annual. A quarterly $540 charge contributes $180 MRR, not $540. Legacy records
+      // without the field default to monthly; the `interval==='year'` path is kept for
+      // back-compat. Never divide by 0.
+      const months =
+        typeof d.months === 'number' && d.months > 0
+          ? d.months
+          : typeof d.intervalCount === 'number' && d.intervalCount > 0
+            ? d.intervalCount
+            : d.interval === 'year'
+              ? 12
+              : 1;
+      let monthly = Math.round(d.amount / months);
+
       mrr += monthly;
       activeSubscriptions += 1;
       const tierName = d.tierName || d.productId || 'Subscription';
