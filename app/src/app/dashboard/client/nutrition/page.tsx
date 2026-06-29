@@ -71,6 +71,11 @@ export default function NutritionPage() {
     fat: 70
   });
   const [nutritionApproach, setNutritionApproach] = useState<any>(null);
+  // True once the clientPlans fetch has completed (regardless of whether an approach
+  // was found). Drives the loading gate so the page never spins forever when a client
+  // has no nutrition approach configured yet.
+  const [planLoaded, setPlanLoaded] = useState(false);
+
   const [trainerName, setTrainerName] = useState('Your Coach');
   const [approachDate, setApproachDate] = useState<Date | null>(null);
   const [streaks, setStreaks] = useState({ proteinStreak: 0, loggingStreak: 0, waterStreak: 0 });
@@ -192,11 +197,17 @@ export default function NutritionPage() {
         }
       } catch (error) {
         console.error('Error loading nutrition plan:', error);
+      } finally {
+        // Mark the plan fetch as complete regardless of outcome, so the loading gate
+        // resolves even when the client has no nutrition approach configured yet
+        // (otherwise the page spins forever — the `!nutritionApproach` gate never clears).
+        setPlanLoaded(true);
       }
     };
 
     loadNutritionPlan();
   }, [user]);
+
 
   // Load nutrition log for selected date
   useEffect(() => {
@@ -657,7 +668,11 @@ export default function NutritionPage() {
     return <FeatureLockedShell feature="nutrition" />;
   }
 
-  if (loading || !nutritionApproach) {
+  // Spin only while data is actually loading (the per-day log listener + the plan
+  // fetch). Once both have resolved we render — either the hub (approach set) or the
+  // empty state below (no approach yet). Previously this gated on `!nutritionApproach`,
+  // which spun forever for clients whose coach hadn't configured a nutrition approach.
+  if (loading || !planLoaded) {
     return (
       <SidebarProvider>
         <ClientSidebar
@@ -678,8 +693,59 @@ export default function NutritionPage() {
     );
   }
 
+  // No nutrition approach configured yet — show a friendly empty state instead of an
+  // infinite spinner or a half-rendered hub (the banner/tabs assume a real approach).
+  if (!nutritionApproach) {
+    return (
+      <SidebarProvider>
+        <ClientSidebar
+          userName={userData?.name}
+          userTier={userData?.tier}
+          userProfilePhoto={userData?.profilePhotoSmall || undefined}
+          onLogout={handleLogout}
+        />
+        <SidebarInset>
+          <div className="min-h-screen text-foreground p-4 sm:p-6 lg:p-8 bg-primary/5">
+            <div className="max-w-3xl mx-auto space-y-6">
+              <div className="space-y-2 mb-6">
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-3">
+                  <Utensils className="w-8 h-8 text-primary" />
+                  Nutrition Hub
+                </h1>
+                <p className="text-muted-foreground">
+                  Your central place for all things nutrition. Track, plan, and build habits.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-white/60 p-10 text-center space-y-4">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                  <Utensils className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold text-foreground">
+                  Your nutrition plan is being set up
+                </h2>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  {trainerName} hasn&apos;t finalized your nutrition approach yet. Once it&apos;s
+                  ready, you&apos;ll be able to track meals, follow your meal plan, and build
+                  habits right here. Check back soon!
+                </p>
+                <Link href="/dashboard/client/plan" className="inline-block">
+                  <Button variant="outline" className="gap-2">
+                    View Your Plan
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
 
   return (
+
     <SidebarProvider>
       <ClientSidebar
         userName={userData?.name}
