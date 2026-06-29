@@ -179,24 +179,42 @@ async function resolveSubscriptionPlan(basePlanId, uid, rawCode) {
     if (codeDoc.freeComp) {
       return { error: new HttpsError("failed-precondition", "This code is a free comp, not a paid subscription discount.") };
     }
-    // Subscription codes must be a percentage with a subscription scope. Any percentage
-    // in (0, 100) is allowed — the discounted price is computed server-side below and
-    // rejected if it doesn't actually reduce the price (no fixed 10/20/30/40/50 levels;
-    // that was a leftover from the old pre-minted-plan model).
+    // Subscription codes need a subscription scope and a valid discount value. BOTH
+    // percentage and fixed ($ off) are supported — the discounted price is computed
+    // server-side below (with the code's minimum-charge floor) and rejected if it
+    // doesn't actually reduce the price. A 100%-off percentage is allowed because the
+    // floor clamps it to a real (>$0) charge; a TRUE $0 (freeComp) is the parked
+    // comp path and is rejected above.
+    //   percentage → 0 < value <= 100 (floored to the min charge if it would hit $0)
+    //   fixed      → value > 0 (cents off; floored likewise)
     // discountScope "first_cycle" → intro (discount the first N cycles, then revert);
     // "recurring" → permanent discount on every cycle.
     const scope = codeDoc.discountScope === "first_cycle" ? "intro"
       : codeDoc.discountScope === "recurring" ? "recurring" : null;
+    if (!scope) {
+      return { error: new HttpsError("failed-precondition", "This code isn't configured for subscriptions.") };
+    }
     const level = Number(codeDoc.value);
-    if (!scope || codeDoc.type !== "percentage" || !(level > 0 && level < 100)) {
-      return { error: new HttpsError("failed-precondition", "This code can't be applied to a subscription.") };
+    const validValue =
+      codeDoc.type === "percentage" ? level > 0 && level <= 100
+      : codeDoc.type === "fixed" ? level > 0
+      : false;
+    if (!validValue) {
+      return { error: new HttpsError("failed-precondition", "This discount code has an invalid value for a subscription.") };
     }
 
-    // Compute the discounted price SERVER-SIDE from the code (never client-set).
+    // Compute the discounted price SERVER-SIDE from the code (never client-set). This
+    // applies the code's minimum-charge floor (default $1.00), so a 100%-off or a
+    // large fixed discount lands at the floor rather than $0 (PayPal rejects $0).
     const computed = discounts.computeDiscountedAmount(codeDoc, regularMinor);
     const discountedMinor = computed.discountedAmount;
     if (discountedMinor == null || !(discountedMinor < regularMinor)) {
       return { error: new HttpsError("failed-precondition", "Discount did not reduce the price.") };
+    }
+    // A genuine $0 (free comp) can't be billed as a subscription cycle — that's the
+    // parked comp path. The floor normally prevents this; guard anyway.
+    if (discountedMinor <= 0) {
+      return { error: new HttpsError("failed-precondition", "Free subscriptions aren't supported yet. Set a minimum charge floor (e.g. $1).") };
     }
     // Thread uid + code through custom_id (JSON token) so the ACTIVATED webhook
     // records the redemption. Bounded to PayPal's 127-char custom_id limit.

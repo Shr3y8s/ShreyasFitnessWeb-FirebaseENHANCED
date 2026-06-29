@@ -172,13 +172,13 @@ export default function AdminDiscountCodesPage() {
         return 'Percentage cannot exceed 100.';
       }
     }
-    // Subscription scopes are applied via the PayPal billing-cycle override. The
-    // server computes the discounted price from the percentage and rejects anything
-    // that doesn't actually reduce the price, so any percentage in (0, 100) is valid.
-    // We only require: percentage type, not a free comp.
+    // Subscription scopes are applied via the PayPal billing-cycle override. Both
+    // percentage AND fixed ($ off) are supported — the server computes the discounted
+    // price (with the minimum-charge floor) and rejects anything that doesn't reduce
+    // the price. Free comps are the only thing not supported for subscriptions yet
+    // (a true $0 cycle; PayPal rejects $0). 100% off is fine — the floor clamps it.
     if (isSubscriptionScope) {
-      if (freeComp) return 'Subscription discounts can\u2019t be free comps.';
-      if (type !== 'percentage') return 'Subscription discounts must be a percentage.';
+      if (freeComp) return 'Subscription discounts can\u2019t be free comps. Use a percentage/amount with a minimum charge floor.';
     }
     return null;
 
@@ -354,7 +354,7 @@ export default function AdminDiscountCodesPage() {
                     <select
                       value={type}
                       onChange={(e) => setType(e.target.value as 'percentage' | 'fixed')}
-                      disabled={freeComp || isSubscriptionScope}
+                      disabled={freeComp}
                       className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm disabled:opacity-50"
                     >
                       <option value="percentage">Percentage (%)</option>
@@ -370,10 +370,10 @@ export default function AdminDiscountCodesPage() {
                       onChange={(e) => {
                         const next = e.target.value as 'one_time' | 'first_cycle' | 'recurring';
                         setDiscountScope(next);
-                        // Subscription scopes are percentage-only — flip the type + clear
-                        // the free-comp flag so the form can't hold an invalid combo.
+                        // Subscriptions support percentage OR fixed ($ off), but NOT free
+                        // comps (a true $0 cycle; PayPal rejects $0). Clear the free-comp
+                        // flag when switching to a subscription scope; keep the chosen type.
                         if (next !== 'one_time') {
-                          setType('percentage');
                           setFreeComp(false);
                         }
                         if (formError) setFormError('');
