@@ -9,7 +9,9 @@
 //
 // Phase 1 covers one-time discounts: percentage / fixed, optional expiry, global
 // max-redemptions, per-user limit, min-charge floor, and a free-comp flag. Full
-// edit + redemption history + subscription scope/fallback-plan UI is Phase 2.
+// edit + redemption history + subscription-scope UI is Phase 2. (Subscription
+// discounts apply a per-subscriber billing-cycle override at checkout — there is no
+// separate "fallback plan"; the discount-codes-2cycle override model replaced it.)
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -33,6 +35,7 @@ interface DiscountCodeRow {
   minChargeFloor: number;
   freeComp: boolean;
   discountScope: string;
+  introCycles?: number;
 }
 
 const fmtCents = (c: number) => `$${(Math.max(0, c) / 100).toFixed(2)}`;
@@ -61,6 +64,17 @@ export default function AdminDiscountCodesPage() {
   const [perUserLimit, setPerUserLimit] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [freeComp, setFreeComp] = useState(false);
+  // Where the code applies. 'one_time' = training-session purchases. The two
+  // subscription scopes drive the 2-cycle billing override at checkout:
+  //   'first_cycle' → intro: discount the FIRST month only, then revert to full price.
+  //   'recurring'   → discount EVERY month for as long as the subscription is active.
+  // Subscription scopes require a percentage code at a supported level (10/20/30/40/50).
+  const [discountScope, setDiscountScope] =
+    useState<'one_time' | 'first_cycle' | 'recurring'>('one_time');
+  // Intro length (first_cycle scope only): how many months the discounted price
+  // applies before PayPal auto-reverts to full. Stored as a string for the input.
+  const [introCycles, setIntroCycles] = useState('1');
+
 
   const isEditing = editId !== null;
 
@@ -104,8 +118,11 @@ export default function AdminDiscountCodesPage() {
     setPerUserLimit('');
     setExpiresAt('');
     setFreeComp(false);
+    setDiscountScope('one_time');
+    setIntroCycles('1');
     setFormError('');
   };
+
 
   // Open the form in "new" mode (cleared).
   const startCreate = () => {
@@ -132,9 +149,17 @@ export default function AdminDiscountCodesPage() {
     setPerUserLimit(row.perUserLimit != null ? String(row.perUserLimit) : '');
     setExpiresAt(row.expiresAt ? new Date(row.expiresAt).toISOString().slice(0, 10) : '');
     setFreeComp(row.freeComp);
+    setDiscountScope(
+      row.discountScope === 'first_cycle' || row.discountScope === 'recurring'
+        ? row.discountScope
+        : 'one_time'
+    );
+    setIntroCycles(String(row.introCycles && row.introCycles > 0 ? row.introCycles : 1));
     setFormError('');
     setShowForm(true);
   };
+
+  const isSubscriptionScope = discountScope === 'first_cycle' || discountScope === 'recurring';
 
   // Validate the shared form (used by both create and edit).
   const validateForm = (): string | null => {
@@ -147,8 +172,18 @@ export default function AdminDiscountCodesPage() {
         return 'Percentage cannot exceed 100.';
       }
     }
+    // Subscription scopes are applied via the PayPal billing-cycle override. The
+    // server computes the discounted price from the percentage and rejects anything
+    // that doesn't actually reduce the price, so any percentage in (0, 100) is valid.
+    // We only require: percentage type, not a free comp.
+    if (isSubscriptionScope) {
+      if (freeComp) return 'Subscription discounts can\u2019t be free comps.';
+      if (type !== 'percentage') return 'Subscription discounts must be a percentage.';
+    }
     return null;
+
   };
+
 
   const handleSave = async () => {
     setFormError('');
@@ -170,6 +205,8 @@ export default function AdminDiscountCodesPage() {
           perUserLimit: perUserLimit.trim() ? Number(perUserLimit) : null,
           expiresAt: expiresAt ? new Date(expiresAt).getTime() : null,
           freeComp,
+          discountScope,
+          introCycles: discountScope === 'first_cycle' ? Math.max(1, Number(introCycles) || 1) : 1,
         });
         resetForm();
         setShowForm(false);
@@ -205,7 +242,8 @@ export default function AdminDiscountCodesPage() {
         perUserLimit: perUserLimit.trim() ? Number(perUserLimit) : null,
         expiresAt: expiresAt ? new Date(expiresAt).getTime() : null,
         freeComp,
-        discountScope: 'one_time',
+        discountScope,
+        introCycles: discountScope === 'first_cycle' ? Math.max(1, Number(introCycles) || 1) : 1,
         active: true,
       });
       resetForm();
@@ -248,7 +286,7 @@ export default function AdminDiscountCodesPage() {
                   Discount Codes
                 </h1>
                 <p className="text-muted-foreground mt-2">
-                  Create and manage one-time discount codes for checkout.
+                  Create and manage discount codes for one-time purchases and subscriptions.
                 </p>
               </div>
               <Button
@@ -271,14 +309,19 @@ export default function AdminDiscountCodesPage() {
                 <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-800 space-y-1">
                   <p>
-                    <span className="font-medium">Phase 1:</span> codes apply to one-time
-                    purchases (training sessions). Subscription discounts are coming in Phase 2.
+                    <span className="font-medium">Scope</span> controls where a code applies:
+                    <span className="font-medium"> one-time</span> (training-session purchases),
+                    <span className="font-medium"> subscription — first month</span> (intro: the
+                    first month is discounted, then the price reverts to full), or
+                    <span className="font-medium"> subscription — every month</span> (the discount
+                    applies for as long as the subscription is active). Subscription scopes must be
+                    a percentage discount.
                   </p>
+
                   <p>
                     The <span className="font-medium">minimum charge floor</span> guarantees the
                     charged amount never drops below it (PayPal rejects $0). A 100%-off paid code
-                    clamps to the floor; use <span className="font-medium">Free comp</span> for a
-                    true $0 (Phase 2 fulfillment).
+                    clamps to this floor (default $1.00).
                   </p>
                 </div>
               </div>
@@ -311,13 +354,56 @@ export default function AdminDiscountCodesPage() {
                     <select
                       value={type}
                       onChange={(e) => setType(e.target.value as 'percentage' | 'fixed')}
-                      disabled={freeComp}
+                      disabled={freeComp || isSubscriptionScope}
                       className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm disabled:opacity-50"
                     >
                       <option value="percentage">Percentage (%)</option>
                       <option value="fixed">Fixed ($ off)</option>
                     </select>
                   </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Applies to (scope)
+                    </label>
+                    <select
+                      value={discountScope}
+                      onChange={(e) => {
+                        const next = e.target.value as 'one_time' | 'first_cycle' | 'recurring';
+                        setDiscountScope(next);
+                        // Subscription scopes are percentage-only — flip the type + clear
+                        // the free-comp flag so the form can't hold an invalid combo.
+                        if (next !== 'one_time') {
+                          setType('percentage');
+                          setFreeComp(false);
+                        }
+                        if (formError) setFormError('');
+                      }}
+                      className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
+                    >
+                      <option value="one_time">One-time purchase (training sessions)</option>
+                      <option value="first_cycle">Subscription — first N months (intro)</option>
+                      <option value="recurring">Subscription — every month</option>
+                    </select>
+                  </div>
+
+                  {discountScope === 'first_cycle' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Intro length (months)
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={introCycles}
+                        onChange={(e) => setIntroCycles(e.target.value)}
+                        placeholder="1"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        How many months the discount applies before reverting to full price.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       {type === 'percentage' ? 'Percent off (0–100)' : 'Amount off ($)'}
@@ -373,18 +459,10 @@ export default function AdminDiscountCodesPage() {
                       onChange={(e) => setExpiresAt(e.target.value)}
                     />
                   </div>
-                  <div className="flex items-center gap-2 mt-7">
-                    <input
-                      id="freeComp"
-                      type="checkbox"
-                      checked={freeComp}
-                      onChange={(e) => setFreeComp(e.target.checked)}
-                      className="h-4 w-4"
-                    />
-                    <label htmlFor="freeComp" className="text-sm text-gray-700">
-                      Free comp (100% off — Phase 2 fulfillment)
-                    </label>
-                  </div>
+                  {/* Free-comp (true $0, no processor charge) is PARKED — low priority,
+                      post-launch. The min charge floor (default $1) covers the need; a
+                      100%-off code clamps to that floor. Backend still understands
+                      freeComp for any legacy code. */}
                 </div>
 
                 {/* In edit mode, show read-only system-managed fields for context. */}
@@ -458,6 +536,7 @@ export default function AdminDiscountCodesPage() {
                     <tr>
                       <th className="px-4 py-3 font-medium">Code</th>
                       <th className="px-4 py-3 font-medium">Discount</th>
+                      <th className="px-4 py-3 font-medium">Scope</th>
                       <th className="px-4 py-3 font-medium">Floor</th>
                       <th className="px-4 py-3 font-medium">Used</th>
                       <th className="px-4 py-3 font-medium">Limits</th>
@@ -471,6 +550,13 @@ export default function AdminDiscountCodesPage() {
                       <tr key={row.id} className={row.active ? '' : 'opacity-60'}>
                         <td className="px-4 py-3 font-semibold">{row.code}</td>
                         <td className="px-4 py-3">{describeValue(row)}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {row.discountScope === 'first_cycle'
+                            ? `Sub · first ${row.introCycles && row.introCycles > 1 ? `${row.introCycles} months` : 'month'}`
+                            : row.discountScope === 'recurring'
+                              ? 'Sub · every month'
+                              : 'One-time'}
+                        </td>
                         <td className="px-4 py-3">{fmtCents(row.minChargeFloor)}</td>
                         <td className="px-4 py-3">
                           {row.redemptionCount}

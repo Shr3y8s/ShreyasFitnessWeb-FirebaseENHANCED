@@ -55,13 +55,14 @@ function apiBaseForEnv(env) {
 // APP_PRODUCTS) stored in `user.tier`. Plan ids are globally unique, so one merged
 // map works for both envs; both sandbox and live plans map to the SAME app id.
 const PLAN_TIER_MAP = {
-  // sandbox
-  "P-98H09129JK640830CNI26BLQ": { tierId: "online_coaching", tierName: "Online Coaching" },
-  "P-9YF75345BP118725ENI26GLI": { tierId: "complete_transformation", tierName: "Complete Transformation" },
-  // live (prod catalog run 2026-06-21)
+  // sandbox (2-cycle base plans, minted 2026-06-27)
+  "P-1UL86855135904642NJAFK4I": { tierId: "online_coaching", tierName: "Online Coaching" },
+  "P-28C55086862794508NJAFK4I": { tierId: "complete_transformation", tierName: "Complete Transformation" },
+  // live (prod catalog run 2026-06-21) — re-mint as 2-cycle at live cutover
   "P-96194639LX633004DNI4ANSI": { tierId: "online_coaching", tierName: "Online Coaching" },
   "P-3S168526T8851291KNI4ANSI": { tierId: "complete_transformation", tierName: "Complete Transformation" },
 };
+
 
 
 function resolvePlanTier(planId) {
@@ -69,8 +70,43 @@ function resolvePlanTier(planId) {
   return PLAN_TIER_MAP[planId] || {};
 }
 
+/**
+ * Registry-backed tier resolution (subscription-management-design.md §2, FR-3).
+ *
+ * Plan ids are migrating OUT of source code into a Firestore `paypalPlans/{planId}`
+ * registry so plans CREATED/REPRICED at runtime (admin console) resolve their tier
+ * without a redeploy. Lookup order:
+ *   1. in-code PLAN_TIER_MAP — fast path + safety seed for the known base ids.
+ *   2. Firestore `paypalPlans/{planId}` — authoritative for everything else.
+ *
+ * Kept async + separate from the sync `resolvePlanTier` (still used as the in-memory
+ * fallback). The webhook dispatch path (`parseEvent`) awaits this. Requires
+ * firebase-admin initialized (it is, in the functions runtime). Best-effort: on any
+ * Firestore error we fall back to the in-code map so webhooks never hard-fail.
+ */
+async function resolvePlanTierAsync(planId) {
+  if (!planId) return {};
+  const local = PLAN_TIER_MAP[planId];
+  if (local) return local;
+  try {
+    const admin = require("firebase-admin");
+    const snap = await admin.firestore().collection("paypalPlans").doc(planId).get();
+    if (snap.exists) {
+      const d = snap.data() || {};
+      if (d.tierId) return { tierId: d.tierId, tierName: d.tierName || null };
+    }
+  } catch (e) {
+    logger.warn("resolvePlanTierAsync registry lookup failed; using in-code map", {
+      planId,
+      error: e.message,
+    });
+  }
+  return {};
+}
+
 
 /**
+
  * Low-level JSON request to the PayPal REST API. `base` is the per-request API host
  * (sandbox vs live). Falls back to the sandbox host only as a last resort.
  */
@@ -232,10 +268,40 @@ async function parseEvent(event, ctx = {}) {
     case "BILLING.SUBSCRIPTION.ACTIVATED":
     case "BILLING.SUBSCRIPTION.UPDATED":
     case "BILLING.SUBSCRIPTION.RE-ACTIVATED": {
-      const tier = resolvePlanTier(r.plan_id);
+      // Registry-backed resolution (FR-3): in-code map first, then Firestore
+      // `paypalPlans` — so runtime-created/repriced plans resolve their tier.
+      const tier = await resolvePlanTierAsync(r.plan_id);
+
+      // custom_id is normally the bare uid, but the Smart Button discount path
+      // (Feature 2 / T9) threads a JSON token {u,c,p,o} so the webhook can record
+      // the redemption. parseOrderCustomId handles both shapes (bare uid → userId).
+      const parsedSub = parseOrderCustomId(r.custom_id);
+      // NEVER fall back to the raw custom_id: for a discounted sub it's a JSON token
+      // ({"u":...}) and using it as the userId would create a junk billing_customers
+      // doc. parseOrderCustomId already returns the bare uid for the plain path.
+      const subUserId = parsedSub.userId || null;
+      const firstChargeMinor = r.billing_info?.last_payment?.amount
+        ? toMinorUnits(r.billing_info.last_payment.amount)
+        : null;
+      // Funding instrument (card brand+last4, or PayPal/Venmo) for the "Current
+      // Payment Method" card + the activation transaction row. The ACTIVATED webhook
+      // payload is TRIMMED and usually omits subscriber.payment_source.card, so we
+      // dereference the full subscription via GET (authoritative state) when the inline
+      // value has no usable instrument — the same pattern PAYMENT.SALE.COMPLETED uses.
+      // Null when truly absent (wallet/balance funding) → UI falls back to "PayPal".
+      let subPaymentMethod = derivePaymentMethod(r.subscriber?.payment_source);
+      if (!subPaymentMethod && r.id) {
+        try {
+          const tok = await getAccessToken(ctx);
+          const fullSub = await request("GET", `/v1/billing/subscriptions/${r.id}`, tok, null, ctx.base);
+          subPaymentMethod = derivePaymentMethod(fullSub?.subscriber?.payment_source);
+        } catch (e) {
+          logger.warn("ACTIVATED: subscription dereference for payment_source failed (fail-soft)", { subId: r.id, error: e.message });
+        }
+      }
       events.push({
         type: "subscription.activated",
-        userId: r.custom_id || null,
+        userId: subUserId,
         subscriptionId: r.id,
         subscription: {
           status: "active",
@@ -247,19 +313,36 @@ async function parseEvent(event, ctx = {}) {
           tierId: tier.tierId || null,
           tierName: tier.tierName || null,
           // ACTUAL charged amount (post-discount), minor units — for accurate MRR.
-          amount: r.billing_info?.last_payment?.amount
-            ? toMinorUnits(r.billing_info.last_payment.amount)
-            : null,
+          amount: firstChargeMinor,
           interval: "month",
+          ...(subPaymentMethod ? { paymentMethod: subPaymentMethod } : {}),
         },
+        ...(subPaymentMethod ? { paymentMethod: subPaymentMethod } : {}),
+        // When the subscription carried a discount code (Smart Button path), record
+        // the redemption on activation (idempotent on the subscription id). The card
+        // path records synchronously in its callable; both dedupe on the same id.
+        discountRedemption: parsedSub.code
+          ? {
+              code: parsedSub.code,
+              userId: subUserId,
+              mode: "subscription",
+              productId: parsedSub.productId || tier.tierId || null,
+              originalAmount: parsedSub.originalAmount,
+              discountedAmount: firstChargeMinor,
+              transactionId: r.id,
+            }
+          : null,
       });
       break;
     }
+
     case "BILLING.SUBSCRIPTION.CANCELLED":
     case "BILLING.SUBSCRIPTION.EXPIRED": {
       events.push({
         type: "subscription.canceled",
-        userId: r.custom_id || null,
+        // custom_id may be a bare uid OR the discount JSON token {u,c,p,o}; decode it
+        // so the dispatcher always targets the real uid (not the literal JSON string).
+        userId: parseOrderCustomId(r.custom_id).userId || null,
         subscriptionId: r.id,
         // include a subscription marker so the dispatcher updates status (not hard-delete)
         subscription: { status: "canceled" },
@@ -276,7 +359,8 @@ async function parseEvent(event, ctx = {}) {
     case "BILLING.SUBSCRIPTION.SUSPENDED": {
       events.push({
         type: "subscription.paused",
-        userId: r.custom_id || null,
+        // Decode custom_id (bare uid OR discount JSON token) → real uid.
+        userId: parseOrderCustomId(r.custom_id).userId || null,
         subscriptionId: r.id,
         subscription: { status: "paused" },
       });
@@ -293,8 +377,12 @@ async function parseEvent(event, ctx = {}) {
       // billing date (to roll the membership "Next Billing" / currentPeriodEnd
       // forward on each renewal). Fail-soft: any lookup miss keeps generic values.
       let subProductName = "Subscription";
-      let renewalUserId = r.custom || r.custom_id || null;
+      // custom_id may be a bare uid OR the discount JSON token {u,c,p,o}; decode it so
+      // the renewal transaction is written under the REAL uid (a discounted sub would
+      // otherwise land under a `{"u":...}` document and never show in Payment History).
+      let renewalUserId = parseOrderCustomId(r.custom || r.custom_id).userId || null;
       let nextBillingEpoch = null;
+      let renewalPaymentMethod = null;
       const subId = r.billing_agreement_id || null;
       if (subId) {
         try {
@@ -302,10 +390,12 @@ async function parseEvent(event, ctx = {}) {
           const sub = await request("GET", `/v1/billing/subscriptions/${subId}`, token, null, ctx.base);
           const tier = resolvePlanTier(sub?.plan_id);
           if (tier.tierName) subProductName = tier.tierName;
-          if (sub?.custom_id) renewalUserId = sub.custom_id;
+          if (sub?.custom_id) renewalUserId = parseOrderCustomId(sub.custom_id).userId || renewalUserId;
           if (sub?.billing_info?.next_billing_time) {
             nextBillingEpoch = toEpoch(sub.billing_info.next_billing_time);
           }
+          // Funding instrument (card brand+last4 or PayPal/Venmo) for the history row.
+          renewalPaymentMethod = derivePaymentMethod(sub?.subscriber?.payment_source);
         } catch (err) {
           logger.warn("PAYMENT.SALE.COMPLETED subscription lookup failed (fail-soft)", { subId, error: err.message });
         }
@@ -320,6 +410,7 @@ async function parseEvent(event, ctx = {}) {
           userId: renewalUserId,
           amount: toMinorUnits(r.amount),
           currentPeriodEnd: nextBillingEpoch,
+          ...(renewalPaymentMethod ? { paymentMethod: renewalPaymentMethod } : {}),
         },
         transaction: {
           id: r.id,
@@ -329,6 +420,7 @@ async function parseEvent(event, ctx = {}) {
           status: "succeeded",
           productName: subProductName,
           type: "subscription", // recurring subscription charge
+          ...(renewalPaymentMethod ? { paymentMethod: renewalPaymentMethod } : {}),
         },
       });
       break;
@@ -339,7 +431,8 @@ async function parseEvent(event, ctx = {}) {
     case "PAYMENT.CAPTURE.REFUNDED": {
       events.push({
         type: "payment.refunded",
-        userId: r.custom || r.custom_id || null,
+        // Decode custom_id (bare uid OR discount JSON token) → real uid.
+        userId: parseOrderCustomId(r.custom || r.custom_id).userId || null,
         transaction: {
           id: r.id,
           date: toEpoch(r.create_time),
@@ -355,13 +448,17 @@ async function parseEvent(event, ctx = {}) {
     // ---- One-time order capture (Orders API v2) → session package ----
     case "PAYMENT.CAPTURE.COMPLETED": {
       const minor = toMinorUnits(r.amount);
+      // Funding instrument for the one-time purchase history row. Capture payloads
+      // carry payment_source on some flows; null → UI falls back to "PayPal".
+      const capturePaymentMethod = derivePaymentMethod(r.payment_source || event?.payment_source);
       // Resolve product identity. PREFER the threaded custom_id token (uid +
       // productId + discount code) so a DISCOUNTED capture still resolves the right
       // product — the captured amount no longer matches the catalog amount once a
       // discount is applied. Fall back to amount→product inference for the legacy
       // no-discount path (custom_id is the bare uid there).
       const parsedCustom = parseOrderCustomId(r.custom_id);
-      const captureUserId = parsedCustom.userId || r.custom_id || null;
+      // NEVER fall back to the raw custom_id (JSON token on discounted orders).
+      const captureUserId = parsedCustom.userId || null;
       let item = parsedCustom.productId ? resolveOneTimeByAppId(parsedCustom.productId) : null;
       if (!item) item = resolveOneTimeByAmount(minor);
       const appProductName = item ? item.label : "Training Sessions";
@@ -394,6 +491,7 @@ async function parseEvent(event, ctx = {}) {
           status: "succeeded",
           productName: appProductName,
           type: "one_time", // one-time session-package purchase
+          ...(capturePaymentMethod ? { paymentMethod: capturePaymentMethod } : {}),
         },
       });
       break;
@@ -525,7 +623,11 @@ async function refundCapture(captureId, opts = {}, ctx = {}) {
 const ONETIME_AMOUNTS = {
   IN_PERSON: { amount: 7500, label: "In-Person Training Session", appId: "in_person", quantity: 1 },
   IN_PERSON_4PACK: { amount: 24000, label: "4-Pack In-Person Sessions", appId: "in_person_4pack", quantity: 4 },
+  // CT-member in-person session ($60). Gated to Complete Transformation members in
+  // the createPaypalOrder callable (the buyer's active tier is verified server-side).
+
 };
+
 
 /**
  * Resolve a one-time capture's neutral product identity from its amount (minor
@@ -575,6 +677,46 @@ function parseOrderCustomId(customId) {
   return { userId: customId, productId: null, code: null, originalAmount: null };
 }
 
+/**
+ * Derive a neutral payment-method descriptor from a PayPal `payment_source` object
+ * (found on subscriptions under `subscriber.payment_source`, or on captures/orders).
+ *
+ * PayPal LIMITATION (intentional): card checkouts expose brand + last digits, and
+ * wallet flows expose PayPal vs Venmo — but Apple Pay / Google Pay are NOT separate
+ * funding sources here (they surface as a card or the PayPal wallet), and credit-vs-
+ * debit is not reported. So the best we can return is:
+ *   - card   → { label: "Visa ••4242", brand, last4, kind:"card" }
+ *   - paypal → { label: "PayPal", kind:"paypal" }
+ *   - venmo  → { label: "Venmo", kind:"venmo" }
+ *   - paylater → { label: "Pay Later", kind:"paylater" }
+ * Returns null when the source is absent/unrecognized (caller falls back to "PayPal").
+ */
+function derivePaymentMethod(paymentSource) {
+  if (!paymentSource || typeof paymentSource !== "object") return null;
+  // Card (ACDC / vaulted card).
+  if (paymentSource.card) {
+    const c = paymentSource.card;
+    const brandRaw = c.brand || c.card_type || "";
+    const brand = brandRaw
+      ? brandRaw.charAt(0).toUpperCase() + brandRaw.slice(1).toLowerCase()
+      : "Card";
+    const last4 = c.last_digits || c.last4 || null;
+    return {
+      label: last4 ? `${brand} ••${last4}` : brand,
+      brand,
+      ...(last4 ? { last4 } : {}),
+      kind: "card",
+    };
+  }
+  if (paymentSource.venmo) return { label: "Venmo", kind: "venmo" };
+  if (paymentSource.paypal) return { label: "PayPal", kind: "paypal" };
+  if (paymentSource.pay_later || paymentSource.paylater) {
+    return { label: "Pay Later", kind: "paylater" };
+  }
+  return null;
+}
+
+
 
 
 /**
@@ -608,19 +750,147 @@ async function createOrder(priceId, customId, ctx = {}, opts = {}) {
         }).slice(0, 127) // PayPal custom_id max length is 127 chars
       : customId || undefined;
 
+  // Amount as a 2-dp string (PayPal expects e.g. "1.00"). We include a single
+  // line item so the PayPal record shows an Item ID (SKU) + Item name instead of
+  // a blank Item ID. When items[] is present PayPal REQUIRES
+  // amount.breakdown.item_total to equal the sum of the line items' unit_amount —
+  // so we set the line item's unit_amount = item_total = the (possibly discounted)
+  // charged amount. SKU = the neutral app product id (same id threaded in custom_id).
+  const amountValue = (amountMinor / 100).toFixed(2);
   const order = await request("POST", "/v2/checkout/orders", token, {
     intent: "CAPTURE",
     purchase_units: [
       {
-        amount: { currency_code: "USD", value: (amountMinor / 100).toFixed(2) },
+        amount: {
+          currency_code: "USD",
+          value: amountValue,
+          breakdown: {
+            item_total: { currency_code: "USD", value: amountValue },
+          },
+        },
         description: item.label,
         custom_id: orderCustomId,
+        items: [
+          {
+            name: item.label,
+            quantity: "1",
+            unit_amount: { currency_code: "USD", value: amountValue },
+            sku: item.appId,
+          },
+        ],
       },
     ],
   }, ctx.base);
 
+
   return order.id;
 
+}
+
+
+/**
+ * Build a per-subscriber `plan.billing_cycles` price override for the 2-cycle base
+ * plans (subscription-discounts-2cycle-handoff.md). Base plans are minted as
+ * TRIAL(seq 1) + REGULAR(seq 2) at the regular price; this override reprices the
+ * cycles that already exist for THIS subscriber only (the base plan is unchanged for
+ * everyone else). Validated in sandbox 2026-06-27 (`--mint2cycle`: INTRO 201 +
+ * RECURRING 201). The hard PayPal constraint: an override can only REPRICE existing
+ * cycles, never ADD one — which is why the base plan must already be 2-cycle.
+ *
+ * Two scopes:
+ *   - "intro"     → reprice seq 1 (TRIAL, total_cycles:N) to the discounted price;
+ *                   seq 2 (REGULAR) stays at full price. PayPal auto-reverts after N.
+ *   - "recurring" → reprice BOTH seq 1 and seq 2 to the discounted price (permanent).
+ *
+ * Every cycle MUST carry `frequency` (PayPal rejects the override otherwise). The
+ * plan's `setup_fee` (e.g. CT's $60) is NOT a billing cycle, so it is untouched.
+ * Returns null when no (valid) discount is supplied.
+ *
+ * @param {object} opts
+ *   @param {"intro"|"recurring"} opts.scope
+ *   @param {number} opts.discountedMinor  discounted price, minor units
+ *   @param {number} opts.regularMinor     regular price, minor units (seq 2 on intro)
+ *   @param {number} [opts.trialCycles=1]  how many cycles the intro price applies
+ *   @param {string} [opts.intervalUnit="MONTH"]
+ */
+function buildPriceOverride(opts = {}) {
+  const scope = opts.scope === "intro" ? "intro" : opts.scope === "recurring" ? "recurring" : null;
+  if (
+    !scope ||
+    opts.discountedMinor == null ||
+    opts.regularMinor == null ||
+    !(opts.discountedMinor < opts.regularMinor)
+  ) {
+    return null;
+  }
+  const fmt = (m) => (Math.max(0, Math.round(m)) / 100).toFixed(2);
+  const freq = { interval_unit: opts.intervalUnit || "MONTH", interval_count: 1 };
+  const trialCycles = opts.trialCycles && opts.trialCycles > 0 ? Math.round(opts.trialCycles) : 1;
+  const price = (m) => ({ fixed_price: { value: fmt(m), currency_code: "USD" } });
+
+  if (scope === "intro") {
+    // Reprice only the TRIAL cycle (seq 1); REGULAR (seq 2) stays full price.
+    return {
+      billing_cycles: [
+        {
+          sequence: 1,
+          tenure_type: "TRIAL",
+          total_cycles: trialCycles,
+          frequency: freq,
+          pricing_scheme: price(opts.discountedMinor),
+        },
+      ],
+    };
+  }
+  // recurring: reprice BOTH cycles to the discounted price.
+  return {
+    billing_cycles: [
+      {
+        sequence: 1,
+        tenure_type: "TRIAL",
+        total_cycles: 1,
+        frequency: freq,
+        pricing_scheme: price(opts.discountedMinor),
+      },
+      {
+        sequence: 2,
+        tenure_type: "REGULAR",
+        total_cycles: 0,
+        frequency: freq,
+        pricing_scheme: price(opts.discountedMinor),
+      },
+    ],
+  };
+}
+
+
+/**
+ * Create a subscription for the Smart Button (PayPal/Venmo) flow SERVER-SIDE — no
+ * vaulted card (so NO Reference Transactions capability needed). The buyer approves
+ * in the PayPal popup; we build the subscription body here so the amount + any
+ * first-cycle discount override are server-authoritative (the client never sets the
+ * price — parity with the one-time createOrder path). `custom_id` carries the uid so
+ * the webhook maps activation → user. Returns the created subscription id; the Smart
+ * Button's onApprove resolves on buyer approval and the ACTIVATED webhook (plus the
+ * callable's synchronous confirmation) fulfills.
+ * @param {string} planId    PayPal billing plan id (P-xxxx)
+ * @param {string} customId  Firebase uid
+ * @param {object} ctx       { clientId, clientSecret, base }
+ * @param {object} opts      optional { scope, discountedMinor, regularMinor, trialCycles }
+ *                           — a per-subscriber price override (buildPriceOverride).
+ * @returns the created subscription id (I-xxxx)
+ */
+async function createSubscription(planId, customId, ctx = {}, opts = {}) {
+  if (!planId) throw new Error("planId required");
+  const token = await getAccessToken(ctx);
+  const subscriptionBody = {
+    plan_id: planId,
+    custom_id: customId || undefined,
+  };
+  const override = buildPriceOverride(opts);
+  if (override) subscriptionBody.plan = override;
+  const subscription = await request("POST", "/v1/billing/subscriptions", token, subscriptionBody, ctx.base);
+  return subscription.id;
 }
 
 
@@ -630,6 +900,7 @@ async function createOrder(priceId, customId, ctx = {}, opts = {}) {
  * token and create the subscription. Returns the setup token id.
  */
 async function createCardSetupToken(ctx = {}) {
+
   const token = await getAccessToken(ctx);
   const res = await request("POST", "/v3/vault/setup-tokens", token, {
     payment_source: { card: {} },
@@ -648,10 +919,11 @@ async function createCardSetupToken(ctx = {}) {
  * @param {object} ctx         { clientId, clientSecret, base }
  * @returns the created subscription (id + status)
  */
-async function createSubscriptionWithCard(setupToken, planId, customId, email, ctx = {}) {
+async function createSubscriptionWithCard(setupToken, planId, customId, email, ctx = {}, opts = {}) {
   if (!setupToken) throw new Error("setupToken required");
   if (!planId) throw new Error("planId required");
   const token = await getAccessToken(ctx);
+
 
   // 1) Exchange setup token → permanent payment token (vaulted card).
   const paymentToken = await request("POST", "/v3/vault/payment-tokens", token, {
@@ -705,6 +977,18 @@ async function createSubscriptionWithCard(setupToken, planId, customId, email, c
     },
   };
 
+  // SUBSCRIPTION DISCOUNT (2-cycle override model): when the caller passes a
+  // validated override spec ({ scope, discountedMinor, regularMinor, trialCycles },
+  // computed server-side from the code — the client never sets these), bake the
+  // per-subscriber billing_cycles override into the create call. The base plan is
+  // 2-cycle (TRIAL seq 1 + REGULAR seq 2), so buildPriceOverride reprices the
+  // existing cycles (intro = seq 1 only, auto-revert; recurring = both). The $60 CT
+  // setup fee is part of the plan, NOT a billing cycle, so it is untouched.
+  const override = buildPriceOverride(opts);
+  if (override) subscriptionBody.plan = override;
+
+
+
   // DIAGNOSTIC: log the EXACT body we send so we can confirm vault_id is populated
   // (structured logger.info for the firebase MCP log reader + raw console.log).
   logger.info("createSubscriptionWithCard: subscription request body", {
@@ -754,6 +1038,271 @@ async function getSubscription(subscriptionId, ctx = {}) {
   return request("GET", `/v1/billing/subscriptions/${subscriptionId}`, token, null, ctx.base);
 }
 
+/**
+ * Revise a subscription onto a DIFFERENT plan (POST /v1/billing/subscriptions/{id}/revise).
+ * Moves the subscriber to `newPlanId` effective the next billing cycle WITHOUT
+ * cancel/re-subscribe and WITHOUT re-collecting payment (same vaulted source). Used
+ * by the admin "Change plan" action to end a promo (→ base plan), move tier, or
+ * reprice an individual. The BILLING.SUBSCRIPTION.UPDATED webhook then syncs the
+ * neutral record + tier. Returns the PayPal revise response.
+ * @param {string} subscriptionId  PayPal subscription id (I-xxxx)
+ * @param {string} newPlanId       target Billing Plan id (P-xxxx)
+ * @param {object} ctx { clientId, clientSecret, base }
+ */
+async function reviseSubscription(subscriptionId, newPlanId, ctx = {}) {
+  if (!subscriptionId) throw new Error("subscriptionId required");
+  if (!newPlanId) throw new Error("newPlanId required");
+  const token = await getAccessToken(ctx);
+  return request(
+    "POST",
+    `/v1/billing/subscriptions/${subscriptionId}/revise`,
+    token,
+    { plan_id: newPlanId },
+    ctx.base
+  );
+}
+
+/**
+ * Per-client price override on the SAME plan (FR-16). PayPal does NOT allow an inline
+ * price override via `/revise` on the same plan (422 OVERRIDES_ON_SAME_PLAN_NOT_ALLOWED).
+ * The supported mechanism — and exactly what the merchant dashboard's "Update pricing"
+ * uses — is JSON-Patch on the subscription itself:
+ *   PATCH /v1/billing/subscriptions/{id}
+ *   [{ op:'replace',
+ *      path:'/plan/billing_cycles/@sequence==<REGULAR seq>/pricing_scheme/fixed_price',
+ *      value:{ currency_code, value } }]
+ * → HTTP 204. The subscription keeps its plan_id (plan_overridden:true) and the new
+ * price applies from the NEXT billing cycle (PayPal's <10-days-before-renewal rule
+ * pushes it one cycle further). Sandbox-validated 2026-06-27 (script S1 `--patch` P4).
+ *
+ * We resolve the REGULAR cycle's sequence from the plan's billing_cycles (base plans
+ * have one REGULAR at seq 1; first_cycle intro plans have the REGULAR at seq 2).
+ * @param {string} subscriptionId  I-xxxx
+ * @param {number} amountMinor     new recurring price, minor units
+ * @param {object} [opts]          { currency?: string }
+ */
+async function reviseSubscriptionPricing(subscriptionId, amountMinor, opts = {}, ctx = {}) {
+  if (!subscriptionId) throw new Error("subscriptionId required");
+  if (amountMinor == null) throw new Error("amountMinor required");
+  const currency = opts.currency || "USD";
+  const token = await getAccessToken(ctx);
+
+  // Find the REGULAR billing cycle's sequence from the subscription's plan.
+  const sub = await request("GET", `/v1/billing/subscriptions/${subscriptionId}`, token, null, ctx.base);
+  const planId = sub.plan_id;
+  let regSeq = 1;
+  try {
+    const plan = await request("GET", `/v1/billing/plans/${planId}`, token, null, ctx.base);
+    const cycles = plan.billing_cycles || [];
+    const regular = cycles.find((c) => c.tenure_type === "REGULAR") || cycles[cycles.length - 1];
+    if (regular && regular.sequence) regSeq = regular.sequence;
+  } catch (e) {
+    logger.warn("reviseSubscriptionPricing: could not read plan cycles, defaulting seq 1", { subscriptionId, error: e.message });
+  }
+
+  // PATCH returns 204 No Content on success (request() resolves with {}).
+  await request(
+    "PATCH",
+    `/v1/billing/subscriptions/${subscriptionId}`,
+    token,
+    [
+      {
+        op: "replace",
+        path: `/plan/billing_cycles/@sequence==${regSeq}/pricing_scheme/fixed_price`,
+        value: { currency_code: currency, value: (amountMinor / 100).toFixed(2) },
+      },
+    ],
+    ctx.base
+  );
+  return { ok: true, planId, sequence: regSeq };
+}
+
+
+// ── Plan management (admin "Manage Subscriptions" console) ──────────────────
+// subscription-management-design.md §3. These back the admin callables that
+// list/create/reprice/activate/deactivate Billing Plans. All take the per-request
+// `ctx` ({ base, clientId, clientSecret }) so the right env is used.
+
+/**
+ * GET a single Billing Plan (status + billing_cycles + pricing).
+ * @param {string} planId  P-xxxx
+ */
+async function getPlan(planId, ctx = {}) {
+  if (!planId) throw new Error("planId required");
+  const token = await getAccessToken(ctx);
+  return request("GET", `/v1/billing/plans/${planId}`, token, null, ctx.base);
+}
+
+/**
+ * LIST Billing Plans (optionally filtered by product). Optional reconciliation
+ * read — the admin console's table is sourced from the Firestore registry, but this
+ * lets us cross-check against PayPal. Returns the raw { plans: [...] } page.
+ * @param {string} [productId]  filter to one product
+ */
+async function listPlans(productId, ctx = {}) {
+  const token = await getAccessToken(ctx);
+  const qs = productId ? `?product_id=${encodeURIComponent(productId)}&page_size=20` : "?page_size=20";
+  return request("GET", `/v1/billing/plans${qs}`, token, null, ctx.base);
+}
+
+/**
+ * CREATE a Billing Plan under an existing product (FR-8). `spec` mirrors the PayPal
+ * plan body but we build the common monthly shape from minor units so callers pass
+ * simple values. Returns the created plan id (P-xxxx).
+ *
+ * The plan is minted with the SAME 2-cycle shape as the base catalog plans
+ * (subscription-discounts-2cycle-handoff.md): a TRIAL cycle at sequence 1
+ * (total_cycles:1) + a REGULAR cycle at sequence 2 (total_cycles:0), BOTH priced at
+ * `amountMinor`. A no-discount subscriber therefore pays the regular price every
+ * month, while the 2-cycle shape lets a create-time `plan.billing_cycles` override
+ * apply an intro discount to seq 1 only — PayPal can only REPRICE existing cycles,
+ * never ADD one, so the base plan must already be 2-cycle.
+ * @param {object} spec { productId, name, description?, amountMinor, currency?, intervalUnit? }
+ */
+async function createPlan(spec = {}, ctx = {}) {
+  const { productId, name, amountMinor } = spec;
+  if (!productId) throw new Error("productId required");
+  if (!name) throw new Error("name required");
+  if (amountMinor == null) throw new Error("amountMinor required");
+  const currency = spec.currency || "USD";
+  const intervalUnit = spec.intervalUnit || "MONTH";
+  const token = await getAccessToken(ctx);
+  const price = { value: (amountMinor / 100).toFixed(2), currency_code: currency };
+  const body = {
+    product_id: productId,
+    name,
+    description: spec.description || name,
+    status: "ACTIVE",
+    billing_cycles: [
+      {
+        // TRIAL cycle (seq 1) — same price as REGULAR; exists so an intro discount
+        // override can reprice it without adding a cycle. total_cycles:1 → PayPal
+        // auto-reverts to the REGULAR cycle after one period.
+        frequency: { interval_unit: intervalUnit, interval_count: 1 },
+        tenure_type: "TRIAL",
+        sequence: 1,
+        total_cycles: 1,
+        pricing_scheme: { fixed_price: price },
+      },
+      {
+        // REGULAR cycle (seq 2) — the ongoing monthly charge. total_cycles:0 = infinite.
+        frequency: { interval_unit: intervalUnit, interval_count: 1 },
+        tenure_type: "REGULAR",
+        sequence: 2,
+        total_cycles: 0,
+        pricing_scheme: { fixed_price: price },
+      },
+    ],
+    payment_preferences: {
+      auto_bill_outstanding: true,
+      setup_fee: { value: "0", currency_code: currency },
+      setup_fee_failure_action: "CONTINUE",
+      payment_failure_threshold: 1,
+    },
+  };
+  const plan = await request("POST", "/v1/billing/plans", token, body, ctx.base);
+  return plan.id;
+}
+
+/**
+ * REPRICE a Billing Plan via update-pricing-schemes (FR-9/FR-11). Changes the price
+ * for ALL current + future subscribers of `planId` (PayPal applies its standard
+ * consumer-notice timing to existing subscribers). `billingCycleSequence` selects
+ * which cycle to reprice (base plans are 2-cycle TRIAL+REGULAR, so the recurring
+ * price lives on the REGULAR cycle at sequence 2 — caller passes it).
+ * @param {string} planId
+ * @param {number} amountMinor  new price, minor units
+ * @param {object} [opts] {
+ *   billingCycleSequence?: number,      // single cycle to reprice (legacy)
+ *   billingCycleSequences?: number[],   // multiple cycles to reprice (preferred for whole-plan reprice)
+ *   currency?: string,
+ * }
+ */
+async function updatePlanPricing(planId, amountMinor, opts = {}, ctx = {}) {
+  if (!planId) throw new Error("planId required");
+  if (amountMinor == null) throw new Error("amountMinor required");
+  const token = await getAccessToken(ctx);
+  const currency = opts.currency || "USD";
+  // Resolve which billing cycle(s) to reprice. Base plans are 2-cycle TRIAL(seq1)+
+  // REGULAR(seq2): a WHOLE-PLAN reprice must update BOTH so the first month and the
+  // ongoing price match (otherwise new subscribers pay the old price for cycle 1).
+  // Callers can pass an explicit list via `billingCycleSequences`; we de-dupe and
+  // drop falsy values, falling back to the legacy single `billingCycleSequence` (or 1).
+  const requestedSeqs = Array.isArray(opts.billingCycleSequences) && opts.billingCycleSequences.length
+    ? [...new Set(opts.billingCycleSequences.filter((n) => Number.isInteger(n) && n > 0))]
+    : [opts.billingCycleSequence || 1];
+
+  // PayPal's update-pricing-schemes 422s the ENTIRE request (PRICING_SCHEME_INVALID_AMOUNT
+  // — "The amount entered should be different from the existing amount") if ANY included
+  // cycle's new price equals its current price. Since a 2-cycle plan's cycles can be out
+  // of sync (e.g. an earlier seq-2-only reprice left seq 1 at the old price), we GET the
+  // plan first and include ONLY the requested cycles that (a) exist and (b) actually
+  // differ from the target. If none differ, it's a no-op success (nothing to change).
+  let currentBySeq = {};
+  try {
+    const plan = await request("GET", `/v1/billing/plans/${planId}`, token, null, ctx.base);
+    for (const c of plan.billing_cycles || []) {
+      const val = c?.pricing_scheme?.fixed_price?.value;
+      if (c?.sequence != null && val != null) {
+        currentBySeq[c.sequence] = Math.round(parseFloat(val) * 100);
+      }
+    }
+  } catch (e) {
+    // If the GET fails, fall back to attempting all requested cycles (best-effort).
+    logger.warn("updatePlanPricing: plan GET failed; attempting all requested cycles", {
+      planId,
+      error: e.message,
+    });
+    currentBySeq = null;
+  }
+
+  const seqs = currentBySeq
+    ? requestedSeqs.filter(
+        (seq) => currentBySeq[seq] == null || currentBySeq[seq] !== amountMinor
+      )
+    : requestedSeqs;
+
+  if (seqs.length === 0) {
+    // Every requested cycle already at the target price → nothing to do (success).
+    return { noop: true, planId };
+  }
+
+  const fixed = { value: (amountMinor / 100).toFixed(2), currency_code: currency };
+  return request(
+    "POST",
+    `/v1/billing/plans/${planId}/update-pricing-schemes`,
+    token,
+    {
+      pricing_schemes: seqs.map((seq) => ({
+        billing_cycle_sequence: seq,
+        pricing_scheme: { fixed_price: fixed },
+      })),
+    },
+    ctx.base
+  );
+}
+
+
+
+/** Activate a Billing Plan (turn ON — allows new subscriptions). (FR-7) */
+async function activatePlan(planId, ctx = {}) {
+  if (!planId) throw new Error("planId required");
+  const token = await getAccessToken(ctx);
+  await request("POST", `/v1/billing/plans/${planId}/activate`, token, {}, ctx.base);
+}
+
+/**
+ * Deactivate a Billing Plan (turn OFF). Blocks NEW subscriptions only; existing
+ * subscribers are unaffected (they keep billing). (FR-7)
+ */
+async function deactivatePlan(planId, ctx = {}) {
+  if (!planId) throw new Error("planId required");
+  const token = await getAccessToken(ctx);
+  await request("POST", `/v1/billing/plans/${planId}/deactivate`, token, {}, ctx.base);
+}
+
+
+
 
 
 
@@ -769,7 +1318,21 @@ module.exports = {
 
 
   createCardSetupToken,
+  createSubscription, // Smart Button (no-vault) server-side subscription create
   createSubscriptionWithCard,
+  reviseSubscription, // admin "Change plan" — move a sub to a different plan id
+  reviseSubscriptionPricing, // admin "Change price" — inline same-plan PATCH override (FR-16)
+
+
+  // Plan management (admin Manage Subscriptions console — subscription-management §3)
+  getPlan,
+  listPlans,
+  createPlan,
+  updatePlanPricing,
+  activatePlan,
+  deactivatePlan,
+
+
   // exported under an explicit name so callers don't confuse it with
   // fulfillment.activateSubscription (which writes accountActivated to Firestore).
   activatePaypalSubscription: activateSubscription,
@@ -777,14 +1340,21 @@ module.exports = {
   resolveOneTimeByAmount, // used by capturePaypalOrder for synchronous fulfillment
   resolveOneTimeByAppId, // resolve product by neutral app id (discounted captures)
   parseOrderCustomId, // decode the threaded uid/productId/code custom_id token
+  derivePaymentMethod, // map PayPal payment_source → neutral { label, brand, last4, kind }
+
+  // Subscription discounts (2-cycle override model): build the per-subscriber
+  // plan.billing_cycles override applied at create time (intro vs recurring).
+  buildPriceOverride,
 
 
 
   // exported for tests / reuse
 
+
   getAccessToken,
   resolvePlanTier,
   PLAN_TIER_MAP,
 };
+
 
 

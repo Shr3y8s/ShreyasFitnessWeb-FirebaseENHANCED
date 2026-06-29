@@ -32,6 +32,20 @@ export interface Product {
   prices: Price[];
 }
 
+/**
+ * The funding instrument used for a charge (or saved for renewals), neutral shape.
+ * PayPal exposes card brand+last4 for card checkouts and the wallet name (PayPal/
+ * Venmo); it does NOT expose Apple/Google Pay separately or credit-vs-debit, so
+ * those fall back to `card`/`paypal`. `label` is the display string (e.g. "Visa
+ * ••4242", "PayPal", "Venmo").
+ */
+export interface PaymentMethodInfo {
+  label: string;
+  brand?: string;
+  last4?: string;
+  kind?: 'card' | 'paypal' | 'venmo' | 'paylater' | string;
+}
+
 /** A past payment, neutral shape for the billing-history UI. */
 export interface Transaction {
   id: string;
@@ -42,6 +56,8 @@ export interface Transaction {
   currency: string;
   status: string;
   productName: string;
+  /** Funding instrument used for this charge (when the provider exposes it). */
+  paymentMethod?: PaymentMethodInfo;
   /** Hosted invoice / receipt URL when the provider offers one. */
   receiptUrl?: string;
 }

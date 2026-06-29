@@ -27,10 +27,35 @@ const admin = require("firebase-admin");
 const { logger } = require("firebase-functions");
 
 /**
+ * Defensive userId guard — the SINGLE chokepoint every billing writer runs through.
+ *
+ * A Firestore `userId` MUST be a bare document id. But PayPal's discounted-checkout
+ * `custom_id` is a JSON token (`{"u":"<uid>","c":"<code>",...}`); if any current OR
+ * future webhook path lets that raw string reach a writer, it would create a junk
+ * `billing_customers/{"u":...}` document (and mis-route the subcollection writes).
+ * Provider adapters are supposed to decode it, but we normalize here too so the junk
+ * doc is STRUCTURALLY IMPOSSIBLE regardless of caller. Decodes a `{u}` token → uid;
+ * passes a bare id through; returns null for anything unusable (caller then skips).
+ */
+function normalizeUserId(userId) {
+  if (typeof userId !== "string" || !userId) return null;
+  if (userId.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(userId);
+      return parsed && typeof parsed.u === "string" && parsed.u ? parsed.u : null;
+    } catch {
+      return null;
+    }
+  }
+  return userId;
+}
+
+/**
  * Write/merge the neutral billing customer doc.
  * billing_customers/{uid} { provider, providerCustomerId, email }
  */
 async function writeBillingCustomer({ userId, provider, providerCustomerId, email }) {
+  userId = normalizeUserId(userId);
   if (!userId) return;
   const ref = admin.firestore().collection("billing_customers").doc(userId);
   await ref.set(
@@ -58,7 +83,9 @@ async function writeSubscriptionRecord({
   currentPeriodEnd,
   amount,
   interval,
+  paymentMethod,
 }) {
+  userId = normalizeUserId(userId);
   if (!userId || !subscriptionId) return;
   const ref = admin
     .firestore()
@@ -66,20 +93,37 @@ async function writeSubscriptionRecord({
     .doc(userId)
     .collection("subscriptions")
     .doc(subscriptionId);
+  // Set-once `createdAt` = the true "subscription started" date for the admin
+  // console. Renewals/status updates only touch `updatedAt`, so this never drifts.
+  const existing = await ref.get();
+  const createdAtField = existing.exists && existing.data()?.createdAt
+    ? {}
+    : { createdAt: admin.firestore.FieldValue.serverTimestamp() };
   await ref.set(
     {
       provider,
+      ...createdAtField,
       status: status ?? null,
-      priceId: priceId ?? null,
-      productId: productId ?? null,
-      currentPeriodEnd: currentPeriodEnd ?? null,
+      // `priceId`/`productId`/`currentPeriodEnd` identify the plan/tier/period. They
+      // are ONLY written when the caller provides them (activation/renewal) — a
+      // status-only update (pause/resume/cancel) must NOT null them out, or the
+      // admin Subscriptions plan-filter (which matches on priceId) would drop the row.
+      ...(priceId != null ? { priceId } : {}),
+      ...(productId != null ? { productId } : {}),
+      ...(currentPeriodEnd != null ? { currentPeriodEnd } : {}),
       // `amount` is the ACTUAL charged amount in minor units (post-discount), not
+
       // catalog price — so revenue/MRR dashboards are accurate even with promos.
       // `interval` ('month'|'year') lets MRR normalize annual plans. Only written
       // when the caller knows them (activation/renewal); omitted on status-only
       // cancel updates so we don't clobber a previously-stored amount.
       ...(amount != null ? { amount } : {}),
       ...(interval ? { interval } : {}),
+      // `paymentMethod` { label, brand?, last4?, kind } — the instrument funding this
+      // subscription (card brand+last4, or "PayPal"/"Venmo" wallet). PayPal doesn't
+      // expose Apple/Google Pay or credit-vs-debit, so those fall back to card/wallet.
+      // Only written when known so a status-only update doesn't clobber it.
+      ...(paymentMethod ? { paymentMethod } : {}),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -87,11 +131,13 @@ async function writeSubscriptionRecord({
 }
 
 
+
 /**
  * Write a neutral transaction record (for the billing-history UI / NFR-2).
  * billing_customers/{uid}/transactions/{id}
  */
 async function writeTransactionRecord({ userId, transaction, provider }) {
+  userId = normalizeUserId(userId);
   if (!userId || !transaction?.id) return;
   const ref = admin
     .firestore()
@@ -111,6 +157,9 @@ async function writeTransactionRecord({ userId, transaction, provider }) {
       // `type` ('subscription' | 'one_time') lets admin analytics split recurring vs
       // one-time revenue without provider-specific parsing. Default 'one_time'.
       type: transaction.type === "subscription" ? "subscription" : "one_time",
+      // `paymentMethod` { label, brand?, last4?, kind } — the instrument used for THIS
+      // charge (e.g. "Visa ••4242", or "PayPal"/"Venmo"). Only written when known.
+      ...(transaction.paymentMethod ? { paymentMethod: transaction.paymentMethod } : {}),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -137,9 +186,10 @@ async function writeTransactionRecord({ userId, transaction, provider }) {
  * @param {object} [hooks] optional { onFirstActivation({userId, userData}) }
  */
 async function activateSubscription(p, hooks = {}) {
-  const { userId, subscriptionId, provider, status } = p;
+  const userId = normalizeUserId(p.userId);
+  const { subscriptionId, provider, status } = p;
   if (!userId) {
-    logger.warn("activateSubscription called without userId");
+    logger.warn("activateSubscription called without a usable userId", { rawUserId: p.userId });
     return;
   }
 
@@ -158,7 +208,13 @@ async function activateSubscription(p, hooks = {}) {
     updateData.subscriptionEndedAt = admin.firestore.FieldValue.serverTimestamp();
   } else if (subscriptionId) {
     updateData.subscriptionId = subscriptionId;
+    // Persist the PayPal plan id (priceId) so the admin "Manage Subscriptions"
+    // console can group/count active subscriptions per plan (PayPal has no
+    // list-subscriptions API — we source counts from users docs).
+    // (subscription-management FR-5/FR-14; design §4 active-sub count source.)
+    if (p.priceId) updateData.subscriptionPlanId = p.priceId;
   }
+
 
   // Mirror billing fields onto the USER doc so the membership dashboard can render
   // "Recent Activity" + "Next Billing" without reading the billing_customers
@@ -181,6 +237,15 @@ async function activateSubscription(p, hooks = {}) {
     updateData.tier = p.tierId;
     updateData.tierName = p.tierName;
   }
+
+  // Mirror the funding instrument onto the user doc so the Billing/Membership
+  // "Current Payment Method" card can render it ("Visa ••4242" / "PayPal" / "Venmo")
+  // without reading the subcollection. Only written when known (e.g. activation or a
+  // renewal that carried the payment_source) so a status-only update keeps it.
+  if (p.paymentMethod) {
+    updateData.currentPaymentMethod = p.paymentMethod;
+  }
+
 
   // Write-once activation on first active subscription.
   let firstActivation = false;
@@ -221,6 +286,7 @@ async function activateSubscription(p, hooks = {}) {
     currentPeriodEnd: p.currentPeriodEnd,
     amount: p.amount,
     interval: p.interval,
+    paymentMethod: p.paymentMethod,
   });
 
   logger.info("Subscription synced to user (neutral fulfillment)", {
@@ -250,6 +316,7 @@ async function activateSubscription(p, hooks = {}) {
  * Mark a subscription fully removed (provider deleted it).
  */
 async function deactivateSubscription({ userId, subscriptionId }) {
+  userId = normalizeUserId(userId);
   if (!userId) return;
   await admin.firestore().collection("users").doc(userId).update({
     subscriptionId: admin.firestore.FieldValue.delete(),
@@ -275,11 +342,13 @@ async function deactivateSubscription({ userId, subscriptionId }) {
  * @param {string} p.transactionId  provider payment/charge id (idempotency key)
  * @param {number} p.amount  minor units actually charged
  * @param {number} [p.quantity]  explicit quantity (falls back to name parse)
+ * @param {object} [hooks] optional { onFirstActivation({userId, userData, tierId, trainerId}) }
  */
-async function fulfillSessionPackage(p) {
-  const { userId, provider, productId, productName, priceId, transactionId, amount } = p;
+async function fulfillSessionPackage(p, hooks = {}) {
+  const userId = normalizeUserId(p.userId);
+  const { provider, productId, productName, priceId, transactionId, amount } = p;
   if (!userId) {
-    logger.warn("fulfillSessionPackage called without userId");
+    logger.warn("fulfillSessionPackage called without a usable userId", { rawUserId: p.userId });
     return;
   }
 
@@ -349,14 +418,34 @@ async function fulfillSessionPackage(p) {
 
   // Write-once account activation for package-only buyers.
   const freshDoc = await userRef.get();
-  if (freshDoc.exists && !freshDoc.data().accountActivated) {
+  const freshData = freshDoc.exists ? freshDoc.data() || {} : {};
+  let firstActivation = false;
+  if (freshDoc.exists && !freshData.accountActivated) {
     await userRef.update({
       accountActivated: true,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    firstActivation = true;
   }
 
   logger.info("Session package created (neutral fulfillment)", { userId, quantity, provider, transactionId });
+
+  // Parity side effects (welcome email / activity feed) via hook — ONLY on first
+  // activation, so repeat webhooks for the same buyer don't re-send. One-time
+  // session buyers have no subscription tier, so tierId is undefined; the setup
+  // goal inside onFirstActivation is tier-gated and correctly skips for them.
+  if (firstActivation && typeof hooks.onFirstActivation === "function") {
+    try {
+      await hooks.onFirstActivation({
+        userId,
+        userData: freshData,
+        tierId: undefined,
+        trainerId: freshData.assignedTrainerId,
+      });
+    } catch (e) {
+      logger.error("onFirstActivation hook failed (non-fatal, session package)", { userId, error: e.message });
+    }
+  }
 }
 
 module.exports = {

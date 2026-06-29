@@ -390,7 +390,35 @@ export default function MembershipPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Plan</p>
                         <p className="text-lg font-semibold">{userData?.tierName || 'Subscription'}</p>
+                        {(() => {
+                          // Discount/intro display (T10.8.1). `subscriptionDiscount` is
+                          // written server-side at subscription create (the 2-cycle
+                          // override). Intro → "$X/mo for first N months, then $base/mo";
+                          // recurring → "$X/mo (discounted)". Absent → nothing.
+                          const d = userData?.subscriptionDiscount;
+                          if (!d || !d.scope) return null;
+                          const fmt = (m: number) => `$${(Math.max(0, m) / 100).toFixed(2)}`;
+                          const base = typeof d.basePriceMinor === 'number' ? d.basePriceMinor : null;
+                          const disc = typeof d.discountedMinor === 'number' ? d.discountedMinor : null;
+                          if (disc == null) return null;
+                          if (d.scope === 'intro') {
+                            const n = d.introCycles && d.introCycles > 0 ? d.introCycles : 1;
+                            const months = n > 1 ? `first ${n} months` : 'first month';
+                            return (
+                              <p className="text-sm text-emerald-700 mt-1">
+                                Intro: {fmt(disc)}/mo for {months}
+                                {base != null ? `, then ${fmt(base)}/mo` : ''}
+                              </p>
+                            );
+                          }
+                          return (
+                            <p className="text-sm text-emerald-700 mt-1">
+                              {fmt(disc)}/mo (discounted)
+                            </p>
+                          );
+                        })()}
                       </div>
+
                       <div>
                         <p className="text-sm text-muted-foreground">Member Since</p>
                         <p className="text-lg font-semibold">{formatDate(userData?.createdAt)}</p>

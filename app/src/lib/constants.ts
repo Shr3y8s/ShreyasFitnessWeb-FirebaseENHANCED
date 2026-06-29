@@ -30,6 +30,8 @@ export type AppProductId =
   | 'online_coaching'
   | 'complete_transformation';
 
+
+
 export interface AppProduct {
   id: AppProductId;
   name: string;
@@ -63,10 +65,11 @@ export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
     sessionsIncluded: 4,
   },
   online_coaching: {
+
     id: 'online_coaching',
     name: 'Online Coaching',
     kind: 'subscription',
-    amount: 25000, // $250/mo
+    amount: 20000, // $200/mo
     interval: 'month',
     hasCheckins: true,
   },
@@ -74,12 +77,13 @@ export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
     id: 'complete_transformation',
     name: 'Complete Transformation',
     kind: 'subscription',
-    amount: 25000, // $250/mo
+    amount: 25000, // $250/mo (no setup fee — in-person sessions bought separately)
+
     interval: 'month',
-    setupFee: 6000, // $60 discounted in-person session at signup (first cycle)
     hasCheckins: true,
   },
 };
+
 
 /** Look up an app product by id (or null). */
 export function getAppProduct(id: string | undefined | null): AppProduct | null {
@@ -97,6 +101,8 @@ export const SERVICE_TIERS = {
   ONLINE_COACHING: 'online_coaching',
   COMPLETE_TRANSFORMATION: 'complete_transformation',
 } as const;
+
+
 
 
 
@@ -133,18 +139,27 @@ export function hasOnlineCoaching(tier: string | undefined): boolean {
 // Recurring tiers resolve to a PayPal **Billing Plan id** (`P-xxxx`), created via
 // firebase/scripts/paypal-setup-catalog.js. One-time items (single session,
 // 4-pack) carry NO plan — they are charged via the Orders API, so we only store
-// their amount (minor units / cents) + label. The Complete Transformation $60
-// discounted in-person session is NOT here — it is the `setup_fee` baked into the
-// CT billing plan (charged with the first cycle).
+// their amount (minor units / cents) + label.
+
+//
+// SUBSCRIPTION DISCOUNTS (subscription-discounts-2cycle-handoff.md): each tier has a
+// SINGLE base plan minted as 2 billing cycles (TRIAL seq1 + REGULAR seq2). Per-subscriber
+// discounts are applied SERVER-SIDE as a create-time billing_cycles override
+// (firebase/functions/payments/providers/paypal.js — buildPriceOverride), NOT separate
+// discounted plans. The client only ever passes the BASE plan id + the discount code.
+
 export const PAYPAL_ENV = (process.env.NEXT_PUBLIC_PAYPAL_ENV || 'sandbox').toLowerCase();
 export const PAYPAL_LIVE = PAYPAL_ENV === 'production';
 
-// Recurring Billing Plans (P-xxxx). Sandbox created 2026-06-19; LIVE filled at
-// cutover (Phase 5) by re-running the catalog script with live credentials.
+// Base recurring Billing Plans (P-xxxx). OC $200/mo, CT $250/mo (no setup fee).
+// 2-CYCLE base plans (subscription-discounts-2cycle-handoff.md): each is minted as
+// TRIAL(seq 1) + REGULAR(seq 2) at the regular price, so per-subscriber discounts can
+// be applied as a create-time billing_cycles override. Minted 2026-06-27 (sandbox).
 const SANDBOX_PLANS = {
-  ONLINE_COACHING: 'P-98H09129JK640830CNI26BLQ',
-  COMPLETE_TRANSFORMATION: 'P-9YF75345BP118725ENI26GLI',
+  ONLINE_COACHING: 'P-1UL86855135904642NJAFK4I',  // product PROD-51P94209CF452694B
+  COMPLETE_TRANSFORMATION: 'P-28C55086862794508NJAFK4I',  // product PROD-5D236001YV287835G
 } as const;
+
 
 const LIVE_PLANS = {
   ONLINE_COACHING: 'P-96194639LX633004DNI4ANSI',
@@ -154,11 +169,14 @@ const LIVE_PLANS = {
 export const PAYPAL_PLANS = PAYPAL_LIVE ? LIVE_PLANS : SANDBOX_PLANS;
 
 // One-time items (Orders API, no plan). `amount` is in MINOR units (cents),
+
 // matching the neutral `Price.amount` convention.
 export const PAYPAL_ONETIME = {
-  IN_PERSON:       { amount: 7500,  label: 'In-Person Training Session' }, // $75
-  IN_PERSON_4PACK: { amount: 24000, label: '4-Pack In-Person Sessions' },  // $240
+  IN_PERSON:        { amount: 7500,  label: 'In-Person Training Session' },   // $75 (public)
+  IN_PERSON_4PACK:  { amount: 24000, label: '4-Pack In-Person Sessions' },    // $240 (public)
 } as const;
+
+
 
 // ========== UNIFIED CHECKOUT ITEMS (design §2.7) ==========
 // Registry the generic `/checkout?item=<KEY>` page resolves. Keyed by a short,

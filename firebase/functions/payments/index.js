@@ -25,6 +25,18 @@ const discounts = require("./discounts");
 // supplies an amount. (Subscriptions are Phase 2 — preview returns not_applicable.)
 const ONETIME_PRICE_MINOR = { IN_PERSON: 7500, IN_PERSON_4PACK: 24000 };
 
+// Server-side subscription monthly prices (minor units), keyed by neutral app tier
+// id (resolvePlanTier(planId).tierId). Used to resolve the ORIGINAL first-cycle
+// amount for subscription discount preview/apply so the client never supplies an
+// amount. Both tiers bill $250/mo; CT additionally has a $60 setup fee which a
+// first-cycle discount does NOT touch (business decision 2026-06-25).
+const SUBSCRIPTION_PRICE_MINOR = {
+  online_coaching: 20000, // $200/mo
+  complete_transformation: 25000, // $250/mo
+};
+
+
+
 
 // PayPal secrets (Secret Manager). Declared here so the functions below can read
 // them via process.env at runtime. Set with:
@@ -77,6 +89,148 @@ function normalizePaypalEnv(v) {
   return String(v || "").toLowerCase() === "production" ? "production" : "sandbox";
 }
 
+/**
+ * Persist the per-subscriber discount/intro DISPLAY state on the user doc so the
+ * Billing/Membership pages can render "intro $X for N months, then $base/mo" without a
+ * live PayPal read (subscription-discounts T10.8.1 / FR-16). Best-effort; never throws.
+ * `override` is the create-time price override from resolveSubscriptionPlan:
+ *   { scope:'intro'|'recurring', discountedMinor, regularMinor, trialCycles }.
+ * A falsy/empty override CLEARS any stale promo state (no-code subscription / re-subscribe).
+ */
+async function persistSubscriptionDiscountState(uid, override) {
+  if (!uid) return;
+  const admin = require("firebase-admin");
+  const ref = admin.firestore().collection("users").doc(uid);
+  try {
+    if (override && override.scope) {
+      await ref.set(
+        {
+          subscriptionDiscount: {
+            scope: override.scope, // 'intro' | 'recurring'
+            introCycles:
+              override.scope === "intro"
+                ? Math.max(1, Math.round(Number(override.trialCycles) || 1))
+                : null,
+            basePriceMinor: override.regularMinor ?? null,
+            discountedMinor: override.discountedMinor ?? null,
+            appliedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    } else {
+      await ref.set(
+        {
+          subscriptionDiscount: admin.firestore.FieldValue.delete(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+  } catch (e) {
+    logger.warn("persistSubscriptionDiscountState failed (non-fatal)", { uid, error: e.message });
+  }
+}
+
+
+/**
+ * Subscription-discounts plan resolver (subscription-discounts-2cycle-handoff.md).
+ * Given the BASE plan id + (optional) discount code, returns:
+ *   { planToUse, customId, override? }
+ *     - planToUse  — ALWAYS the base plan id (the 2-plan model keeps a single base
+ *                    plan per tier; discounts are applied via a per-subscriber
+ *                    billing_cycles override, NOT a separate discounted plan).
+ *     - customId   — bare uid, or a JSON token carrying uid + code when discounted.
+ *     - override   — { scope, discountedMinor, regularMinor, trialCycles } passed to
+ *                    the adapter's buildPriceOverride (omitted when no code).
+ *   { error: HttpsError } — when a supplied code is invalid; the caller throws it.
+ *
+ * No code → { planToUse: basePlanId, customId: uid }.
+ * With code → validate it (scope subscription, level allowed, limits) → resolve the
+ * tier from the base plan → compute the discounted price server-side → return the
+ * base plan id + the override spec. The base plan is minted as 2-cycle (TRIAL seq 1
+ * + REGULAR seq 2), so the override can reprice the existing cycles (intro = seq 1
+ * only; recurring = both) without ADDing a cycle (the PayPal constraint).
+ */
+async function resolveSubscriptionPlan(basePlanId, uid, rawCode) {
+  if (!rawCode) {
+    return { planToUse: basePlanId, customId: uid };
+  }
+  const tier = PROVIDERS.paypal.resolvePlanTier
+    ? PROVIDERS.paypal.resolvePlanTier(basePlanId)
+    : {};
+  const tierId = tier.tierId;
+  const regularMinor = tierId ? SUBSCRIPTION_PRICE_MINOR[tierId] : undefined;
+  if (!tierId || regularMinor == null) {
+    return { error: new HttpsError("invalid-argument", "Unknown subscription plan for discount.") };
+  }
+  try {
+    const codeDoc = await discounts.getCode(rawCode);
+    const perUser = codeDoc ? await discounts.countUserRedemptions(codeDoc.id, uid) : 0;
+    const v = discounts.validateCode(
+      codeDoc,
+      { productId: tierId, mode: "subscription", priceId: basePlanId, userId: uid },
+      perUser
+    );
+    if (!v.valid) {
+      return { error: new HttpsError("failed-precondition", `Discount code ${v.reason}.`) };
+    }
+    if (codeDoc.freeComp) {
+      return { error: new HttpsError("failed-precondition", "This code is a free comp, not a paid subscription discount.") };
+    }
+    // Subscription codes must be a percentage with a subscription scope. Any percentage
+    // in (0, 100) is allowed — the discounted price is computed server-side below and
+    // rejected if it doesn't actually reduce the price (no fixed 10/20/30/40/50 levels;
+    // that was a leftover from the old pre-minted-plan model).
+    // discountScope "first_cycle" → intro (discount the first N cycles, then revert);
+    // "recurring" → permanent discount on every cycle.
+    const scope = codeDoc.discountScope === "first_cycle" ? "intro"
+      : codeDoc.discountScope === "recurring" ? "recurring" : null;
+    const level = Number(codeDoc.value);
+    if (!scope || codeDoc.type !== "percentage" || !(level > 0 && level < 100)) {
+      return { error: new HttpsError("failed-precondition", "This code can't be applied to a subscription.") };
+    }
+
+    // Compute the discounted price SERVER-SIDE from the code (never client-set).
+    const computed = discounts.computeDiscountedAmount(codeDoc, regularMinor);
+    const discountedMinor = computed.discountedAmount;
+    if (discountedMinor == null || !(discountedMinor < regularMinor)) {
+      return { error: new HttpsError("failed-precondition", "Discount did not reduce the price.") };
+    }
+    // Thread uid + code through custom_id (JSON token) so the ACTIVATED webhook
+    // records the redemption. Bounded to PayPal's 127-char custom_id limit.
+    const customId = JSON.stringify({
+      u: uid,
+      c: codeDoc.id,
+      p: tierId,
+      o: regularMinor,
+    }).slice(0, 127);
+    // Intro length: how many cycles the discounted TRIAL price applies before PayPal
+    // auto-reverts to full. Admin-configurable per code (default 1). Only meaningful
+    // for the "intro" scope; recurring ignores it.
+    const introCycles = codeDoc.introCycles != null
+      ? Math.max(1, Math.round(Number(codeDoc.introCycles)))
+      : 1;
+    return {
+      planToUse: basePlanId,
+      customId,
+      override: {
+        scope, // "intro" | "recurring"
+        discountedMinor,
+        regularMinor,
+        trialCycles: introCycles,
+      },
+    };
+  } catch (e) {
+    if (e instanceof HttpsError) return { error: e };
+    logger.error("resolveSubscriptionPlan failed", { uid, basePlanId, error: e.message });
+    return { error: new HttpsError("internal", "Failed to validate discount.") };
+  }
+}
+
+
+
 
 
 // Provider registry. Paddle adapter is added in its phase.
@@ -118,10 +272,38 @@ async function handleEvent(providerName, e) {
           currentPeriodEnd: e.subscription?.currentPeriodEnd,
           amount: e.subscription?.amount,
           interval: e.subscription?.interval,
+          // Funding instrument (card brand+last4 / PayPal / Venmo) for the
+          // "Current Payment Method" card. Null when PayPal didn't expose it.
+          paymentMethod: e.subscription?.paymentMethod || e.paymentMethod,
         },
         fulfillmentHooks
       );
+      // Discount redemption (Feature 2 / T9): when the Smart Button subscription
+      // carried a code (threaded in custom_id), record it on activation. Idempotent
+      // on the subscription id — the card path's synchronous record dedupes against
+      // this same id, so only one redemption is ever written.
+      if (e.discountRedemption?.code) {
+        try {
+          const dr = e.discountRedemption;
+          await discounts.recordRedemption({
+            codeId: dr.code,
+            userId: dr.userId,
+            mode: dr.mode || "subscription",
+            productId: dr.productId,
+            originalAmount: dr.originalAmount,
+            discountedAmount: dr.discountedAmount,
+            amountOff:
+              dr.originalAmount != null && dr.discountedAmount != null
+                ? dr.originalAmount - dr.discountedAmount
+                : null,
+            transactionId: dr.transactionId,
+          });
+        } catch (err) {
+          logger.error("subscription discount redemption recording failed (non-fatal)", { error: err.message });
+        }
+      }
       break;
+
 
 
     case "subscription.paused":
@@ -181,7 +363,7 @@ async function handleEvent(providerName, e) {
           transactionId: e.transaction?.id,
           amount: e.transaction?.amount,
           quantity: e.quantity,
-        });
+        }, fulfillmentHooks);
       }
       // Recurring subscription RENEWAL: roll the membership dashboard's billing
       // fields forward on the user doc (lastPaymentDate / lastPaymentAmount /
@@ -201,6 +383,11 @@ async function handleEvent(providerName, e) {
             update.currentPeriodEnd = admin.firestore.Timestamp.fromMillis(
               e.subscriptionRenewal.currentPeriodEnd * 1000
             );
+          }
+          // Keep the "Current Payment Method" card fresh from each renewal's
+          // funding instrument when PayPal exposed it.
+          if (e.subscriptionRenewal.paymentMethod) {
+            update.currentPaymentMethod = e.subscriptionRenewal.paymentMethod;
           }
           await admin.firestore().collection("users").doc(e.subscriptionRenewal.userId).update(update);
         } catch (err) {
@@ -476,7 +663,7 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
           transactionId: capture.id,
           amount: minor,
           quantity: item ? item.quantity : undefined,
-        });
+        }, fulfillmentHooks);
         await fulfillment.writeTransactionRecord({
           userId: uid,
           provider: "paypal",
@@ -537,6 +724,8 @@ const createPaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }
   const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
 
   // DISCOUNT (Feature 2): when a code is supplied, re-validate it + recompute the
+
+
   // discounted amount SERVER-SIDE (the client never sets the amount). The original
   // amount comes from our server price map; the floored discounted amount is passed
   // to the adapter's createOrder, which also threads the productId + code through
@@ -600,12 +789,26 @@ const previewDiscount = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, 
   const productId = req.data?.productId || null;
   if (!code || !priceId) throw new HttpsError("invalid-argument", "code and priceId required.");
 
-  // Phase 1: one-time only. Subscriptions (Phase 2) aren't discountable yet.
-  const originalMinor = ONETIME_PRICE_MINOR[priceId];
+  // Resolve the server-side ORIGINAL amount the discount applies to:
+  //   - one-time (payment): the item price from ONETIME_PRICE_MINOR.
+  //   - subscription: the FIRST-CYCLE monthly price (SUBSCRIPTION_PRICE_MINOR by
+  //     tier). For Complete Transformation a first-cycle discount applies to the
+  //     $250 month only — NOT the $60 setup fee (business decision 2026-06-25).
   const empty = { originalAmount: 0, discountedAmount: 0, amountOff: 0 };
-  if (mode !== "payment" || originalMinor == null) {
+  let originalMinor;
+  if (mode === "payment") {
+    originalMinor = ONETIME_PRICE_MINOR[priceId];
+  } else {
+    // priceId is the PayPal plan id (P-...); resolve its neutral tier → monthly price.
+    const tier = PROVIDERS.paypal.resolvePlanTier
+      ? PROVIDERS.paypal.resolvePlanTier(priceId)
+      : {};
+    originalMinor = tier.tierId ? SUBSCRIPTION_PRICE_MINOR[tier.tierId] : undefined;
+  }
+  if (originalMinor == null) {
     return { valid: false, reason: "not_applicable", ...empty };
   }
+
 
   try {
     const codeDoc = await discounts.getCode(code);
@@ -665,7 +868,9 @@ const createDiscountCode = onCall({ region: "us-west1" }, async (req) => {
     minChargeFloor: d.minChargeFloor != null ? Number(d.minChargeFloor) : discounts.DEFAULT_MIN_CHARGE_FLOOR,
     freeComp: d.freeComp === true,
     discountScope: d.discountScope || "one_time",
-    fallbackPlanIds: d.fallbackPlanIds || null,
+    // Intro length (subscription "first_cycle" scope only): how many billing cycles
+    // the intro price applies before PayPal auto-reverts to full price. Default 1.
+    introCycles: d.introCycles != null ? Math.max(1, Math.round(Number(d.introCycles))) : 1,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     createdBy: req.auth.uid,
@@ -694,6 +899,7 @@ const listDiscountCodes = onCall({ region: "us-west1" }, async (req) => {
       minChargeFloor: x.minChargeFloor ?? discounts.DEFAULT_MIN_CHARGE_FLOOR,
       freeComp: x.freeComp === true,
       discountScope: x.discountScope || "one_time",
+      introCycles: x.introCycles != null ? Number(x.introCycles) : 1,
       appliesTo: x.appliesTo || null,
     };
   });
@@ -764,8 +970,12 @@ const updateDiscountCode = onCall({ region: "us-west1" }, async (req) => {
   }
   if (d.freeComp !== undefined) update.freeComp = d.freeComp === true;
   if (d.discountScope !== undefined) update.discountScope = d.discountScope || "one_time";
+  if (d.introCycles !== undefined) {
+    update.introCycles = d.introCycles != null && d.introCycles !== ""
+      ? Math.max(1, Math.round(Number(d.introCycles)))
+      : 1;
+  }
   if (d.appliesTo !== undefined) update.appliesTo = d.appliesTo || null;
-  if (d.fallbackPlanIds !== undefined) update.fallbackPlanIds = d.fallbackPlanIds || null;
 
   await ref.set(update, { merge: true });
   return { ok: true, id };
@@ -804,7 +1014,39 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
   if (!setupToken) throw new HttpsError("invalid-argument", "setupToken required.");
   if (!planId) throw new HttpsError("invalid-argument", "planId required.");
   const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
+
+  // SUBSCRIPTION DISCOUNTS (2-cycle override model): resolveSubscriptionPlan returns
+  // the BASE plan id + (when a code applies) a per-subscriber billing_cycles override
+  // ({ scope, discountedMinor, regularMinor, trialCycles }). We vault the card against
+  // the base plan and bake the override into the create call (the base plan is minted
+  // 2-cycle, so the override reprices existing cycles — no INVALID_BILLING_CYCLE_SEQUENCE).
+  // custom_id carries uid + code so the ACTIVATED webhook / synchronous path records
+  // the redemption. No code → base plan + bare-uid custom_id + no override.
+  const sub = await resolveSubscriptionPlan(planId, uid, req.data?.discountCode);
+  if (sub.error) throw sub.error;
+  const planToUse = sub.planToUse;
+  const cardCustomId = sub.customId;
+  const cardOverride = sub.override || {};
+
+  // discountCtx drives the synchronous redemption record on confirmed ACTIVE.
+  let discountCtx = null;
+  if (req.data?.discountCode) {
+    const t = PROVIDERS.paypal.resolvePlanTier ? PROVIDERS.paypal.resolvePlanTier(planId) : {};
+    const codeDoc = await discounts.getCode(req.data.discountCode);
+    const regularMinor = t.tierId ? SUBSCRIPTION_PRICE_MINOR[t.tierId] : null;
+    if (codeDoc) {
+      const computed = discounts.computeDiscountedAmount(codeDoc, regularMinor || 0);
+      discountCtx = {
+        code: codeDoc.id,
+        productId: t.tierId || null,
+        originalAmount: regularMinor,
+        discountedAmount: computed.discountedAmount,
+        amountOff: computed.amountOff,
+      };
+    }
+  }
   try {
+
     // Resolve buyer email — REQUIRED by PayPal alongside `card.vault_id` (without it
     // PayPal treats the vaulted card as inline raw-card entry and 400s for
     // number/expiry). Prefer the auth token email; fall back to users/{uid}.email.
@@ -819,8 +1061,14 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
       }
     }
 
-    const created = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planId, uid, email, cfg);
+    // Create against the BASE plan, baking in the per-subscriber price override
+    // (intro/recurring) when a code was applied. The base plan is 2-cycle so the
+    // override reprices existing cycles — no INVALID_BILLING_CYCLE_SEQUENCE.
+    const created = await PROVIDERS.paypal.createSubscriptionWithCard(setupToken, planToUse, cardCustomId, email, cfg, cardOverride);
+
     const subscriptionId = created?.id;
+
+
 
 
     // SYNCHRONOUS confirmation (PayPal best practice): don't trust the create
@@ -888,9 +1136,38 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
                 ? Math.round(parseFloat(lastPayment.amount.value) * 100)
                 : undefined,
               interval: "month",
+              // Funding instrument (card path → typically "Visa ••4242") for the
+              // "Current Payment Method" card. Null → UI falls back to "PayPal".
+              paymentMethod: PROVIDERS.paypal.derivePaymentMethod
+                ? PROVIDERS.paypal.derivePaymentMethod(sub?.subscriber?.payment_source)
+                : null,
             },
             fulfillmentHooks
           );
+
+          // Persist the discount/intro DISPLAY state for Billing/Membership (T10.8.1).
+          await persistSubscriptionDiscountState(uid, sub.override);
+
+          // DISCOUNT redemption (Feature 2 / T9): record once on confirmed ACTIVE,
+          // idempotent on the subscription id (a later ACTIVATED webhook for the
+          // same subscription dedupes via recordRedemption's transactionId guard).
+          if (discountCtx) {
+
+            try {
+              await discounts.recordRedemption({
+                codeId: discountCtx.code,
+                userId: uid,
+                mode: "subscription",
+                productId: discountCtx.productId,
+                originalAmount: discountCtx.originalAmount,
+                discountedAmount: discountCtx.discountedAmount,
+                amountOff: discountCtx.amountOff,
+                transactionId: subscriptionId,
+              });
+            } catch (re) {
+              logger.error("createPaypalSubscriptionWithCard: redemption recording failed (non-fatal)", { uid, subscriptionId, error: re.message });
+            }
+          }
         }
       } catch (e) {
 
@@ -899,6 +1176,7 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
       }
     }
 
+
     return { ok: true, subscriptionId, status: status || "PENDING" };
   } catch (err) {
     logger.error("createPaypalSubscriptionWithCard failed", { uid, planId, error: err.message });
@@ -906,9 +1184,636 @@ const createPaypalSubscriptionWithCard = onCall({ region: "us-west1", secrets: P
   }
 });
 
+/**
+ * Callable: create a subscription SERVER-SIDE for the Smart Button (PayPal/Venmo)
+ * flow — no vaulted card, so no Reference Transactions capability needed. Returns
+ * the subscription id for the button to approve. This is the server-authoritative
+ * parity of the one-time `createPaypalOrder`: the client passes only planId +
+ * (optional) discountCode; the server validates the code, computes the discounted
+ * first-cycle amount from its own price map, and applies the billing-cycle override
+ * (the client never sets the price). When a code is applied the uid + code are
+ * threaded through `custom_id` as a JSON token so the ACTIVATED webhook records the
+ * redemption; otherwise `custom_id` is the bare uid (back-compat). The $60 CT setup
+ * fee stays on the plan and is never discounted (business decision 2026-06-25).
+ */
+const createPaypalSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const planId = req.data?.planId;
+  if (!planId) throw new HttpsError("invalid-argument", "planId required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
+
+  // SUBSCRIPTION DISCOUNTS (2-cycle override model): when a code is applied,
+  // resolveSubscriptionPlan returns the BASE plan id + a per-subscriber billing_cycles
+  // override ({ scope, discountedMinor, regularMinor, trialCycles }). We create against
+  // the base plan and bake the override into the create call — the base plan is minted
+  // 2-cycle, so the override reprices existing cycles (no INVALID_BILLING_CYCLE_SEQUENCE).
+  // custom_id carries uid + code (JSON token) so the ACTIVATED webhook records the
+  // redemption. No code → base plan + bare-uid custom_id + no override.
+  const { planToUse, customId, override, error: subErr } = await resolveSubscriptionPlan(planId, uid, req.data?.discountCode);
+  if (subErr) throw subErr;
+
+  try {
+    const subscriptionId = await PROVIDERS.paypal.createSubscription(planToUse, customId, cfg, override || {});
+    // Persist the discount/intro DISPLAY state for Billing/Membership (T10.8.1).
+    // A missing override clears any stale promo (no-code subscription). Non-fatal.
+    await persistSubscriptionDiscountState(uid, override);
+    return { ok: true, subscriptionId };
+
+  } catch (err) {
+    logger.error("createPaypalSubscription failed", { uid, planId, error: err.message });
+
+    throw new HttpsError("internal", "Failed to create subscription.");
+  }
+});
+
+
+
+/**
+ * Callable (ADMIN): change a subscriber's plan via PayPal revise — to end a promo
+ * (→ base plan), move tier, or reprice an individual. No cancel/re-subscribe, no
+ * re-collecting payment. The BILLING.SUBSCRIPTION.UPDATED webhook syncs the neutral
+ * record + tier on the next read. (subscription-discounts T10.5 / FR-12.)
+ */
+const revisePaypalSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const subscriptionId = req.data?.subscriptionId;
+  const newPlanId = req.data?.newPlanId;
+  if (!subscriptionId) throw new HttpsError("invalid-argument", "subscriptionId required.");
+  if (!newPlanId) throw new HttpsError("invalid-argument", "newPlanId required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv));
+  try {
+    const result = await PROVIDERS.paypal.reviseSubscription(subscriptionId, newPlanId, cfg);
+    return { ok: true, result };
+  } catch (err) {
+    logger.error("revisePaypalSubscription failed", { subscriptionId, newPlanId, error: err.message });
+    throw new HttpsError("internal", "Failed to change the subscription plan.");
+  }
+});
+
+/**
+ * Callable (ADMIN): per-client price override on the SAME plan (FR-16). Sets a custom
+ * recurring price for ONE subscriber without moving them to a different plan — the
+ * exact behavior of the PayPal dashboard's "Update pricing" (sandbox-validated S1:
+ * PATCH subscription, inline pricing_scheme override → plan_overridden:true, new price
+ * from the next billing cycle). Looks the subscriber up by targetUserId (their stored
+ * subscriptionId) and writes optimistic `pendingPriceMinor`/`priceEffectiveAt` on the
+ * user doc so the membership/billing UI can show "new price effective {date}" until the
+ * UPDATED webhook reconciles. (subscription-management T3.9 / FR-16, FR-17.)
+ */
+const repriceClientSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const targetUserId = req.data?.targetUserId;
+  const newAmountMinor = Number(req.data?.newAmountMinor);
+  if (!targetUserId) throw new HttpsError("invalid-argument", "targetUserId required.");
+  if (!Number.isFinite(newAmountMinor) || newAmountMinor < 100) {
+    throw new HttpsError("invalid-argument", "newAmountMinor must be ≥ 100 (a $1.00 floor).");
+  }
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv ?? req.data?.env));
+
+  const ref = admin.firestore().collection("users").doc(targetUserId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "User not found.");
+  const u = snap.data() || {};
+  const subscriptionId = u.subscriptionId;
+  if (!subscriptionId) throw new HttpsError("failed-precondition", "User has no active subscription.");
+
+  try {
+    await PROVIDERS.paypal.reviseSubscriptionPricing(subscriptionId, newAmountMinor, {}, cfg);
+    // Optimistic display (FR-17): the new price applies next cycle. The UPDATED
+    // webhook / next renewal reconciles `lastPaymentAmount` + clears these.
+    await ref.set(
+      {
+        pendingPriceMinor: newAmountMinor,
+        priceEffectiveAt: u.currentPeriodEnd || null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return { ok: true, subscriptionId, newAmountMinor };
+  } catch (err) {
+    logger.error("repriceClientSubscription failed", { targetUserId, subscriptionId, error: err.message });
+    throw new HttpsError("internal", "Failed to update the client's price.");
+  }
+});
+
+
+
+// ============================================================================
+// Subscription Management Console (subscription-management FR-3…FR-19) — admin.
+// All callables are admin-gated. They translate neutral admin actions into PayPal
+// adapter calls and keep the Firestore `paypalPlans` registry authoritative for the
+// console's display. Per-client reprice (`repriceClientSubscription` /
+// `reviseSubscriptionPricing`) is intentionally NOT here yet — deferred until the
+// PayPal `revise` pricing-override is sandbox-validated (script S1).
+// ============================================================================
+
+/** Upsert a plan doc into the Firestore `paypalPlans` registry (merge). */
+async function upsertPlanRegistry(planId, fields) {
+  const admin = require("firebase-admin");
+  await admin
+    .firestore()
+    .collection("paypalPlans")
+    .doc(planId)
+    .set(
+      {
+        planId,
+        ...fields,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+}
+
+/**
+ * Pricing math (FR-11/FR-12). Returns the new price in minor units with a $1.00
+ * (100 minor) floor so a plan can never drop to $0 (PayPal rejects $0 recurring).
+ *   percent: round(current * (1 + value/100))
+ *   amount:  current + round(value*100)   (value is whole dollars, +/-)
+ *   set:     round(value*100)
+ */
+function computeNewPrice(currentMinor, action = {}) {
+  const FLOOR = 100;
+  const cur = Number(currentMinor) || 0;
+  const v = Number(action.value) || 0;
+  let next;
+  switch (action.mode) {
+    case "percent":
+      next = Math.round(cur * (1 + v / 100));
+      break;
+    case "amount":
+      next = cur + Math.round(v * 100);
+      break;
+    case "set":
+      next = Math.round(v * 100);
+      break;
+    default:
+      next = cur;
+  }
+  return Math.max(FLOOR, next);
+}
+
+/** Active-subscriber counts per plan id (FR-5). Source: users with a live sub. */
+async function activeSubCountsByPlan() {
+  const admin = require("firebase-admin");
+  const snap = await admin
+    .firestore()
+    .collection("users")
+    .where("subscriptionId", "!=", null)
+    .get();
+  const counts = {};
+  snap.forEach((d) => {
+    const pid = d.data()?.subscriptionPlanId;
+    if (pid) counts[pid] = (counts[pid] || 0) + 1;
+  });
+  return counts;
+}
+
+/** Callable (ADMIN): list registry plans + active-sub counts (FR-3/FR-5). */
+const listPaypalPlans = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const env = req.data?.env ? normalizePaypalEnv(req.data.env) : null;
+  const snap = await admin.firestore().collection("paypalPlans").get();
+  const counts = await activeSubCountsByPlan();
+  const plans = snap.docs
+    .map((doc) => {
+      const x = doc.data() || {};
+      return {
+        planId: doc.id,
+        productId: x.productId || null,
+        tierId: x.tierId || null,
+        tierName: x.tierName || null,
+        amountMinor: x.amountMinor ?? null,
+        currency: x.currency || "USD",
+        status: x.status || "ACTIVE",
+        env: x.env || null,
+        name: x.name || doc.id,
+        activeSubscriptions: counts[doc.id] || 0,
+      };
+    })
+    .filter((p) => (env ? p.env === env : true));
+  return { ok: true, plans };
+});
+
+/** Callable (ADMIN): create a new monthly Billing Plan + register it (FR-8). */
+const createPaypalPlan = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const d = req.data || {};
+  const productId = d.productId;
+  const name = d.name;
+  const amountMinor = d.amountMinor;
+  if (!productId) throw new HttpsError("invalid-argument", "productId required.");
+  if (!name) throw new HttpsError("invalid-argument", "name required.");
+  if (amountMinor == null) throw new HttpsError("invalid-argument", "amountMinor required.");
+  const env = normalizePaypalEnv(d.paypalEnv ?? d.env);
+  const cfg = paypalEnvConfig(env);
+  const currency = d.currency || "USD";
+  try {
+    const planId = await PROVIDERS.paypal.createPlan(
+      { productId, name, amountMinor, currency, intervalUnit: d.interval || "MONTH" },
+      cfg
+    );
+    await upsertPlanRegistry(planId, {
+      productId,
+      tierId: d.tierId || null,
+      tierName: d.tierName || null,
+      amountMinor: Number(amountMinor),
+      currency,
+      status: "ACTIVE",
+      env,
+      name,
+      createdAt: require("firebase-admin").firestore.FieldValue.serverTimestamp(),
+    });
+    return { ok: true, planId };
+  } catch (err) {
+    logger.error("createPaypalPlan failed", { productId, name, error: err.message });
+    throw new HttpsError("internal", "Failed to create the plan.");
+  }
+});
+
+/** Callable (ADMIN): rename and/or reprice a plan (FR-9). */
+const updatePaypalPlan = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const d = req.data || {};
+  const planId = d.planId;
+  if (!planId) throw new HttpsError("invalid-argument", "planId required.");
+  const env = normalizePaypalEnv(d.paypalEnv ?? d.env);
+  const cfg = paypalEnvConfig(env);
+
+  const ref = admin.firestore().collection("paypalPlans").doc(planId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Plan not in registry.");
+  const existing = snap.data() || {};
+  const currency = existing.currency || "USD";
+
+  const registryUpdate = {};
+  try {
+    if (d.amountMinor != null && Number(d.amountMinor) !== existing.amountMinor) {
+      // Base plans are minted 2-cycle (TRIAL seq 1 + REGULAR seq 2). A WHOLE-PLAN
+      // reprice must update BOTH cycles so a new subscriber pays the new price from
+      // month 1 (cycle 1) onward — repricing only seq 2 would leave the first month
+      // at the old price (PayPal shows it as Trial period 1).
+      await PROVIDERS.paypal.updatePlanPricing(
+        planId,
+        Number(d.amountMinor),
+        { billingCycleSequences: [1, 2], currency },
+        cfg
+      );
+
+      registryUpdate.amountMinor = Number(d.amountMinor);
+    }
+    if (d.name && d.name !== existing.name) {
+      registryUpdate.name = d.name;
+    }
+    if (Object.keys(registryUpdate).length > 0) {
+      await upsertPlanRegistry(planId, registryUpdate);
+    }
+    return { ok: true, planId, updated: Object.keys(registryUpdate) };
+  } catch (err) {
+    logger.error("updatePaypalPlan failed", { planId, error: err.message });
+    throw new HttpsError("internal", "Failed to update the plan.");
+  }
+});
+
+/** Callable (ADMIN): turn a plan ON/OFF for NEW subscriptions (FR-7). */
+const setPaypalPlanActive = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const planId = req.data?.planId;
+  const active = req.data?.active === true;
+  if (!planId) throw new HttpsError("invalid-argument", "planId required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv ?? req.data?.env));
+  try {
+    if (active) await PROVIDERS.paypal.activatePlan(planId, cfg);
+    else await PROVIDERS.paypal.deactivatePlan(planId, cfg);
+    await upsertPlanRegistry(planId, { status: active ? "ACTIVE" : "INACTIVE" });
+    return { ok: true, planId, status: active ? "ACTIVE" : "INACTIVE" };
+  } catch (err) {
+    logger.error("setPaypalPlanActive failed", { planId, active, error: err.message });
+    throw new HttpsError("internal", "Failed to change plan status.");
+  }
+});
+
+/**
+ * Callable (ADMIN): bulk/global reprice of selected plans (FR-10/FR-11). With
+ * `dryRun:true` returns an old→new preview and writes nothing. Otherwise applies the
+ * new price to each plan via update-pricing-schemes and updates the registry. A $1.00
+ * floor is enforced. Affects ALL current + future subscribers of those plans (PayPal
+ * applies its standard consumer-notice timing to existing subscribers).
+ */
+const repricePlans = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const d = req.data || {};
+  const planIds = Array.isArray(d.planIds) ? d.planIds : [];
+  const action = d.action || {};
+  const dryRun = d.dryRun === true;
+  if (planIds.length === 0) throw new HttpsError("invalid-argument", "planIds required.");
+  if (!["percent", "amount", "set"].includes(action.mode)) {
+    throw new HttpsError("invalid-argument", "action.mode must be percent|amount|set.");
+  }
+  const env = normalizePaypalEnv(d.paypalEnv ?? d.env);
+  const cfg = paypalEnvConfig(env);
+
+  // Load each plan's current registry state to compute and (optionally) apply.
+  const db = admin.firestore();
+  const preview = [];
+  for (const planId of planIds) {
+    const snap = await db.collection("paypalPlans").doc(planId).get();
+    if (!snap.exists) {
+      preview.push({ planId, error: "not_in_registry" });
+      continue;
+    }
+    const x = snap.data() || {};
+    const oldMinor = x.amountMinor ?? 0;
+    const newMinor = computeNewPrice(oldMinor, action);
+    preview.push({
+      planId,
+      name: x.name || planId,
+      tierId: x.tierId || null,
+      oldMinor,
+      newMinor,
+      currency: x.currency || "USD",
+    });
+  }
+
+  if (dryRun) return { ok: true, dryRun: true, preview };
+
+  // Apply: reprice via PayPal, then update registry. Collect per-plan results so a
+  // single failure doesn't abort the whole batch.
+  const results = [];
+  for (const p of preview) {
+    if (p.error) {
+      results.push({ planId: p.planId, ok: false, error: p.error });
+      continue;
+    }
+    try {
+      // Base plans are 2-cycle (TRIAL seq 1 + REGULAR seq 2); a whole-plan reprice
+      // updates BOTH cycles so new subscribers pay the new price from month 1.
+      await PROVIDERS.paypal.updatePlanPricing(
+        p.planId,
+        p.newMinor,
+        { billingCycleSequences: [1, 2], currency: p.currency },
+        cfg
+      );
+
+      await upsertPlanRegistry(p.planId, { amountMinor: p.newMinor });
+      results.push({ planId: p.planId, ok: true, newMinor: p.newMinor });
+    } catch (err) {
+      logger.error("repricePlans: plan failed", { planId: p.planId, error: err.message });
+      results.push({ planId: p.planId, ok: false, error: err.message });
+    }
+  }
+  return { ok: true, dryRun: false, results };
+});
+
+/** Callable (ADMIN): list subscribers of a given plan (FR-14). Source: users docs. */
+const listPlanSubscriptions = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const planId = req.data?.planId;
+  if (!planId) throw new HttpsError("invalid-argument", "planId required.");
+  const snap = await admin
+    .firestore()
+    .collection("users")
+    .where("subscriptionPlanId", "==", planId)
+    .get();
+  const subscriptions = snap.docs
+    .map((doc) => {
+      const x = doc.data() || {};
+      if (!x.subscriptionId) return null; // canceled — plan id may linger; skip
+      return {
+        userId: doc.id,
+        name: x.name || x.displayName || null,
+        email: x.email || null,
+        subscriptionId: x.subscriptionId,
+        status: x.subscriptionStatus || "active",
+        tierId: x.tier || null,
+        tierName: x.tierName || null,
+        currentPeriodEnd: x.currentPeriodEnd?.toMillis ? x.currentPeriodEnd.toMillis() : null,
+        cancelAtPeriodEnd: x.cancelAtPeriodEnd === true,
+      };
+    })
+    .filter(Boolean);
+  return { ok: true, subscriptions };
+});
+
+/** Callable (ADMIN): one subscription's PayPal detail + the matched user doc (FR-15). */
+const getPaypalSubscriptionDetail = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const subscriptionId = req.data?.subscriptionId;
+  if (!subscriptionId) throw new HttpsError("invalid-argument", "subscriptionId required.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv ?? req.data?.env));
+  try {
+    const sub = await PROVIDERS.paypal.getSubscription(subscriptionId, cfg);
+    // Match the owning user doc by subscriptionId.
+    const us = await admin
+      .firestore()
+      .collection("users")
+      .where("subscriptionId", "==", subscriptionId)
+      .limit(1)
+      .get();
+    let user = null;
+    if (!us.empty) {
+      const doc = us.docs[0];
+      const x = doc.data() || {};
+      user = {
+        userId: doc.id,
+        name: x.name || x.displayName || null,
+        email: x.email || null,
+        tierId: x.tier || null,
+        tierName: x.tierName || null,
+        subscriptionPlanId: x.subscriptionPlanId || null,
+        cancelAtPeriodEnd: x.cancelAtPeriodEnd === true,
+        currentPeriodEnd: x.currentPeriodEnd?.toMillis ? x.currentPeriodEnd.toMillis() : null,
+      };
+    }
+    const lastPayment = sub?.billing_info?.last_payment || null;
+    return {
+      ok: true,
+      subscription: {
+        id: sub?.id || subscriptionId,
+        status: sub?.status || null,
+        planId: sub?.plan_id || null,
+        nextBillingTime: sub?.billing_info?.next_billing_time || null,
+        startTime: sub?.start_time || null,
+        lastPaymentAmountMinor: lastPayment?.amount?.value
+          ? Math.round(parseFloat(lastPayment.amount.value) * 100)
+          : null,
+        lastPaymentTime: lastPayment?.time || null,
+      },
+      user,
+    };
+  } catch (err) {
+    logger.error("getPaypalSubscriptionDetail failed", { subscriptionId, error: err.message });
+    throw new HttpsError("internal", "Failed to load the subscription.");
+  }
+});
+
+
+/**
+ * Callable (ADMIN): list ALL subscriptions (every status) from the neutral store
+ * (subscription-management FR-14). Unlike listPlanSubscriptions (which reads `users`
+ * docs and therefore only sees ACTIVE subs — a canceled sub clears subscriptionId),
+ * this reads `collectionGroup('subscriptions')` under billing_customers/{uid}, which
+ * RETAINS the record across active/paused/canceled. Joins each to the user doc for
+ * name/email. Provider-neutral: returns tierName + amount + interval + status; the
+ * PayPal subscription id is included only as a provider reference.
+ */
+const listAllSubscriptions = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const db = admin.firestore();
+  const snap = await db.collectionGroup("subscriptions").get();
+
+  // Resolve each subscription's owning user (the parent of the subscriptions
+  // subcollection is billing_customers/{uid}); join to users/{uid} for name/email.
+  const rows = [];
+  for (const doc of snap.docs) {
+    const d = doc.data() || {};
+    // parent.parent is the billing_customers/{uid} doc.
+    const uid = doc.ref.parent.parent ? doc.ref.parent.parent.id : null;
+    if (!uid) continue;
+    let name = null;
+    let email = null;
+    let userTierName = null;
+    let cancelAtPeriodEnd = false;
+    try {
+      const us = await db.collection("users").doc(uid).get();
+      const u = us.data() || {};
+      name = u.name || u.displayName || null;
+      email = u.email || null;
+      userTierName = u.tierName || null;
+      cancelAtPeriodEnd = u.cancelAtPeriodEnd === true;
+    } catch (e) {
+      logger.warn("listAllSubscriptions: user lookup failed", { uid, error: e.message });
+    }
+    const cpe = d.currentPeriodEnd;
+    rows.push({
+      userId: uid,
+      subscriptionId: doc.id,
+      provider: d.provider || "paypal",
+      status: d.status || "active",
+      priceId: d.priceId || null, // provider plan id (P-…) — reference only
+      productId: d.productId || null,
+      tierName: d.tierName || userTierName || null,
+      amountMinor: typeof d.amount === "number" ? d.amount : null,
+      interval: d.interval || "month",
+      currentPeriodEnd:
+        typeof cpe === "number" ? cpe * 1000 : cpe?.toMillis ? cpe.toMillis() : null,
+      // Set-once createdAt is the true "started" date for new subs; fall back to
+      // updatedAt for legacy records written before createdAt existed (so the column
+      // shows a sensible date instead of blank).
+      startedAt: d.createdAt?.toMillis
+        ? d.createdAt.toMillis()
+        : d.updatedAt?.toMillis
+          ? d.updatedAt.toMillis()
+          : null,
+      cancelAtPeriodEnd,
+    });
+  }
+
+  // Newest first by start/period end as a stable-ish ordering.
+  rows.sort((a, b) => (b.currentPeriodEnd || 0) - (a.currentPeriodEnd || 0));
+  return { ok: true, subscriptions: rows };
+});
+
+/**
+ * Callable (ADMIN): pause (suspend) a subscriber's PayPal subscription. Admin variant
+ * of the client `pauseSubscription` — takes `targetUserId` instead of the caller's uid.
+ * Billing stops until resumed; subscriptionId is preserved. No auto-resume date (the
+ * admin resumes manually via adminResumeSubscription). The SUSPENDED webhook syncs the
+ * neutral record + user doc to `paused`.
+ */
+const adminPauseSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const targetUserId = req.data?.targetUserId;
+  if (!targetUserId) throw new HttpsError("invalid-argument", "targetUserId required.");
+  const ref = admin.firestore().collection("users").doc(targetUserId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "User not found.");
+  const u = snap.data() || {};
+  const subscriptionId = u.subscriptionId;
+  if (!subscriptionId) throw new HttpsError("failed-precondition", "User has no active subscription.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv ?? req.data?.env));
+  try {
+    await PROVIDERS.paypal.suspendSubscription(subscriptionId, cfg);
+    await ref.update({
+      subscriptionPaused: true,
+      subscriptionStatus: "paused",
+      pausedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    // Sync the NEUTRAL subscription record immediately so the admin console's kebab
+    // menu + list (which read billing_customers/{uid}/subscriptions/{id}.status) match
+    // PayPal right away — don't wait on the (slow/unreliable) SUSPENDED webhook. This
+    // is a status-only update; writeSubscriptionRecord preserves priceId/tier/period.
+    await fulfillment.writeSubscriptionRecord({
+      userId: targetUserId,
+      subscriptionId,
+      provider: "paypal",
+      status: "paused",
+    });
+    return { ok: true, subscriptionId };
+  } catch (err) {
+    logger.error("adminPauseSubscription failed", { targetUserId, subscriptionId, error: err.message });
+    throw new HttpsError("internal", "Failed to pause the subscription.");
+  }
+});
+
+
+/**
+ * Callable (ADMIN): resume (re-activate) a paused subscription. Admin variant of the
+ * client `resumeSubscription` — takes `targetUserId`. Billing restarts immediately.
+ */
+const adminResumeSubscription = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const targetUserId = req.data?.targetUserId;
+  if (!targetUserId) throw new HttpsError("invalid-argument", "targetUserId required.");
+  const ref = admin.firestore().collection("users").doc(targetUserId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "User not found.");
+  const u = snap.data() || {};
+  const subscriptionId = u.subscriptionId;
+  if (!subscriptionId) throw new HttpsError("failed-precondition", "User has no subscription.");
+  const cfg = paypalEnvConfig(normalizePaypalEnv(req.data?.paypalEnv ?? req.data?.env));
+  try {
+    await PROVIDERS.paypal.activatePaypalSubscription(subscriptionId, cfg);
+    await ref.update({
+      subscriptionPaused: false,
+      subscriptionStatus: "active",
+      resumedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pauseResumesAt: admin.firestore.FieldValue.delete(),
+      pauseDuration: admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    // Sync the NEUTRAL subscription record immediately so the kebab/list show
+    // "active" right away (don't wait on the ACTIVATED webhook). Status-only update;
+    // writeSubscriptionRecord preserves priceId/tier/period.
+    await fulfillment.writeSubscriptionRecord({
+      userId: targetUserId,
+      subscriptionId,
+      provider: "paypal",
+      status: "active",
+    });
+    return { ok: true, subscriptionId };
+  } catch (err) {
+    logger.error("adminResumeSubscription failed", { targetUserId, subscriptionId, error: err.message });
+
+    throw new HttpsError("internal", "Failed to resume the subscription.");
+  }
+});
+
 
 module.exports = {
+
   paymentWebhook,
+
   paypalWebhookSandbox,
   paypalWebhookLive,
   cancelPaypalSubscription,
@@ -916,6 +1821,23 @@ module.exports = {
   createPaypalOrder,
   createPaypalCardSetupToken,
   createPaypalSubscriptionWithCard,
+  createPaypalSubscription, // Smart Button (no-vault) server-side subscription create
+  revisePaypalSubscription, // admin "Change plan" (revise to a different plan id)
+  repriceClientSubscription, // admin "Change price" (inline same-plan PATCH override)
+
+  // Subscription Management Console (subscription-management Phase 3) — admin only.
+  listPaypalPlans,
+
+  createPaypalPlan,
+  updatePaypalPlan,
+  setPaypalPlanActive,
+  repricePlans,
+  listPlanSubscriptions,
+  getPaypalSubscriptionDetail,
+  listAllSubscriptions, // global all-status subscriptions list (neutral store)
+  adminPauseSubscription, // admin pause (suspend) a client's subscription
+  adminResumeSubscription, // admin resume (re-activate) a client's subscription
+
 
   // Discount codes (Feature 2, phase 1)
   previewDiscount,

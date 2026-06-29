@@ -55,7 +55,7 @@ function buildCatalog(): CatalogEntry[] {
         'Custom monthly training programs, personalized nutrition coaching, unlimited messaging support, and weekly progress check-ins.',
       price: {
         id: PAYPAL_PLANS.ONLINE_COACHING,
-        amount: 25000,
+        amount: 20000, // $200/mo
         currency: 'USD',
         type: 'recurring',
         active: true,
@@ -66,10 +66,11 @@ function buildCatalog(): CatalogEntry[] {
       productId: SERVICE_TIERS.COMPLETE_TRANSFORMATION,
       name: 'Complete Transformation',
       description:
-        'All online coaching benefits plus in-person training sessions. Includes a discounted in-person session at signup, then $250/month.',
+        'All online coaching benefits plus discounted in-person training sessions, then $250/month.',
+
       price: {
         id: PAYPAL_PLANS.COMPLETE_TRANSFORMATION,
-        amount: 25000,
+        amount: 25000, // $250/mo
         currency: 'USD',
         type: 'recurring',
         active: true,
@@ -104,6 +105,8 @@ function buildCatalog(): CatalogEntry[] {
     },
   ];
 }
+
+
 
 function toNeutralProduct(entry: CatalogEntry): Product {
   return {
@@ -257,12 +260,31 @@ export const paypalProvider: PaymentProvider = {
 
 
     if (isSubscription) {
-      buttonConfig.createSubscription = (_data: unknown, actions: any) =>
-        actions.subscription.create({
-          plan_id: opts.priceId, // P-xxxx from PAYPAL_PLANS
-          custom_id: opts.userId, // webhook maps subscription → user
+      // Create the subscription SERVER-SIDE via the callable (NOT
+      // actions.subscription.create). The server resolves the BASE plan id, re-validates
+      // any discountCode, computes the discounted price, and bakes a per-subscriber
+      // billing_cycles override into the create call. The base plans are minted 2-cycle
+      // (TRIAL seq 1 + REGULAR seq 2), so the override reprices existing cycles (intro =
+      // seq 1 only with auto-revert; recurring = both) — no INVALID_BILLING_CYCLE_SEQUENCE.
+      // custom_id carries uid + code so the ACTIVATED webhook records the redemption. No
+      // code → bare-uid custom_id + no override (byte-for-byte the old plain flow).
+      // (subscription-discounts T10 — 2-cycle override model.)
+      buttonConfig.createSubscription = async () => {
+        const { httpsCallable } = await import('firebase/functions');
+        const { functions } = await import('@/lib/firebase');
+        const createSub = httpsCallable(functions, 'createPaypalSubscription');
+        const res = await createSub({
+          planId: opts.priceId,
+          userId: opts.userId,
+          discountCode: opts.discountCode,
+          paypalEnv: PAYPAL_ENV,
         });
+        const subscriptionId = (res?.data as { subscriptionId?: string } | undefined)?.subscriptionId;
+        if (!subscriptionId) throw new Error('Failed to create PayPal subscription.');
+        return subscriptionId;
+      };
     } else {
+
       const oneTime = oneTimeAmount(opts.priceId);
 
       if (!oneTime) {
@@ -471,10 +493,12 @@ export const paypalProvider: PaymentProvider = {
           setupToken: data?.vaultSetupToken,
           planId: opts.priceId, // P-xxxx
           userId: opts.userId,
+          discountCode: opts.discountCode, // Feature 2 T9: server validates + first-cycle override
           paypalEnv: PAYPAL_ENV,
         });
         opts.onApproved();
       };
+
     } else {
       const oneTime = oneTimeAmount(opts.priceId);
       if (!oneTime) {
@@ -611,6 +635,9 @@ export const paypalProvider: PaymentProvider = {
         status: d.status ?? 'paid',
         productName: d.productName ?? 'Payment',
         receiptUrl: d.receiptUrl,
+        // Funding instrument ("Visa ••4242" / "PayPal" / "Venmo") when the webhook
+        // captured it. Absent on legacy rows → the UI falls back to "PayPal".
+        paymentMethod: d.paymentMethod,
       });
     });
     return transactions;

@@ -853,7 +853,7 @@ exports.reactivateSubscription = onCall({
  */
 exports.adminCancelSubscription = onCall({
   region: sharedConfig.region,
-  secrets: [stripeKey],
+  secrets: [stripeKey, ...PAYPAL_SECRETS],
   cors: true,
 }, async (request) => {
   try {
@@ -901,33 +901,74 @@ exports.adminCancelSubscription = onCall({
       throw new Error("Subscription is already set to cancel at period end");
     }
 
-    // Initialize Stripe
-    const stripe = require("stripe")(stripeKey.value(), {
-      apiVersion: "2024-09-30.acacia",
-    });
+    // Provider detection: PayPal subscription ids are `I-…`; Stripe are `sub_…`.
+    // Mirrors the client-facing cancelSubscription: PayPal has NO native
+    // "cancel at period end", so we set a LOCAL cancelAtPeriodEnd flag + keep access
+    // until currentPeriodEnd, and a scheduled finalizer performs the real PayPal
+    // /cancel at that date (using the persisted paypalEnv for credentials).
+    const isPaypal = String(subscriptionId).startsWith("I-") || userData.provider === "paypal";
 
-    // Cancel subscription at period end
-    const subscription = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: true,
-    });
+    let currentPeriodEndSec;
+    if (isPaypal) {
+      const existingEnd = userData.currentPeriodEnd?.toMillis
+        ? userData.currentPeriodEnd.toMillis()
+        : null;
+      const lastPaymentMs = userData.lastPaymentDate?.toMillis
+        ? userData.lastPaymentDate.toMillis()
+        : null;
+      const fallback = lastPaymentMs ? new Date(lastPaymentMs) : new Date();
+      if (!existingEnd) fallback.setMonth(fallback.getMonth() + 1);
+      currentPeriodEndSec = Math.floor((existingEnd || fallback.getTime()) / 1000);
 
-    logger.info("Subscription canceled by admin in Stripe", {
-      adminId,
-      targetUserId,
-      subscriptionId,
-      currentPeriodEnd: subscription.current_period_end,
-    });
+      await userRef.update({
+        cancelAtPeriodEnd: true,
+        canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+        canceledBy: "admin",
+        canceledByAdminId: adminId,
+        cancelReason: reason,
+        currentPeriodEnd: admin.firestore.Timestamp.fromMillis(currentPeriodEndSec * 1000),
+        // Persist the PayPal env so the scheduled finalizer (no request context) can
+        // resolve the correct credentials when it performs the real /cancel.
+        paypalEnv: paymentsModule.normalizePaypalEnv(request.data?.paypalEnv),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-    // Update Firestore
-    await userRef.update({
-      cancelAtPeriodEnd: true,
-      canceledAt: admin.firestore.FieldValue.serverTimestamp(),
-      canceledBy: "admin",
-      canceledByAdminId: adminId,
-      cancelReason: reason,
-      currentPeriodEnd: admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      logger.info("PayPal subscription marked cancel-at-period-end by admin (local flag)", {
+        adminId,
+        targetUserId,
+        subscriptionId,
+        currentPeriodEnd: currentPeriodEndSec,
+      });
+    } else {
+      // Initialize Stripe
+      const stripe = require("stripe")(stripeKey.value(), {
+        apiVersion: "2024-09-30.acacia",
+      });
+
+      // Cancel subscription at period end
+      const subscription = await stripe.subscriptions.update(subscriptionId, {
+        cancel_at_period_end: true,
+      });
+      currentPeriodEndSec = subscription.current_period_end;
+
+      logger.info("Subscription canceled by admin in Stripe", {
+        adminId,
+        targetUserId,
+        subscriptionId,
+        currentPeriodEnd: currentPeriodEndSec,
+      });
+
+      // Update Firestore
+      await userRef.update({
+        cancelAtPeriodEnd: true,
+        canceledAt: admin.firestore.FieldValue.serverTimestamp(),
+        canceledBy: "admin",
+        canceledByAdminId: adminId,
+        cancelReason: reason,
+        currentPeriodEnd: admin.firestore.Timestamp.fromMillis(currentPeriodEndSec * 1000),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
 
     // Log audit
     await admin.firestore().collection("audit_logs").add({
@@ -937,10 +978,10 @@ exports.adminCancelSubscription = onCall({
       performedAt: admin.firestore.FieldValue.serverTimestamp(),
       reason: reason,
       subscriptionId: subscriptionId,
-      accessUntil: new Date(subscription.current_period_end * 1000).toISOString(),
+      accessUntil: new Date(currentPeriodEndSec * 1000).toISOString(),
     });
 
-    const accessUntil = new Date(subscription.current_period_end * 1000);
+    const accessUntil = new Date(currentPeriodEndSec * 1000);
 
     logger.info("Admin subscription cancellation completed", {
       adminId,
@@ -953,9 +994,10 @@ exports.adminCancelSubscription = onCall({
       success: true,
       message: "Subscription canceled at period end",
       accessUntil: accessUntil.toISOString(),
-      currentPeriodEnd: subscription.current_period_end,
+      currentPeriodEnd: currentPeriodEndSec,
     };
   } catch (error) {
+
     logger.error("Error in admin cancel subscription", {
       error: error.message,
       stack: error.stack,
@@ -2020,8 +2062,25 @@ async function sendWelcomeEmail(clientName, clientEmail, trainerName = null, tie
       tierName,
     });
 
+    // Guard: if the RESEND_API_KEY secret isn't bound to this function's runtime
+    // (e.g. a stale revision or unbound secret version), `value()` resolves empty.
+    // Log a loud, specific error instead of letting `new Resend("")` fail silently
+    // inside the non-blocking catch — that's exactly how welcome emails went missing.
+    let resendApiKey;
+    try {
+      resendApiKey = resendKey.value();
+    } catch (keyErr) {
+      resendApiKey = null;
+    }
+    if (!resendApiKey) {
+      logger.error("Welcome email NOT sent: RESEND_API_KEY unavailable to this function runtime (check the function's secrets binding / redeploy)", {
+        clientEmail,
+      });
+      return {success: false, error: "RESEND_API_KEY unavailable"};
+    }
+
     const {Resend} = require("resend");
-    const resend = new Resend(resendKey.value());
+    const resend = new Resend(resendApiKey);
 
     // Determine greeting based on available info
     const greeting = clientName ? clientName.split(' ')[0] : 'there';
@@ -2213,7 +2272,8 @@ exports.sendEmailVerificationOTP = onCall({
     const resend = new Resend(resendKey.value());
 
     await resend.emails.send({
-      from: "verify@shrey.fit",
+      from: "Shrey.Fit <verify@shrey.fit>",
+      replyTo: "support@shrey.fit",
       to: email,
       subject: "Verify Your Email Address",
       html: `
@@ -3657,6 +3717,26 @@ exports.updateDiscountCode = paymentsModule.updateDiscountCode;
 exports.createPaypalCardSetupToken = paymentsModule.createPaypalCardSetupToken;
 
 exports.createPaypalSubscriptionWithCard = paymentsModule.createPaypalSubscriptionWithCard;
+// Smart Button (no-vault) server-side subscription create (Feature 2 T9 — subscription discounts)
+exports.createPaypalSubscription = paymentsModule.createPaypalSubscription;
+// Admin "Change plan" — revise a subscription to a different plan id (subscription discounts T10.5)
+exports.revisePaypalSubscription = paymentsModule.revisePaypalSubscription;
+// Admin "Change price" — per-client inline same-plan PATCH override (subscription-management FR-16)
+exports.repriceClientSubscription = paymentsModule.repriceClientSubscription;
+// Subscription Management Console (subscription-management Phase 3) — admin-only callables.
+
+exports.listPaypalPlans = paymentsModule.listPaypalPlans;
+exports.createPaypalPlan = paymentsModule.createPaypalPlan;
+exports.updatePaypalPlan = paymentsModule.updatePaypalPlan;
+exports.setPaypalPlanActive = paymentsModule.setPaypalPlanActive;
+exports.repricePlans = paymentsModule.repricePlans;
+exports.listPlanSubscriptions = paymentsModule.listPlanSubscriptions;
+exports.getPaypalSubscriptionDetail = paymentsModule.getPaypalSubscriptionDetail;
+exports.listAllSubscriptions = paymentsModule.listAllSubscriptions;
+exports.adminPauseSubscription = paymentsModule.adminPauseSubscription;
+exports.adminResumeSubscription = paymentsModule.adminResumeSubscription;
+
+
 
 /**
  * SCHEDULED: finalize PayPal subscription lifecycle workarounds (spec P2.3).

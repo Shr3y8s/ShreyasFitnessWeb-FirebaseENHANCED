@@ -66,6 +66,15 @@ export default function BillingPage() {
   // PayPal → neutral history store, no card block, in-app cancel (no portal link).
   const provider = getPaymentProvider();
   const caps = provider.capabilities;
+  // Display label for the active payment processor, derived from the neutral
+  // `provider.name` ('stripe' | 'paypal' | 'paddle') — NOT hardcoded. Used for the
+  // "payments are processed by X" copy so swapping providers needs no UI change.
+  const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+    paypal: 'PayPal',
+    stripe: 'Stripe',
+    paddle: 'Paddle',
+  };
+  const providerDisplayName = PROVIDER_DISPLAY_NAMES[provider.name] ?? 'your payment processor';
 
 
   useEffect(() => {
@@ -119,7 +128,9 @@ export default function BillingPage() {
               amount: t.amount,
               currency: t.currency,
               status: t.status,
-              paymentMethod: 'PayPal',
+              // Funding instrument captured by the webhook ("Visa ••4242" / "Venmo"),
+              // falling back to "PayPal" for legacy rows that predate it.
+              paymentMethod: t.paymentMethod?.label || 'PayPal',
               receiptUrl: t.receiptUrl ?? null,
             }));
             txns.sort((a, b) => b.date - a.date);
@@ -425,8 +436,40 @@ export default function BillingPage() {
               </div>
             )}
 
+            {/* Current Rate (discount/intro display — T10.8.1) */}
+            {(() => {
+              const d = (userData as any)?.subscriptionDiscount;
+              if (!d || !d.scope) return null;
+              const fmt = (m: number) => `$${(Math.max(0, m) / 100).toFixed(2)}`;
+              const base = typeof d.basePriceMinor === 'number' ? d.basePriceMinor : null;
+              const disc = typeof d.discountedMinor === 'number' ? d.discountedMinor : null;
+              if (disc == null) return null;
+              let text: string;
+              if (d.scope === 'intro') {
+                const n = d.introCycles && d.introCycles > 0 ? d.introCycles : 1;
+                const months = n > 1 ? `first ${n} months` : 'first month';
+                text = `Intro rate: ${fmt(disc)}/mo for the ${months}${base != null ? `, then ${fmt(base)}/mo` : ''}.`;
+              } else {
+                text = `Discounted rate: ${fmt(disc)}/mo.`;
+              }
+              return (
+                <Card className="border-emerald-200 bg-emerald-50">
+                  <CardContent className="pt-6">
+                    <div className="flex gap-3">
+                      <Calendar className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-emerald-900">
+                        <p className="font-medium mb-1">Your current rate</p>
+                        <p>{text}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Current Payment Method Card */}
             <Card>
+
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-primary" />
@@ -444,9 +487,16 @@ export default function BillingPage() {
                         <CreditCard className="w-8 h-8 text-gray-700" />
                       </div>
                       <div>
-                        <p className="font-semibold text-lg text-foreground">Paid with PayPal</p>
+                        {/* Processor-driven copy (provider.name, not hardcoded). The
+                            processor (PayPal) owns the funding source — card/bank/
+                            wallet — so we point the client there to manage it rather
+                            than showing an instrument we can't reliably read. */}
+                        <p className="font-semibold text-lg text-foreground">
+                          Payments processed by {providerDisplayName}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          Your PayPal account funds your purchases. Manage your funding source in PayPal.
+                          Your {providerDisplayName} account funds your purchases. Manage your
+                          funding source (card, bank, or balance) in {providerDisplayName}.
                         </p>
                       </div>
                     </div>
@@ -563,9 +613,7 @@ export default function BillingPage() {
                         <tr className="text-left">
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Date & Time</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Product</th>
-                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Activity</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Amount</th>
-                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Payment Method</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Status</th>
                           <th className="pb-3 text-sm font-medium text-muted-foreground">Receipt</th>
                         </tr>
@@ -582,21 +630,15 @@ export default function BillingPage() {
                               <td className="py-4 pr-4 text-sm text-foreground font-medium">
                                 {transaction.productName}
                               </td>
-                              <td className="py-4 pr-4 text-sm text-foreground">
-                                <div className="flex items-center gap-2">
-                                  {getStatusIcon(transaction.status)}
-                                  <span>{transaction.description}</span>
-                                </div>
-                              </td>
                               <td className="py-4 pr-4 text-sm font-medium text-foreground">
                                 {formatCurrency(transaction.amount, transaction.currency)}
                               </td>
-                              <td className="py-4 pr-4 text-sm text-muted-foreground">
-                                {transaction.paymentMethod}
-                              </td>
                               <td className="py-4 pr-4">
-                                <span className={getStatusBadge(transaction.status)}>
-                                  {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                                <span className="inline-flex items-center gap-1.5">
+                                  {getStatusIcon(transaction.status)}
+                                  <span className={getStatusBadge(transaction.status)}>
+                                    {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                                  </span>
                                 </span>
                               </td>
                               <td className="py-4">

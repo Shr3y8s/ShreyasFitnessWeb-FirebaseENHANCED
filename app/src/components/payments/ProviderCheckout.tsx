@@ -172,7 +172,15 @@ export function ProviderCheckout({
   // On Apply we call the adapter's previewDiscount (READ-ONLY); the applied code is
   // threaded into buildOpts so the wallet/card create-order callable re-validates +
   // applies it server-side (the client never sets the amount).
-  const discountsSupported = !!provider.capabilities.discounts && mode === 'payment';
+  // Discounts apply to BOTH one-time (payment) AND subscription checkout. For
+  // subscriptions the base plans are minted 2-cycle (TRIAL seq 1 + REGULAR seq 2), so
+  // the server bakes a per-subscriber billing_cycles override into the create call
+  // (intro = first cycle only with auto-revert; recurring = every cycle). The server
+  // validates + applies the code per-mode; the client never sets the amount.
+  // (subscription-discounts T10 — 2-cycle override model.)
+  const discountsSupported = !!provider.capabilities.discounts;
+
+
   const [codeInput, setCodeInput] = useState('');
   const [appliedCode, setAppliedCode] = useState<string | undefined>(undefined);
   const [preview, setPreview] = useState<DiscountPreview | null>(null);

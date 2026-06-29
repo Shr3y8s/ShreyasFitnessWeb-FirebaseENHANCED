@@ -113,7 +113,7 @@ the neutral-interface rule (no PayPal in app/pages/components).
 - [x] **T8.3** Verify floor clamps a hypothetical 100%-off paid code to $1.00.
 - [x] **T8.4** Neutral-interface audit: no PayPal references in pages/components.
       *(checkout field + admin page use only the neutral provider interface + callables.)*
-- [ ] **T8.5** ✅ HANDOFF: Phase 1 deployed → Feature 1 T4 (live smoke test) unblocked.
+- [x] **T8.5** ✅ HANDOFF: Phase 1 deployed → Feature 1 T4 (live smoke test) unblocked.
 
 
 ---
@@ -122,14 +122,41 @@ the neutral-interface rule (no PayPal in app/pages/components).
 
 ## T9 — Subscription first-cycle discount
 
-- [ ] **T9.1** Extend the subscription-create callables
-      (`createPaypalSubscriptionWithCard` and the Smart Button `createSubscription`
-      path) to accept `discountCode`.
-- [ ] **T9.2** Implement first-cycle discount via PayPal subscription
-      `plan`/`billing_cycles` override (or setup-fee adjustment for CT) in
-      `providers/paypal.js`; validate server-side.
-- [ ] **T9.3** Record redemption on confirmed `ACTIVE`; verify sandbox activation
-      reflects the discounted first charge in MRR/transaction records.
+> **Progress 2026-06-25 (server complete, sandbox-verify + UI pending):** the
+> server-authoritative card path is built end-to-end. Decision: a first-cycle code
+> discounts the **first month only** ($250→discounted); CT's $60 setup fee is left
+> intact. Also shipped alongside: the Item-ID polish (one-time `createOrder` now
+> sends `items[]`/`sku` + `amount.breakdown.item_total` so PayPal shows an Item ID).
+> `node --check` + app `tsc` clean.
+
+- [x] **T9.1** Extend the subscription-create callable to accept `discountCode`.
+      *(Done for `createPaypalSubscriptionWithCard`: server re-validates the code,
+      computes the discounted first-cycle amount from `SUBSCRIPTION_PRICE_MINOR`
+      (client never sets it), rejects free-comp on the paid path. `previewDiscount`
+      now also supports `mode:"subscription"`, resolving the plan→tier→price. The
+      client adapter threads `discountCode` into the card-fields subscription
+      onApprove. The Smart Button `createSubscription` path is NOT yet covered — see
+      blocker below.)*
+- [x] **T9.2** Implement first-cycle discount via PayPal subscription
+      `plan.billing_cycles` override in `providers/paypal.js` (cycle 1 = discounted
+      price `total_cycles:1`, cycle 2 = regular price `total_cycles:0`); validated
+      server-side. Setup fee untouched (CT decision above).
+- [x] **T9.3** Record redemption on confirmed `ACTIVE` (idempotent on subscription
+      id) in `createPaypalSubscriptionWithCard`.
+- [ ] **T9.4 (SANDBOX verify — pending):** run a sandbox card subscription with a
+      first-cycle code; confirm the discounted first charge + normal renewal price,
+      and the redemption recorded.
+- [ ] **T9.5 (BLOCKER — UI/path decision):** subscription discounts are NOT yet
+      reachable from the live UI because (a) the checkout discount field is gated to
+      `mode === 'payment'`, and (b) the ACDC card-fields **subscription** path is
+      currently DISABLED — live subscriptions use the Smart Button
+      `actions.subscription.create` (client-side, not server-authoritative, can't
+      carry the billing-cycle override). To expose subscription discounts we must
+      first move the Smart Button subscription create server-side (a `createPaypal
+      Subscription` callable mirroring the card path) OR re-enable the ACDC card
+      subscription path, THEN ungate the discount field for `mode === 'subscription'`.
+      Needs a design decision before wiring.
+
 
 ## T10 — Subscription recurring discount (discounted-plan fallback)
 
@@ -142,6 +169,14 @@ the neutral-interface rule (no PayPal in app/pages/components).
       sandbox.
 
 ## T11 — Free-comp path (100% off, no processor charge)
+
+> **PARKED — low priority (post-launch), decision 2026-06-28.** Business decision: a
+> non-zero **minimum charge floor (default $1.00)** covers the "almost free" need, so a
+> true $0 comp isn't required for launch. The free-comp CHECKBOX has been REMOVED from
+> the admin Discount Codes form so admins can't create a code that has no redemption
+> path. The backend (`discounts.js` / `computeDiscountedAmount`) still understands
+> `freeComp` for any legacy record. To revive: build T11.1–T11.5 + restore the form
+> toggle.
 
 - [ ] **T11.1** Add `redeemFreeComp` callable (auth-gated): re-validate, fulfill
       directly (one-time `fulfillSessionPackage` amount 0 / subscription entitlement),

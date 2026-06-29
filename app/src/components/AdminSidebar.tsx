@@ -27,7 +27,9 @@ import {
   LogOut,
   Inbox,
   Tag,
+  Layers,
 } from 'lucide-react';
+
 
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
@@ -142,9 +144,21 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
 
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={pathname === '/dashboard/admin/subscriptions' ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/admin/subscriptions">
+                    <Layers className="w-4 h-4" />
+                    <span className="font-medium">Subscription Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
 
 
         {/* Business Operations Section */}
