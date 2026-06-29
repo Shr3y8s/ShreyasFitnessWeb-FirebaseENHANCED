@@ -58,9 +58,9 @@ const PLAN_TIER_MAP = {
   // sandbox (2-cycle base plans, minted 2026-06-27)
   "P-1UL86855135904642NJAFK4I": { tierId: "online_coaching", tierName: "Online Coaching" },
   "P-28C55086862794508NJAFK4I": { tierId: "complete_transformation", tierName: "Complete Transformation" },
-  // live (prod catalog run 2026-06-21) — re-mint as 2-cycle at live cutover
-  "P-96194639LX633004DNI4ANSI": { tierId: "online_coaching", tierName: "Online Coaching" },
-  "P-3S168526T8851291KNI4ANSI": { tierId: "complete_transformation", tierName: "Complete Transformation" },
+  // live (2-cycle base plans, re-minted 2026-06-28)
+  "P-4EM46614UA100974ENJA7U3A": { tierId: "online_coaching", tierName: "Online Coaching" },
+  "P-8D877538ML425510RNJA7U3I": { tierId: "complete_transformation", tierName: "Complete Transformation" },
 };
 
 

@@ -60,7 +60,9 @@ const BASE_PLANS = [
   },
 
   {
-    planId: "P-96194639LX633004DNI4ANSI",
+    // 2-cycle base plan (TRIAL seq1 + REGULAR seq2), re-minted 2026-06-28.
+    planId: "P-4EM46614UA100974ENJA7U3A",
+    productId: "PROD-8A5246863N608771L",
     tierId: "online_coaching",
     tierName: "Online Coaching",
     env: "production",
@@ -68,7 +70,9 @@ const BASE_PLANS = [
     name: "Online Coaching Monthly",
   },
   {
-    planId: "P-3S168526T8851291KNI4ANSI",
+    // 2-cycle base plan (TRIAL seq1 + REGULAR seq2), re-minted 2026-06-28.
+    planId: "P-8D877538ML425510RNJA7U3I",
+    productId: "PROD-0YA71868YT116171P",
     tierId: "complete_transformation",
     tierName: "Complete Transformation",
     env: "production",
