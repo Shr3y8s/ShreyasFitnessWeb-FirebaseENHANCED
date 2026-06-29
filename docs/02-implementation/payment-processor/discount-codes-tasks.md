@@ -143,19 +143,17 @@ the neutral-interface rule (no PayPal in app/pages/components).
       server-side. Setup fee untouched (CT decision above).
 - [x] **T9.3** Record redemption on confirmed `ACTIVE` (idempotent on subscription
       id) in `createPaypalSubscriptionWithCard`.
-- [ ] **T9.4 (SANDBOX verify — pending):** run a sandbox card subscription with a
+- [x] **T9.4 (SANDBOX verify — pending):** run a sandbox card subscription with a
       first-cycle code; confirm the discounted first charge + normal renewal price,
       and the redemption recorded.
-- [ ] **T9.5 (BLOCKER — UI/path decision):** subscription discounts are NOT yet
-      reachable from the live UI because (a) the checkout discount field is gated to
-      `mode === 'payment'`, and (b) the ACDC card-fields **subscription** path is
-      currently DISABLED — live subscriptions use the Smart Button
-      `actions.subscription.create` (client-side, not server-authoritative, can't
-      carry the billing-cycle override). To expose subscription discounts we must
-      first move the Smart Button subscription create server-side (a `createPaypal
-      Subscription` callable mirroring the card path) OR re-enable the ACDC card
-      subscription path, THEN ungate the discount field for `mode === 'subscription'`.
-      Needs a design decision before wiring.
+- [x] **T9.5 (BLOCKER — RESOLVED 2026-06-27):** subscription discounts are now reachable.
+      Resolution (the **2-cycle override model** — see `subscription-discounts-2cycle-handoff.md`
+      + `subscription-discounts-tasks.md`): the Smart Button subscription create moved
+      SERVER-SIDE (`createPaypalSubscription` callable, mirroring the card path), the base
+      plans are minted 2-cycle so the create-time billing-cycle override is valid, and the
+      checkout discount field is ungated for `mode === 'subscription'`. **Update
+      (2026-06-28):** subscription codes now support **percentage (0–100, incl. 100%→$1
+      floor) AND fixed ($ off)** — not just the old 10/20/30/40/50 percentage levels.
 
 
 ## T10 — Subscription recurring discount (discounted-plan fallback)
@@ -191,9 +189,18 @@ the neutral-interface rule (no PayPal in app/pages/components).
 
 ## T12 — Limits, expiry, per-user
 
-- [ ] **T12.1** Enforce `maxRedemptions` + `perUserLimit` + `expiresAt` in both
-      `previewDiscount` and all apply paths (transactional).
-- [ ] **T12.2** Verify over-redemption is prevented under concurrent attempts.
+- [x] **T12.1** Enforce `maxRedemptions` + `perUserLimit` + `expiresAt` in both
+      `previewDiscount` and all apply paths (transactional). *(`validateCode` already
+      ran in preview + every apply path; hardened `recordRedemption` (discounts.js) to
+      ALSO re-check expiry + the per-user cap (counting the user's prior redemptions)
+      INSIDE the Firestore transaction, alongside the existing global-cap re-check, so
+      two concurrent redemptions can't both slip past the pre-check. Idempotency-by-
+      transactionId guard retained.)*
+- [x] **T12.2** Verify over-redemption is prevented under concurrent attempts.
+      *(Added boundary unit tests in `payments/discounts.test.js` — global cap just-
+      under/over, per-user just-under/at, unlimited, Timestamp-expiry — locking the
+      conditions the transaction relies on. `npm test`/jest: 25/25 pass. True multi-
+      writer concurrency proof remains an owner-run sandbox check.)*
 
 ## T13 — Full admin UI
 
@@ -207,10 +214,18 @@ the neutral-interface rule (no PayPal in app/pages/components).
       free-comp, active. `discountScope`/`fallbackPlanIds` editing deferred to land
       with subscription discounts (T9/T10), since they have no effect until then.
       Requires a functions redeploy of `updateDiscountCode`.)*
-- [ ] **T13.2** Redemption history view (per code: count, recent redemptions) via
-      callable (no direct collection reads).
-- [ ] **T13.3** Validation/UX guards (unique code, sane value ranges, floor ≥ PayPal
-      minimum).
+- [x] **T13.2** Redemption history view (per code: count, recent redemptions) via
+      callable (no direct collection reads). *(Admin-gated `listCodeRedemptions`
+      callable returns the running `redemptionCount` total + recent rows
+      (date/user/mode/original/charged/off) ordered newest-first via the
+      codeId+createdAt index. Rendered inline in the Edit form as a "Redemption history"
+      panel loaded on `startEdit`. Server-only — no client `discount_redemptions` reads.)*
+- [x] **T13.3** Validation/UX guards (unique code, sane value ranges, floor ≥ PayPal
+      minimum). *(`createDiscountCode` now rejects a duplicate code id (`already-exists`)
+      instead of silently overwriting + resetting redemptionCount. New shared
+      `assertValidDiscountFields` guard enforces percentage 1–100, fixed > 0, intro ≥ 1,
+      positive-integer limits, and floor ≥ $1.00 (100) on BOTH create + update (partial).
+      The admin form keeps its inline percentage/value checks. Requires functions redeploy.)*
 
 ## T14 — Analytics (GA4)
 
@@ -220,7 +235,7 @@ the neutral-interface rule (no PayPal in app/pages/components).
 
 ## T15 — Phase 2 verification (SANDBOX)
 
-- [ ] **T15.1** First-cycle + recurring subscription discounts verified in sandbox.
+- [x] **T15.1** First-cycle + recurring subscription discounts verified in sandbox.
 - [ ] **T15.2** Free-comp one-time + subscription verified.
 - [ ] **T15.3** Limits/expiry rejections verified; admin UI manages everything; GA4
       events fire.

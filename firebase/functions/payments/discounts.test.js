@@ -158,3 +158,45 @@ describe("validateCode", () => {
     });
   });
 });
+
+// T12.2 — limits/expiry boundary behavior. The transactional re-check in
+// recordRedemption mirrors these same conditions inside a Firestore transaction
+// (global cap, per-user cap, expiry) to prevent over-redemption under concurrency;
+// these pure-logic tests lock the boundaries the transaction relies on.
+describe("validateCode — limit boundaries (T12)", () => {
+  const base = { type: "percentage", value: 25, active: true };
+
+  test("global cap: just under the limit still passes", () => {
+    expect(
+      validateCode({ ...base, maxRedemptions: 5, redemptionCount: 4 })
+    ).toEqual({ valid: true });
+  });
+
+  test("global cap: over the limit is rejected", () => {
+    expect(
+      validateCode({ ...base, maxRedemptions: 5, redemptionCount: 6 })
+    ).toEqual({ valid: false, reason: "limit_reached" });
+  });
+
+  test("per-user cap: just under the limit still passes", () => {
+    expect(validateCode({ ...base, perUserLimit: 2 }, {}, 1)).toEqual({ valid: true });
+  });
+
+  test("per-user cap: at the limit is rejected", () => {
+    expect(validateCode({ ...base, perUserLimit: 2 }, {}, 2)).toEqual({
+      valid: false,
+      reason: "per_user_limit",
+    });
+  });
+
+  test("no caps set → unlimited (passes regardless of counts)", () => {
+    expect(validateCode(base, {}, 999)).toEqual({ valid: true });
+  });
+
+  test("expiry as Firestore Timestamp-like (toMillis) in the past → expired", () => {
+    const pastMs = Date.now() - 3600 * 1000;
+    expect(
+      validateCode({ ...base, expiresAt: { toMillis: () => pastMs } })
+    ).toEqual({ valid: false, reason: "expired" });
+  });
+});

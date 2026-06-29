@@ -75,6 +75,22 @@ export default function AdminDiscountCodesPage() {
   // applies before PayPal auto-reverts to full. Stored as a string for the input.
   const [introCycles, setIntroCycles] = useState('1');
 
+  // T13.2 — inline redemption history for the code being edited.
+  interface RedemptionRow {
+    id: string;
+    userId: string | null;
+    mode: string | null;
+    originalAmount: number | null;
+    discountedAmount: number | null;
+    amountOff: number | null;
+    transactionId: string | null;
+    createdAt: number | null;
+  }
+  const [history, setHistory] = useState<RedemptionRow[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+
 
   const isEditing = editId !== null;
 
@@ -130,9 +146,26 @@ export default function AdminDiscountCodesPage() {
     setShowForm(true);
   };
 
+  // Load recent redemptions for a code (T13.2). Server-side only via callable.
+  const loadHistory = useCallback(async (codeId: string) => {
+    setHistoryLoading(true);
+    setHistory([]);
+    setHistoryTotal(0);
+    try {
+      const data = await callable('listCodeRedemptions', { code: codeId, limit: 25 });
+      setHistory((data?.redemptions as RedemptionRow[]) || []);
+      setHistoryTotal(Number(data?.total) || 0);
+    } catch {
+      // Non-fatal: leave history empty; the form still works.
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [callable]);
+
   // Open the form in "edit" mode pre-filled from a row. The code field becomes
   // read-only because the code string is the document identity.
   const startEdit = (row: DiscountCodeRow) => {
+    loadHistory(row.id);
     setEditId(row.id);
     setEditRow(row);
     setCode(row.code);
@@ -485,6 +518,58 @@ export default function AdminDiscountCodesPage() {
                       <span className="block text-gray-500">Scope</span>
                       <span className="font-medium text-gray-800">{editRow.discountScope}</span>
                     </div>
+                  </div>
+                )}
+
+                {/* T13.2 — inline redemption history (admin-only callable; no direct reads). */}
+                {isEditing && (
+                  <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">
+                        Redemption history{historyTotal > 0 ? ` (${historyTotal} total)` : ''}
+                      </span>
+                      {historyLoading && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
+                    </div>
+                    {!historyLoading && history.length === 0 ? (
+                      <p className="px-4 py-4 text-sm text-gray-500">No redemptions yet.</p>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-white text-left text-gray-500 sticky top-0">
+                            <tr>
+                              <th className="px-4 py-2 font-medium">Date</th>
+                              <th className="px-4 py-2 font-medium">User</th>
+                              <th className="px-4 py-2 font-medium">Mode</th>
+                              <th className="px-4 py-2 font-medium">Original</th>
+                              <th className="px-4 py-2 font-medium">Charged</th>
+                              <th className="px-4 py-2 font-medium">Off</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {history.map((r) => (
+                              <tr key={r.id}>
+                                <td className="px-4 py-2 text-gray-600 whitespace-nowrap">
+                                  {r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—'}
+                                </td>
+                                <td className="px-4 py-2 text-gray-600 font-mono text-xs" title={r.userId || ''}>
+                                  {r.userId ? `${r.userId.slice(0, 8)}…` : '—'}
+                                </td>
+                                <td className="px-4 py-2 text-gray-600">{r.mode || '—'}</td>
+                                <td className="px-4 py-2 text-gray-600">
+                                  {r.originalAmount != null ? fmtCents(r.originalAmount) : '—'}
+                                </td>
+                                <td className="px-4 py-2 text-gray-800">
+                                  {r.discountedAmount != null ? fmtCents(r.discountedAmount) : '—'}
+                                </td>
+                                <td className="px-4 py-2 text-emerald-700">
+                                  {r.amountOff != null ? fmtCents(r.amountOff) : '—'}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
 

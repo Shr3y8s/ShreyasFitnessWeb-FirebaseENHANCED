@@ -26,9 +26,24 @@ Legend: [ ] todo · [x] done · ⚙️ owner action (run script / deploy) · �
 > truth: `subscription-discounts-2cycle-handoff.md`. T10.5 (revise), T10.7 (CT rate, deferred),
 > T10.8 (portal display) still stand.
 
+> **FOLLOW-UP FIXES (2026-06-28):**
+> - **100%-off now works for subscriptions.** The `resolveSubscriptionPlan` guard used
+>   `level < 100`, which rejected a 100% code BEFORE the min-charge floor ran (the
+>   misleading "This code can't be applied to a subscription" 400). It now allows
+>   `percentage` up to 100; `computeDiscountedAmount` floors it to the code's minimum
+>   charge (default $1), so a `SUB_3M_100PCT` charges $1/mo for the intro then reverts.
+> - **Fixed ($ off) subscription discounts now supported.** Server validation accepts
+>   `type:"fixed"` (value > 0) as well as `percentage` for subscription scopes; the admin
+>   Discount-Codes form no longer forces percentage-only (Type select enabled, scope
+>   switch keeps the chosen type, "must be a percentage" check removed). Free comps remain
+>   blocked for subscriptions (true $0 cycle = parked T11/T13). Clearer rejection messages.
+> - **LIVE 2-cycle plans minted (2026-06-28):** OC `P-4EM46614UA100974ENJA7U3A`,
+>   CT `P-8D877538ML425510RNJA7U3I`; wired into `LIVE_PLANS` + `PLAN_TIER_MAP` + seed
+>   `BASE_PLANS`; prod `paypalPlans` registry seeded. Remaining: deploy functions,
+>   redeploy app, smoke test, deactivate the old 1-cycle live plans.
+> - Verified: `node --check` (functions) + app `tsc --noEmit` clean.
+
 ---
-
-
 
 ## T0 — Standing safety fix (already coded; deploy pending)
 - [x] **T0.1** Revert subscription Smart Button to client-side `actions.subscription.create`.
@@ -38,8 +53,8 @@ Legend: [ ] todo · [x] done · ⚙️ owner action (run script / deploy) · �
   (This is reverted in T10.6 once discounted plans exist.)
 
 ## T10.1 — Catalog script (mint plans)
-- [ ] **T10.1.1** In `firebase/scripts/paypal-setup-catalog.js`: OC monthly `200.00`,
-  CT monthly `250.00`, **remove CT `setupFee`**.
+- [x] **T10.1.1** In `firebase/scripts/paypal-setup-catalog.js`: OC monthly `200.00`,
+  CT monthly `250.00`, **CT `setupFee` removed**. (Now mints 2-cycle base plans; see banner.)
 - [ ] **T10.1.2** Add a discounted-plan generator: for each tier × level {10,20,30,40,50}
   × scope {recurring, first_cycle}, create the plan (recurring = single REGULAR cycle at
   discounted price; first_cycle = TRIAL cycle×1 at discounted price + REGULAR ∞ at base).
@@ -79,21 +94,21 @@ Legend: [ ] todo · [x] done · ⚙️ owner action (run script / deploy) · �
   subscription record (for portal "intro then base" rendering).
 
 ## T10.5 — Admin "Change plan" (revise)
-- [ ] **T10.5.1** Adapter `reviseSubscription(id, planId, cfg)` →
+- [x] **T10.5.1** Adapter `reviseSubscription(id, planId, cfg)` →
   `POST /v1/billing/subscriptions/{id}/revise`.
-- [ ] **T10.5.2** Callable `revisePaypalSubscription` (admin-only).
-- [ ] **T10.5.3** Admin UI: "Change plan" action + plan picker (base + discounted, labeled)
-  in client-management subscription panel.
+- [x] **T10.5.2** Callable `revisePaypalSubscription` (admin-only).
+- [x] **T10.5.3** Admin UI: "Change plan" action in the subscription detail modal
+  (`/dashboard/admin/subscriptions`). _(Plan picker shows the base plans; the 22-plan
+  "discounted plan" labels are moot under the 2-cycle override model.)_
 
-## T10.6 — Re-enable subscription discounts (reverse T0)
-- [ ] **T10.6.1** `ProviderCheckout.tsx`: `discountsSupported = !!capabilities.discounts`
-  (drop `&& mode === 'payment'`).
-- [ ] **T10.6.2** Re-point subscription Smart Button to server `createPaypalSubscription`
-  (pass `discountCode`).
-- [ ] **T10.6.3** `previewDiscount`: use new base prices ($200/$250); scope-aware preview
-  (intro vs recurring text).
-- [ ] **T10.6.4** Checkout Order Summary: discounted monthly (recurring) / intro breakdown
-  ("Today $X, then $base/mo").
+## T10.6 — Re-enable subscription discounts (reverse T0) — DONE (2-cycle model)
+- [x] **T10.6.1** `ProviderCheckout.tsx`: discount field reachable for subscription mode
+  (no longer gated to `mode === 'payment'`).
+- [x] **T10.6.2** Subscription create routed server-side (`createPaypalSubscription` /
+  `createPaypalSubscriptionWithCard`) carrying `discountCode`; override baked at create.
+- [x] **T10.6.3** `previewDiscount` supports `mode:"subscription"` at base prices ($200/$250),
+  scope-aware (intro vs recurring). Now also handles percentage up to 100 + fixed ($ off).
+- [x] **T10.6.4** Checkout Order Summary shows discounted monthly / intro breakdown.
 
 ## T10.7 — CT member in-person rate (FUTURE — a discount, NOT a product)
 > The $60 CT-member rate is **20% off the existing `in_person` product** ($75), gated to
@@ -107,10 +122,12 @@ Legend: [ ] todo · [x] done · ⚙️ owner action (run script / deploy) · �
 
 
 ## T10.8 — Billing/Membership + admin editor
-- [ ] **T10.8.1** Billing + Membership read neutral record; show discounted amount + tier;
-  render intro state.
-- [ ] **T10.8.2** Admin discount editor: edit `discountScope` + `value`/level for
-  subscription codes.
+- [x] **T10.8.1** Billing + Membership render the discount/intro DISPLAY state
+  (`persistSubscriptionDiscountState` writes `subscriptionDiscount` on the user doc:
+  scope, introCycles, base vs discounted price).
+- [x] **T10.8.2** Admin discount editor: edit `discountScope` + `value` (+ intro length)
+  for subscription codes via `updateDiscountCode` + the edit-mode form. Subscription codes
+  now support percentage (0–100, incl. 100%→floor) AND fixed ($ off).
 
 ## T11 — Automated time-boxed recurring (SUPERSEDED → see subscription-management)
 > Moved to `subscription-management-tasks.md` as **Deferred D1** (post-launch). Tracked there, not here.
@@ -151,5 +168,7 @@ Legend: [ ] todo · [x] done · ⚙️ owner action (run script / deploy) · �
 - [ ] **V7** Admin can create/edit a subscription code (scope + level) and it applies.
 
 ## Deploy
-- [ ] ⚙️ Redeploy functions; rebuild + deploy app. Verify in sandbox, then repeat catalog
-  script with LIVE creds at go-live (record live ids; update LIVE maps).
+- [ ] ⚙️ Redeploy functions; rebuild + deploy app. _(LIVE 2-cycle base plans already minted +
+  wired + prod registry seeded 2026-06-28 — see banner. Remaining at go-live: deploy
+  functions, redeploy app, smoke test per tier, then `--deactivate-old` the legacy 1-cycle
+  live plans `P-96194639LX633004DNI4ANSI`,`P-3S168526T8851291KNI4ANSI`.)_

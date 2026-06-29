@@ -3713,6 +3713,7 @@ exports.createDiscountCode = paymentsModule.createDiscountCode;
 exports.listDiscountCodes = paymentsModule.listDiscountCodes;
 exports.setDiscountCodeActive = paymentsModule.setDiscountCodeActive;
 exports.updateDiscountCode = paymentsModule.updateDiscountCode;
+exports.listCodeRedemptions = paymentsModule.listCodeRedemptions;
 
 exports.createPaypalCardSetupToken = paymentsModule.createPaypalCardSetupToken;
 

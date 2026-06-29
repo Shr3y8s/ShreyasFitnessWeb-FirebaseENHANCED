@@ -863,7 +863,52 @@ async function assertAdmin(uid) {
   }
 }
 
-/** Callable: create/overwrite a discount code (admin only). */
+/**
+ * Validate the shared editable fields of a discount code (T13.3). Throws an
+ * HttpsError on the first problem; returns nothing on success. `partial` (edit mode)
+ * only validates the fields that are present.
+ */
+function assertValidDiscountFields(d, { partial = false } = {}) {
+  const has = (k) => d[k] !== undefined && d[k] !== null && d[k] !== "";
+  // Value range — percentage 0<v<=100; fixed (cents) > 0. Skip when freeComp.
+  if (!d.freeComp && (!partial || has("value") || has("type"))) {
+    const v = Number(d.value);
+    if (d.type === "percentage") {
+      if (!Number.isFinite(v) || v <= 0 || v > 100) {
+        throw new HttpsError("invalid-argument", "Percentage must be between 1 and 100.");
+      }
+    } else if (d.type === "fixed") {
+      if (!Number.isFinite(v) || v <= 0) {
+        throw new HttpsError("invalid-argument", "Fixed amount off must be greater than 0.");
+      }
+    }
+  }
+  // Minimum charge floor must be ≥ $1.00 (100 minor) — PayPal rejects $0.
+  if (has("minChargeFloor")) {
+    const floor = Number(d.minChargeFloor);
+    if (!Number.isFinite(floor) || floor < 100) {
+      throw new HttpsError("invalid-argument", "Minimum charge floor must be at least $1.00 (100).");
+    }
+  }
+  // Intro length ≥ 1 month when provided.
+  if (has("introCycles")) {
+    const n = Number(d.introCycles);
+    if (!Number.isFinite(n) || n < 1) {
+      throw new HttpsError("invalid-argument", "Intro length must be at least 1 month.");
+    }
+  }
+  // Limits, when provided, must be positive integers.
+  for (const k of ["maxRedemptions", "perUserLimit"]) {
+    if (has(k)) {
+      const n = Number(d[k]);
+      if (!Number.isInteger(n) || n < 1) {
+        throw new HttpsError("invalid-argument", `${k} must be a positive whole number.`);
+      }
+    }
+  }
+}
+
+/** Callable: create a discount code (admin only). Rejects duplicate code ids. */
 const createDiscountCode = onCall({ region: "us-west1" }, async (req) => {
   await assertAdmin(req.auth?.uid);
   const admin = require("firebase-admin");
@@ -872,6 +917,14 @@ const createDiscountCode = onCall({ region: "us-west1" }, async (req) => {
   if (!id) throw new HttpsError("invalid-argument", "code required.");
   if (d.type !== "percentage" && d.type !== "fixed" && d.freeComp !== true) {
     throw new HttpsError("invalid-argument", "type must be 'percentage' or 'fixed' (or freeComp).");
+  }
+  // T13.3 value/floor/limit guards.
+  assertValidDiscountFields(d, { partial: false });
+  // Unique-code guard: never silently overwrite an existing code (which would also
+  // reset redemptionCount). Editing an existing code must go through updateDiscountCode.
+  const existingSnap = await admin.firestore().collection("discount_codes").doc(id).get();
+  if (existingSnap.exists) {
+    throw new HttpsError("already-exists", `A discount code "${id}" already exists. Edit it instead.`);
   }
   const doc = {
     code: id,
@@ -956,6 +1009,9 @@ const updateDiscountCode = onCall({ region: "us-west1" }, async (req) => {
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError("not-found", "Discount code not found.");
 
+  // T13.3 value/floor/limit guards (partial — only validate provided fields).
+  assertValidDiscountFields(d, { partial: true });
+
   // Build an update with ONLY the provided, editable fields (never code/count/created*).
   const update = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
   if (d.type !== undefined) {
@@ -999,6 +1055,54 @@ const updateDiscountCode = onCall({ region: "us-west1" }, async (req) => {
   return { ok: true, id };
 });
 
+
+
+/**
+ * Callable (ADMIN): list recent redemptions for a code (T13.2). Server-side only —
+ * the client never reads `discount_redemptions` directly (firestore.rules deny it).
+ * Returns the total count + the most-recent rows (date, user, mode, amounts, txn id),
+ * ordered newest-first (uses the codeId+createdAt index).
+ */
+const listCodeRedemptions = onCall({ region: "us-west1" }, async (req) => {
+  await assertAdmin(req.auth?.uid);
+  const admin = require("firebase-admin");
+  const id = discounts.normalizeCode(req.data?.code);
+  if (!id) throw new HttpsError("invalid-argument", "code required.");
+  const limit = Math.min(Math.max(Number(req.data?.limit) || 25, 1), 100);
+
+  const db = admin.firestore();
+  // Total count from the code doc's running counter (authoritative, cheap).
+  let total = 0;
+  try {
+    const codeSnap = await db.collection("discount_codes").doc(id).get();
+    total = codeSnap.exists ? Number(codeSnap.data()?.redemptionCount || 0) : 0;
+  } catch (e) {
+    logger.warn("listCodeRedemptions: code count read failed", { id, error: e.message });
+  }
+
+  const snap = await db
+    .collection("discount_redemptions")
+    .where("codeId", "==", id)
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+  const redemptions = snap.docs.map((doc) => {
+    const x = doc.data() || {};
+    return {
+      id: doc.id,
+      userId: x.userId || null,
+      mode: x.mode || null,
+      productId: x.productId || null,
+      originalAmount: x.originalAmount ?? null,
+      discountedAmount: x.discountedAmount ?? null,
+      amountOff: x.amountOff ?? null,
+      transactionId: x.transactionId || null,
+      freeComp: x.freeComp === true,
+      createdAt: x.createdAt?.toMillis ? x.createdAt.toMillis() : null,
+    };
+  });
+  return { ok: true, total, redemptions };
+});
 
 
 /**
@@ -1863,6 +1967,7 @@ module.exports = {
   listDiscountCodes,
   setDiscountCodeActive,
   updateDiscountCode,
+  listCodeRedemptions, // admin redemption history (T13.2)
 
 
   setFulfillmentHooks, // ../index.js injects parity side-effects (welcome email/goal/feed)

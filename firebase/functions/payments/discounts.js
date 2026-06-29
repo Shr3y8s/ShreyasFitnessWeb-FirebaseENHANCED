@@ -201,10 +201,32 @@ async function recordRedemption(p) {
   }
 
   try {
+    // Per-user cap re-check needs to count this user's prior redemptions INSIDE the
+    // transaction (Firestore Admin SDK allows a query read in a transaction). Build
+    // the query here; it's read first, before any writes, per transaction rules.
+    const perUserQuery = db
+      .collection("discount_redemptions")
+      .where("codeId", "==", codeId)
+      .where("userId", "==", p.userId);
+
     return await db.runTransaction(async (t) => {
       const codeSnap = await t.get(codeRef);
       if (!codeSnap.exists) return { recorded: false, reason: "not_found" };
       const code = codeSnap.data() || {};
+
+      // Re-check EXPIRY under the transaction (a code can expire between preview/apply
+      // and fulfillment). Mirrors validateCode's expiry parsing.
+      if (code.expiresAt) {
+        const expMs =
+          typeof code.expiresAt === "number"
+            ? code.expiresAt * 1000
+            : code.expiresAt.toMillis
+            ? code.expiresAt.toMillis()
+            : Date.parse(code.expiresAt);
+        if (Number.isFinite(expMs) && expMs < Date.now()) {
+          return { recorded: false, reason: "expired" };
+        }
+      }
 
       // Re-check the global cap under the transaction (prevents over-redemption).
       if (
@@ -212,6 +234,16 @@ async function recordRedemption(p) {
         (code.redemptionCount || 0) >= code.maxRedemptions
       ) {
         return { recorded: false, reason: "limit_reached" };
+      }
+
+      // Re-check the PER-USER cap under the transaction. Counting inside the txn
+      // closes the race where two concurrent redemptions for the same user both
+      // passed the pre-check. (No-op when perUserLimit is unset.)
+      if (code.perUserLimit != null) {
+        const userSnap = await t.get(perUserQuery);
+        if (userSnap.size >= code.perUserLimit) {
+          return { recorded: false, reason: "per_user_limit" };
+        }
       }
 
       const redemptionRef = db.collection("discount_redemptions").doc();
