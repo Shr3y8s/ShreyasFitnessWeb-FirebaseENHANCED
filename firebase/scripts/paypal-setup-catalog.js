@@ -71,6 +71,8 @@ const TIERS = [
     description:
       "Complete transformation system with monthly custom training programs, personalized nutrition coaching, unlimited messaging support, weekly progress check-ins, video form analysis, and habit & accountability coaching.",
     monthly: "200.00", // $200/mo
+    // Quarterly (3-month pre-pay) at the 10% default: $200 × 3 × 0.9 = $540.00.
+    quarterly: "540.00",
   },
   {
     key: "COMPLETE_TRANSFORMATION",
@@ -80,8 +82,23 @@ const TIERS = [
     description:
       "Premium fitness experience combining comprehensive online coaching with hands-on personal training. Includes all online coaching benefits plus discounted in-person training sessions ($60/session for members). Online coaching available worldwide; in-person sessions in Seattle area only.",
     monthly: "250.00", // $250/mo — NO setup fee
+    // Quarterly (3-month pre-pay) at the 10% default: $250 × 3 × 0.9 = $675.00.
+    quarterly: "675.00",
   },
 ];
+
+// Prepay-plans Phase B: `--quarterly` mints the 3-month plans instead of monthly.
+// They reuse the EXISTING tier products (PayPal allows many plans per product), so
+// this only creates plans — pass the existing product ids via env so we don't make
+// duplicate products:
+//   set OC_PRODUCT_ID=PROD-...   (Online Coaching product)
+//   set CT_PRODUCT_ID=PROD-...   (Complete Transformation product)
+const QUARTERLY = process.argv.slice(2).includes("--quarterly");
+const EXISTING_PRODUCT_IDS = {
+  ONLINE_COACHING: process.env.OC_PRODUCT_ID || null,
+  COMPLETE_TRANSFORMATION: process.env.CT_PRODUCT_ID || null,
+};
+
 
 function request(method, path, token, body) {
   return new Promise((resolve, reject) => {
@@ -171,12 +188,20 @@ const PAYMENT_PREFS = {
  * Sandbox-validated 2026-06-27 (paypal-validate-revise-pricing.js --mint2cycle).
  */
 async function createBasePlan(token, productId, tier) {
-  const freq = { interval_unit: "MONTH", interval_count: 1 };
-  const price = { fixed_price: { value: tier.monthly, currency_code: "USD" } };
+  // Cadence (prepay-plans Phase B): monthly (interval_count 1) by default, or
+  // quarterly (interval_count 3) when `--quarterly` is passed. Both keep the 2-cycle
+  // TRIAL+REGULAR shape so the discount-override model still applies.
+  const intervalCount = QUARTERLY ? 3 : 1;
+  const amount = QUARTERLY ? tier.quarterly : tier.monthly;
+  const cadenceLabel = QUARTERLY ? "Quarterly" : "Monthly";
+  const cadenceUnit = QUARTERLY ? "quarter" : "month";
+  const freq = { interval_unit: "MONTH", interval_count: intervalCount };
+  const price = { fixed_price: { value: amount, currency_code: "USD" } };
   const plan = await request("POST", "/v1/billing/plans", token, {
     product_id: productId,
-    name: `${tier.name} Monthly`,
-    description: `${tier.name} — $${tier.monthly}/month`,
+    name: `${tier.name} ${cadenceLabel}`,
+    description: `${tier.name} — $${amount}/${cadenceUnit}`,
+
     status: "ACTIVE",
     billing_cycles: [
       {
@@ -249,34 +274,58 @@ async function main() {
   const baseIds = {};   // { ONLINE_COACHING: 'P-...', COMPLETE_TRANSFORMATION: 'P-...' }
   const productIds = {};
 
-  for (const tier of tiersToCreate) {
-    console.log(`Creating product: ${tier.name} ...`);
-    const productId = await createProduct(token, tier);
-    productIds[tier.key] = productId;
-    console.log(`  product id: ${productId}`);
+  const cadence = QUARTERLY ? "Quarterly" : "Monthly";
+  const cadenceUnit = QUARTERLY ? "qtr" : "mo";
+  const intervalCount = QUARTERLY ? 3 : 1;
+  if (QUARTERLY) {
+    console.log("(--quarterly — minting 3-month plans; reusing existing tier products)\n");
+  }
 
-    console.log(`Creating 2-CYCLE base plan: ${tier.name} Monthly ($${tier.monthly}/mo) ...`);
+  for (const tier of tiersToCreate) {
+    let productId;
+    if (QUARTERLY) {
+      // Quarterly plans hang off the SAME product as the monthly plan — pass it via env.
+      productId = EXISTING_PRODUCT_IDS[tier.key];
+      if (!productId) {
+        console.error(
+          `ERROR: --quarterly needs the existing product id for ${tier.key}. ` +
+          `Set ${tier.short === "OC" ? "OC_PRODUCT_ID" : "CT_PRODUCT_ID"}=PROD-... (from the monthly catalog run).`
+        );
+        process.exit(1);
+      }
+      console.log(`Reusing product for ${tier.name}: ${productId}`);
+    } else {
+      console.log(`Creating product: ${tier.name} ...`);
+      productId = await createProduct(token, tier);
+      console.log(`  product id: ${productId}`);
+    }
+    productIds[tier.key] = productId;
+
+    const amount = QUARTERLY ? tier.quarterly : tier.monthly;
+    console.log(`Creating 2-CYCLE base plan: ${tier.name} ${cadence} ($${amount}/${cadenceUnit}) ...`);
     baseIds[tier.key] = await createBasePlan(token, productId, tier);
     console.log(`  plan id:    ${baseIds[tier.key]}`);
     console.log("");
   }
 
   const mapName = ENV === "production" ? "LIVE_PLANS" : "SANDBOX_PLANS";
+  const keySuffix = QUARTERLY ? "_QUARTERLY" : "";
 
   console.log("==================================================================");
-  console.log(`Paste into app/src/lib/constants.ts — ${mapName}:\n`);
-  console.log(`const ${mapName} = {`);
+  console.log(`Paste into app/src/lib/constants.ts — ${mapName} (${cadence} keys):\n`);
   for (const [key, v] of Object.entries(baseIds)) {
-    console.log(`  ${key}: '${v}',  // product ${productIds[key]}`);
+    console.log(`  ${key}${keySuffix}: '${v}',  // product ${productIds[key]}`);
   }
-  console.log("};\n");
+  console.log("");
 
   console.log("Also update firebase/functions/payments/providers/paypal.js PLAN_TIER_MAP");
   console.log("and seed the paypalPlans registry (firebase/scripts/seed-paypal-plans.js):");
   for (const tier of tiersToCreate) {
-    console.log(`  ${baseIds[tier.key]} → { tierId: '${tier.tierId}', tierName: '${tier.name}', amountMinor: ${Math.round(parseFloat(tier.monthly) * 100)} }`);
+    const amt = Math.round(parseFloat(QUARTERLY ? tier.quarterly : tier.monthly) * 100);
+    console.log(`  ${baseIds[tier.key]} → { tierId: '${tier.tierId}', tierName: '${tier.name}', amountMinor: ${amt}, intervalCount: ${intervalCount} }`);
   }
   console.log("==================================================================\n");
+
   console.log("One-time amounts (Orders API, no plan needed — set in PAYPAL_ONETIME):");
   console.log("  In-Person Training Session (public):  $75  (IN_PERSON)");
   console.log("  4-Pack In-Person Sessions (public):   $240 (IN_PERSON_4PACK)");

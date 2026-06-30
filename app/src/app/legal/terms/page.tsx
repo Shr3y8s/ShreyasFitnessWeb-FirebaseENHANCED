@@ -92,7 +92,18 @@ export default function TermsOfServicePage() {
               <li>Payments are processed securely by our payment processor (currently <strong>PayPal</strong>). We do not store full card numbers.</li>
               <li>We provide at least <strong>30 days' notice</strong> of price changes affecting renewals.</li>
             </ul>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-3 mt-6">5.1 Pre-Paid Multi-Month Plans</h3>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              Some subscriptions are offered on a <strong>pre-paid multi-month billing cadence</strong> (for example, billed once every 3 months). For these plans:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 text-gray-700">
+              <li>You are charged the <strong>full multi-month amount up front</strong> at the start of each billing period, and the plan auto-renews for another full multi-month period until cancelled.</li>
+              <li>Pre-paid periods are <strong className="text-red-600">non-refundable</strong>. If you cancel, your access continues until the end of the period you have already paid for, and your subscription is not renewed afterward — we do not refund or prorate the unused portion of a pre-paid period.</li>
+              <li>Cancelling stops the <strong>next</strong> renewal only; it does not refund the current pre-paid period.</li>
+            </ul>
           </section>
+
 
           {/* 6. Subscription Management */}
           <section className="mb-8 bg-blue-50 border-l-4 border-blue-500 p-6 rounded-lg">

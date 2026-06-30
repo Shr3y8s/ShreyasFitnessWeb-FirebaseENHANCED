@@ -61,6 +61,19 @@ export async function setPaypalPlanActive(planId: string, active: boolean): Prom
   await call('setPaypalPlanActive', { planId, active });
 }
 
+/**
+ * Prepay (quarterly) pricing — set a tier's discount % and reprice its quarterly
+ * PayPal plan to match (prepay-plans B4). Returns the computed quarterly price (minor)
+ * + the repriced plan id. Existing subscribers keep their locked-in price until renewal.
+ */
+export async function updatePrepayPricing(
+  tierId: string,
+  discountPct: number
+): Promise<{ tierId: string; discountPct: number; quarterlyMinor: number; planId: string }> {
+  return call('updatePrepayPricing', { tierId, discountPct });
+}
+
+
 /** Bulk reprice — dry-run preview (writes nothing). */
 export async function repricePlansPreview(
   planIds: string[],

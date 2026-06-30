@@ -63,7 +63,12 @@ const PLAN_TIER_MAP = {
   // live (2-cycle base plans, re-minted 2026-06-28) — monthly
   "P-4EM46614UA100974ENJA7U3A": { tierId: "online_coaching", tierName: "Online Coaching", intervalCount: 1 },
   "P-8D877538ML425510RNJA7U3I": { tierId: "complete_transformation", tierName: "Complete Transformation", intervalCount: 1 },
+  // sandbox QUARTERLY (2-cycle, interval_count 3), minted 2026-06-29 (prepay-plans Phase B)
+  "P-2TA612087A1042525NJBQTAA": { tierId: "online_coaching", tierName: "Online Coaching", intervalCount: 3 },
+  "P-0M212305WN6341942NJBQTAA": { tierId: "complete_transformation", tierName: "Complete Transformation", intervalCount: 3 },
+  // live QUARTERLY — minted at live cutover (B1.3); ids added then.
 };
+
 
 
 
@@ -402,7 +407,15 @@ async function parseEvent(event, ctx = {}) {
           const token = await getAccessToken(ctx);
           const sub = await request("GET", `/v1/billing/subscriptions/${subId}`, token, null, ctx.base);
           const tier = resolvePlanTier(sub?.plan_id);
-          if (tier.tierName) subProductName = tier.tierName;
+          if (tier.tierName) {
+            // Payment History label includes cadence (prepay-plans Phase B):
+            // "Online Coaching Quarterly" / "… Monthly" so the row is self-describing.
+            const cadence = tier.intervalCount === 3 ? " Quarterly"
+              : tier.intervalCount === 12 ? " Annual"
+              : " Monthly";
+            subProductName = tier.tierName + cadence;
+          }
+
           if (sub?.custom_id) renewalUserId = parseOrderCustomId(sub.custom_id).userId || renewalUserId;
           if (sub?.billing_info?.next_billing_time) {
             nextBillingEpoch = toEpoch(sub.billing_info.next_billing_time);

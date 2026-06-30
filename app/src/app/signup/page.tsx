@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { auth, db, trackEvent } from '@/lib/firebase';
 import { onAuthStateChanged, createUserWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { getCheckoutKeyForProduct } from '@/lib/constants';
+import { getCheckoutKeyForProductCadence } from '@/lib/constants';
+
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -26,7 +27,11 @@ export interface ServiceTier {
   title?: string;
   description?: string;
   details?: string;
+  /** Selected billing cadence (prepay-plans Phase B): 1 = monthly, 3 = quarterly.
+   * Subscriptions only; one-time tiers leave this undefined (treated as 1). */
+  intervalCount?: number;
 }
+
 
 // Form data interface
 export interface FormData {
@@ -126,15 +131,25 @@ export default function SignupPage() {
               name: userData.name || '',
               email: userData.email || user.email || '',
               phone: userData.phone || '',
-              tier: userData.tier
-                ? {
-                    id: userData.tier,
-                    name: userData.tierName || '',
-                    price: 0,
-                    features: [],
-                  }
-                : prev.tier,
+              // Rehydrate the tier from Firestore, but PRESERVE the in-memory
+              // selection when it's the same product — the user doc only stores
+              // tier/tierName (NOT the chosen cadence), so naively rebuilding here
+              // would drop `intervalCount` and flash the card back to Monthly on
+              // Continue (prepay-plans Phase B). Keep prev.tier when ids match so
+              // the quarterly selection (+ features/price) survives.
+              tier:
+                prev.tier && userData.tier && prev.tier.id === userData.tier
+                  ? prev.tier
+                  : userData.tier
+                    ? {
+                        id: userData.tier,
+                        name: userData.tierName || '',
+                        price: 0,
+                        features: [],
+                      }
+                    : prev.tier,
             }));
+
 
           }
         } catch (error) {
@@ -201,8 +216,14 @@ export default function SignupPage() {
       return;
     }
 
-    // Resolve the checkout item (app id → CHECKOUT_ITEMS key) before creating anything.
-    const itemKey = getCheckoutKeyForProduct(formData.tier.id);
+    // Resolve the checkout item (app id + cadence → CHECKOUT_ITEMS key) before
+    // creating anything. The selected BillingPeriod (1 monthly / 3 quarterly) picks
+    // the quarterly variant key when applicable (prepay-plans Phase B).
+    const itemKey = getCheckoutKeyForProductCadence(
+      formData.tier.id,
+      formData.tier.intervalCount || 1
+    );
+
     if (!itemKey) {
       setError('This plan is not available for checkout.');
       setIsSubmitting(false);

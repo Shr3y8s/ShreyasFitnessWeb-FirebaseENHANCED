@@ -71,62 +71,69 @@ Verification commands (Windows cmd):
 
 ### A6. Phase A verification + ship
 - [x] A6.1 All build checks green (JS_OK + jest 25/25 + TS_OK).
+- [x] A6.2 Deploy functions + app. (User confirmed Phase A done.)
+- [x] A6.3 Smoke test (monthly, expect NO change). (User confirmed.)
+- [x] A6.4 Git checkpoint tagged before starting Phase B. (User confirmed.)
 
-- [ ] A6.2 Deploy functions + app.
-- [ ] A6.3 Smoke test (monthly, expect NO change): new OC purchase, new CT purchase, a
-  renewal event, membership/billing pages, admin subscriptions list, revenue MRR.
-- [ ] A6.4 Git checkpoint tagged before starting Phase B.
+**PHASE A COMPLETE (2026-06-29).** Cadence is now a first-class `intervalCount`/`months`
+variable across the payment path; monthly behavior unchanged. Proceeding to Phase B.
 
 ---
 
 ## Phase B — Quarterly plans
 
 ### B1. Mint plans
-- [ ] B1.1 Extend `createPlan` callers / catalog scripts (`paypal-setup-catalog.js`,
+- [x] B1.1 Extend `createPlan` callers / catalog scripts (`paypal-setup-catalog.js`,
   `seed-paypal-plans.js`) to mint a 2-cycle plan with `intervalCount: 3`.
-- [ ] B1.2 Mint OC-Q + CT-Q in **sandbox** at the 10% quarterly price (OC 54000, CT 67500).
-  Record plan ids.
+- [x] B1.2 Mint OC-Q + CT-Q in **sandbox** at the 10% quarterly price (OC 54000, CT 67500).
+  OC-Q `P-2TA612087A1042525NJBQTAA`, CT-Q `P-0M212305WN6341942NJBQTAA`.
 - [ ] B1.3 (after sandbox verified) Mint OC-Q + CT-Q in **live**. Record plan ids.
-- [ ] B1.4 Add the ids to `SANDBOX_PLANS`/`LIVE_PLANS` under
-  `ONLINE_COACHING_QUARTERLY` / `COMPLETE_TRANSFORMATION_QUARTERLY`.
+- [x] B1.4 Add the sandbox ids to `SANDBOX_PLANS` under `ONLINE_COACHING_QUARTERLY` /
+  `COMPLETE_TRANSFORMATION_QUARTERLY` (live keys present, values empty until B1.3).
 
 ### B2. Register tier mapping
-- [ ] B2.1 `PLAN_TIER_MAP` += 4 entries (2 sandbox + 2 live) → same tierId,
-  `intervalCount: 3`.
-- [ ] B2.2 Write `paypalPlans/{planId}` registry docs (tierId, tierName, intervalCount: 3).
+- [x] B2.1 `PLAN_TIER_MAP` += the 2 sandbox entries → same tierId, `intervalCount: 3`
+  (live placeholder comment; live entries added at B1.3).
+- [x] B2.2 Write `paypalPlans/{planId}` registry docs (tierId, tierName, intervalCount: 3).
+  User seeded 6 docs.
 
 ### B3. Billing options + checkout
-- [ ] B3.1 `constants.ts`: add the quarterly `BillingOption` to OC and CT
-  `billingOptions` (period quarterly, planKey quarterly, amount 54000/67500).
-- [ ] B3.2 `CHECKOUT_ITEMS` += `ONLINE_COACHING_QUARTERLY`,
-  `COMPLETE_TRANSFORMATION_QUARTERLY` (subscription, same productId/tier).
-- [ ] B3.3 Pricing UI (`ServiceTierStep`, `PricingCard`, `product-marketing.ts`): add a
-  **Monthly / Quarterly** toggle; quarterly shows total + effective $/mo + "Save 10%".
-- [ ] B3.4 Checkout resolves the selected option → planKey → plan id → existing
-  `createPaypalSubscription*` callable (plan id is the only difference).
+- [x] B3.1 `constants.ts`: quarterly `BillingOption` on OC and CT
+  (period quarterly, planKey quarterly, amount 54000/67500).
+- [x] B3.2 `CHECKOUT_ITEMS` += `ONLINE_COACHING_QUARTERLY`,
+  `COMPLETE_TRANSFORMATION_QUARTERLY` (subscription, same productId/tier; `planKey` +
+  `intervalCount` fields added to `CheckoutItem`).
+- [x] B3.3 Pricing UI (`ServiceTierStep`): **Monthly / Quarterly** toggle; quarterly shows
+  total + effective $/mo + "Save 10%". Signup routes via `getCheckoutKeyForProductCadence`.
+- [x] B3.4 Checkout (`/checkout`) resolves the selected option → planKey →
+  `PAYPAL_PLANS[key]` plan id → existing `createPaypalSubscription*` callable.
 
 ### B4. Admin discount configuration
-- [ ] B4.1 `config/prepayPricing` Firestore doc + firestore.rules (client read ok / write
-  denied).
-- [ ] B4.2 New admin callable `updatePrepayPricing({ tierId, discountPct })`: validate
-  0–50, compute quarterly minor, `updatePlanPricing(quarterlyPlanId, minor,
-  {billingCycleSequences:[1,2]})`, persist config + amount. Export from index.js.
-- [ ] B4.3 Admin UI: monthly anchor (read-only) + discount % input per tier + computed
-  quarterly preview + "Save & reprice"; note "applies to new/renewing subs only".
-- [ ] B4.4 `node --check` + `npx jest` + `tsc`.
+- [x] B4.1 `config/prepayPricing` Firestore doc covered by the existing `config/{configId}`
+  rule (authenticated read, server-only write) — no rules change needed.
+- [x] B4.2 New admin callable `updatePrepayPricing({ tierId, discountPct })`: validates
+  0–50, computes quarterly minor, reprices the quarterly plan via `updatePlanPricing(...,
+  {billingCycleSequences:[1,2]})`, persists config + amount. Exported from index.js +
+  re-exported from functions entrypoint; client wrapper in subscription-admin-api.ts.
+- [x] B4.3 Admin UI: Quarterly pricing card on the Plans tab — per-tier monthly anchor
+  (read-only) + discount % + live quarterly preview ($total + $/mo) + "Save & reprice";
+  note "existing subscribers keep their price until renewal".
+- [x] B4.4 `node --check` + `npx jest` (25/25) + `tsc` (all green).
 
 ### B5. Discounts interaction
-- [ ] B5.1 Discount-code subscription path passes `intervalCount` (from resolved plan) into
-  `buildPriceOverride`; `subscriptionPriceMinor(tierId, 3)` resolves the quarterly original
-  amount. Verify override accepted by PayPal in sandbox.
+- [x] B5.1 Discount-code subscription path threads `intervalCount` (from the resolved plan)
+  into `buildPriceOverride` (already Phase A) + `subscriptionPriceMinor(tierId, 3)`; added the
+  quarterly original amounts (OC 54000, CT 67500) to `SUBSCRIPTION_PRICE_MINOR`. Sandbox
+  override verification pending in B7.
 
 ### B6. No-refund messaging + legal
-- [ ] B6.1 Quarterly checkout copy: "Billed once every 3 months. No refunds — access
-  continues until the end of your paid period."
-- [ ] B6.2 ToS clause (`docs/03-legal/terms-of-service.md` + `app/src/app/legal/terms/page.tsx`):
-  pre-paid multi-month is non-refundable; cancel stops next renewal only.
+- [x] B6.1 Quarterly checkout copy: "Billed once every 3 months. No refunds — your access
+  continues until the end of your paid period. Cancel anytime to stop the next renewal."
+- [x] B6.2 ToS clause (`docs/03-legal/terms-of-service.md` §5.4 + `app/src/app/legal/terms/page.tsx`
+  §5.1): pre-paid multi-month is non-refundable; cancel stops next renewal only.
 
 ### B7. Phase B verification
+
 - [ ] B7.1 Sandbox: buy Quarterly OC + CT, confirm single discounted charge, same tier +
   feature access, next billing +3 months, MRR normalized.
 - [ ] B7.2 Admin changes discount % → quarterly plan reprices; preview matches PayPal.

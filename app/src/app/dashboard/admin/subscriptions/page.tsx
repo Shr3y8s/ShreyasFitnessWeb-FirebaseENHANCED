@@ -43,14 +43,16 @@ import {
 import {
   Layers, Plus, Loader2, MoreHorizontal, Search, RefreshCw, X,
 } from 'lucide-react';
-import { SERVICE_TIERS } from '@/lib/constants';
+import { SERVICE_TIERS, APP_PRODUCTS } from '@/lib/constants';
 import {
   listPaypalPlans, createPaypalPlan, updatePaypalPlan, setPaypalPlanActive,
   repricePlansPreview, repricePlansApply,
   getPaypalSubscriptionDetail, revisePaypalSubscription, adminCancelSubscription,
   repriceClientSubscription, listAllSubscriptions,
   adminPauseSubscription, adminResumeSubscription,
+  updatePrepayPricing,
 } from '@/lib/subscription-admin-api';
+
 
 import type {
   PaypalPlanRow, PaypalSubscriptionDetail, AllSubscriptionRow,
@@ -416,9 +418,13 @@ export default function AdminSubscriptionsPage() {
                   </Table>
                 </div>
               )}
+
+              {/* Prepay (Quarterly) pricing — admin discount % per tier (prepay-plans B4). */}
+              <PrepayPricingCard />
             </TabsContent>
 
             {/* ──────────────────────── Tab B: Subscriptions (global) ──────────────────────── */}
+
             <TabsContent value="subs">
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <Select value={subStatusFilter} onValueChange={(v) => setSubStatusFilter(v as SubStatusFilter)}>
@@ -1032,3 +1038,113 @@ function SubscriptionDetailBody({
     </div>
   );
 }
+
+/* ───────────────────────── Prepay (Quarterly) pricing ─────────────────────────
+ * Admin sets a per-tier discount % for the 3-month pre-pay plan; the server reprices
+ * the tier's quarterly PayPal plan to monthly×3×(1−pct) and persists config/prepayPricing.
+ * Existing subscribers keep their locked-in price until renewal (PayPal behavior). */
+function PrepayPricingCard() {
+  // The two subscription tiers that offer a quarterly cadence (from APP_PRODUCTS).
+  const tiers = useMemo(
+    () =>
+      Object.values(APP_PRODUCTS).filter(
+        (p) => p.kind === 'subscription' && (p.billingOptions || []).some((o) => o.period.intervalCount === 3)
+      ),
+    []
+  );
+
+  return (
+    <div className="mt-8 rounded-md border p-5">
+      <div className="mb-1 flex items-center gap-2">
+        <Layers className="w-4 h-4 text-emerald-600" />
+        <h3 className="font-semibold">Quarterly (pre-pay) pricing</h3>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Set the discount applied to the 3-month pre-pay plan for each tier. Saving reprices
+        the quarterly PayPal plan. Existing subscribers keep their current price until renewal.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {tiers.map((t) => (
+          <PrepayTierRow
+            key={t.id}
+            tierId={t.id}
+            tierName={t.name}
+            monthlyMinor={t.amount}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PrepayTierRow({
+  tierId, tierName, monthlyMinor,
+}: { tierId: string; tierName: string; monthlyMinor: number }) {
+  const [pct, setPct] = useState('10');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  const pctNum = parseFloat(pct);
+  const valid = Number.isFinite(pctNum) && pctNum >= 0 && pctNum <= 50;
+  // Live preview: monthly × 3 × (1 − pct/100), $1 floor.
+  const quarterlyMinor = valid
+    ? Math.max(100, Math.round(monthlyMinor * 3 * (1 - pctNum / 100)))
+    : null;
+
+  const save = async () => {
+    setErr(''); setMsg('');
+    if (!valid) { setErr('Enter a discount between 0 and 50%.'); return; }
+    setBusy(true);
+    try {
+      const res = await updatePrepayPricing(tierId, pctNum);
+      setMsg(`Saved — quarterly price is now ${fmtCents(res.quarterlyMinor)}.`);
+    } catch (e) {
+      setErr((e as Error)?.message || 'Failed to save.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border bg-muted/30 p-4">
+      <div className="font-medium">{tierName}</div>
+      <div className="text-xs text-muted-foreground mb-3">
+        Monthly anchor {fmtCents(monthlyMinor)} · billed every 3 months
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <label className="text-xs font-medium">Discount (%)</label>
+          <Input
+            value={pct}
+            onChange={(e) => { setPct(e.target.value); setMsg(''); }}
+            inputMode="decimal"
+            placeholder="10"
+          />
+        </div>
+        <Button
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          onClick={save}
+          disabled={busy || !valid}
+        >
+          {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save &amp; reprice
+        </Button>
+      </div>
+      <div className="mt-2 text-sm">
+        Quarterly total:{' '}
+        <span className="font-semibold text-emerald-700">
+          {quarterlyMinor != null ? fmtCents(quarterlyMinor) : '—'}
+        </span>
+        {quarterlyMinor != null && (
+          <span className="text-muted-foreground">
+            {' '}({fmtCents(Math.round(quarterlyMinor / 3))}/mo)
+          </span>
+        )}
+      </div>
+      {msg && <p className="text-xs text-green-700 mt-1">{msg}</p>}
+      {err && <p className="text-xs text-red-600 mt-1">{err}</p>}
+    </div>
+  );
+}
+
+

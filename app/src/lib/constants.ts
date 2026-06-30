@@ -127,12 +127,13 @@ export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
     amount: 20000, // $200/mo
     interval: 'month',
     hasCheckins: true,
-    // Phase A: monthly only. Phase B adds the quarterly option (planKey
-    // ONLINE_COACHING_QUARTERLY, amount 54000 = $540/qtr at 10% off).
+    // Quarterly (3-month pre-pay) at 10% off: $540/qtr (= $180/mo effective).
     billingOptions: [
       { period: PERIOD_MONTHLY, planKey: 'ONLINE_COACHING', amount: 20000 },
+      { period: PERIOD_QUARTERLY, planKey: 'ONLINE_COACHING_QUARTERLY', amount: 54000 },
     ],
   },
+
   complete_transformation: {
     id: 'complete_transformation',
     name: 'Complete Transformation',
@@ -141,11 +142,12 @@ export const APP_PRODUCTS: Record<AppProductId, AppProduct> = {
 
     interval: 'month',
     hasCheckins: true,
-    // Phase A: monthly only. Phase B adds the quarterly option (planKey
-    // COMPLETE_TRANSFORMATION_QUARTERLY, amount 67500 = $675/qtr at 10% off).
+    // Quarterly (3-month pre-pay) at 10% off: $675/qtr (= $225/mo effective).
     billingOptions: [
       { period: PERIOD_MONTHLY, planKey: 'COMPLETE_TRANSFORMATION', amount: 25000 },
+      { period: PERIOD_QUARTERLY, planKey: 'COMPLETE_TRANSFORMATION_QUARTERLY', amount: 67500 },
     ],
+
   },
 };
 
@@ -339,13 +341,20 @@ export const PAYPAL_LIVE = PAYPAL_ENV === 'production';
 const SANDBOX_PLANS = {
   ONLINE_COACHING: 'P-1UL86855135904642NJAFK4I',  // product PROD-51P94209CF452694B
   COMPLETE_TRANSFORMATION: 'P-28C55086862794508NJAFK4I',  // product PROD-5D236001YV287835G
+  // QUARTERLY (3-month pre-pay), minted 2026-06-29 — prepay-plans Phase B.
+  ONLINE_COACHING_QUARTERLY: 'P-2TA612087A1042525NJBQTAA',  // $540/qtr, product PROD-51P94209CF452694B
+  COMPLETE_TRANSFORMATION_QUARTERLY: 'P-0M212305WN6341942NJBQTAA',  // $675/qtr, product PROD-5D236001YV287835G
 } as const;
 
 
 const LIVE_PLANS = {
   ONLINE_COACHING: 'P-4EM46614UA100974ENJA7U3A',  // 2-cycle, product PROD-8A5246863N608771L (re-minted 2026-06-28)
   COMPLETE_TRANSFORMATION: 'P-8D877538ML425510RNJA7U3I',  // 2-cycle, product PROD-0YA71868YT116171P (re-minted 2026-06-28)
+  // QUARTERLY (3-month pre-pay) — minted at live cutover (B1.3); ids pasted here then.
+  ONLINE_COACHING_QUARTERLY: '',
+  COMPLETE_TRANSFORMATION_QUARTERLY: '',
 } as const;
+
 
 export const PAYPAL_PLANS = PAYPAL_LIVE ? LIVE_PLANS : SANDBOX_PLANS;
 
@@ -370,7 +379,9 @@ export type CheckoutItemKey =
   | 'IN_PERSON'
   | 'IN_PERSON_4PACK'
   | 'ONLINE_COACHING'
-  | 'COMPLETE_TRANSFORMATION';
+  | 'COMPLETE_TRANSFORMATION'
+  | 'ONLINE_COACHING_QUARTERLY'
+  | 'COMPLETE_TRANSFORMATION_QUARTERLY';
 
 export interface CheckoutItem {
   /** Routed to getPaymentProvider({mode}). */
@@ -381,7 +392,17 @@ export interface CheckoutItem {
   fulfillment: 'session_package' | 'subscription_active';
   /** Human label for the checkout summary (display only). */
   label: string;
+  /**
+   * Cadence selector for subscription items (prepay-plans Phase B). When set, the
+   * checkout page resolves the PayPal plan id from PAYPAL_PLANS[planKey] (instead of
+   * the catalog's default monthly price) and the per-period amount from the matching
+   * BillingOption. Absent → the default monthly plan (back-compat). `intervalCount`
+   * (1 monthly / 3 quarterly) drives the "/mo" vs "every 3 months" copy + MRR.
+   */
+  planKey?: PaypalPlanKey;
+  intervalCount?: number;
 }
+
 
 export const CHECKOUT_ITEMS: Record<CheckoutItemKey, CheckoutItem> = {
   IN_PERSON: {
@@ -408,7 +429,26 @@ export const CHECKOUT_ITEMS: Record<CheckoutItemKey, CheckoutItem> = {
     fulfillment: 'subscription_active',
     label: 'Complete Transformation',
   },
+  // QUARTERLY (3-month pre-pay) variants — same tier/productId (so feature gating +
+  // fulfillment are identical), but resolve the quarterly PayPal plan id via planKey.
+  ONLINE_COACHING_QUARTERLY: {
+    mode: 'subscription',
+    productId: SERVICE_TIERS.ONLINE_COACHING,
+    fulfillment: 'subscription_active',
+    label: 'Online Coaching — Quarterly',
+    planKey: 'ONLINE_COACHING_QUARTERLY',
+    intervalCount: 3,
+  },
+  COMPLETE_TRANSFORMATION_QUARTERLY: {
+    mode: 'subscription',
+    productId: SERVICE_TIERS.COMPLETE_TRANSFORMATION,
+    fulfillment: 'subscription_active',
+    label: 'Complete Transformation — Quarterly',
+    planKey: 'COMPLETE_TRANSFORMATION_QUARTERLY',
+    intervalCount: 3,
+  },
 };
+
 
 /** Resolve a CHECKOUT_ITEMS entry from an unknown URL param; null when invalid. */
 export function getCheckoutItem(key: string | null | undefined): CheckoutItem | null {
@@ -416,13 +456,33 @@ export function getCheckoutItem(key: string | null | undefined): CheckoutItem | 
   return (CHECKOUT_ITEMS as Record<string, CheckoutItem>)[key] ?? null;
 }
 
-/** Reverse lookup: a Stripe product id (user.tier) → its CHECKOUT_ITEMS key. */
+/** Reverse lookup: a Stripe product id (user.tier) → its CHECKOUT_ITEMS key.
+ * Returns the MONTHLY (default-cadence) key. For a specific cadence use
+ * getCheckoutKeyForProductCadence(productId, intervalCount). */
 export function getCheckoutKeyForProduct(productId: string): CheckoutItemKey | null {
   const entry = (Object.entries(CHECKOUT_ITEMS) as [CheckoutItemKey, CheckoutItem][]).find(
-    ([, v]) => v.productId === productId
+    ([, v]) => v.productId === productId && (v.intervalCount || 1) === 1
   );
   return entry ? entry[0] : null;
 }
+
+/**
+ * Reverse lookup keyed by tier (productId) AND cadence (prepay-plans Phase B):
+ * (online_coaching, 3) → 'ONLINE_COACHING_QUARTERLY'. Falls back to the monthly
+ * key when no quarterly variant exists for that count. Used by signup/checkout
+ * routing to pick the right CHECKOUT_ITEMS entry for the selected BillingOption.
+ */
+export function getCheckoutKeyForProductCadence(
+  productId: string,
+  intervalCount = 1
+): CheckoutItemKey | null {
+  const count = intervalCount > 0 ? intervalCount : 1;
+  const exact = (Object.entries(CHECKOUT_ITEMS) as [CheckoutItemKey, CheckoutItem][]).find(
+    ([, v]) => v.productId === productId && (v.intervalCount || 1) === count
+  );
+  return exact ? exact[0] : getCheckoutKeyForProduct(productId);
+}
+
 
 /**
  * Redirect an un-activated client to resume payment via the unified checkout,

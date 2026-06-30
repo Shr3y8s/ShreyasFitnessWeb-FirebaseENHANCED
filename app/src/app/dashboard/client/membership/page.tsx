@@ -399,6 +399,13 @@ export default function MembershipPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Plan</p>
                         <p className="text-lg font-semibold">{userData?.tierName || 'Subscription'}</p>
+                        {/* Billing cadence (prepay-plans Phase B): 3 = quarterly, else monthly. */}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {(userData as { intervalCount?: number })?.intervalCount === 3
+                            ? 'Quarterly · billed every 3 months'
+                            : 'Monthly · billed every month'}
+                        </p>
+
                         {(() => {
                           // Discount/intro display (T10.8.1). `subscriptionDiscount` is
                           // written server-side at subscription create (the 2-cycle

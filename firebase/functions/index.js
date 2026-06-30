@@ -3729,7 +3729,10 @@ exports.repriceClientSubscription = paymentsModule.repriceClientSubscription;
 exports.listPaypalPlans = paymentsModule.listPaypalPlans;
 exports.createPaypalPlan = paymentsModule.createPaypalPlan;
 exports.updatePaypalPlan = paymentsModule.updatePaypalPlan;
+// Prepay (quarterly) discount config — admin sets % → reprices quarterly plan (prepay-plans B4)
+exports.updatePrepayPricing = paymentsModule.updatePrepayPricing;
 exports.setPaypalPlanActive = paymentsModule.setPaypalPlanActive;
+
 exports.repricePlans = paymentsModule.repricePlans;
 exports.listPlanSubscriptions = paymentsModule.listPlanSubscriptions;
 exports.getPaypalSubscriptionDetail = paymentsModule.getPaypalSubscriptionDetail;

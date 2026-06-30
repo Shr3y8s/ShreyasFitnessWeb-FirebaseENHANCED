@@ -79,6 +79,31 @@ const BASE_PLANS = [
     amountMinor: 25000,
     name: "Complete Transformation Monthly",
   },
+
+  // ── QUARTERLY (3-month pre-pay) plans — prepay-plans Phase B ──────────────
+  {
+    // sandbox 2-cycle quarterly, minted 2026-06-29. $540/qtr (10% off $200×3).
+    planId: "P-2TA612087A1042525NJBQTAA",
+    productId: "PROD-51P94209CF452694B",
+    tierId: "online_coaching",
+    tierName: "Online Coaching",
+    env: "sandbox",
+    amountMinor: 54000,
+    intervalCount: 3,
+    name: "Online Coaching Quarterly",
+  },
+  {
+    // sandbox 2-cycle quarterly, minted 2026-06-29. $675/qtr (10% off $250×3).
+    planId: "P-0M212305WN6341942NJBQTAA",
+    productId: "PROD-5D236001YV287835G",
+    tierId: "complete_transformation",
+    tierName: "Complete Transformation",
+    env: "sandbox",
+    amountMinor: 67500,
+    intervalCount: 3,
+    name: "Complete Transformation Quarterly",
+  },
+  // live quarterly plans appended at cutover (B1.3).
 ];
 
 function planDoc(p) {
@@ -88,10 +113,13 @@ function planDoc(p) {
     tierId: p.tierId,
     tierName: p.tierName,
     amountMinor: p.amountMinor,
+    // Billing cadence (prepay-plans): 1 = monthly (default), 3 = quarterly.
+    intervalCount: p.intervalCount || 1,
     currency: "USD",
     status: "ACTIVE",
     env: p.env,
     name: p.name,
+
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     // createdAt only on first write (merge won't overwrite an existing one if we
     // guard, but serverTimestamp on merge is fine for a seed/backfill).

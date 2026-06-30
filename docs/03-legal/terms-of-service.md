@@ -86,10 +86,18 @@ We offer recurring subscription plans (e.g., Online Coaching and Complete Transf
 - **Authorization:** By subscribing, you authorize us and our payment processor to charge your payment method on a recurring basis.
 - **Payment processing:** Payments are processed securely by our third-party payment processor (currently **PayPal**; we may use Stripe or another reputable processor as an alternate or replacement). We do not store full payment card numbers ourselves.
 
-### 5.4 Price Changes
+### 5.4 Pre-Paid Multi-Month Plans
+Some subscriptions are offered on a **pre-paid multi-month billing cadence** (for example, billed once every 3 months). For these plans:
+- You are charged the **full multi-month amount up front** at the start of each billing period, and the plan auto-renews for another full multi-month period until cancelled.
+- Pre-paid periods are **non-refundable**. If you cancel, your access continues until the end of the period you have already paid for, and your subscription is not renewed afterward — we do not refund or prorate the unused portion of a pre-paid period.
+- Cancelling stops the **next** renewal only; it does not refund the current pre-paid period.
+
+### 5.5 Price Changes
+
 We may change subscription prices. We will provide at least **30 days' advance notice** of price changes affecting recurring charges. Price changes apply to subsequent renewals, not your current billing period. Continued use after a price change takes effect constitutes acceptance.
 
-### 5.5 Failed Payments
+### 5.6 Failed Payments
+
 If a payment fails, we (or our processor) may retry the charge. Your access may be suspended, and your subscription may be cancelled if payment cannot be processed. You remain responsible for any unpaid amounts.
 
 ---

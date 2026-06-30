@@ -612,7 +612,8 @@ export default function BillingPage() {
                       <thead className="border-b">
                         <tr className="text-left">
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Date & Time</th>
-                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Product</th>
+                          <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Item</th>
+
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Amount</th>
                           <th className="pb-3 pr-4 text-sm font-medium text-muted-foreground">Status</th>
                           <th className="pb-3 text-sm font-medium text-muted-foreground">Receipt</th>

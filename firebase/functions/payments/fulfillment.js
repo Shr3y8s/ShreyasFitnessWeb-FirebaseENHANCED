@@ -240,6 +240,14 @@ async function activateSubscription(p, hooks = {}) {
     updateData.currentPeriodEnd = admin.firestore.Timestamp.fromMillis(p.currentPeriodEnd * 1000);
   }
 
+  // Mirror the billing cadence onto the USER doc (prepay-plans Phase B). The
+  // membership "Next Billing" fallback adds `months`, and the Plan label reads
+  // `intervalCount` (1 monthly / 3 quarterly). Only written when known so a
+  // status-only update (pause/cancel) keeps the previously-stored cadence.
+  if (p.intervalCount != null) updateData.intervalCount = p.intervalCount;
+  if (p.months != null) updateData.months = p.months;
+
+
 
   // Sync tier from event metadata when present.
   if (p.tierId && p.tierName) {

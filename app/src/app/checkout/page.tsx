@@ -23,7 +23,13 @@ import {
   selectSessionPrice,
 } from '@/lib/payments';
 import type { DiscountPreview } from '@/lib/payments';
-import { getCheckoutItem } from '@/lib/constants';
+import {
+  getCheckoutItem,
+  getBillingOption,
+  PAYPAL_PLANS,
+  type PaypalPlanKey,
+} from '@/lib/constants';
+
 
 import { ProviderCheckout } from '@/components/payments/ProviderCheckout';
 import { PaymentMethodLogos } from '@/components/payments/PaymentMethodLogos';
@@ -69,6 +75,10 @@ function CheckoutInner() {
   const [amount, setAmount] = useState<number>(0); // minor units
   const [priceType, setPriceType] = useState<'recurring' | 'one_time'>('one_time');
   const [checkoutPriceId, setCheckoutPriceId] = useState<string>('');
+  // Billing cadence (prepay-plans Phase B): 1 = monthly (default), 3 = quarterly.
+  // Drives the "/mo" vs "every 3 months" + no-refund copy. Monthly items leave this 1.
+  const [intervalCount, setIntervalCount] = useState<number>(1);
+
   // Discount preview (Feature 2). ProviderCheckout reports the validated preview up
   // here so the Order Summary is the single source of price truth; null = no code.
   const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
@@ -116,10 +126,30 @@ function CheckoutInner() {
         }
         if (cancelled) return;
         setProductName(product.name || item.label);
-        setAmount(price.amount);
-        setPriceType(price.type);
-        setCheckoutPriceId(price.id);
+
+        // CADENCE OVERRIDE (prepay-plans Phase B): the catalog's selectSignupPrice
+        // returns the DEFAULT (monthly) plan. When the checkout item carries a
+        // `planKey` (quarterly variant), swap in that plan's PayPal id + the matching
+        // BillingOption amount so the subscription is created against the quarterly
+        // plan. Monthly items have no planKey → unchanged (back-compat).
+        const count = item.intervalCount && item.intervalCount > 0 ? item.intervalCount : 1;
+        setIntervalCount(count);
+        if (item.mode === 'subscription' && item.planKey) {
+          const planId = (PAYPAL_PLANS as Record<PaypalPlanKey, string>)[item.planKey];
+          const opt = getBillingOption(item.productId, count);
+          if (!planId) {
+            throw new Error('This plan is not available yet. Please try the monthly option.');
+          }
+          setCheckoutPriceId(planId);
+          setAmount(opt ? opt.amount : price.amount);
+          setPriceType('recurring');
+        } else {
+          setAmount(price.amount);
+          setPriceType(price.type);
+          setCheckoutPriceId(price.id);
+        }
       } catch (e) {
+
         if (!cancelled) setError((e as Error)?.message || 'Failed to load checkout.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -216,9 +246,12 @@ function CheckoutInner() {
                       <p className="font-semibold text-gray-900 text-lg">{productName}</p>
                       <p className="text-sm text-gray-600">
                         {priceType === 'recurring'
-                          ? 'Monthly subscription • Cancel anytime'
+                          ? intervalCount === 3
+                            ? 'Billed every 3 months • Cancel anytime'
+                            : 'Monthly subscription • Cancel anytime'
                           : 'One-time payment'}
                       </p>
+
                     </div>
                     <div className="text-right">
                       {discountPreview ? (
@@ -236,10 +269,29 @@ function CheckoutInner() {
                         </div>
                       )}
                       {priceType === 'recurring' && (
-                        <div className="text-xs text-gray-600">per month</div>
+                        <div className="text-xs text-gray-600">
+                          {intervalCount === 3 ? 'per 3 months' : 'per month'}
+                        </div>
+                      )}
+                      {/* Effective $/mo for quarterly so the per-month value is obvious. */}
+                      {priceType === 'recurring' && intervalCount === 3 && !discountPreview && (
+                        <div className="text-xs font-medium text-emerald-700">
+                          {formatCurrency(Math.round(amount / 3))}/mo
+                        </div>
                       )}
                     </div>
                   </div>
+
+                  {/* No-refund disclosure for pre-paid multi-month plans (prepay-plans
+                      B6.1 / FR-B9). Monthly subscriptions don't show this. */}
+                  {priceType === 'recurring' && intervalCount === 3 && (
+                    <p className="mt-3 text-xs text-gray-600">
+                      Billed once every 3 months. No refunds — your access continues
+                      until the end of your paid period. Cancel anytime to stop the next
+                      renewal.
+                    </p>
+                  )}
+
 
                   {/* Discount line-items — shown only when a code is applied. */}
                   {discountPreview && (
