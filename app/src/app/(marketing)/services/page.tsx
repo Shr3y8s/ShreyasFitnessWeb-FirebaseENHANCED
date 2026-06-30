@@ -95,7 +95,7 @@ export default function ServicesPage() {
                 </div>
                 <h3 className="service-card-title">In-Person Training</h3>
                 <p className="service-card-tagline">Get expert 1-on-1 guidance</p>
-                <div className="service-card-price">$70<span>/session</span></div>
+                <div className="service-card-price">$75<span>/session</span></div>
                 <p className="service-card-desc">Expert in-person coaching sessions focused on technique, form, and effective workouts tailored to your goals.</p>
                 <span className="service-card-format">Seattle Area Only</span>
                 <div className="card-action-buttons">
@@ -113,9 +113,9 @@ export default function ServicesPage() {
                   <i className="fas fa-laptop"></i>
                 </div>
                 <h3 className="service-card-title">Online Coaching</h3>
-                <p className="service-card-tagline">Achieve total fitness transformation</p>
-                <div className="service-card-price">$249<span>/month</span></div>
-                <p className="service-card-desc">Your complete transformation system - everything you need to build sustainable fitness habits and achieve lasting results.</p>
+                <p className="service-card-tagline">Train smart and eat right from anywhere</p>
+                <div className="service-card-price">$200<span>/month</span></div>
+                <p className="service-card-desc">A complete remote system - a custom program refreshed every 2 weeks, real nutrition coaching, a monthly strategy call, video form analysis, and direct support to keep you progressing on your own terms.</p>
                 <span className="service-card-format">Remote Coaching</span>
                 <div className="card-action-buttons">
                   <button className="btn-secondary details-modal-btn" data-modal="transformationDetailsModal">Learn More</button>
@@ -127,19 +127,158 @@ export default function ServicesPage() {
             {/* Tier 3: Complete Transformation */}
             <div className="service-tier">
               <div className="service-card-item elite-card">
-                <div className="service-card-badge elite-badge">Premium Experience</div>
+                <div className="service-card-badge elite-badge">Best Value</div>
                 <div className="service-card-icon">
                   <i className="fas fa-crown"></i>
                 </div>
                 <h3 className="service-card-title">Complete Transformation</h3>
-                <p className="service-card-tagline">Experience premium results</p>
-                <div className="service-card-price">$249<span>/month</span> + $60<span>/session</span></div>
-                <p className="service-card-desc">The complete package - comprehensive transformation support plus hands-on training for maximum results and accountability.</p>
-                <span className="service-card-format">Seattle Premium Experience</span>
+                <p className="service-card-tagline">My highest level of support &mdash; we solve your puzzle together</p>
+                <div className="service-card-price">$250<span>/month</span></div>
+                <p className="service-card-desc">Everything in Online Coaching, plus the hands-on guidance, real-world skills, and direct access that don&apos;t just get you results &mdash; they teach you to keep them for life. Locked-in $60 in-person rate as a bonus.</p>
+                <span className="service-card-format">Remote + Seattle In-Person Bonus</span>
                 <div className="card-action-buttons">
                   <button className="btn-secondary details-modal-btn" data-modal="eliteDetailsModal">Learn More</button>
                   <Link href="/connect" className="btn-primary elite-btn">Go Premium</Link>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tier Comparison Chart */}
+      <section className="comparison-chart-section">
+        <div className="container">
+          <div className="section-header">
+            <h2>Compare All Three Options</h2>
+            <p>See exactly what you get at every level &mdash; and why most clients choose Complete Transformation</p>
+          </div>
+
+          <div className="comparison-chart-scroll">
+            <table className="comparison-chart">
+              <thead>
+                <tr>
+                  <th className="cc-feature-col">What You Get</th>
+                  <th className="cc-tier-col">
+                    <span className="cc-tier-name">In-Person Training</span>
+                    <span className="cc-tier-price">$75<small>/session</small></span>
+                  </th>
+                  <th className="cc-tier-col">
+                    <span className="cc-tier-name">Online Coaching</span>
+                    <span className="cc-tier-price">$200<small>/month</small></span>
+                  </th>
+                  <th className="cc-tier-col cc-best">
+                    <span className="cc-best-badge">Best Value</span>
+                    <span className="cc-tier-name">Complete Transformation</span>
+                    <span className="cc-tier-price">$250<small>/month</small></span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="cc-feature">Custom Training Program</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell">Every 2 weeks</td>
+                  <td className="cc-cell cc-best"><strong>Continuously adapted</strong></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Nutrition Coaching</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell">Every 2 weeks</td>
+                  <td className="cc-cell cc-best"><strong>Continuously adapted</strong></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Progress Check-Ins</td>
+                  <td className="cc-cell">In session</td>
+                  <td className="cc-cell">Every 2 weeks</td>
+                  <td className="cc-cell cc-best"><strong>Weekly</strong></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Messaging Support</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell">Within 24 hrs</td>
+                  <td className="cc-cell cc-best"><strong>Priority &middot; same day</strong></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Video Form Analysis</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell"><i className="fas fa-check cc-yes"></i></td>
+                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Real-World Skills Coaching <span className="cc-seattle">(eat out, shop, travel, social events)</span></td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Train-Anywhere Fundamentals</td>
+                  <td className="cc-cell">In session</td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Mindset &amp; Lifestyle Coaching</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">1-on-1 Strategy Call</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell">Monthly</td>
+                  <td className="cc-cell cc-best"><strong>Monthly + as-needed</strong></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">Habit &amp; Accountability Coaching</td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">In-Person Check-In Meetings <span className="cc-seattle">(Seattle &middot; FaceTime if remote)</span></td>
+                  <td className="cc-cell">&mdash;</td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><strong>Included</strong></td>
+                </tr>
+                <tr>
+                  <td className="cc-feature">In-Person Training Sessions <span className="cc-seattle">(Seattle)</span></td>
+                  <td className="cc-cell">$75/session</td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><strong>$60/session</strong><br /><span className="cc-sub">best rate anywhere</span></td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td className="cc-feature cc-cta-label">Ready to start?</td>
+                  <td className="cc-cell"><Link href="/connect" className="cc-cta">Book a Session</Link></td>
+                  <td className="cc-cell"><Link href="/connect" className="cc-cta">Choose Online</Link></td>
+                  <td className="cc-cell cc-best"><Link href="/connect" className="cc-cta cc-cta-best">Get Complete</Link></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p className="comparison-chart-note">Online coaching is available worldwide. In-person sessions are available in the Seattle area only.</p>
+        </div>
+      </section>
+
+
+      {/* Why Most People Never See Results - Empathy Intro */}
+      <section className="empathy-section">
+        <div className="container">
+          <div className="empathy-block">
+            <div className="empathy-eyebrow">The real reason</div>
+            <h2>Why most people never see results &mdash; and why it&apos;s not your fault</h2>
+            <div className="empathy-grid">
+              <div className="empathy-col empathy-problem">
+                <span className="empathy-tag empathy-tag-bad"><i className="fas fa-circle-xmark"></i> What goes wrong</span>
+                <p>You&apos;ve been handed the &quot;perfect&quot; meal plan and workout before &mdash; and still fell off. The truth no one tells you: you can&apos;t flip years of habits overnight.</p>
+                <p>Most trainers assume you already have skills you were never taught, then blame you when the plan doesn&apos;t stick.</p>
+              </div>
+              <div className="empathy-col empathy-solution">
+                <span className="empathy-tag empathy-tag-good"><i className="fas fa-circle-check"></i> How I do it differently</span>
+                <p>I&apos;ve been over 100 pounds heavier myself, and I had to completely rewire how I think about food and training.</p>
+                <p>So I meet you exactly where you are &mdash; not where some &quot;perfect plan&quot; assumes you should be &mdash; and we build the skills together, one realistic step at a time, so the change actually lasts.</p>
               </div>
             </div>
           </div>
@@ -151,33 +290,51 @@ export default function ServicesPage() {
         <div className="container">
           <div className="section-header">
             <h2>The Right Approach For Your Fitness Journey</h2>
-            <p>Choose the service level that best fits your goals, budget, and preferred coaching style</p>
+            <p>Whatever your starting point, there is a fit &mdash; and most clients quickly find that one option simply gives the most.</p>
           </div>
           <div className="approach-benefits">
             <div className="approach-benefit">
               <div className="approach-icon">
                 <i className="fas fa-user"></i>
               </div>
-              <h3>Just Need Expert Training?</h3>
-              <p>Perfect for those who want hands-on guidance during workouts but prefer to manage nutrition and lifestyle independently.</p>
+              <h3>Hands-On Training</h3>
+              <p className="approach-persona">Best for you if&hellip;</p>
+              <p>You&apos;re local to Seattle, you learn best in person, and you want to nail your technique and build real confidence in the gym &mdash; on your own schedule.</p>
             </div>
             <div className="approach-benefit">
               <div className="approach-icon">
                 <i className="fas fa-laptop"></i>
               </div>
-              <h3>Want Remote Coaching Support?</h3>
-              <p>Ideal for those seeking comprehensive coaching including training programs, nutrition guidance, and accountability from anywhere.</p>
+              <h3>The Full Remote System</h3>
+              <p className="approach-persona">Best for you if&hellip;</p>
+              <p>You&apos;re self-motivated and want a proven plan plus expert support you can run from anywhere &mdash; without the premium price tag.</p>
             </div>
             <div className="approach-benefit">
+              <div className="approach-popular">Most Popular</div>
               <div className="approach-icon">
                 <i className="fas fa-crown"></i>
               </div>
-              <h3>Want the Complete Package?</h3>
-              <p>The best solution for those who want both comprehensive coaching and the benefits of in-person training sessions.</p>
+              <h3>The One Most Clients Choose</h3>
+              <p className="approach-persona">Best for you if&hellip;</p>
+              <p>You&apos;ve started and stalled before. You don&apos;t just want a plan &mdash; you want me in your corner, teaching you the real-world skills so the results finally stick for good.</p>
             </div>
           </div>
+
+          {/* My Promise Callout */}
+          <div className="my-promise">
+            <i className="fas fa-handshake my-promise-watermark" aria-hidden="true"></i>
+            <div className="my-promise-left">
+              <div className="my-promise-badge"><i className="fas fa-handshake"></i> My Promise</div>
+              <h3>I don&apos;t create dependence &mdash; I build independence.</h3>
+            </div>
+            <div className="my-promise-right">
+              <p>My goal is to teach you the skills to stay in shape on your own &mdash; so your results last for life, not just while we work together. Most coaches overcomplicate food and training so you stay dependent on them; I do the opposite.</p>
+              <p>You&apos;ll learn how to order at any restaurant, train in any gym, and handle a vacation or a night out without losing your progress. Diets are temporary structure &mdash; the skills I teach are for life, long after you stop needing a coach.</p>
+            </div>
+          </div>
+
           <div className="approach-note">
-            <p>All services can be tailored to your specific needs, and you can easily upgrade your service tier as your fitness journey progresses.</p>
+            <p>Every option is tailored to you, and you can upgrade anytime &mdash; but Complete Transformation gives you the most room to grow from day one.</p>
           </div>
         </div>
       </section>
@@ -187,7 +344,7 @@ export default function ServicesPage() {
         <div className="container">
           <div className="section-header">
             <h2>Why Our Services Are Your Best Investment</h2>
-            <p>See how our value compares to typical fitness coaching pricing</p>
+            <p>See how much Complete Transformation would cost if you bought every piece separately</p>
           </div>
           
           <div className="value-cards-container">
@@ -208,10 +365,10 @@ export default function ServicesPage() {
                 </div>
                 <div className="comparison-row highlighted">
                   <div className="comparison-item">
-                    <span className="comparison-label"><i className="fas fa-laptop"></i> Our Premium Services:</span>
+                    <span className="comparison-label"><i className="fas fa-laptop"></i> Complete Transformation:</span>
                   </div>
                   <div className="comparison-value">
-                    <span className="price-tag">$8.30</span><span className="price-period">/day</span>
+                    <span className="price-tag">$8.33</span><span className="price-period">/day</span>
                   </div>
                 </div>
               </div>
@@ -232,7 +389,7 @@ export default function ServicesPage() {
                     <tr style={{borderBottom: '1px solid #f0f0f0', fontWeight: 600}}>
                       <td style={{padding: '12px 10px'}}>Service Feature</td>
                       <td style={{padding: '12px 10px', textAlign: 'center'}}>SHREY.FIT</td>
-                      <td style={{padding: '12px 10px', textAlign: 'right'}}>Typical Fitness Coaching</td>
+                      <td style={{padding: '12px 10px', textAlign: 'right'}}>Bought Separately</td>
                     </tr>
                     <tr style={{borderBottom: '1px solid #f0f0f0'}}>
                       <td style={{padding: '12px 10px'}}>Custom Training Programs</td>
@@ -245,9 +402,9 @@ export default function ServicesPage() {
                       <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$200</span><span className="price-period">/month</span></td>
                     </tr>
                     <tr style={{borderBottom: '1px solid #f0f0f0'}}>
-                      <td style={{padding: '12px 10px'}}>Unlimited Messaging Support</td>
+                      <td style={{padding: '12px 10px'}}>Real-World Skills &amp; Lifestyle Coaching</td>
                       <td style={{padding: '12px 10px', textAlign: 'center'}}>Included</td>
-                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$99</span><span className="price-period">/month</span></td>
+                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$150</span><span className="price-period">/month</span></td>
                     </tr>
                     <tr style={{borderBottom: '1px solid #f0f0f0'}}>
                       <td style={{padding: '12px 10px'}}>Weekly Progress Check-Ins</td>
@@ -255,29 +412,45 @@ export default function ServicesPage() {
                       <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$150</span><span className="price-period">/month</span></td>
                     </tr>
                     <tr style={{borderBottom: '1px solid #f0f0f0'}}>
+                      <td style={{padding: '12px 10px'}}>Habit &amp; Accountability Coaching</td>
+                      <td style={{padding: '12px 10px', textAlign: 'center'}}>Included</td>
+                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$120</span><span className="price-period">/month</span></td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid #f0f0f0'}}>
+                      <td style={{padding: '12px 10px'}}>Monthly 1-on-1 Strategy Call</td>
+                      <td style={{padding: '12px 10px', textAlign: 'center'}}>Included</td>
+                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$100</span><span className="price-period">/month</span></td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid #f0f0f0'}}>
+                      <td style={{padding: '12px 10px'}}>Anytime Priority Messaging</td>
+                      <td style={{padding: '12px 10px', textAlign: 'center'}}>Included</td>
+                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$99</span><span className="price-period">/month</span></td>
+                    </tr>
+                    <tr style={{borderBottom: '1px solid #f0f0f0'}}>
                       <td style={{padding: '12px 10px'}}>Video Form Analysis</td>
                       <td style={{padding: '12px 10px', textAlign: 'center'}}>Included</td>
                       <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$125</span><span className="price-period">/month</span></td>
                     </tr>
                     <tr style={{borderBottom: '1px solid #f0f0f0'}}>
-                      <td style={{padding: '12px 10px'}}>Habit & Accountability Coaching</td>
+                      <td style={{padding: '12px 10px'}}>In-Person Check-In Meetings</td>
                       <td style={{padding: '12px 10px', textAlign: 'center'}}>Included</td>
-                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$250</span><span className="price-period">/month</span></td>
-                    </tr>
-                    <tr style={{borderBottom: '1px solid #f0f0f0'}}>
-                      <td style={{padding: '12px 10px'}}>4 In-Person Training Sessions</td>
-                      <td style={{padding: '12px 10px', textAlign: 'center'}}><span className="price-tag">$240</span><span className="price-period">/month</span></td>
-                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$280</span><span className="price-period">/month</span></td>
+                      <td style={{padding: '12px 10px', textAlign: 'right'}}><span className="price-tag">$180</span><span className="price-period">/month</span></td>
                     </tr>
                     <tr style={{borderBottom: '2px dashed #e0e0e0', backgroundColor: '#f9f9f9', fontWeight: 600}}>
-                      <td style={{padding: '14px 10px'}}>Total Monthly Cost</td>
-                      <td style={{padding: '14px 10px', textAlign: 'center'}}><span className="price-tag">$489</span></td>
-                      <td style={{padding: '14px 10px', textAlign: 'right'}}><span className="price-tag">$1,279</span></td>
+                      <td style={{padding: '14px 10px'}}>Coaching Value Total</td>
+                      <td style={{padding: '14px 10px', textAlign: 'center', color: 'var(--primary-dark)'}}><span className="price-tag">$250</span><span className="price-period">/mo</span></td>
+                      <td style={{padding: '14px 10px', textAlign: 'right'}}><span className="price-tag">$1,299</span><span className="price-period">/month</span></td>
                     </tr>
                     <tr style={{backgroundColor: 'rgba(76, 175, 80, 0.2)'}}>
-                      <td style={{padding: '14px 10px', fontWeight: 600, color: 'var(--primary-dark)'}}>Monthly Savings</td>
+                      <td style={{padding: '14px 10px', fontWeight: 600, color: 'var(--primary-dark)'}}>You Save Every Month</td>
                       <td style={{padding: '14px 10px', textAlign: 'center'}}></td>
-                      <td style={{padding: '14px 10px', textAlign: 'right', fontWeight: 700}}><span className="price-tag" style={{color: '#00b300', fontSize: '1.3rem'}}>$790</span></td>
+                      <td style={{padding: '14px 10px', textAlign: 'right', fontWeight: 700}}><span className="price-tag" style={{color: '#00b300', fontSize: '1.3rem'}}>$1,049</span></td>
+                    </tr>
+                    <tr style={{backgroundColor: 'rgba(255, 193, 7, 0.18)'}}>
+                      <td style={{padding: '14px 10px', fontWeight: 600}} colSpan={3}>
+                        <i className="fas fa-gift" style={{color: '#f0a500', marginRight: '6px'}}></i>
+                        And on top of all that &mdash; a locked-in <strong>$60</strong> in-person training rate (Seattle), below the $75 walk-in. The coaching alone already pays for itself; this is just the cherry on top.
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -314,8 +487,8 @@ export default function ServicesPage() {
             <p>Expert in-person coaching sessions focused on technique, form, and effective workouts tailored specifically to your unique goals, fitness level, and lifestyle. These sessions are perfect for those who want hands-on guidance without requiring comprehensive nutrition or lifestyle coaching.</p>
             
             <div className="modal-price-callout">
-              <div className="modal-price">$70<span>/session</span></div>
-              <p>4-session pack available: $240 ($60/session)</p>
+              <div className="modal-price">$75<span>/session</span></div>
+              <p>4-session pack available: $260 ($65/session)</p>
             </div>
             
             <h3>What&apos;s Included:</h3>
@@ -414,11 +587,11 @@ export default function ServicesPage() {
             <span className="modal-close">&times;</span>
           </div>
           <div className="modal-body">
-            <p>Your complete transformation system that delivers everything you need to build sustainable fitness habits and achieve lasting results. This comprehensive program provides you with full support no matter where you are.</p>
+            <p>Your complete remote coaching system - everything you need to train smart and eat right from anywhere. A custom program refreshed every two weeks, real nutrition coaching, a monthly 1-on-1 strategy call, and direct access to me so you always know your next move.</p>
             
             <div className="modal-price-callout">
-              <div className="modal-price">$249<span>/month</span></div>
-              <p>Less than $8.30 per day for complete fitness support</p>
+              <div className="modal-price">$200<span>/month</span></div>
+              <p>Just ~$6.67 per day for a complete remote coaching system</p>
             </div>
             
             <h3>What&apos;s Included:</h3>
@@ -426,29 +599,36 @@ export default function ServicesPage() {
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Custom Training Programs</strong>
-                  <p>Personalized exercise plans updated monthly based on your progress, goals, and available equipment</p>
+                  <strong>Custom Training Program</strong>
+                  <p>Personalized exercise plans refreshed every two weeks based on your progress, goals, and available equipment</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Complete Nutrition Coaching</strong>
-                  <p>Personalized meal plans, dietary guidance, and nutritional education to support your fitness journey</p>
+                  <strong>Nutrition Coaching</strong>
+                  <p>A personalized nutrition plan adjusted every two weeks so you always know exactly how to eat for your goals</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Unlimited Messaging Support</strong>
-                  <p>Direct access to me with 24-hour response guarantee for questions, motivation, and guidance</p>
+                  <strong>Bi-Weekly Progress Check-Ins</strong>
+                  <p>A structured review every two weeks to track progress and fine-tune your program</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Weekly Progress Check-Ins</strong>
-                  <p>Regular video calls to review progress, address challenges, and adjust your program as needed</p>
+                  <strong>Monthly 1-on-1 Strategy Call</strong>
+                  <p>A dedicated video call each month to plan ahead, solve roadblocks, and keep you accountable</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Direct Messaging Support</strong>
+                  <p>Message me directly with questions and check-ins, with replies typically within 24 hours</p>
                 </div>
               </li>
               <li>
@@ -456,13 +636,6 @@ export default function ServicesPage() {
                 <div>
                   <strong>Video Form Analysis</strong>
                   <p>Submit workout videos for detailed technique feedback and exercise modifications</p>
-                </div>
-              </li>
-              <li>
-                <i className="fas fa-check"></i>
-                <div>
-                  <strong>Habit & Accountability Coaching</strong>
-                  <p>Develop sustainable lifestyle habits with structured accountability and behavior change support</p>
                 </div>
               </li>
             </ul>
@@ -477,22 +650,71 @@ export default function ServicesPage() {
                   <li>
                     <i className="fas fa-times"></i>
                     <div>
-                      <strong>In-Person Training Sessions</strong>
-                      <p>Hands-on technique guidance and personalized coaching for maximum effectiveness</p>
+                      <strong>Weekly Progress Check-Ins</strong>
+                      <p>Complete Transformation reviews your progress every week instead of every two weeks - faster adjustments, faster results</p>
                     </div>
                   </li>
                   <li>
                     <i className="fas fa-times"></i>
                     <div>
-                      <strong>Direct Physical Assessments</strong>
-                      <p>In-person measurements and progress tracking for precise feedback</p>
+                      <strong>Priority Same-Day Messaging</strong>
+                      <p>Skip the line with priority responses (typically same day) instead of standard 48-hour replies</p>
                     </div>
                   </li>
                   <li>
                     <i className="fas fa-times"></i>
                     <div>
-                      <strong>Equipment Guidance in Real-Time</strong>
-                      <p>Immediate feedback during exercises to optimize form and prevent injury</p>
+                      <strong>Continuously Adapted Programming</strong>
+                      <p>Your plan is adjusted whenever your body, schedule, or life changes - not just once a month</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>Real-World Skills Coaching</strong>
+                      <p>Learn how to eat out, shop, travel, and handle a night out with friends while still hitting your goals - the skills that keep you in shape for life</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>Train-Anywhere Fundamentals</strong>
+                      <p>Master the fundamentals of movement so you can build an effective workout in any gym, park, or hotel - and never be lost or dependent again</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>Mindset &amp; Lifestyle Coaching</strong>
+                      <p>The mental side most coaches skip - rewiring how you think about food and training so the change actually sticks</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>As-Needed 1-on-1 Calls</strong>
+                      <p>Online includes a monthly strategy call - Complete adds extra as-needed calls whenever you hit a roadblock</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>Habit &amp; Accountability Coaching</strong>
+                      <p>A structured behavior-change system that builds the daily habits that actually drive long-term results</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>In-Person Check-In Meetings (Included)</strong>
+                      <p>Sit down with me to talk through how you&apos;re feeling and any roadblocks - in person in Seattle, or over FaceTime anywhere else</p>
+                    </div>
+                  </li>
+                  <li>
+                    <i className="fas fa-times"></i>
+                    <div>
+                      <strong>Locked-In $60 In-Person Rate</strong>
+                      <p>Train with me in person at the best rate available anywhere - below the $75 walk-in and the $260 four-pack</p>
                     </div>
                   </li>
                 </ul>
@@ -508,8 +730,8 @@ export default function ServicesPage() {
             </div>
             
             <div className="modal-upgrade">
-              <h4>Want In-Person Training Too?</h4>
-              <p>Upgrade to the Complete Transformation to combine this comprehensive support with in-person training sessions.</p>
+              <h4>Want Even Better Results?</h4>
+              <p>For just $50 more, Complete Transformation upgrades you to weekly check-ins, anytime priority support, a monthly 1-on-1 strategy call, real-world skills &amp; mindset coaching, and included in-person check-in meetings - and adds a locked-in $60 in-person rate as a bonus.</p>
             </div>
             
             <div className="modal-social-proof">
@@ -531,11 +753,11 @@ export default function ServicesPage() {
             <span className="modal-close">&times;</span>
           </div>
           <div className="modal-body">
-            <p>The ultimate fitness experience combining comprehensive transformation support with hands-on personal training. Get the best of both worlds with complete remote coaching plus in-person training sessions for maximum results.</p>
+            <p>My highest level of support - we solve your puzzle together. You get everything in Online Coaching, upgraded, plus the real-world skills and one-on-one access that don&apos;t just get you results - they teach you to keep them for life. My job isn&apos;t to keep you dependent on me; it&apos;s to make myself unnecessary. And as a bonus, you lock in my best-ever in-person rate.</p>
             
             <div className="modal-price-callout">
-              <div className="modal-price">$249<span>/month</span> + $60<span>/session</span></div>
-              <p>The complete package for your fitness success</p>
+              <div className="modal-price">$250<span>/month</span></div>
+              <p>Just ~$8.33 per day - only ~$1.67 more than Online Coaching for everything below</p>
             </div>
             
             <div className="value-highlight elite">
@@ -545,7 +767,7 @@ export default function ServicesPage() {
             
             <div className="value-highlight elite">
               <div className="value-highlight-header">Value:</div>
-              <div className="value-highlight-body"><a href="#value-comparison-section" className="savings-link">See how we can save you $800+ on premium fitness services! →</a></div>
+              <div className="value-highlight-body"><a href="#value-comparison-section" className="savings-link">See how Complete Transformation saves you nearly $1,000/month vs. buying it all separately! →</a></div>
             </div>
             
             <h3>What&apos;s Included:</h3>
@@ -553,43 +775,92 @@ export default function ServicesPage() {
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Everything From Online Coaching</strong>
-                  <p>All the features of the comprehensive remote coaching program</p>
+                  <strong>Everything in Online Coaching</strong>
+                  <p>Your custom training program, nutrition coaching, direct messaging, and video form analysis - all included as the foundation</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>In-Person Training Sessions</strong>
-                  <p>Hands-on coaching sessions with expert guidance and form correction</p>
+                  <strong>Weekly Progress Check-Ins</strong>
+                  <p>A structured review every single week (not every two) so we adjust faster and you progress faster</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Flexible Session Scheduling</strong>
-                  <p>Book sessions as needed to fit your schedule and budget ($60 per session)</p>
+                  <strong>Priority Same-Day Messaging</strong>
+                  <p>Front-of-the-line responses, typically the same day, whenever you have a question or need a quick adjustment</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Session Package Option</strong>
-                  <p>Save with a 4-session package for $240 ($60/session)</p>
+                  <strong>Continuously Adapted Programming</strong>
+                  <p>Your plan evolves whenever your body, schedule, or life changes - not just once a month</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>In-Person Progress Assessments</strong>
-                  <p>Track your improvements with hands-on measurements and assessments</p>
+                  <strong>1-on-1 Strategy Calls (Monthly + As-Needed)</strong>
+                  <p>Your monthly strategy call, plus extra as-needed calls whenever you hit a roadblock - so you&apos;re never stuck waiting</p>
                 </div>
               </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
-                  <strong>Priority Support & Scheduling</strong>
-                  <p>Get preferential booking times and faster response to your questions</p>
+                  <strong>Habit &amp; Accountability Coaching</strong>
+                  <p>A structured behavior-change system that builds the daily habits that actually create lasting results</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Real-World Skills Coaching</strong>
+                  <p>The skills most coaching skips: how to order at a restaurant, shop a grocery store, travel, and enjoy a night out with friends while still hitting your goals - in person in Seattle, or over FaceTime anywhere else</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Train-Anywhere Fundamentals</strong>
+                  <p>Master the fundamentals of movement so you can build an effective workout in any gym, park, or hotel - never lost, never dependent on a machine or a once-a-week session</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Mindset &amp; Lifestyle Coaching</strong>
+                  <p>The mental side that actually drives results - I&apos;ve lost over 100 pounds and rewired how I think about food and training, so I help you do the same from where you are now</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>In-Person Check-In Meetings (Included)</strong>
+                  <p>Sit down with me to talk through how you&apos;re feeling, wins, and roadblocks - beyond your regular check-ins and workouts. In person in Seattle, or over FaceTime anywhere else</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Priority Support &amp; Scheduling</strong>
+                  <p>Preferential booking times and the fastest response to everything you need</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>BONUS: Locked-In $60 In-Person Rate</strong>
+                  <p>Train with me in person at $60/session - my best rate anywhere, below the $75 walk-in and the $260 four-pack ($65/session). Seattle area only.</p>
+                </div>
+              </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>BONUS: In-Person Progress Assessments</strong>
+                  <p>Hands-on measurements and form correction during your in-person sessions for precise feedback</p>
                 </div>
               </li>
             </ul>
@@ -646,6 +917,285 @@ export default function ServicesPage() {
       </div>
 
       <style jsx>{`
+        /* ===== Empathy Intro ===== */
+        .empathy-section {
+          padding: 60px 0 20px;
+        }
+        .empathy-block {
+          max-width: 960px;
+          margin: 0 auto;
+          background: #fff;
+          border-radius: 16px;
+          padding: 40px 40px 44px;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+          border-top: 4px solid #4CAF50;
+        }
+        .empathy-eyebrow {
+          display: inline-block;
+          color: #4CAF50;
+          font-weight: 700;
+          font-size: 0.78rem;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          margin-bottom: 10px;
+        }
+        .empathy-block h2 {
+          font-size: 1.75rem;
+          color: #1f2d1f;
+          margin-bottom: 28px;
+          line-height: 1.25;
+          max-width: 760px;
+        }
+        .empathy-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 28px;
+        }
+        .empathy-col {
+          text-align: left;
+          padding: 22px 24px;
+          border-radius: 12px;
+        }
+        .empathy-problem {
+          background: #fbf4f4;
+          border-left: 4px solid #e57373;
+        }
+        .empathy-solution {
+          background: #f1f8f2;
+          border-left: 4px solid #4CAF50;
+        }
+        .empathy-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          font-weight: 700;
+          font-size: 0.82rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 12px;
+        }
+        .empathy-tag-bad { color: #d9534f; }
+        .empathy-tag-good { color: #2e7d32; }
+        .empathy-col p {
+          color: #555;
+          font-size: 1rem;
+          line-height: 1.7;
+          margin-bottom: 12px;
+        }
+        .empathy-col p:last-child { margin-bottom: 0; }
+
+        /* ===== Approach card persona + popular ribbon ===== */
+        .approach-persona {
+          color: #9c27b0 !important;
+          font-weight: 700;
+          font-size: 0.8rem !important;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+        .approach-benefit:nth-child(1) .approach-persona { color: #3F51B5 !important; }
+        .approach-benefit:nth-child(2) .approach-persona { color: var(--primary) !important; }
+        /* Allow the "Most Popular" ribbon to sit above the card without clipping */
+        .approach-benefits { overflow: visible; padding-top: 14px; }
+        .approach-benefit {
+          position: relative;
+          overflow: visible;
+        }
+        .approach-popular {
+          position: absolute;
+          top: -13px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #9c27b0;
+          color: #fff;
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          padding: 5px 16px;
+          border-radius: 999px;
+          white-space: nowrap;
+          box-shadow: 0 3px 8px rgba(156,39,176,0.3);
+          z-index: 5;
+        }
+
+        /* ===== My Promise Callout ===== */
+        .my-promise {
+          max-width: 960px;
+          margin: 48px auto 10px;
+          background: linear-gradient(135deg, #1f2d1f 0%, #2e7d32 100%);
+          color: #fff;
+          border-radius: 16px;
+          padding: 40px;
+          display: grid;
+          grid-template-columns: 1fr 1.2fr;
+          gap: 36px;
+          align-items: center;
+          box-shadow: 0 10px 30px rgba(46,125,50,0.25);
+          position: relative;
+          overflow: hidden;
+        }
+        .my-promise-watermark {
+          position: absolute;
+          right: -8px;
+          bottom: -28px;
+          font-size: 9rem;
+          color: rgba(255,255,255,0.07);
+          pointer-events: none;
+          z-index: 0;
+        }
+        .my-promise-left { position: relative; z-index: 1; }
+        .my-promise-badge {
+          display: inline-block;
+          background: rgba(255,255,255,0.16);
+          color: #fff;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          padding: 5px 14px;
+          border-radius: 999px;
+          margin-bottom: 16px;
+        }
+        .my-promise-badge i { margin-right: 6px; }
+        .my-promise h3 {
+          font-size: 1.6rem;
+          margin: 0;
+          line-height: 1.3;
+          color: #fff;
+        }
+        .my-promise-right { position: relative; z-index: 1; }
+        .my-promise-right p {
+          color: rgba(255,255,255,0.92);
+          font-size: 1rem;
+          line-height: 1.7;
+          margin: 0 0 14px;
+        }
+        .my-promise-right p:last-child { margin-bottom: 0; }
+        @media (max-width: 768px) {
+          .empathy-grid { grid-template-columns: 1fr; gap: 18px; }
+          .my-promise { grid-template-columns: 1fr; gap: 20px; padding: 32px 26px; }
+        }
+        @media (max-width: 600px) {
+          .empathy-block { padding: 30px 22px; }
+          .empathy-block h2 { font-size: 1.4rem; }
+          .my-promise h3 { font-size: 1.3rem; }
+        }
+
+        /* ===== Tier Comparison Chart ===== */
+        .comparison-chart-section {
+          padding: 60px 0;
+          background: #fafafa;
+        }
+        .comparison-chart-scroll {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          margin: 0 auto;
+          max-width: 1000px;
+        }
+        .comparison-chart {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          background: #fff;
+          border-radius: 14px;
+          overflow: hidden;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+          min-width: 680px;
+        }
+        .comparison-chart th,
+        .comparison-chart td {
+          padding: 16px 14px;
+          text-align: center;
+          vertical-align: middle;
+          border-bottom: 1px solid #eee;
+        }
+        .comparison-chart thead th {
+          background: #f5f5f5;
+          font-size: 0.95rem;
+        }
+        .cc-feature-col,
+        .cc-feature {
+          text-align: left !important;
+          font-weight: 600;
+          color: #333;
+          min-width: 180px;
+        }
+        .cc-tier-col {
+          position: relative;
+        }
+        .cc-tier-name {
+          display: block;
+          font-weight: 700;
+          color: #222;
+          font-size: 0.95rem;
+        }
+        .cc-tier-price {
+          display: block;
+          margin-top: 4px;
+          color: #4CAF50;
+          font-weight: 700;
+          font-size: 1.15rem;
+        }
+        .cc-tier-price small {
+          font-size: 0.7rem;
+          color: #888;
+          font-weight: 500;
+        }
+        .cc-yes { color: #00b300; font-size: 1.1rem; }
+        .cc-no i { color: #ccc; font-size: 1rem; }
+        .cc-cell { color: #555; font-size: 0.92rem; }
+        .cc-sub { font-size: 0.72rem; color: #00913a; }
+        .cc-seattle { font-size: 0.72rem; color: #999; font-weight: 400; }
+        /* Highlighted Complete Transformation column */
+        .cc-best {
+          background: rgba(76, 175, 80, 0.08);
+        }
+        thead .cc-best {
+          background: rgba(76, 175, 80, 0.16);
+          border-top: 3px solid #4CAF50;
+        }
+        .cc-best .cc-tier-name { color: #2e7d32; }
+        .cc-best-badge {
+          display: inline-block;
+          background: #4CAF50;
+          color: #fff;
+          font-size: 0.68rem;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          padding: 3px 10px;
+          border-radius: 999px;
+          margin-bottom: 6px;
+        }
+        .cc-cta {
+          display: inline-block;
+          padding: 9px 16px;
+          border-radius: 8px;
+          background: #eee;
+          color: #333;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 0.85rem;
+          transition: all 0.25s ease;
+        }
+        .cc-cta:hover { background: #ddd; }
+        .cc-cta-best { background: #4CAF50; color: #fff; }
+        .cc-cta-best:hover { background: #3d9140; }
+        .cc-cta-label { font-weight: 700; }
+        .comparison-chart-note {
+          text-align: center;
+          color: #888;
+          font-size: 0.85rem;
+          margin-top: 16px;
+        }
+        @media (max-width: 600px) {
+          .comparison-chart th,
+          .comparison-chart td { padding: 12px 8px; }
+          .cc-tier-name { font-size: 0.82rem; }
+        }
+
+
         .savings-link {
           color: inherit;
           text-decoration: none;

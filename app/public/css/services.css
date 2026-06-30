@@ -1061,7 +1061,11 @@
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+}
+.approach-benefits {
+    overflow: visible;
+    padding-top: 14px;
 }
 
 .approach-benefit h3 {
@@ -1135,10 +1139,18 @@
     text-align: center;
 }
 
-/* Make the middle card heading fit on one line */
-.approach-benefit:nth-child(2) h3 {
-    white-space: nowrap;
+/* Cards stretch to equal height and align content consistently */
+.approach-benefit {
+    display: flex;
+    flex-direction: column;
 }
+.approach-benefit h3 {
+    min-height: 2.6em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 
 .approach-benefit p {
     color: #666;

@@ -97,7 +97,7 @@ export default function HomePage() {
                   <i className="fas fa-user-circle"></i>
                 </div>
                 <div className="testimonial-info">
-                  <h4>Sarah M.</h4>
+                  <h4>Steven S.</h4>
                   <p>Lost 28 lbs in 4 months</p>
                 </div>
               </div>
@@ -112,7 +112,7 @@ export default function HomePage() {
                   <i className="fas fa-user-circle"></i>
                 </div>
                 <div className="testimonial-info">
-                  <h4>Mike T.</h4>
+                  <h4>Griffin R.</h4>
                   <p>Down 35 lbs and feeling strong</p>
                 </div>
               </div>
@@ -127,7 +127,7 @@ export default function HomePage() {
                   <i className="fas fa-user-circle"></i>
                 </div>
                 <div className="testimonial-info">
-                  <h4>Jennifer L.</h4>
+                  <h4>Jason L.</h4>
                   <p>Consistent for 8 months now</p>
                 </div>
               </div>
