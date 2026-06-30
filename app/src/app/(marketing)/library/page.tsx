@@ -12,9 +12,10 @@ export default function LibraryPage() {
       <style>{`
         .ex-page-header .container {
           text-align: left;
-          max-width: 1000px;
+          max-width: 1280px;
           padding: 0 20px;
         }
+
         .ex-page-header h1 {
           font-size: 2.8rem;
           margin-bottom: 20px;
