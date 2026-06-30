@@ -1,0 +1,5 @@
+{
+  "comment": "Manually hide specific videos from the /exercises page. Add full YouTube URLs (watch, /shorts/, or youtu.be) OR bare 11-char video IDs. The date rule (hideBefore, default 2025-01-01) hides old videos automatically, so you only need this list for one-off hides of newer videos.",
+  "hide": [
+  ]
+}

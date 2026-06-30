@@ -79,12 +79,14 @@ export function MarketingNav() {
           <li className="md:ml-8 my-4 md:my-0">
             <Link 
               href="/connect" 
+
               className="text-[0.95rem] font-medium text-gray-800 hover:text-[#4CAF50] transition-all duration-300 no-underline"
               onClick={() => setIsOpen(false)}
             >
               Connect
             </Link>
           </li>
+
           <li className="md:ml-8 my-4 md:my-0">
             <Link 
               href="/faq" 
@@ -103,7 +105,17 @@ export function MarketingNav() {
               Blog
             </Link>
           </li>
+          <li className="md:ml-8 my-4 md:my-0">
+            <Link 
+              href="/exercises" 
+              className="text-[0.95rem] font-medium text-gray-800 hover:text-[#4CAF50] transition-all duration-300 no-underline"
+              onClick={() => setIsOpen(false)}
+            >
+              Library
+            </Link>
+          </li>
           {!loading && (
+
             user ? (
               <>
                 <li className="md:ml-8 my-4 md:my-0">

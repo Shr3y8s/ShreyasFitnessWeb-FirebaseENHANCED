@@ -47,3 +47,9 @@ ui-debug.log
 # OS specific
 .DS_Store
 Thumbs.db
+
+# YouTube content-pipeline intermediate artifacts (regenerable via firebase/scripts)
+# The website only consumes app/src/lib/exercise-videos.ts, which IS committed.
+firebase/scripts/output/
+
+
