@@ -1,12 +1,12 @@
 import { ExerciseGallery } from '@/components/exercises/ExerciseGallery';
 
 export const metadata = {
-  title: 'Exercise Library - SHREY.FIT',
+  title: 'Video Library - SHREY.FIT',
   description:
-    'Free exercise and workout videos from coach Shrey. Learn proper form and technique for chest, back, shoulders, arms, and legs.',
+    'Free workout, nutrition, and mindset videos from coach Shrey. Learn proper form and technique across every muscle group.',
 };
 
-export default function ExercisesPage() {
+export default function LibraryPage() {
   return (
     <>
       <style>{`
@@ -46,7 +46,7 @@ export default function ExercisesPage() {
       <section className="page-header ex-page-header">
         <div className="container">
           <h1>
-            Exercise <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Video Library</span>
+            Video <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Library</span>
           </h1>
           <p className="ex-header-subtitle">
             Free, no-nonsense fitness content straight from my YouTube channel.
@@ -54,7 +54,6 @@ export default function ExercisesPage() {
             and watch proper form, nutrition advice, and mindset talks. New videos
             added regularly.
           </p>
-
         </div>
       </section>
 

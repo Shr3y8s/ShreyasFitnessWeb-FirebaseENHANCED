@@ -107,7 +107,7 @@ export function MarketingNav() {
           </li>
           <li className="md:ml-8 my-4 md:my-0">
             <Link 
-              href="/exercises" 
+              href="/library" 
               className="text-[0.95rem] font-medium text-gray-800 hover:text-[#4CAF50] transition-all duration-300 no-underline"
               onClick={() => setIsOpen(false)}
             >
