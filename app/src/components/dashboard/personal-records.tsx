@@ -1,6 +1,6 @@
 "use client";
 
-import { Trophy, Award, Star } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 export function PersonalRecords() {
   return (
@@ -14,39 +14,14 @@ export function PersonalRecords() {
           Celebrating your recent achievements and milestones.
         </p>
       </div>
-      <div className="p-6 pt-0 space-y-4">
-        <ul className="space-y-4">
-          <li className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg">
-            <div className="text-primary">
-              <Trophy className="text-amber-500" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold">New Deadlift PR</p>
-              <p className="text-sm text-muted-foreground">Aug 12, 2024</p>
-            </div>
-            <p className="font-bold text-lg text-primary">315 lbs</p>
-          </li>
-          <li className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg">
-            <div className="text-primary">
-              <Award className="text-sky-500" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold">Fastest 5k Run</p>
-              <p className="text-sm text-muted-foreground">Aug 10, 2024</p>
-            </div>
-            <p className="font-bold text-lg text-primary">24:32</p>
-          </li>
-          <li className="flex items-center gap-4 p-3 bg-secondary/50 rounded-lg">
-            <div className="text-primary">
-              <Star className="text-rose-500" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold">Workout Streak</p>
-              <p className="text-sm text-muted-foreground">Ongoing</p>
-            </div>
-            <p className="font-bold text-lg text-primary">14 Days</p>
-          </li>
-        </ul>
+      <div className="p-6 pt-0">
+        <div className="flex flex-col items-center justify-center text-center py-8">
+          <Trophy className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="font-semibold">No personal records yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Keep training — your milestones will appear here.
+          </p>
+        </div>
       </div>
     </div>
   );

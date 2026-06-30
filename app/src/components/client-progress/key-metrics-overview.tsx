@@ -154,13 +154,8 @@ const initialMetrics: Metric[] = [
         id: 'weight',
         icon: <span className="h-4 w-4 text-primary inline-flex items-center justify-center"><FaWeight size={16} /></span>,
         label: 'Weight Journey',
-        startWeight: "215.0 lbs",
-        value: '202.0',
+        value: '—',
         unit: 'lbs',
-        change: '-13.0 lbs',
-        bf_change: '-2%',
-        changeType: 'positive',
-        trend: 'down',
         tooltip: "This is your current weight and the total amount you've lost since starting. Seeing this number go down is a fantastic sign of progress!",
         editable: true,
     },
@@ -178,9 +173,9 @@ const initialMetrics: Metric[] = [
         id: 'strength-gain',
         icon: <Dumbbell className="h-4 w-4 text-primary" />,
         label: 'Strength Gain',
-        value: '+8',
+        value: '—',
         unit: '%',
-        subtext: 'last 30 days',
+        subtext: 'Not enough data yet',
         tooltip: "An estimate of your overall strength increase based on your logged workouts.",
         editable: false,
     },
@@ -263,30 +258,37 @@ const MetricCard = ({ metric, className, index }: { metric: Metric, onEdit?: (me
                     </div>
                     <p className="text-xs font-medium text-primary mb-0.5">{metric.label}</p>
                     {isWeightCard ? (
-                        <>
-                            <div className="flex flex-col items-center justify-center">
-                                <div className="flex items-baseline gap-1">
-                                    <p className="text-2xl font-bold">{metric.value}</p>
-                                    <span className="text-muted-foreground text-xs">lbs</span>
+                        metric.startWeight ? (
+                            <>
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="flex items-baseline gap-1">
+                                        <p className="text-2xl font-bold">{metric.value}</p>
+                                        <span className="text-muted-foreground text-xs">lbs</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <p className="text-xs font-semibold text-muted-foreground line-through">{metric.startWeight}</p>
+                                        <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                    <p className="text-xs font-semibold text-muted-foreground line-through">{metric.startWeight}</p>
-                                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                <div className="mt-0.5 flex items-center justify-center">
+                                    <Badge
+                                        className={cn(
+                                            "text-xs font-semibold gap-1",
+                                            metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
+                                        )}
+                                    >
+                                        <TrendIcon className="h-3 w-3" />
+                                        {metric.change} ({metric.bf_change})
+                                    </Badge>
                                 </div>
-                            </div>
-                            <div className="mt-0.5 flex items-center justify-center">
-                                <Badge
-                                    className={cn(
-                                        "text-xs font-semibold gap-1",
-                                        metric.changeType === 'positive' ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 animate-pulse-badge' : 'bg-red-100 text-red-800'
-                                    )}
-                                >
-                                    <TrendIcon className="h-3 w-3" />
-                                    {metric.change} ({metric.bf_change})
-                                </Badge>
-                            </div>
-                            <p className="text-xs text-primary mt-0.5">{metric.subtext}</p>
-                        </>
+                                <p className="text-xs text-primary mt-0.5">{metric.subtext}</p>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-2xl font-bold">—</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Log your first weigh-in</p>
+                            </>
+                        )
                     ) : isStrengthCard ? (
                         <>
                             <p className="text-2xl font-bold">{metric.value}{metric.unit}</p>

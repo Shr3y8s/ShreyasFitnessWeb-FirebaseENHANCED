@@ -6,59 +6,7 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card';
-import { Dumbbell, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { ReactNode } from 'react';
-
-const strengthCategories = [
-    {
-        category: "Push Strength",
-        trend: "+15%",
-        lifts: "Bench Press, Shoulder Press",
-        icon: <Dumbbell className="h-6 w-6" />,
-        gradient: "gradient-accent-blue",
-        color: "text-blue-600",
-    },
-    {
-        category: "Pull Strength",
-        trend: "+12%",
-        lifts: "Deadlift, Bent-over Row",
-        icon: <Dumbbell className="h-6 w-6" />,
-        gradient: "gradient-accent-green",
-        color: "text-green-600",
-    },
-    {
-        category: "Leg Strength",
-        trend: "+20%",
-        lifts: "Squat, Leg Press",
-        icon: <Dumbbell className="h-6 w-6" />,
-        gradient: "gradient-accent-purple",
-        color: "text-purple-600",
-    }
-];
-
-const StrengthCategoryCard = ({ category, trend, lifts, icon, gradient, color, index }: { category: string; trend: string; lifts: string; icon: ReactNode; gradient: string; color: string; index: number }) => (
-    <div className={cn(
-        "p-4 rounded-lg border border-primary/20 flex items-center gap-4 card-hover-lift overflow-hidden",
-        gradient,
-        "animate-fade-in-up",
-        `stagger-${index + 1}`
-    )}>
-        <div className={cn("p-3 rounded-lg", gradient)}>{icon}</div>
-        <div className="flex-1">
-            <h4 className="font-semibold">{category}</h4>
-            <p className="text-sm text-muted-foreground">{lifts}</p>
-        </div>
-        <div className="text-right">
-            <p className={cn("text-2xl font-bold number-emphasis animate-count-up flex items-center gap-1 justify-end", color)}>
-                <TrendingUp className="h-5 w-5" />
-                {trend}
-            </p>
-            <p className="text-xs text-muted-foreground">This month</p>
-        </div>
-    </div>
-);
-
+import { Dumbbell } from 'lucide-react';
 
 export function StrengthTrends() {
   return (
@@ -73,10 +21,12 @@ export function StrengthTrends() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-            {strengthCategories.map((cat, index) => (
-                <StrengthCategoryCard key={cat.category} {...cat} index={index} />
-            ))}
+        <div className="flex flex-col items-center justify-center text-center py-10">
+          <Dumbbell className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="font-semibold">Not enough data yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Complete logged workouts and your strength trends will appear here.
+          </p>
         </div>
       </CardContent>
     </Card>

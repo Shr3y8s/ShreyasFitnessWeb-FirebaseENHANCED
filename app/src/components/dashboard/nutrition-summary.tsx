@@ -32,6 +32,7 @@ export function NutritionSummary() {
 
   // Nutrition approach & goals from clientPlans
   const [approach, setApproach] = useState<string>('macro_tracking');
+  const [hasMacroGoals, setHasMacroGoals] = useState(false);
   const [goals, setGoals] = useState({
     calories: 2400,
     protein: 180,
@@ -72,6 +73,7 @@ export function NutritionSummary() {
 
           if (protocol?.macroTracking) {
             const t = protocol.macroTracking;
+            setHasMacroGoals(true);
             setGoals({
               calories: Number(t.calories) || 2400,
               protein: Number(t.protein) || 180,
@@ -256,16 +258,24 @@ export function NutritionSummary() {
 
       <CardContent className="space-y-4">
         {/* Macro rings - reuse NutritionCommandCenter as-is */}
-        <NutritionCommandCenter
-          caloriesConsumed={totals.calories}
-          calorieGoal={goals.calories}
-          proteinConsumed={totals.protein}
-          proteinGoal={goals.protein}
-          carbsConsumed={totals.carbs}
-          carbsGoal={goals.carbs}
-          fatsConsumed={totals.fat}
-          fatsGoal={goals.fats}
-        />
+        {hasMacroGoals ? (
+          <NutritionCommandCenter
+            caloriesConsumed={totals.calories}
+            calorieGoal={goals.calories}
+            proteinConsumed={totals.protein}
+            proteinGoal={goals.protein}
+            carbsConsumed={totals.carbs}
+            carbsGoal={goals.carbs}
+            fatsConsumed={totals.fat}
+            fatsGoal={goals.fats}
+          />
+        ) : (
+          <div className="text-center py-8 text-muted-foreground border border-dashed border-primary/30 rounded-lg">
+            <p className="font-medium">Nutrition targets not set yet</p>
+            <p className="text-sm mt-1">Your coach will configure your macro goals soon.</p>
+          </div>
+        )}
+
 
         {/* Water Intake */}
         <div className="space-y-2 pt-2">
