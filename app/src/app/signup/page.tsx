@@ -498,23 +498,23 @@ export default function SignupPage() {
                 <CardHeader className="pb-6">
                   {/* Progress indicator */}
                   <div className="mb-6">
-                    <div className="flex items-center justify-center gap-4">
+                    <div className="flex items-center justify-center gap-2 sm:gap-4">
                       {[1, 2, 3, 4].map((step, index) => {
                         const StepIcon = stepIcons[index];
                         return (
                           <div key={step} className="flex items-center">
                             <div className="flex flex-col items-center">
                               <div className={`
-                                flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200
+                                flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all duration-200
                                 ${currentStep >= step 
                                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg' 
                                   : 'bg-gray-100 text-gray-400'
                                 }
                               `}>
                                 {currentStep > step ? (
-                                  <Check className="w-6 h-6" />
+                                  <Check className="w-5 h-5 sm:w-6 sm:h-6" />
                                 ) : (
-                                  <StepIcon className="w-6 h-6" />
+                                  <StepIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                                 )}
                               </div>
                               <div className="mt-2 text-xs font-medium text-gray-600">
@@ -523,7 +523,7 @@ export default function SignupPage() {
                             </div>
                             {step < 4 && (
                               <div className={`
-                                w-16 h-0.5 transition-all duration-200
+                                w-8 sm:w-16 h-0.5 transition-all duration-200
                                 ${currentStep > step 
                                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
                                   : 'bg-gray-200'

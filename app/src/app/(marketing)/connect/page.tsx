@@ -344,6 +344,7 @@ export default function ConnectPage() {
                           type="text"
                           id="name"
                           name="name"
+                          autoComplete="name"
                           placeholder="Enter your full name"
                           required
                           value={formData.name}
@@ -359,6 +360,7 @@ export default function ConnectPage() {
                           type="email"
                           id="email"
                           name="email"
+                          autoComplete="email"
                           placeholder="Enter your email address"
                           required
                           value={formData.email}
@@ -407,6 +409,7 @@ export default function ConnectPage() {
                           type="tel"
                           id="phone"
                           name="phone"
+                          autoComplete="tel"
                           placeholder="(555) 123-4567"
                           value={formData.phone}
                           onChange={handlePhoneChange}

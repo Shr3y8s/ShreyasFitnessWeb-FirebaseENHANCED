@@ -337,3 +337,32 @@
 .close:hover {
   background: #e2e2e2;
 }
+
+/* ------------------------------------------------------------------ */
+/* Mobile / small-screen adjustments                                   */
+/* ------------------------------------------------------------------ */
+@media (max-width: 600px) {
+  /* Full Workouts: single column so the 320px min-width can't overflow */
+  .gridLandscape {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  /* Quick Tips (portrait 9:16): 2-up fills narrow screens cleanly */
+  .gridPortrait {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+
+  /* Slightly tighter side gutters on phones */
+  .wrap {
+    padding: 0 14px 60px;
+  }
+
+  /* Cap the portrait lightbox player so the modal body stays reachable */
+  .playerShort {
+    max-height: 60vh;
+  }
+}
+
+

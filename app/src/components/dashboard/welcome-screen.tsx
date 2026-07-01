@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Circle, Dumbbell, TrendingUp, BarChart3, User, Zap, MessageSquare } from 'lucide-react';
+import { CheckCircle2, Circle, Dumbbell, TrendingUp, BarChart3, User, Zap, MessageSquare, Monitor } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
@@ -51,6 +51,18 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-primary/5 flex items-center justify-center p-4 overflow-y-auto">
       <div className="max-w-5xl w-full space-y-8 py-8">
+        {/* Mobile-only nudge: the dashboard is built for desktop for now. */}
+        <div className="md:hidden rounded-xl border-2 border-primary/40 bg-primary/5 p-4 flex items-start gap-3">
+          <Monitor className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-semibold text-foreground">Best viewed on desktop</p>
+            <p className="text-sm text-muted-foreground">
+              Your dashboard is designed for a computer right now — and a mobile app is on the way!
+              For the full experience, log in on a desktop or laptop. Feel free to look around here in the meantime.
+            </p>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold">
