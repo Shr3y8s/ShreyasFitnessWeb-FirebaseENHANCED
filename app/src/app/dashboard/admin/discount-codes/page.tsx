@@ -548,8 +548,11 @@ export default function AdminDiscountCodesPage() {
           {isEditing ? 'Save Changes' : 'Create Code'}
         </Button>
         <Button variant="outline" onClick={onCancel} disabled={creating}>
-          Cancel
+          {/* In create mode the handler just clears the form (a Reset); in edit
+              mode it closes the inline panel (a true Cancel). */}
+          {isEditing ? 'Cancel' : 'Reset'}
         </Button>
+
       </div>
     </>
   );
