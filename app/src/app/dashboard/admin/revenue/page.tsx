@@ -28,7 +28,7 @@ interface RevenueByTier {
 
 export default function AdminRevenuePage() {
   const router = useRouter();
-  const { user, canAccessAdminDashboard } = useAuth();
+  const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
   const [loading, setLoading] = useState(true);
   const [mrr, setMrr] = useState(0); // dollars
   const [activeSubscriptions, setActiveSubscriptions] = useState(0);
@@ -52,13 +52,16 @@ export default function AdminRevenuePage() {
       : null;
 
   useEffect(() => {
+    // Wait for auth to resolve before guarding — otherwise a hard reload (when
+    // user/role are momentarily null) would bounce the admin to /dashboard/trainer.
+    if (authLoading) return;
     if (!user || !canAccessAdminDashboard) {
       router.push('/dashboard/trainer');
       return;
     }
     loadBusinessData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, canAccessAdminDashboard, router]);
+  }, [user, authLoading, canAccessAdminDashboard, router]);
 
   const loadBusinessData = async () => {
     try {

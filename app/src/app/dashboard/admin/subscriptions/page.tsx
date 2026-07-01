@@ -94,7 +94,7 @@ function statusBadgeVariant(status: string, cancelAtPeriodEnd: boolean):
 
 export default function AdminSubscriptionsPage() {
   const router = useRouter();
-  const { user, canAccessAdminDashboard } = useAuth();
+  const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
 
   const [plans, setPlans] = useState<PaypalPlanRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,12 +148,15 @@ export default function AdminSubscriptionsPage() {
   }, []);
 
   useEffect(() => {
+    // Wait for auth to resolve before guarding — otherwise a hard reload (when
+    // user/role are momentarily null) would bounce the admin to /dashboard/trainer.
+    if (authLoading) return;
     if (!user || !canAccessAdminDashboard) {
       router.push('/dashboard/trainer');
       return;
     }
     loadPlans();
-  }, [user, canAccessAdminDashboard, router, loadPlans]);
+  }, [user, authLoading, canAccessAdminDashboard, router, loadPlans]);
 
   // Lazy-load the global subscriptions list the first time the tab is opened.
   useEffect(() => {
@@ -254,6 +257,7 @@ export default function AdminSubscriptionsPage() {
   };
 
 
+  if (authLoading) return null;
   if (!user || !canAccessAdminDashboard) return null;
 
   return (

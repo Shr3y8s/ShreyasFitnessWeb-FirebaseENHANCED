@@ -15,13 +15,16 @@ import AdminSidebar from '@/components/AdminSidebar';
 
 export default function AdminTrainingLocationsPage() {
   const router = useRouter();
-  const { user, canAccessAdminDashboard } = useAuth();
+  const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
   const [locations, setLocations] = useState<LocationWithCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<TrainingLocation | null>(null);
 
   useEffect(() => {
+    // Wait for auth to resolve before guarding — otherwise a hard reload (when
+    // user/role are momentarily null) would bounce the admin to /dashboard/trainer.
+    if (authLoading) return;
     if (!user || !canAccessAdminDashboard) {
       router.push('/dashboard/trainer');
       return;

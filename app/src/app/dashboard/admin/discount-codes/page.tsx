@@ -67,7 +67,7 @@ const fmtCents = (c: number) => `$${(Math.max(0, c) / 100).toFixed(2)}`;
 
 export default function AdminDiscountCodesPage() {
   const router = useRouter();
-  const { user, canAccessAdminDashboard } = useAuth();
+  const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
 
   const [codes, setCodes] = useState<DiscountCodeRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,12 +141,15 @@ export default function AdminDiscountCodesPage() {
   }, [callable]);
 
   useEffect(() => {
+    // Wait for auth to resolve before guarding — otherwise a hard reload (when
+    // user/role are momentarily null) would bounce the admin to /dashboard/trainer.
+    if (authLoading) return;
     if (!user || !canAccessAdminDashboard) {
       router.push('/dashboard/trainer');
       return;
     }
     loadCodes();
-  }, [user, canAccessAdminDashboard, router, loadCodes]);
+  }, [user, authLoading, canAccessAdminDashboard, router, loadCodes]);
 
   const resetForm = () => {
     setEditId(null);

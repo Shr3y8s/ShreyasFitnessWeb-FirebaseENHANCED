@@ -10,13 +10,16 @@ import { Button } from '@/components/ui/button';
 
 export default function AdminSettingsPage() {
   const router = useRouter();
-  const { user, canAccessAdminDashboard } = useAuth();
+  const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
 
   useEffect(() => {
+    // Wait for auth to resolve before guarding — otherwise a hard reload (when
+    // user/role are momentarily null) would bounce the admin to /dashboard/trainer.
+    if (authLoading) return;
     if (!user || !canAccessAdminDashboard) {
       router.push('/dashboard/trainer');
     }
-  }, [user, canAccessAdminDashboard, router]);
+  }, [user, authLoading, canAccessAdminDashboard, router]);
 
   return (
     <SidebarProvider>
