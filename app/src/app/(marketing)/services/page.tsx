@@ -115,7 +115,7 @@ export default function ServicesPage() {
                 <h3 className="service-card-title">Online Coaching</h3>
                 <p className="service-card-tagline">Train smart and eat right from anywhere</p>
                 <div className="service-card-price">$200<span>/month</span></div>
-                <p className="service-card-desc">A complete remote system - a custom program refreshed every 2 weeks, real nutrition coaching, a monthly strategy call, video form analysis, and direct support to keep you progressing on your own terms.</p>
+                <p className="service-card-desc">A complete remote system - a custom program refreshed every 2 weeks, real nutrition coaching, a monthly strategy call, video form analysis, and direct support to keep you progressing on your own terms. <strong>Includes full SHREY.FIT app access.</strong></p>
                 <span className="service-card-format">Remote Coaching</span>
                 <div className="card-action-buttons">
                   <button className="btn-secondary details-modal-btn" data-modal="transformationDetailsModal">Learn More</button>
@@ -134,7 +134,7 @@ export default function ServicesPage() {
                 <h3 className="service-card-title">Complete Transformation</h3>
                 <p className="service-card-tagline">My highest level of support &mdash; we solve your puzzle together</p>
                 <div className="service-card-price">$250<span>/month</span></div>
-                <p className="service-card-desc">Everything in Online Coaching, plus the hands-on guidance, real-world skills, and direct access that don&apos;t just get you results &mdash; they teach you to keep them for life. Locked-in $60 in-person rate as a bonus.</p>
+                <p className="service-card-desc">Everything in Online Coaching, plus the hands-on guidance, real-world skills, and direct access that don&apos;t just get you results &mdash; they teach you to keep them for life. <strong>Includes full SHREY.FIT app access.</strong> Locked-in $60 in-person rate as a bonus.</p>
                 <span className="service-card-format">Remote + Seattle In-Person Bonus</span>
                 <div className="card-action-buttons">
                   <button className="btn-secondary details-modal-btn" data-modal="eliteDetailsModal">Learn More</button>
@@ -143,6 +143,67 @@ export default function ServicesPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Platform / Command Center Section */}
+      <section className="platform-section">
+        <div className="container">
+          <div className="section-header">
+            <div className="platform-eyebrow">More than a coach</div>
+            <h2>Your Entire Fitness Command Center</h2>
+          </div>
+          <p className="platform-intro">
+            <strong>Most trainers run on Google Docs and spreadsheets.</strong> I built you a real app &mdash; everything in one place, fully interactive, and made for how clients and coaches actually work.
+          </p>
+          <div className="platform-grid">
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-clipboard-list"></i></div>
+              <h4>Your Plan, Live</h4>
+              <p>Training &amp; nutrition protocol, your vision and current focus &mdash; always up to date.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-dumbbell"></i></div>
+              <h4>Interactive Workouts</h4>
+              <p>Log every set &amp; rep, watch exercise demos, and check off completed workouts.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-apple-alt"></i></div>
+              <h4>Nutrition Hub</h4>
+              <p>Meal plans, macro tracking, a daily habit tracker, and easy-to-follow guides.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-chart-line"></i></div>
+              <h4>Progress Analytics</h4>
+              <p>Body composition, strength trends, and workout history &mdash; visualized over time.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-bullseye"></i></div>
+              <h4>Goals &amp; Milestones</h4>
+              <p>Set targets, track milestones, and unlock achievements as you progress.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-camera"></i></div>
+              <h4>Photos &amp; Weekly Survey</h4>
+              <p>Track the visual change and tell me how you&apos;re really doing each week.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-calendar-check"></i></div>
+              <h4>Book Workouts &amp; Check-ins</h4>
+              <p>Schedule your 1-on-1 sessions and weekly check-ins right inside the app.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-comments"></i></div>
+              <h4>Direct Coach Chat</h4>
+              <p>Message me anytime, with everything about your plan in one thread.</p>
+            </div>
+            <div className="platform-feature">
+              <div className="platform-icon"><i className="fas fa-credit-card"></i></div>
+              <h4>Billing &amp; Membership</h4>
+              <p>Buy sessions, manage your subscription, and view invoices &mdash; all self-service.</p>
+            </div>
+          </div>
+          <p className="platform-note"><i className="fas fa-circle-info"></i> Full platform access is included with <strong>Online Coaching</strong> and <strong>Complete Transformation</strong>. In-Person Training is sessions-only.</p>
         </div>
       </section>
 
@@ -176,76 +237,82 @@ export default function ServicesPage() {
               </thead>
               <tbody>
                 <tr>
+                  <td className="cc-feature">SHREY.FIT Platform Access <span className="cc-seattle">(full client app)</span></td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Full access</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Full access</strong></span></td>
+                </tr>
+                <tr>
                   <td className="cc-feature">Custom Training Program</td>
                   <td className="cc-cell">&mdash;</td>
-                  <td className="cc-cell">Every 2 weeks</td>
-                  <td className="cc-cell cc-best"><strong>Continuously adapted</strong></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Every 2 weeks</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Continuously adapted</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Nutrition Coaching</td>
                   <td className="cc-cell">&mdash;</td>
-                  <td className="cc-cell">Every 2 weeks</td>
-                  <td className="cc-cell cc-best"><strong>Continuously adapted</strong></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Every 2 weeks</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Continuously adapted</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Progress Check-Ins</td>
-                  <td className="cc-cell">In session</td>
-                  <td className="cc-cell">Every 2 weeks</td>
-                  <td className="cc-cell cc-best"><strong>Weekly</strong></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> In session</span></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Every 2 weeks</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Weekly</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Messaging Support</td>
                   <td className="cc-cell">&mdash;</td>
-                  <td className="cc-cell">Within 24 hrs</td>
-                  <td className="cc-cell cc-best"><strong>Priority &middot; same day</strong></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Within 24 hrs</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Priority &middot; same day</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Video Form Analysis</td>
                   <td className="cc-cell">&mdash;</td>
-                  <td className="cc-cell"><i className="fas fa-check cc-yes"></i></td>
-                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Real-World Skills Coaching <span className="cc-seattle">(eat out, shop, travel, social events)</span></td>
-                  <td className="cc-cell">&mdash;</td>
                   <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Train-Anywhere Fundamentals</td>
-                  <td className="cc-cell">In session</td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> In session</span></td>
                   <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Mindset &amp; Lifestyle Coaching</td>
                   <td className="cc-cell">&mdash;</td>
                   <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">1-on-1 Strategy Call</td>
                   <td className="cc-cell">&mdash;</td>
-                  <td className="cc-cell">Monthly</td>
-                  <td className="cc-cell cc-best"><strong>Monthly + as-needed</strong></td>
+                  <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Monthly</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Monthly + as-needed</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">Habit &amp; Accountability Coaching</td>
                   <td className="cc-cell">&mdash;</td>
                   <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><i className="fas fa-check cc-yes"></i></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">In-Person Check-In Meetings <span className="cc-seattle">(Seattle &middot; FaceTime if remote)</span></td>
                   <td className="cc-cell">&mdash;</td>
                   <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><strong>Included</strong></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Included</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">In-Person Training Sessions <span className="cc-seattle">(Seattle)</span></td>
                   <td className="cc-cell">$75/session</td>
                   <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><strong>$60/session</strong><br /><span className="cc-sub">best rate anywhere</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>$60/session</strong></span><br /><span className="cc-sub">best rate anywhere</span></td>
                 </tr>
               </tbody>
               <tfoot>
@@ -258,6 +325,7 @@ export default function ServicesPage() {
               </tfoot>
             </table>
           </div>
+          <p className="comparison-chart-note"><i className="fas fa-phone-volume" style={{color: '#4CAF50', marginRight: '6px'}}></i>Every plan starts with a free intro call so I understand exactly what I&apos;m helping you with before we begin.</p>
           <p className="comparison-chart-note">Online coaching is available worldwide. In-person sessions are available in the Seattle area only.</p>
         </div>
       </section>
@@ -307,7 +375,7 @@ export default function ServicesPage() {
               </div>
               <h3>The Full Remote System</h3>
               <p className="approach-persona">Best for you if&hellip;</p>
-              <p>You&apos;re self-motivated and want a proven plan plus expert support you can run from anywhere &mdash; without the premium price tag.</p>
+              <p>You&apos;re self-motivated and want a proven plan plus expert support you can run from anywhere, on your own schedule.</p>
             </div>
             <div className="approach-benefit">
               <div className="approach-popular">Most Popular</div>
@@ -917,6 +985,130 @@ export default function ServicesPage() {
       </div>
 
       <style jsx>{`
+        /* ===== Platform / Command Center ===== */
+        .platform-section {
+          padding: 60px 0 20px;
+        }
+        .platform-eyebrow {
+          display: inline-block;
+          color: #4CAF50;
+          font-weight: 700;
+          font-size: 0.78rem;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .platform-intro {
+          max-width: 640px;
+          margin: 4px auto 0;
+          text-align: center;
+          color: #555;
+          font-size: 1.05rem;
+          line-height: 1.7;
+        }
+        .platform-intro strong { color: #1f2d1f; }
+        .platform-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 18px;
+          max-width: 1100px;
+          margin: 30px auto 0;
+        }
+        .platform-feature {
+          background: #fff;
+          border: 1px solid #eee;
+          border-radius: 12px;
+          padding: 22px 22px 20px;
+          transition: all 0.25s ease;
+        }
+        .platform-feature:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+          border-color: rgba(76,175,80,0.4);
+        }
+        .platform-icon {
+          width: 46px;
+          height: 46px;
+          border-radius: 10px;
+          background: rgba(76,175,80,0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 14px;
+        }
+        .platform-icon i { color: #4CAF50; font-size: 1.2rem; }
+        .platform-feature h4 {
+          margin: 0 0 6px;
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: #1f2d1f;
+        }
+        .platform-feature p {
+          margin: 0;
+          color: #666;
+          font-size: 0.92rem;
+          line-height: 1.55;
+        }
+        .platform-note {
+          text-align: center;
+          margin: 28px auto 0;
+          max-width: 760px;
+          color: #555;
+          font-size: 0.92rem;
+          background: rgba(76,175,80,0.06);
+          border-radius: 10px;
+          padding: 14px 18px;
+        }
+        .platform-note i { color: #4CAF50; margin-right: 6px; }
+        @media (max-width: 900px) {
+          .platform-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+          .platform-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ===== Comparison chart: included cell (check + text) ===== */
+        .cc-inc {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 6px;
+          color: #2e7d32;
+        }
+        .cc-inc i {
+          color: #00b300;
+          font-size: 0.8rem;
+        }
+
+        /* ===== Mobile: horizontal-scroll for wide tables + swipe hint ===== */
+        @media (max-width: 768px) {
+          /* Big value-breakdown table scrolls sideways instead of squishing */
+          .value-comparison-table {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .value-comparison-table table {
+            min-width: 460px;
+          }
+          /* "Swipe" hint above scrollable tables so users know to scroll */
+          .comparison-chart-scroll::before,
+          .value-breakdown .value-comparison-table::before {
+            content: "← swipe to compare →";
+            display: block;
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            color: #4CAF50;
+            padding: 6px 0 8px;
+          }
+          /* Comfortable tap targets for the chart CTAs */
+          .cc-cta {
+            padding: 11px 14px;
+            font-size: 0.82rem;
+          }
+        }
+
+
         /* ===== Empathy Intro ===== */
         .empathy-section {
           padding: 60px 0 20px;

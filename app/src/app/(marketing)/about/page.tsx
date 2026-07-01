@@ -20,6 +20,7 @@ export default function AboutPage() {
                 className="trainer-photo"
                 width={400}
                 height={400}
+                priority
               />
               <div className="trainer-name">
                 <h1>Shreyas Annapureddy</h1>

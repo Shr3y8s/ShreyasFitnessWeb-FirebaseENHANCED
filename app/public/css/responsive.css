@@ -217,12 +217,91 @@
     }
 }
 
+/* ===== Global mobile hardening (applies all pages) ===== */
+@media (max-width: 768px) {
+    /* Prevent any element from causing horizontal scroll on phones */
+    html, body {
+        overflow-x: hidden;
+    }
+
+    /* Hero: trim the large top padding so it isn't pushed way down under the nav */
+    .hero {
+        padding-top: 110px;
+    }
+
+    /* Home feature + testimonial grids: clean single column on phones */
+    .services-grid,
+    .testimonial-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== About page (touch/tablet) ===== */
+@media (max-width: 1024px) {
+    /* No hover on touch — show credential details by default so nothing is hidden */
+    .credential-details {
+        max-height: none !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+    }
+    /* Hide the dropdown chevron since details are always shown on touch */
+    .credential.expandable:after {
+        display: none;
+    }
+    /* Tablet: tidy 2-column philosophy grid */
+    .philosophy-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    /* Tablet: trainer photo sized like a portrait, not a hero */
+    .about-image .trainer-photo {
+        width: 100% !important;
+        max-width: 240px !important;
+        height: auto !important;
+        margin: 0 auto;
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* Trainer photo sized like an avatar so name/title/socials fit on first view */
+    .about-image .trainer-photo {
+        width: 100% !important;
+        max-width: 200px !important;
+        height: auto !important;
+        margin: 0 auto;
+        display: block;
+    }
+    .about-image {
+        text-align: center;
+    }
+
+    /* Philosophy stacks to one column on phones */
+    .philosophy-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 /* Extra small devices (portrait phones, less than 576px) */
 @media (max-width: 576px) {
     .container {
         width: 100%;
         padding: 0 15px;
     }
+
+    /* Hero buttons stack full-width for easy thumb taps */
+    .hero-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hero-buttons .btn-primary,
+    .hero-buttons .btn-secondary {
+        width: 100%;
+        text-align: center;
+    }
+
 
     h1 {
         font-size: 2rem;
