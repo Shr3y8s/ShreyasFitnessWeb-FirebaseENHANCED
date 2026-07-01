@@ -36,7 +36,15 @@ interface DiscountCodeRow {
   freeComp: boolean;
   discountScope: string;
   introCycles?: number;
+  appliesTo?: { productIds?: string[] } | null;
 }
+
+// App tier ids for OC/CT scoping (must match firebase/functions/product-config.js
+// and app/src/lib/constants.ts). A subscription discount can be restricted to one
+// tier via appliesTo.productIds — the server's validateCode enforces it at checkout.
+const TIER_OC = 'online_coaching';
+const TIER_CT = 'complete_transformation';
+
 
 const fmtCents = (c: number) => `$${(Math.max(0, c) / 100).toFixed(2)}`;
 
@@ -74,6 +82,12 @@ export default function AdminDiscountCodesPage() {
   // Intro length (first_cycle scope only): how many months the discounted price
   // applies before PayPal auto-reverts to full. Stored as a string for the input.
   const [introCycles, setIntroCycles] = useState('1');
+  // Which subscription tier a subscription-scoped code applies to. 'both' = no
+  // restriction (appliesTo:null); 'oc'/'ct' scope the code to a single tier via
+  // appliesTo.productIds so an OC discount can't be used on a CT subscription and
+  // vice-versa. Only meaningful for subscription scopes (first_cycle/recurring).
+  const [subPlan, setSubPlan] = useState<'both' | 'oc' | 'ct'>('both');
+
 
   // T13.2 — inline redemption history for the code being edited.
   interface RedemptionRow {
@@ -136,8 +150,10 @@ export default function AdminDiscountCodesPage() {
     setFreeComp(false);
     setDiscountScope('one_time');
     setIntroCycles('1');
+    setSubPlan('both');
     setFormError('');
   };
+
 
 
   // Open the form in "new" mode (cleared).
@@ -188,9 +204,20 @@ export default function AdminDiscountCodesPage() {
         : 'one_time'
     );
     setIntroCycles(String(row.introCycles && row.introCycles > 0 ? row.introCycles : 1));
+    // Decode the tier restriction from appliesTo.productIds back into the dropdown.
+    // A single OC/CT id → that tier; anything else (null, empty, multiple) → 'both'.
+    const pids = row.appliesTo?.productIds;
+    setSubPlan(
+      Array.isArray(pids) && pids.length === 1 && pids[0] === TIER_OC
+        ? 'oc'
+        : Array.isArray(pids) && pids.length === 1 && pids[0] === TIER_CT
+          ? 'ct'
+          : 'both'
+    );
     setFormError('');
     setShowForm(true);
   };
+
 
   const isSubscriptionScope = discountScope === 'first_cycle' || discountScope === 'recurring';
 
@@ -218,9 +245,21 @@ export default function AdminDiscountCodesPage() {
   };
 
 
+  // Build the appliesTo payload from the subscription-tier selector. Tier scoping
+  // is only meaningful for subscription scopes; one-time codes never apply to
+  // subscriptions, so they always send appliesTo:null. 'both' → null (no restriction);
+  // 'oc'/'ct' → a single-tier productIds array the server's validateCode enforces.
+  const buildAppliesTo = (): { productIds: string[] } | null => {
+    if (!isSubscriptionScope) return null;
+    if (subPlan === 'oc') return { productIds: [TIER_OC] };
+    if (subPlan === 'ct') return { productIds: [TIER_CT] };
+    return null;
+  };
+
   const handleSave = async () => {
     setFormError('');
     if (isEditing) {
+
       // Edit mode: code is immutable; send only the editable fields.
       const validationError = validateForm();
       if (validationError) {
@@ -240,8 +279,12 @@ export default function AdminDiscountCodesPage() {
           freeComp,
           discountScope,
           introCycles: discountScope === 'first_cycle' ? Math.max(1, Number(introCycles) || 1) : 1,
+          // Tier scope for subscription codes (OC-only / CT-only / both). null clears
+          // any prior restriction so an edit back to "both" widens the code again.
+          appliesTo: buildAppliesTo(),
         });
         resetForm();
+
         setShowForm(false);
         await loadCodes();
       } catch (e) {
@@ -277,8 +320,11 @@ export default function AdminDiscountCodesPage() {
         freeComp,
         discountScope,
         introCycles: discountScope === 'first_cycle' ? Math.max(1, Number(introCycles) || 1) : 1,
+        // Tier scope for subscription codes (OC-only / CT-only / both). null = both.
+        appliesTo: buildAppliesTo(),
         active: true,
       });
+
       resetForm();
       setShowForm(false);
       await loadCodes();
@@ -305,6 +351,17 @@ export default function AdminDiscountCodesPage() {
     if (row.freeComp) return 'Free (100% off)';
     return row.type === 'percentage' ? `${row.value}% off` : `${fmtCents(row.value)} off`;
   };
+
+  // Short tier-restriction suffix for the Scope column (subscription codes only).
+  // A single OC/CT productId → "· OC only" / "· CT only"; otherwise nothing (both).
+  const describeTier = (row: DiscountCodeRow): string => {
+    const pids = row.appliesTo?.productIds;
+    if (!Array.isArray(pids) || pids.length !== 1) return '';
+    if (pids[0] === TIER_OC) return ' · OC only';
+    if (pids[0] === TIER_CT) return ' · CT only';
+    return '';
+  };
+
 
   return (
     <SidebarProvider>
@@ -347,9 +404,18 @@ export default function AdminDiscountCodesPage() {
                     <span className="font-medium"> subscription — first month</span> (intro: the
                     first month is discounted, then the price reverts to full), or
                     <span className="font-medium"> subscription — every month</span> (the discount
-                    applies for as long as the subscription is active). Subscription scopes must be
-                    a percentage discount.
+                    applies for as long as the subscription is active).
                   </p>
+
+                  <p>
+                    <span className="font-medium">Applies to plan</span> (subscription scopes only)
+                    restricts a code to a single tier — <span className="font-medium">Online
+                    Coaching (OC)</span> or <span className="font-medium">Complete Transformation
+                    (CT)</span>. An OC-only code can&apos;t be redeemed on a CT subscription and
+                    vice-versa. Choose <span className="font-medium">Both plans</span> to leave it
+                    unrestricted.
+                  </p>
+
 
                   <p>
                     The <span className="font-medium">minimum charge floor</span> guarantees the
@@ -419,7 +485,29 @@ export default function AdminDiscountCodesPage() {
                     </select>
                   </div>
 
+                  {isSubscriptionScope && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Applies to plan
+                      </label>
+                      <select
+                        value={subPlan}
+                        onChange={(e) => setSubPlan(e.target.value as 'both' | 'oc' | 'ct')}
+                        className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
+                      >
+                        <option value="both">Both plans (OC &amp; CT)</option>
+                        <option value="oc">Online Coaching (OC) only</option>
+                        <option value="ct">Complete Transformation (CT) only</option>
+                      </select>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Restrict this subscription discount to one tier. A code scoped to OC
+                        can&apos;t be redeemed on a CT subscription and vice-versa.
+                      </p>
+                    </div>
+                  )}
+
                   {discountScope === 'first_cycle' && (
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
                         Intro length (months)
@@ -637,11 +725,12 @@ export default function AdminDiscountCodesPage() {
                         <td className="px-4 py-3">{describeValue(row)}</td>
                         <td className="px-4 py-3 text-gray-600">
                           {row.discountScope === 'first_cycle'
-                            ? `Sub · first ${row.introCycles && row.introCycles > 1 ? `${row.introCycles} months` : 'month'}`
+                            ? `Sub · first ${row.introCycles && row.introCycles > 1 ? `${row.introCycles} months` : 'month'}${describeTier(row)}`
                             : row.discountScope === 'recurring'
-                              ? 'Sub · every month'
+                              ? `Sub · every month${describeTier(row)}`
                               : 'One-time'}
                         </td>
+
                         <td className="px-4 py-3">{fmtCents(row.minChargeFloor)}</td>
                         <td className="px-4 py-3">
                           {row.redemptionCount}
