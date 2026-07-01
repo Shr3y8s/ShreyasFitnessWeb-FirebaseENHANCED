@@ -1636,87 +1636,8 @@ const updatePaypalPlan = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS },
   }
 });
 
-/**
- * Callable (ADMIN): set the prepay (quarterly) discount % for a tier and reprice the
- * tier's quarterly PayPal plan to match (prepay-plans B4). The config is the source of
- * truth for the displayed discount; the plan price is config-driven:
- *   quarterlyMinor = monthlyMinor × 3 × (1 − discountPct/100)   (rounded, ≥ $1 floor)
- * The quarterly plan id is resolved from the `paypalPlans` registry (tierId + the
- * env's quarterly plan with intervalCount 3). Existing subscribers keep their locked-in
- * price until renewal (PayPal behavior, FR-B8). Persists config/prepayPricing.{tierId}.
- */
-const updatePrepayPricing = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
-  await assertAdmin(req.auth?.uid);
-  const admin = require("firebase-admin");
-  const d = req.data || {};
-  const tierId = d.tierId;
-  const discountPct = Number(d.discountPct);
-  if (!tierId) throw new HttpsError("invalid-argument", "tierId required.");
-  if (!Number.isFinite(discountPct) || discountPct < 0 || discountPct > 50) {
-    throw new HttpsError("invalid-argument", "discountPct must be between 0 and 50.");
-  }
-  // Monthly anchor price for the tier (server source of truth).
-  const monthlyMinor = subscriptionPriceMinor(tierId, 1);
-  if (monthlyMinor == null) {
-    throw new HttpsError("invalid-argument", "Unknown tier (no monthly price).");
-  }
-  // Computed quarterly price: 3 months at the discount, $1.00 floor (PayPal rejects $0).
-  const quarterlyMinor = Math.max(
-    100,
-    Math.round(monthlyMinor * 3 * (1 - discountPct / 100))
-  );
-
-  const env = normalizePaypalEnv(d.paypalEnv ?? d.env);
-  const cfg = paypalEnvConfig(env);
-
-  // Resolve the tier's QUARTERLY plan id from the registry (intervalCount 3, this env).
-  const db = admin.firestore();
-  const snap = await db
-    .collection("paypalPlans")
-    .where("tierId", "==", tierId)
-    .get();
-  const quarterly = snap.docs
-    .map((doc) => ({ planId: doc.id, ...(doc.data() || {}) }))
-    .find((p) => Number(p.intervalCount) === 3 && (!p.env || p.env === env));
-  if (!quarterly) {
-    throw new HttpsError("failed-precondition", "No quarterly plan registered for this tier/env. Mint it first.");
-  }
-
-  try {
-    // Reprice BOTH cycles (TRIAL seq 1 + REGULAR seq 2) so a new subscriber pays the
-    // new quarterly price from cycle 1 onward (2-cycle base-plan model).
-    await PROVIDERS.paypal.updatePlanPricing(
-      quarterly.planId,
-      quarterlyMinor,
-      { billingCycleSequences: [1, 2], currency: quarterly.currency || "USD" },
-      cfg
-    );
-    await upsertPlanRegistry(quarterly.planId, { amountMinor: quarterlyMinor });
-
-    // Persist the admin-facing config (single doc keyed by tierId under the field map).
-    await db.collection("config").doc("prepayPricing").set(
-      {
-        [tierId]: {
-          discountPct,
-          monthlyMinor,
-          quarterlyMinor,
-          quarterlyPlanId: quarterly.planId,
-          env,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedBy: req.auth.uid,
-        },
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-    return { ok: true, tierId, discountPct, quarterlyMinor, planId: quarterly.planId };
-  } catch (err) {
-    logger.error("updatePrepayPricing failed", { tierId, discountPct, error: err.message });
-    throw new HttpsError("internal", "Failed to update prepay pricing.");
-  }
-});
-
 /** Callable (ADMIN): turn a plan ON/OFF for NEW subscriptions (FR-7). */
+
 const setPaypalPlanActive = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS }, async (req) => {
 
   await assertAdmin(req.auth?.uid);
@@ -2073,8 +1994,8 @@ module.exports = {
 
   createPaypalPlan,
   updatePaypalPlan,
-  updatePrepayPricing, // admin prepay (quarterly) discount % → reprice quarterly plan
   setPaypalPlanActive,
+
 
   repricePlans,
   listPlanSubscriptions,

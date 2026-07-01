@@ -41,17 +41,18 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import {
-  Layers, Plus, Loader2, MoreHorizontal, Search, RefreshCw, X,
+  Layers, Loader2, MoreHorizontal, Search, RefreshCw, X,
 } from 'lucide-react';
-import { SERVICE_TIERS, APP_PRODUCTS } from '@/lib/constants';
+import { SERVICE_TIERS } from '@/lib/constants';
 import {
-  listPaypalPlans, createPaypalPlan, updatePaypalPlan, setPaypalPlanActive,
+  listPaypalPlans, setPaypalPlanActive,
   repricePlansPreview, repricePlansApply,
   getPaypalSubscriptionDetail, revisePaypalSubscription, adminCancelSubscription,
+
   repriceClientSubscription, listAllSubscriptions,
   adminPauseSubscription, adminResumeSubscription,
-  updatePrepayPricing,
 } from '@/lib/subscription-admin-api';
+
 
 
 import type {
@@ -116,8 +117,8 @@ export default function AdminSubscriptionsPage() {
   const [planFilter, setPlanFilter] = useState<{ planId: string; tierName: string | null } | null>(null);
 
   // Dialogs
-  const [showCreate, setShowCreate] = useState(false);
   const [showReprice, setShowReprice] = useState(false);
+
   const [detail, setDetail] = useState<PaypalSubscriptionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
@@ -259,17 +260,19 @@ export default function AdminSubscriptionsPage() {
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset>
-        <div className="p-6 max-w-7xl mx-auto w-full">
+        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <div className="p-8 max-w-7xl mx-auto w-full">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <Layers className="w-6 h-6 text-primary" />
+              <Layers className="w-7 h-7 text-emerald-600" />
               <div>
-                <h1 className="text-2xl font-bold">Subscription Management</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-3xl font-bold">Subscription Management</h1>
+                <p className="text-muted-foreground mt-1">
                   Plans &amp; subscriptions (PayPal). Reprices take effect at the next billing cycle.
                 </p>
               </div>
             </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -328,10 +331,8 @@ export default function AdminSubscriptionsPage() {
                   >
                     Bulk reprice ({selected.size})
                   </Button>
-                  <Button size="sm" onClick={() => setShowCreate(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Create Plan
-                  </Button>
                 </div>
+
               </div>
 
               {loading ? (
@@ -418,10 +419,8 @@ export default function AdminSubscriptionsPage() {
                   </Table>
                 </div>
               )}
-
-              {/* Prepay (Quarterly) pricing — admin discount % per tier (prepay-plans B4). */}
-              <PrepayPricingCard />
             </TabsContent>
+
 
             {/* ──────────────────────── Tab B: Subscriptions (global) ──────────────────────── */}
 
@@ -546,18 +545,12 @@ export default function AdminSubscriptionsPage() {
             </TabsContent>
           </Tabs>
         </div>
+        </div>
       </SidebarInset>
 
-      {/* Create Plan dialog */}
-      {showCreate && (
-        <CreatePlanDialog
-          plans={plans}
-          onClose={() => setShowCreate(false)}
-          onCreated={async () => { setShowCreate(false); await loadPlans(); }}
-        />
-      )}
 
       {/* Bulk reprice dialog */}
+
       {showReprice && (
         <RepriceDialog
           planIds={Array.from(selected)}
@@ -624,97 +617,8 @@ function ClientCell({ userId }: { userId: string }) {
   );
 }
 
-/* ───────────────────────── Create Plan ───────────────────────── */
-function CreatePlanDialog({
-  plans, onClose, onCreated,
-}: { plans: PaypalPlanRow[]; onClose: () => void; onCreated: () => void }) {
-  const [tierId, setTierId] = useState<string>(SERVICE_TIERS.ONLINE_COACHING);
-  const [name, setName] = useState('');
-  const [priceDollars, setPriceDollars] = useState('');
-  const [productId, setProductId] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState('');
-
-  // Pre-fill the PayPal product id from an existing plan of the chosen tier (all
-  // plans of a tier share one product), so the admin rarely types it manually.
-  useEffect(() => {
-    const match = plans.find((p) => p.tierId === tierId && p.productId);
-    setProductId(match?.productId || '');
-  }, [tierId, plans]);
-
-  const tierName = tierId === SERVICE_TIERS.COMPLETE_TRANSFORMATION
-    ? 'Complete Transformation' : 'Online Coaching';
-
-  const submit = async () => {
-    setErr('');
-    const dollars = parseFloat(priceDollars);
-    if (!name.trim()) return setErr('Name is required.');
-    if (!productId.trim()) return setErr('PayPal product id is required (no existing plan to infer it from).');
-    if (!(dollars > 0)) return setErr('Enter a price greater than $0.');
-    setBusy(true);
-    try {
-      await createPaypalPlan({
-        productId: productId.trim(),
-        name: name.trim(),
-        tierId,
-        tierName,
-        amountMinor: Math.round(dollars * 100),
-      });
-      onCreated();
-    } catch (e) {
-      setErr((e as Error)?.message || 'Failed to create plan.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create plan</DialogTitle>
-          <DialogDescription>
-            Creates a new monthly PayPal billing plan under the tier&apos;s product and registers it.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm font-medium">Tier</label>
-            <Select value={tierId} onValueChange={setTierId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SERVICE_TIERS.ONLINE_COACHING}>Online Coaching</SelectItem>
-                <SelectItem value={SERVICE_TIERS.COMPLETE_TRANSFORMATION}>Complete Transformation</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Plan name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Online Coaching Monthly" />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Monthly price (USD)</label>
-            <Input value={priceDollars} onChange={(e) => setPriceDollars(e.target.value)} placeholder="200.00" inputMode="decimal" />
-          </div>
-          <div>
-            <label className="text-sm font-medium">PayPal product id</label>
-            <Input value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="PROD-…" className="font-mono text-sm" />
-            <p className="text-xs text-muted-foreground mt-1">Auto-filled from an existing plan of this tier when available.</p>
-          </div>
-          {err && <p className="text-sm text-red-600">{err}</p>}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button onClick={submit} disabled={busy}>
-            {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Create
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 /* ───────────────────────── Bulk reprice (preview → confirm) ───────────────────────── */
+
 function RepriceDialog({
   planIds, onClose, onApplied,
 }: { planIds: string[]; onClose: () => void; onApplied: () => void }) {
@@ -723,8 +627,14 @@ function RepriceDialog({
   const [preview, setPreview] = useState<RepricePreviewRow[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  // Money-affecting guardrail: repricing changes ONLY the price charged in PayPal.
+  // The prices shown to customers come from two other places the admin must update
+  // by hand — the marketing pages and the app config (app/src/lib/constants.ts).
+  // The Apply button stays disabled until the admin acknowledges this.
+  const [ack, setAck] = useState(false);
 
   const runPreview = async () => {
+
     setErr('');
     const v = parseFloat(value);
     if (Number.isNaN(v)) return setErr('Enter a numeric value.');
@@ -775,7 +685,23 @@ function RepriceDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Marketing-sync guardrail (Option C). Repricing touches ONLY PayPal — the
+            displayed prices live elsewhere and must be updated by hand. */}
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-medium">⚠️ This changes the price charged in PayPal only.</p>
+          <p className="mt-1">
+            The prices shown to customers are NOT updated by this action. After repricing,
+            you must also update them in <span className="font-medium">two</span> places or
+            customers will see a different price than they are charged:
+          </p>
+          <ul className="mt-1 list-disc pl-5 space-y-0.5">
+            <li>the <span className="font-medium">marketing pages</span> (public pricing/site copy), and</li>
+            <li>the <span className="font-medium">app config</span> (<code className="font-mono text-xs">app/src/lib/constants.ts</code> — <code className="font-mono text-xs">APP_PRODUCTS</code>).</li>
+          </ul>
+        </div>
+
         <div className="flex items-end gap-3">
+
           <div>
             <label className="text-sm font-medium">Action</label>
             <Select value={mode} onValueChange={(v) => { setMode(v as RepriceMode); setPreview(null); }}>
@@ -830,12 +756,27 @@ function RepriceDialog({
 
         {err && <p className="text-sm text-red-600">{err}</p>}
 
+        {/* Required acknowledgment before applying (money-affecting action). */}
+        <label className="flex items-start gap-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm cursor-pointer">
+          <Checkbox
+            checked={ack}
+            onCheckedChange={(c) => setAck(c === true)}
+            className="mt-0.5"
+          />
+          <span>
+            I understand the marketing pages and the app config
+            (<code className="font-mono text-xs">constants.ts</code>) prices must be updated
+            separately to match.
+          </span>
+        </label>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button onClick={apply} disabled={busy || !preview}>
+          <Button onClick={apply} disabled={busy || !preview || !ack}>
             {busy && preview && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Apply reprice
           </Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
@@ -1039,112 +980,5 @@ function SubscriptionDetailBody({
   );
 }
 
-/* ───────────────────────── Prepay (Quarterly) pricing ─────────────────────────
- * Admin sets a per-tier discount % for the 3-month pre-pay plan; the server reprices
- * the tier's quarterly PayPal plan to monthly×3×(1−pct) and persists config/prepayPricing.
- * Existing subscribers keep their locked-in price until renewal (PayPal behavior). */
-function PrepayPricingCard() {
-  // The two subscription tiers that offer a quarterly cadence (from APP_PRODUCTS).
-  const tiers = useMemo(
-    () =>
-      Object.values(APP_PRODUCTS).filter(
-        (p) => p.kind === 'subscription' && (p.billingOptions || []).some((o) => o.period.intervalCount === 3)
-      ),
-    []
-  );
-
-  return (
-    <div className="mt-8 rounded-md border p-5">
-      <div className="mb-1 flex items-center gap-2">
-        <Layers className="w-4 h-4 text-emerald-600" />
-        <h3 className="font-semibold">Quarterly (pre-pay) pricing</h3>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Set the discount applied to the 3-month pre-pay plan for each tier. Saving reprices
-        the quarterly PayPal plan. Existing subscribers keep their current price until renewal.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {tiers.map((t) => (
-          <PrepayTierRow
-            key={t.id}
-            tierId={t.id}
-            tierName={t.name}
-            monthlyMinor={t.amount}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PrepayTierRow({
-  tierId, tierName, monthlyMinor,
-}: { tierId: string; tierName: string; monthlyMinor: number }) {
-  const [pct, setPct] = useState('10');
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [err, setErr] = useState('');
-
-  const pctNum = parseFloat(pct);
-  const valid = Number.isFinite(pctNum) && pctNum >= 0 && pctNum <= 50;
-  // Live preview: monthly × 3 × (1 − pct/100), $1 floor.
-  const quarterlyMinor = valid
-    ? Math.max(100, Math.round(monthlyMinor * 3 * (1 - pctNum / 100)))
-    : null;
-
-  const save = async () => {
-    setErr(''); setMsg('');
-    if (!valid) { setErr('Enter a discount between 0 and 50%.'); return; }
-    setBusy(true);
-    try {
-      const res = await updatePrepayPricing(tierId, pctNum);
-      setMsg(`Saved — quarterly price is now ${fmtCents(res.quarterlyMinor)}.`);
-    } catch (e) {
-      setErr((e as Error)?.message || 'Failed to save.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="rounded-lg border bg-muted/30 p-4">
-      <div className="font-medium">{tierName}</div>
-      <div className="text-xs text-muted-foreground mb-3">
-        Monthly anchor {fmtCents(monthlyMinor)} · billed every 3 months
-      </div>
-      <div className="flex items-end gap-2">
-        <div className="flex-1">
-          <label className="text-xs font-medium">Discount (%)</label>
-          <Input
-            value={pct}
-            onChange={(e) => { setPct(e.target.value); setMsg(''); }}
-            inputMode="decimal"
-            placeholder="10"
-          />
-        </div>
-        <Button
-          className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          onClick={save}
-          disabled={busy || !valid}
-        >
-          {busy && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Save &amp; reprice
-        </Button>
-      </div>
-      <div className="mt-2 text-sm">
-        Quarterly total:{' '}
-        <span className="font-semibold text-emerald-700">
-          {quarterlyMinor != null ? fmtCents(quarterlyMinor) : '—'}
-        </span>
-        {quarterlyMinor != null && (
-          <span className="text-muted-foreground">
-            {' '}({fmtCents(Math.round(quarterlyMinor / 3))}/mo)
-          </span>
-        )}
-      </div>
-      {msg && <p className="text-xs text-green-700 mt-1">{msg}</p>}
-      {err && <p className="text-xs text-red-600 mt-1">{err}</p>}
-    </div>
-  );
-}
 
 
