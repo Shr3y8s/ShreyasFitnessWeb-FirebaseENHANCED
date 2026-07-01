@@ -375,7 +375,7 @@ export default function ServicesPage() {
               </div>
               <h3>The Full Remote System</h3>
               <p className="approach-persona">Best for you if&hellip;</p>
-              <p>You&apos;re self-motivated and want a proven plan plus expert support you can run from anywhere &mdash; without the premium price tag.</p>
+              <p>You&apos;re self-motivated and want a proven plan plus expert support you can run from anywhere, on your own schedule.</p>
             </div>
             <div className="approach-benefit">
               <div className="approach-popular">Most Popular</div>
@@ -1078,6 +1078,36 @@ export default function ServicesPage() {
           color: #00b300;
           font-size: 0.8rem;
         }
+
+        /* ===== Mobile: horizontal-scroll for wide tables + swipe hint ===== */
+        @media (max-width: 768px) {
+          /* Big value-breakdown table scrolls sideways instead of squishing */
+          .value-comparison-table {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+          .value-comparison-table table {
+            min-width: 460px;
+          }
+          /* "Swipe" hint above scrollable tables so users know to scroll */
+          .comparison-chart-scroll::before,
+          .value-breakdown .value-comparison-table::before {
+            content: "← swipe to compare →";
+            display: block;
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            color: #4CAF50;
+            padding: 6px 0 8px;
+          }
+          /* Comfortable tap targets for the chart CTAs */
+          .cc-cta {
+            padding: 11px 14px;
+            font-size: 0.82rem;
+          }
+        }
+
 
         /* ===== Empathy Intro ===== */
         .empathy-section {
