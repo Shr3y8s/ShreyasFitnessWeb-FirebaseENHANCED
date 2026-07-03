@@ -8,6 +8,8 @@ import type { ProgressPhotoWithId } from '@/types/progress-photo';
 import type { WeightLog } from '@/types/activity';
 import type { WeeklySurveyData } from '@/lib/survey-api';
 import type { DailyActivityData } from '@/types/activity';
+import { getStrengthGainPct } from '@/lib/strength-metrics';
+
 
 interface ClientProgressDashboardProps {
   clientId: string;
@@ -45,7 +47,8 @@ export function ClientProgressDashboard({ clientId }: ClientProgressDashboardPro
   const [avgSteps7d, setAvgSteps7d] = useState<number | null>(null);
   const [workoutStreak, setWorkoutStreak] = useState<number | null>(null);
   const [habitScore, setHabitScore] = useState<number | null>(null);
-  const [strengthGain] = useState<string>('+8');
+  const [strengthGain, setStrengthGain] = useState<{ value: number | null; label: string; hasData: boolean }>({ value: null, label: '', hasData: false });
+
 
   // ── Survey state ──
   const [surveys, setSurveys] = useState<WeeklySurveyData[]>([]);
@@ -174,7 +177,16 @@ export function ClientProgressDashboard({ clientId }: ClientProgressDashboardPro
           setHabitScore(0);
         }
 
+        // Strength Gain % — adaptive e1RM window (shared util)
+        try {
+          const result = await getStrengthGainPct(clientId);
+          setStrengthGain(result);
+        } catch {
+          setStrengthGain({ value: null, label: '', hasData: false });
+        }
+
       } catch (err) {
+
         console.error('Error loading progress data:', err);
       } finally {
         setLoading(false);
@@ -385,8 +397,18 @@ export function ClientProgressDashboard({ clientId }: ClientProgressDashboardPro
                 <Dumbbell className="h-3.5 w-3.5 text-blue-600" />
                 <p className="text-xs font-semibold text-gray-700">Strength Gain</p>
               </div>
-              <p className="text-xl font-bold text-blue-600">{strengthGain}%</p>
-              <p className="text-xs text-muted-foreground mt-0.5">last 30 days</p>
+              {strengthGain.hasData && strengthGain.value !== null ? (
+                <>
+                  <p className="text-xl font-bold text-blue-600">{strengthGain.value > 0 ? '+' : ''}{strengthGain.value}%</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{strengthGain.label}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl font-bold text-gray-400">—</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Not enough data yet</p>
+                </>
+              )}
+
             </div>
           </div>
         </div>

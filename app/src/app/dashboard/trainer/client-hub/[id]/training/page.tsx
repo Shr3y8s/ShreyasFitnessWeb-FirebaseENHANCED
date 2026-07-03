@@ -864,15 +864,8 @@ export default function ClientTrainingDashboard() {
             </div>
           </div>
 
-          {/* Development Note */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>📝 Phase 1:</strong> Core structure with placeholder data. Analytics cards show static values to demonstrate layout.
-              <br />
-              <strong>Next:</strong> Phase 2 will implement real data calculations for all metrics.
-            </p>
-          </div>
         </div>
+
       </SidebarInset>
     </SidebarProvider>
   );

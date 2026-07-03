@@ -162,3 +162,173 @@ fabricated numbers:
 **Recommended order:** Phase 1 → Phase 2 → Phase 3 → Phase 4
 (Phases 1–2 are quick wins on existing data; Phase 4 is the biggest as it needs a new
 calculation engine.)
+
+---
+
+# Trainer-Side (Client Hub) Data Wiring
+
+**Scope:** Trainer → Client Hub → `[id]` tabs (Progress, Training) and the linked
+Training Performance Dashboard (`[id]/training`).
+
+**Last reviewed:** 2026-07-03
+
+## TL;DR (trainer side)
+
+Almost everything on the trainer side is genuinely wired to Firestore. Only **two**
+issues exist:
+
+| # | Location | Item | Issue |
+|---|----------|------|-------|
+| T1 | Client Hub → Progress tab (`ClientProgressDashboard`) | **Strength Gain** card | Hardcoded `useState('+8')` — never computed (same fake metric as the client side) |
+| T2 | Training → Performance Dashboard (`[id]/training/page.tsx`) | **Dev note** ("📝 Phase 1… placeholder data") | Stale/false — the cards ARE real now; note misleads and should be deleted |
+
+## A. Client Hub → Progress tab (`components/trainer/client-progress/ClientProgressDashboard.tsx`)
+
+✅ **Wired to real data:**
+- Body Metrics (current/start weight, total change, since-last, avg/log, ST & LT goals) →
+  `weightLogs` + `goals/{id}_weight_loss(_st)`.
+- Adherence: Steps, Workout Streak, Habit Score → `dailyActivities`,
+  `goals/{id}_workout_consistency`, computed habit score.
+- Weekly Check-in (last 2 surveys) → `getRecentSurveys`.
+- Daily Activity (7-day steps/water/habits) → `dailyActivities`.
+- LISS Cardio adherence → `clientPlans.lissCardio` + activity logs.
+- Progress Photos → `getUserProgressPhotos`.
+
+❌ **Not wired:** **Strength Gain** card — `const [strengthGain] = useState('+8')` (line ~48).
+Always shows "+8%" for every client.
+
+## B. Client Hub → Training tab (`app/.../client-hub/[id]/page.tsx`, `activeTab === 'training'`)
+
+✅ **Fully real.** Workout Assignments / Training Sessions / Check-ins metrics
+(last-month & last-3-months completed / total / on-time) are computed from live
+`workouts` + `sessions` queries. Upcoming/completed sessions & check-ins, locations, and
+workout assignment lists are all real listeners. No mock data.
+
+## C. Client Hub → Training → Performance Dashboard (`app/.../client-hub/[id]/training/page.tsx`)
+
+✅ **Fully real** (4 summary cards + 4 charts):
+- **Avg Workout Duration** — mean of `workouts.durationMinutes` (last 4 weeks).
+- **Training Streak** (current + longest) — consecutive-day streak from completed-workout dates.
+- **Volume Trend** — Σ(`actualWeight × actualReps`) over completed sets, last 4 wks vs prior 4 wks.
+- **Personal Records** (this month) — reads `clientStats.strengthRecords`, which
+  `firebase/functions/workouts.js` writes at workout completion (compares each set's
+  `actualWeight` to the stored per-exercise max). PR detection is implemented end-to-end.
+- **Charts** — Strength Progression, Volume, Consistency Heatmap, Exercise Completion, each
+  backed by real hooks over `workouts` (`useStrengthProgressionData`, `useVolumeData`,
+  `useConsistencyData`, exercise-completion hook).
+
+❌ **Only issue:** stale dev note at the bottom (lines ~867–874):
+> "📝 Phase 1: Core structure with placeholder data. Analytics cards show static values…
+> Phase 2 will implement real data calculations."
+
+This is **false now** — the cards are fully wired. Delete the note.
+
+## D. Reference: how the existing real engines calculate
+
+- **Strength Progression** (`useStrengthProgressionData.ts`): for each completed workout,
+  per strength exercise, take **max `actualWeight` across completed sets** = one data point;
+  group by `exerciseId`; show top 6 by frequency over 12 weeks. (Top-set weight; ignores reps.)
+- **Volume** (`useVolumeData` + Performance page inline calc): Σ(`actualWeight × actualReps`)
+  over completed sets (reps-aware). Proves both `actualWeight` and `actualReps` are logged.
+- **PRs** (`firebase/functions/workouts.js`): on completion, compare each set's `actualWeight`
+  to `clientStats.strengthRecords[exerciseId].maxWeight`; update the record + write
+  `workout.personalRecords` if exceeded.
+
+---
+
+# Finalized Calculation Methods (the "right way")
+
+All methods below use **only data already logged** in `workouts`
+(`StrengthActualData.completedSets[].{actualWeight, actualReps, actualWeightUnit, completed}`,
+`exercise.exerciseId/exerciseName/exerciseType`, `workout.completedAt/status`). No schema
+change or new logging is required. Defensive rule everywhere: **only count a set when
+`set.completed && set.actualWeight && set.actualReps`** (matches `useVolumeData`).
+
+## Estimated 1-Rep-Max (e1RM) — shared primitive
+
+Use the **Epley formula** (reps-aware, standard):
+
+```
+e1RM = weight × (1 + reps / 30)
+```
+
+Per exercise per workout, take the **best e1RM across that day's completed sets**.
+Rationale for e1RM over raw top-set weight: it credits rep progression (185×3 → 185×10 is
+real progress) and normalizes across set/rep schemes.
+
+## M1 — Strength Gain % (single number)
+
+Used by: trainer Progress-tab **Strength Gain** card (T1) AND the client-side Key Metrics
+"Strength Gain" card.
+
+**Method: adaptive window** (finalized — chosen to minimize time-to-first-value):
+1. Build each exercise's chronological e1RM series (best e1RM per session).
+2. **If** the client has enough history for two non-overlapping 30-day windows with at least
+   one exercise appearing in both → compute **mature** value:
+   - For each such exercise: `%Δ = (avg e1RM last 30d − avg e1RM prior 30d) / avg e1RM prior 30d`.
+   - Strength Gain % = equal-weighted average of per-exercise %Δ. Label: "last 30 days".
+3. **Else if** any exercise has **≥2 logged sessions** → compute **early** value:
+   - For each such exercise: `%Δ = (latest e1RM − first e1RM) / first e1RM`.
+   - Strength Gain % = equal-weighted average. Label: "since you started".
+4. **Else** (0–1 sessions, or missing weight/reps) → render **"—" / "Not enough data yet."**
+
+Effect: a real value appears after the **2nd logged strength session** (days, not months)
+and automatically upgrades to the stable 30-day comparison once the client has ~60 days of
+history. Only compares like-for-like exercises (robust to program changes).
+
+## M2 — Strength Trends by category (Push / Pull / Legs)
+
+Used by: client progress page **Strength Trends** component.
+
+- Same e1RM engine + same **adaptive window** as M1, but group exercises into
+  **Push / Pull / Legs** using the Exercise library (`exercises/{id}.muscleGroup` /
+  `movementPattern`), joined by `exerciseId` (one extra read/lookup).
+- Category %Δ = equal-weighted average of per-exercise e1RM %Δ within that category.
+- Empty-state any category with insufficient data ("Not enough data yet").
+
+## M3 — Personal Records (client dashboard card)
+
+- **Reuse the existing** `clientStats.strengthRecords` (already maintained by `workouts.js`).
+- Show top N by weight (or most recent), mirroring the trainer Performance Dashboard PR card.
+- Appears on the **very first PR** (no window needed). Empty-state when none.
+
+## M4 — Metric Achievements (client progress page)
+
+- Compute earned/locked from existing data:
+  - Streak milestones → `goals/{uid}_workout_consistency`.
+  - First weigh-in / weight-loss milestones → `weightLogs` + `goals/{uid}_weight_loss(_st)`.
+  - PR count → `clientStats.strengthRecords`.
+  - Goal-milestone completions → `goals`.
+- Belt/level logic already partially exists in `components/goals/achievement-level.tsx`.
+- Empty-state when nothing earned yet.
+
+## Shared implementation note
+
+Create a single util — `app/src/lib/strength-metrics.ts` — as the one source of truth:
+- `computeE1RM(weight, reps)` — Epley.
+- `getExerciseE1RMSeries(clientId, weeksBack)` — per-exercise chronological best-e1RM series.
+- `getStrengthGainPct(clientId)` — M1 adaptive window; returns `{ value, label, hasData }`.
+- `getStrengthTrendsByCategory(clientId)` — M2 (Push/Pull/Legs), returns per-category `{ value, label, hasData }`.
+
+Both the trainer Progress-tab card and the client-side cards consume this util so their math
+can never drift apart. (Optionally precompute into `clientStats` via a Cloud Function later,
+mirroring how workout streaks are precomputed in `goals.js`, but on-read is fine to start.)
+
+## Data-availability confirmation
+
+All inputs verified present in `types/workout.ts` and already consumed by
+`useVolumeData` / `useStrengthProgressionData`:
+`actualWeight`, `actualReps`, `actualWeightUnit`, `completed`, `exerciseId`, `exerciseName`,
+`exerciseType`, `workout.completedAt`, `workout.status`. Category data for M2 lives on the
+`exercises` library docs (`muscleGroup` / `movementPattern`).
+
+## Trainer-side implementation plan
+
+- **TP1** — Wire the Progress-tab **Strength Gain** card to `getStrengthGainPct` (M1); show
+  "—" empty state until the 2nd session. (Small.)
+- **TP2** — Delete the stale "Phase 1 placeholder data" dev note on the Performance Dashboard. (Trivial.)
+- **TP3** — (Client-side, shared) Implement `strength-metrics.ts` and wire the client Key
+  Metrics "Strength Gain" + "Strength Trends" via M1/M2; wire Personal Records via M3 and
+  Metric Achievements via M4.
+
+
