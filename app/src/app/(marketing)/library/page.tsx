@@ -42,6 +42,10 @@ export default function LibraryPage() {
           .ex-page-header h1 { font-size: 2.2rem; }
           .ex-header-subtitle { font-size: 1rem; }
         }
+        /* Tighten the large desktop top gap on phones (nav is ~70px) */
+        @media (max-width: 576px) {
+          .marketing-content .ex-page-header { padding-top: 110px; }
+        }
       `}</style>
 
       <section className="page-header ex-page-header">

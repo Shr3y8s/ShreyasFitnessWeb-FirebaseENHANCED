@@ -160,6 +160,7 @@ export default function OTPVerificationStep({ email, onVerified, prevStep }: OTP
               ref={inputRefs[index]}
               type="text"
               inputMode="numeric"
+              autoComplete={index === 0 ? 'one-time-code' : 'off'}
               maxLength={1}
               value={digit}
               onChange={(e) => handleChange(index, e.target.value)}

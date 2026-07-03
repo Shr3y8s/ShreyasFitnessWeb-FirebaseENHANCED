@@ -74,6 +74,7 @@ export default function EmailStep({ email, onEmailUpdate, onCodeSent }: EmailSte
         <Input
           id="email"
           type="email"
+          autoComplete="email"
           placeholder="your.email@example.com"
           value={localEmail}
           onChange={(e) => {

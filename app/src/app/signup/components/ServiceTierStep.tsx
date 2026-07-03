@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Check, ExternalLink } from 'lucide-react';
+import { AlertCircle, Check, ExternalLink, Monitor } from 'lucide-react';
 import { FormData, ServiceTier as ServiceTierType } from '../page';
 import { getPaymentProvider, selectSignupPrice, type Product } from '@/lib/payments';
 import { getProductMarketing } from '@/lib/product-marketing';
@@ -268,6 +268,17 @@ export default function ServiceTierStep({
       <p className="text-sm text-stone-600">
         Choose the service that best fits your fitness goals and preferences.
       </p>
+
+      {/* Mobile-only heads-up: the coaching dashboard is desktop-first for now.
+          Shown before payment so phone users can choose to finish on a computer. */}
+      <div className="md:hidden flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <Monitor className="h-5 w-5 flex-shrink-0 text-emerald-600 mt-0.5" />
+        <p className="text-sm text-emerald-900">
+          <span className="font-semibold">Heads up:</span> your coaching dashboard is built for
+          desktop right now (a mobile app is coming soon). You can sign up here on your phone, then
+          log in on a computer for the full experience.
+        </p>
+      </div>
 
       {/* One GROUP BOX per row (In-Person / Online Coaching / Complete Transformation),
           each with two side-by-side selectable option cards → a clean 3×2 layout.

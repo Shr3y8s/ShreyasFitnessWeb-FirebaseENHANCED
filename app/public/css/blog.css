@@ -345,6 +345,17 @@
         margin-right: 0;
         margin-bottom: 15px;
     }
+
+    /* Tighter side padding so cards breathe on small screens */
+    .tip-section {
+        padding: 20px;
+    }
+
+    /* Reduce list indent that eats horizontal space on phones */
+    .blog-post-content ul,
+    .blog-post-content ol {
+        padding-left: 22px;
+    }
     
     .related-posts-grid {
         grid-template-columns: 1fr;
@@ -359,3 +370,17 @@
         max-width: 100%;
     }
 }
+
+/* Blog index card grid — force single column on phones so the fixed
+   320px min-width doesn't overflow narrow viewports. */
+@media (max-width: 576px) {
+    .blog-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .featured-article-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+

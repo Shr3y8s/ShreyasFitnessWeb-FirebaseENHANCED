@@ -371,7 +371,7 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <main className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-4xl px-4 pt-28 pb-16 sm:px-6 sm:pb-20 lg:px-8">
         {/* Header */}
         <div className="mb-8 text-center">
           <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
@@ -440,10 +440,10 @@ export default function FAQPage() {
                   {cat.items.map((item, idx) => (
                     <AccordionItem key={idx} value={`${cat.id}-${idx}`}>
                       <AccordionTrigger className="text-base font-semibold text-gray-900 hover:no-underline">
-                        <span className="flex items-center gap-2 pr-2 text-left">
+                        <span className="flex flex-wrap items-center gap-2 pr-2 text-left">
                           {item.q}
                           {item.popular && (
-                            <Badge className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-600">
+                            <Badge className="shrink-0 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-600">
                               Most Asked
                             </Badge>
                           )}

@@ -585,3 +585,22 @@ input.invalid-input {
         font-size: 1.3rem;
     }
 }
+
+/* ===== Mobile: Calendly embed fit (prevent overflow + trim dead scroll) ===== */
+@media (max-width: 768px) {
+    .calendly-container,
+    .calendly-inline-widget {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .calendly-inline-widget {
+        height: 650px !important;
+    }
+    /* Long motivation CTA button reads comfortably on small screens */
+    .motivation-button {
+        padding: 16px 22px;
+        line-height: 1.5;
+    }
+}
+
+

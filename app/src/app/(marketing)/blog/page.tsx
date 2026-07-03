@@ -46,6 +46,14 @@ export default function BlogPage() {
             font-size: 1rem;
           }
         }
+
+        /* Tighten the large desktop top gap on phones (nav is ~70px) */
+        @media (max-width: 576px) {
+          :global(.marketing-content .page-header) {
+            padding-top: 110px;
+          }
+        }
+
       `}</style>
 
       {/* Page Header */}
