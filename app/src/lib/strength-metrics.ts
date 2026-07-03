@@ -8,9 +8,10 @@
 // (StrengthActualData.completedSets[].{actualWeight, actualReps, actualWeightUnit, completed}).
 // No schema change or new logging is required.
 
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { subWeeks } from 'date-fns';
+
 
 // ── e1RM primitive (Epley) ────────────────────────────────────────────────
 
@@ -181,3 +182,133 @@ export async function getStrengthGainPct(clientId: string): Promise<StrengthGain
 
   return emptyResult;
 }
+
+// ── M2: Strength Trends by category (Push / Pull / Legs) ─────────────────────
+
+export type StrengthCategory = 'Push' | 'Pull' | 'Legs';
+
+export interface CategoryTrend {
+  category: StrengthCategory;
+  value: number | null; // percentage
+  label: string;
+  hasData: boolean;
+}
+
+/**
+ * Classify an exercise into Push / Pull / Legs using the exercise-library metadata.
+ * Prefers movementPattern, falls back to muscleGroup / name heuristics. Returns null
+ * when it can't be confidently categorized.
+ */
+function categorizeExercise(
+  movementPattern?: string,
+  muscleGroup?: string,
+  exerciseName?: string
+): StrengthCategory | null {
+  const mp = (movementPattern || '').toLowerCase();
+  const mg = (muscleGroup || '').toLowerCase();
+  const name = (exerciseName || '').toLowerCase();
+
+  // Movement pattern is the most reliable signal
+  if (mp === 'push') return 'Push';
+  if (mp === 'pull') return 'Pull';
+  if (mp === 'squat' || mp === 'hinge' || mp === 'lunge') return 'Legs';
+
+  // Muscle-group fallback
+  if (mg.includes('lower') || mg.includes('leg') || mg.includes('glute') ||
+      mg.includes('quad') || mg.includes('hamstring') || mg.includes('calf')) {
+    return 'Legs';
+  }
+  if (mg.includes('back') || mg.includes('bicep')) return 'Pull';
+  if (mg.includes('chest') || mg.includes('shoulder') || mg.includes('tricep')) return 'Push';
+
+  // Name heuristics (last resort)
+  if (/squat|deadlift|lunge|leg press|calf|hip thrust|rdl/.test(name)) return 'Legs';
+  if (/row|pull|curl|chin|lat|face pull/.test(name)) return 'Pull';
+  if (/press|push|dip|fly|extension|raise/.test(name)) return 'Push';
+
+  return null;
+}
+
+function pctChangeAdaptive(points: E1RMPoint[]): number | null {
+  const now = new Date();
+  const window30 = new Date(now);
+  window30.setDate(window30.getDate() - 30);
+  const window60 = new Date(now);
+  window60.setDate(window60.getDate() - 60);
+
+  const recentAvg = averageE1RMInWindow(points, window30, now);
+  const priorAvg = averageE1RMInWindow(points, window60, window30);
+  if (recentAvg !== null && priorAvg !== null && priorAvg > 0) {
+    return ((recentAvg - priorAvg) / priorAvg) * 100;
+  }
+  // Fallback: first vs latest
+  if (points.length >= 2) {
+    const first = points[0].e1rm;
+    const latest = points[points.length - 1].e1rm;
+    if (first > 0) return ((latest - first) / first) * 100;
+  }
+  return null;
+}
+
+/**
+ * M2 — Strength Trends grouped into Push / Pull / Legs.
+ * Reuses the e1RM series; classifies each exercise via the `exercises` library
+ * (movementPattern / muscleGroup), then computes an adaptive %Δ per category.
+ * Categories with insufficient data return hasData:false (empty state).
+ */
+export async function getStrengthTrendsByCategory(clientId: string): Promise<CategoryTrend[]> {
+  const categories: StrengthCategory[] = ['Push', 'Pull', 'Legs'];
+  const empty = (): CategoryTrend[] =>
+    categories.map((category) => ({ category, value: null, label: '', hasData: false }));
+
+  if (!clientId) return empty();
+
+  let series: Record<string, ExerciseE1RMSeries>;
+  try {
+    series = await getExerciseE1RMSeries(clientId, 26);
+  } catch (err) {
+    console.error('Error computing strength trends:', err);
+    return empty();
+  }
+
+  const exerciseIds = Object.keys(series);
+  if (exerciseIds.length === 0) return empty();
+
+  // Look up exercise-library metadata for classification (one read per exercise).
+  const categoryChanges: Record<StrengthCategory, number[]> = { Push: [], Pull: [], Legs: [] };
+
+  await Promise.all(
+    exerciseIds.map(async (exerciseId) => {
+      const ex = series[exerciseId];
+      let movementPattern: string | undefined;
+      let muscleGroup: string | undefined;
+      try {
+        const exDoc = await getDoc(doc(db, 'exercises', exerciseId));
+        if (exDoc.exists()) {
+          const d = exDoc.data();
+          movementPattern = d.movementPattern;
+          muscleGroup = d.muscleGroup;
+        }
+      } catch {
+        // ignore — fall back to name heuristics
+      }
+
+      const category = categorizeExercise(movementPattern, muscleGroup, ex.exerciseName);
+      if (!category) return;
+
+      const pct = pctChangeAdaptive(ex.points);
+      if (pct !== null) categoryChanges[category].push(pct);
+    })
+  );
+
+  return categories.map((category) => {
+    const changes = categoryChanges[category];
+    if (changes.length === 0) {
+      return { category, value: null, label: '', hasData: false };
+    }
+    const avg = changes.reduce((a, b) => a + b, 0) / changes.length;
+    return { category, value: Math.round(avg), label: 'last 30 days', hasData: true };
+  });
+}
+
+

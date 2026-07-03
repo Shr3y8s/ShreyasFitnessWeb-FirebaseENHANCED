@@ -65,6 +65,8 @@ export default function ClientDashboardPage() {
   const [habitsRefreshKey, setHabitsRefreshKey] = useState(0);
   const [upcomingWorkouts, setUpcomingWorkouts] = useState<WorkoutSession[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState<WorkoutSession[]>([]);
+  const [trainerName, setTrainerName] = useState<string>('');
+
 
   useEffect(() => {
     if (authLoading) {
@@ -243,10 +245,24 @@ export default function ClientDashboardPage() {
         // Load client plan for habits configuration
         const plan = await getClientPlan(user.uid);
         setPlanData(plan);
-        
+
+        // Resolve assigned trainer's name for the Coach Note attribution
+        const trainerId = (userDataFromAuth?.assignedTrainerId as string | undefined) || plan?.trainerId;
+        if (trainerId) {
+          try {
+            const trainerDoc = await getDoc(doc(db, 'users', trainerId));
+            if (trainerDoc.exists()) {
+              setTrainerName((trainerDoc.data().name as string) || '');
+            }
+          } catch {
+            // Non-fatal — fall back to generic "Coach" in the note.
+          }
+        }
+
         // Load today's activity data for habit completion status
         const activity = await getDailyActivity(user.uid, today);
         setActivityData(activity);
+
       } catch (error) {
         console.error('Error loading habits data:', error);
       }
@@ -476,10 +492,20 @@ export default function ClientDashboardPage() {
     );
   }
 
+  // Coach Note — real data from the trainer's "Notes from Last Call" (Plan tab).
+  // Pick the most recent weekly-focus entry that actually has a note; fall back to
+  // a friendly default so a brand-new client sees something honest (not fabricated).
+  const coachName = trainerName || 'your Coach';
+  const weeklyFocusWeeks = planData?.weeklyFocus?.weeks ?? [];
+  const latestNoteWeek = [...weeklyFocusWeeks]
+    .filter((w) => w.coachNotes && w.coachNotes.trim() !== '')
+    .sort((a, b) => (b.weekStartDate || '').localeCompare(a.weekStartDate || ''))[0];
   const coachNote = {
-    coachName: 'Shreyas',
-    message: `Amazing job on your last deadlift session, ${userDataFromAuth?.name || 'Alex'}! Your form is looking solid. Let's focus on adding a bit more weight next week. Keep up the fantastic work!`,
+    coachName,
+    message: latestNoteWeek?.coachNotes?.trim()
+      || `${coachName} will leave you a note here after your check-ins. Keep up the great work!`,
   };
+
 
   // Show onboarding if setup goal exists, is active, and not complete
   const milestones = setupGoal?.milestones as { completed: boolean }[] | undefined;

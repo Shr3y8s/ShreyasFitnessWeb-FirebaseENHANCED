@@ -5,7 +5,9 @@ import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { getActivityLogsForDateRange, getRecentWeightLogs } from '@/lib/activity-api';
+import { getStrengthGainPct } from '@/lib/strength-metrics';
 import { getTodayLocal, formatDateISO } from '@/lib/date-utils';
+
 import type { DailyActivityData } from '@/types/activity';
 import {
   Card,
@@ -196,37 +198,42 @@ const initialMetrics: Metric[] = [
 ];
 
 const HabitConsistencyCard = ({ index, score, loading }: { index?: number, score: number, loading?: boolean }) => {
+    const tooltipText = "Your consistency score for the last 7 days across 4 core habits (Nutrition, Workouts, Steps, Water). Each day you complete a habit counts toward your score (max 28 completions per week). New users will see lower scores initially - keep logging daily to build your consistency!";
     return (
         <TooltipProvider>
-            <Card className={cn(
-                "group p-2 card-hover-lift border-primary/20 cursor-pointer gradient-accent-green col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden text-center",
-                "animate-fade-in-up",
-                index !== undefined && `stagger-${Math.min(index + 1, 6)}`
-            )}>
-                <div className="flex items-center justify-between mb-0.5">
-                    <Target className="h-4 w-4 text-primary" />
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-muted-foreground/50" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p className="max-w-xs">
-                                Your consistency score for the last 7 days across 4 core habits (Nutrition, Workouts, Steps, Water). 
-                                Each day you complete a habit counts toward your score (max 28 completions per week). 
-                                New users will see lower scores initially - keep logging daily to build your consistency!
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-                <p className="text-xs font-medium text-primary mb-0.5">Habit Score</p>
-                <p className="text-2xl font-bold number-emphasis animate-count-up">
-                    {loading ? '...' : score}%
-                </p>
-                <p className="text-xs text-primary">Last 7 days</p>
-            </Card>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Card className={cn(
+                    "group p-2 card-hover-lift border-primary/20 cursor-pointer gradient-accent-green col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden text-center",
+                    "animate-fade-in-up",
+                    index !== undefined && `stagger-${Math.min(index + 1, 6)}`
+                )}>
+                    <div className="flex items-center justify-between mb-0.5">
+                        <Target className="h-4 w-4 text-primary" />
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-4 w-4 text-muted-foreground/50" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="max-w-xs">{tooltipText}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                    <p className="text-xs font-medium text-primary mb-0.5">Habit Score</p>
+                    <p className="text-2xl font-bold number-emphasis animate-count-up">
+                        {loading ? '...' : score}%
+                    </p>
+                    <p className="text-xs text-primary">Last 7 days</p>
+                </Card>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p className="max-w-xs">{tooltipText}</p>
+            </TooltipContent>
+        </Tooltip>
         </TooltipProvider>
     )
 };
+
 
 
 const MetricCard = ({ metric, className, index }: { metric: Metric, onEdit?: (metric: Metric) => void, className?: string, index?: number }) => {
@@ -464,8 +471,33 @@ export function KeyMetricsOverview() {
 
         loadWorkoutStreak();
     }, [user]);
-    
+
+    // Load strength gain (adaptive e1RM window — shared util with trainer dashboard)
+    useEffect(() => {
+        if (!user) return;
+
+        const loadStrengthGain = async () => {
+            try {
+                const result = await getStrengthGainPct(user.uid);
+                if (!result.hasData || result.value === null) return;
+                const val = result.value;
+                setMetrics(currentMetrics =>
+                    currentMetrics.map(m =>
+                        m.id === 'strength-gain'
+                            ? { ...m, value: `${val > 0 ? '+' : ''}${val}`, subtext: result.label }
+                            : m
+                    )
+                );
+            } catch (error) {
+                console.error('Error loading strength gain:', error);
+            }
+        };
+
+        loadStrengthGain();
+    }, [user]);
+
     // Load activity data for steps
+
     useEffect(() => {
         if (!user) {
             setLoading(false);
