@@ -1,0 +1,49 @@
+# Firebase App Hosting — STAGING (sandbox) environment overrides.
+#
+# PURPOSE: a real HTTPS domain (sandbox.shrey.fit) running the SAME code as prod but
+# pointed at PayPal SANDBOX, so we can test wallet buttons (Google Pay / Apple Pay)
+# that CANNOT run on localhost (PayPal's GetGooglePayConfig + Apple Pay both require a
+# real, registered domain — not localhost). See:
+#   docs/02-implementation/payment-processor/sandbox-staging-setup.md
+#   docs/02-implementation/payment-processor/applepay-googlepay-design.md (§10)
+#
+# HOW APP HOSTING USES THIS FILE:
+#   App Hosting merges the base `apphosting.yaml` with an environment-specific
+#   `apphosting.<environment>.yaml` when a backend is bound to that environment. This
+#   file is the `staging` environment override — create the staging backend with
+#   `--environment staging` (tracking the SAME `main` branch; NO separate git branch).
+#   Only the variables listed here override the base; everything else (Firebase web
+#   config, Maps/reCAPTCHA/Resend secrets, run config) is INHERITED from apphosting.yaml.
+#
+# BACKEND REUSE: the deployed Cloud Functions are dual-env and are REUSED as-is. The
+# client sends `paypalEnv: 'sandbox'` (derived from NEXT_PUBLIC_PAYPAL_ENV below), so
+# createPaypalOrder / capturePaypalOrder / createPaypalSubscription use the SANDBOX
+# credentials, and the sandbox webhook (`paypalWebhookSandbox`) fulfills — exactly like
+# local dev does today. No Functions changes, no emulators.
+#
+# ⚠️ DO NOT set production PayPal values here. This backend must stay SANDBOX.
+
+env:
+  # ---- PayPal SANDBOX (staging only) ----
+  # Override the base file's production values so this backend talks to PayPal sandbox.
+  # NEXT_PUBLIC_PAYPAL_CLIENT_ID is the SANDBOX app's public client id (same one used in
+  # app/.env.local for local dev). The sandbox CLIENT SECRET + WEBHOOK_ID live in Secret
+  # Manager (bound to the Functions), NOT here.
+  - variable: NEXT_PUBLIC_PAYPAL_ENV
+    value: "sandbox"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+    value: "AXP13FxA55KA3kK__Omtw717gTa8ot6Tkq-ZZde28A77Y_p7V_KrqyOdwVCHuK2rWVNYrofmxNCvuZYi"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # ---- Canonical app URL for the staging origin ----
+  # Keeps redirects/links/emails pointed at the sandbox host during testing.
+  - variable: NEXT_PUBLIC_APP_URL
+    value: "https://sandbox.shrey.fit"
+    availability:
+      - BUILD
+      - RUNTIME
