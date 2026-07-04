@@ -500,12 +500,13 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild className={pathname === '/resources' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
-                  <Link href="/resources">
+                <SidebarMenuButton asChild className={pathname === '/dashboard/client/resources' ? 'bg-primary text-white hover:bg-primary/90' : ''}>
+                  <Link href="/dashboard/client/resources">
                     <BookOpen className="w-4 h-4" />
                     <span className="font-medium">Resources</span>
                   </Link>
                 </SidebarMenuButton>
+
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

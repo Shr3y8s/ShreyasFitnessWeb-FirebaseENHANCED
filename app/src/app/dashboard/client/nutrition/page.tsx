@@ -75,6 +75,11 @@ export default function NutritionPage() {
   // was found). Drives the loading gate so the page never spins forever when a client
   // has no nutrition approach configured yet.
   const [planLoaded, setPlanLoaded] = useState(false);
+  // Active nutrition tab — controlled so a `?tab=` query param (e.g. from the
+  // Resources hub link) can deep-link straight to a specific tab. Empty means
+  // "use the approach's default".
+  const [activeTab, setActiveTab] = useState('');
+
 
   const [trainerName, setTrainerName] = useState('Your Coach');
   const [approachDate, setApproachDate] = useState<Date | null>(null);
@@ -208,8 +213,16 @@ export default function NutritionPage() {
     loadNutritionPlan();
   }, [user]);
 
+  // Deep-link support: honor a `?tab=` query param (e.g. from the Resources hub's
+  // "Nutrition Resources" link → ?tab=resources) so we can land on a specific tab.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const param = new URLSearchParams(window.location.search).get('tab');
+    if (param) setActiveTab(param);
+  }, []);
 
   // Load nutrition log for selected date
+
   useEffect(() => {
     if (!user || !selectedDate) {
       setLoading(false);
@@ -904,7 +917,12 @@ export default function NutritionPage() {
               />
             )}
 
-            <Tabs key={nutritionApproach} defaultValue={visibleTabs.defaultTab}>
+            <Tabs
+              key={nutritionApproach}
+              value={activeTab && visibleTabs.tabs.includes(activeTab) ? activeTab : visibleTabs.defaultTab}
+              onValueChange={setActiveTab}
+            >
+
               <TabsList className="mb-4 inline-flex items-center justify-center rounded-full bg-secondary p-1">
                 {visibleTabs.tabs.includes('tracking') && (
                   <TabsTrigger value="tracking">
