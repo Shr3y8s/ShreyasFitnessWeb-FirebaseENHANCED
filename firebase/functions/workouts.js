@@ -14,6 +14,7 @@
  */
 
 const {onCall} = require("firebase-functions/v2/https");
+const {defineSecret} = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 
@@ -25,6 +26,14 @@ const { writeActivityEvent, getClientInfoForActivityFeed } = require("./activity
 
 // Client Notifications helper
 const {writeClientNotification} = require("./client-notifications");
+
+// Email notifications (preference-gated, fail-soft)
+const {sendNotification} = require("./notifications/send-notification");
+
+// Resend API key secret (shared name across functions)
+const resendKey = defineSecret("RESEND_API_KEY");
+
+
 
 /**
  * Assign a workout template to a client with configured parameters
@@ -44,7 +53,9 @@ const {writeClientNotification} = require("./client-notifications");
 exports.assignWorkout = onCall({
   region: sharedConfig.region,
   cors: true,
+  secrets: [resendKey],
 }, async (request) => {
+
   try {
     // Require authentication
     if (!request.auth) {
@@ -191,11 +202,34 @@ exports.assignWorkout = onCall({
       });
     });
 
+    // EMAIL NOTIFICATION: Send new-assignment email (preference-gated, fail-soft)
+    let resendApiKey = null;
+    try {
+      resendApiKey = resendKey.value();
+    } catch (e) {
+      resendApiKey = null;
+    }
+    sendNotification({
+      uid: data.clientId,
+      type: "new_assignment",
+      data: {
+        workoutName: workoutDisplayName,
+        dueDate: data.dueDate || "",
+      },
+      resendApiKey,
+    }).catch((err) => {
+      logger.warn("[Notifications] new_assignment email failed (non-fatal)", {
+        clientId: data.clientId,
+        error: err.message,
+      });
+    });
+
     return {
       success: true,
       workoutId: workoutRef.id,
       workout: workoutData,
     };
+
   } catch (error) {
     logger.error("Error assigning workout", {
       error: error.message,

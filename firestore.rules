@@ -587,8 +587,18 @@ service cloud.firestore {
       allow create: if isTrainerOrAdmin();
     }
     
+    // APP SETTINGS — Platform-wide configuration (e.g., notifications kill-switch).
+    // Any authenticated user may READ (Cloud Functions also read via Admin SDK,
+    // which bypasses rules). Only admins may WRITE.
+    // Doc: appSettings/notifications = { emailEnabled, updatedAt, updatedBy }
+    match /appSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     // Global configuration accessible to all authenticated users
     match /config/{configId} {
+
       allow read: if request.auth != null;
       allow write: if false; // Only admins can write via backend
     }

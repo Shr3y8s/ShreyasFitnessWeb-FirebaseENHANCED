@@ -22,6 +22,11 @@ const {writeClientNotification} = require("./client-notifications");
 const stripeKey = defineSecret("STRIPE_KEY");
 const resendKey = defineSecret("RESEND_API_KEY");
 
+// Client email notifications (preference-gated, fail-soft) — see
+// docs/02-implementation/email-notifications/.
+const { sendNotification } = require("./notifications/send-notification");
+
+
 // Provider-neutral account deletion path. The deletion logic lives in a shared
 // helper (also reused by the bulk-delete-test-accounts.js script) and uses the
 // PayPal seam (NOT the Stripe SDK) for subscription cancel + credit refunds.
@@ -2901,7 +2906,9 @@ exports.onProgressPhotoWrite = onDocumentWritten({
 exports.onClientMessageWrite = onDocumentWritten({
   document: "client_messages/{messageId}",
   region: sharedConfig.region,
+  secrets: [resendKey],
 }, async (event) => {
+
   try {
     // Only fire on document creation (not updates like marking as read)
     if (event.data.before.exists) return null;
@@ -2943,11 +2950,26 @@ exports.onClientMessageWrite = onDocumentWritten({
         logger.warn("[ClientNotifications] Failed to write new_message notification", {clientId, error: err.message});
       });
       logger.info("[ClientNotifications] new_message notification sent", {clientId});
+
+      // EMAIL (preference-gated, fail-soft): "New message from your coach".
+      // senderDoc is the trainer/admin who authored this message (FR-8: never the client).
+      let resendApiKey = null;
+      try { resendApiKey = resendKey.value(); } catch (e) { resendApiKey = null; }
+      const trainerName = (senderDoc.exists && senderDoc.data().name) || "Your coach";
+      sendNotification({
+        uid: clientId,
+        type: "trainer_message",
+        data: { trainerName },
+        resendApiKey,
+      }).catch(err => {
+        logger.warn("[Notifications] trainer_message email failed (non-fatal)", {clientId, error: err.message});
+      });
     }
     
     return null;
   } catch (error) {
     logger.error("[ActivityFeed] Error in onClientMessageWrite trigger:", error);
+
     return null;
   }
 });

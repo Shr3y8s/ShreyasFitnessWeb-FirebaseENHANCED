@@ -1393,8 +1393,9 @@ export default function ProfilePage() {
                         <div className="flex gap-2">
                           <Bell className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                           <div className="text-sm text-blue-800">
-                            <strong>Note:</strong> Email notifications require email service integration (Phase 2). 
-                            Your preferences are saved and will be applied once email notifications are enabled.
+                            <strong>Active:</strong> Email notifications are live for New Workout Assignments
+                            and Trainer Messages. Reminders and progress digests are coming soon.
+
                           </div>
                         </div>
                       </div>
@@ -1490,16 +1491,18 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Info Banner - Email service not set up */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                      {/* Info Banner - Email notifications active */}
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                         <div className="flex gap-2">
-                          <Bell className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                          <div className="text-sm text-amber-800">
-                            <strong>Status:</strong> Email notifications are not yet configured. 
-                            Your preferences are saved and will be applied once the email service is set up (Phase 2).
+                          <Bell className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-emerald-800">
+                            <strong>Active:</strong> Email notifications are live for New Workout
+                            Assignments and Trainer Messages, based on your preferences above.
+                            Reminders and progress digests are coming soon.
                           </div>
                         </div>
                       </div>
+
                     </div>
                   </>
                 )}
