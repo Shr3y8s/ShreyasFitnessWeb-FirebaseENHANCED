@@ -5,8 +5,13 @@
 //    `react-svg-credit-card-payment-icons` (inline, no network/asset 404s).
 //  - Wallets (PayPal/Google Pay/Apple Pay) use brand marks: PayPal inline wordmark;
 //    Apple Pay + Google Pay are the OFFICIAL mark SVGs served from /public/payment-icons
-//    (brand-guideline compliant). These are DISPLAY-ONLY — functional Apple/Google Pay
-//    buttons require PayPal domain registration + HTTPS (deferred to cutover).
+//    (brand-guideline compliant). These logos are a display-only "accepted here" row; the
+//    FUNCTIONAL wallet buttons (Apple Pay / Google Pay, one-time checkout) are rendered
+//    inside the PayPal adapter's renderCheckout (eligibility-gated), NOT here. Apple/Google
+//    Pay buttons appear only on capable devices served from a secure, PayPal-registered
+//    domain — see docs/.../applepay-googlepay-design.md. This component stays neutral: it
+//    does not branch on or invoke any specific wallet.
+
 
 import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
 

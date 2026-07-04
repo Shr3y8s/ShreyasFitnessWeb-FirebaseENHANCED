@@ -76,29 +76,39 @@ only**; wallet buttons must NOT render in `mode === 'subscription'`.
 
 # T3 — Apple Pay domain registration  [FR-11, NFR-5]
 
-- [ ] **T3.1** Move the obtained `apple-developer-merchantid-domain-association` file
-      into `app/public/.well-known/` (no extension).
-- [ ] **T3.2** Verify
-      `https://shrey.fit/.well-known/apple-developer-merchantid-domain-association`
+> **Sandbox-first:** we register **`sandbox.shrey.fit`** in the PayPal **sandbox**
+> dashboard for testing; `shrey.fit` gets registered in the **live** dashboard at launch.
+> The `.well-known` file ships from `app/public/` to both.
+
+- [x] **T3.1** `apple-developer-merchantid-domain-association` placed in
+      `app/public/.well-known/` (no extension). ✅
+- [ ] **T3.2** Verify (runtime, after SSL active)
+      `https://sandbox.shrey.fit/.well-known/apple-developer-merchantid-domain-association`
       returns 200 with exact content (check `next.config.ts` / App Hosting doesn't strip
-      it; add a rewrite/header only if the check fails).
-- [ ] **T3.3** Register `shrey.fit` as an Apple Pay web domain in the PayPal dashboard.
+      it; add a rewrite/header only if the check fails). Repeat on `shrey.fit` at launch.
+- [x] **T3.3** `sandbox.shrey.fit` registered as an Apple Pay web domain in the PayPal
+      **sandbox** dashboard. ✅ (`shrey.fit` in live dashboard deferred to launch.)
+
 
 ---
 
 # T4 — Apple Pay flow  [FR-3, FR-6, FR-7, FR-8, FR-9]
 
-- [ ] **T4.1** In `renderCheckout` (one-time branch only), implement the Apple Pay
-      eligibility gate (`ApplePaySession` present + `supportsVersion` + `canMakePayments`
-      + `Applepay().config()`); skip if not eligible (non-fatal).
-- [ ] **T4.2** Render the Apple Pay button into an isolated child DOM node in the "More
-      ways to pay" section; wire `ApplePaySession` with `onvalidatemerchant`
-      (`Applepay().validateMerchant` → `completeMerchantValidation`) and
+- [x] **T4.1** `renderApplePay` (one-time branch only) implements the eligibility gate
+      (`ApplePaySession` + `supportsVersion(4)` + `canMakePayments` + `Applepay().config()`)
+      + a localhost/secure-context origin guard; non-fatal skip (returns null → omitted). ✅
+- [x] **T4.2** Apple Pay button (`<apple-pay-button>`) rendered into an isolated child
+      node in "More ways to pay"; `ApplePaySession` wired with `onvalidatemerchant`
+      (`Applepay().validateMerchant` → `completeMerchantValidation`) +
       `onpaymentauthorized` (`createPaypalOrder` → `Applepay().confirmOrder` →
-      `completePayment` → `capturePaypalOrder` → `onApproved(transactionId)`).
-- [ ] **T4.3** Push the Apple Pay teardown into the existing `closers[]` cleanup array.
+      `completePayment` → `capturePaypalOrder` → `onApproved(transactionId)`); cancel
+      non-fatal. ✅
+- [x] **T4.3** Apple Pay teardown pushed into the existing `closers[]` array (via the
+      `customMount` closer contract). ✅
 - [ ] **T4.4** Verify an Apple Pay one-time purchase on a **real Apple device** against
-      the registered live domain fulfills via the existing paths.
+      the registered sandbox domain (`sandbox.shrey.fit`) fulfills via the existing paths.
+      (runtime — Apple sandbox tester card, no real charge)
+
 - [ ] **T4.5** Verify a non-Apple context omits Apple Pay (non-fatal) and
       `mode === 'subscription'` shows **no** Apple Pay button (FR-6/FR-7).
 
@@ -106,14 +116,16 @@ only**; wallet buttons must NOT render in `mode === 'subscription'`.
 
 # T5 — Neutral capability + logos  [FR-13, FR-14, NFR-1]
 
-- [ ] **T5.1** Add `ProviderCapabilities.wallets?: boolean` to
-      `app/src/lib/payments/types.ts`; set `wallets: true` in the PayPal adapter,
-      `wallets: false` in the Stripe adapter.
-- [ ] **T5.2** Update `PaymentMethodLogos.tsx` comment/behavior so the Apple/Google Pay
-      marks reflect the now-functional (one-time) buttons; no method-specific branching
-      in any page.
-- [ ] **T5.3** Neutral-interface audit: confirm no app page/component references
-      `applepay`/`googlepay` (adapter + `PaymentMethodLogos` only — G2).
+- [x] **T5.1** `ProviderCapabilities.wallets?: boolean` added to
+      `app/src/lib/payments/types.ts`; `wallets: true` in the PayPal adapter,
+      `wallets: false` in the Stripe adapter. ✅
+- [x] **T5.2** `PaymentMethodLogos.tsx` comment updated: the marks are a display-only
+      "accepted here" row; functional wallet buttons are rendered in the adapter
+      (eligibility-gated). No method-specific branching in any page. ✅
+- [x] **T5.3** Neutral-interface audit clean: `applepay`/`googlepay` appear ONLY in the
+      adapter (`paypal.ts`/`stripe.ts`), the neutral `types.ts` capability doc, and
+      `PaymentMethodLogos.tsx` — no app page/component references a wallet name (G2). ✅
+
 
 ---
 

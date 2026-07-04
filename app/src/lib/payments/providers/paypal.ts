@@ -616,8 +616,175 @@ export const paypalProvider: PaymentProvider = {
       }
     };
 
+    // Apple Pay wallet mount (Feature 3 phase 2b — ONE-TIME only). Separate PayPal SDK
+    // component (`paypal.Applepay()`) + the browser-native `ApplePaySession`. Eligibility-
+    // gated + non-fatal: returns null (→ omitted) unless the browser is Apple Pay-capable
+    // (Safari on a device with a card in Wallet) AND the merchant/domain is Apple Pay-
+    // registered. On tap: create the order SERVER-SIDE (amount + discount authoritative),
+    // validate the merchant, confirm the order with the Apple Pay token, then capture
+    // server-side — the SAME fulfillment path as the buttons. See design §3. Requires the
+    // domain to be registered in PayPal + the /.well-known/apple-developer-merchantid-
+    // domain-association file served at 200 (T3). NOT testable on localhost / non-Safari.
+    const renderApplePay = async (mountEl: HTMLElement): Promise<(() => void) | null> => {
+      // Wallets are one-time only (recurring via wallets is deferred — decision §4).
+      if (isSubscription) return null;
+      const oneTime = oneTimeAmount(opts.priceId);
+      if (!oneTime) return null;
+      if (!paypal.Applepay) return null;
+
+      // ORIGIN GUARD: Apple Pay requires a SECURE (HTTPS) context on a REAL, registered
+      // domain — never localhost. Skip quietly on localhost/non-HTTPS so local dev isn't
+      // noisy (matches the Google Pay guard). Test via a deployed HTTPS domain that's
+      // registered in PayPal (sandbox.shrey.fit) on a real Apple device.
+      if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        const isLocalhost =
+          host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost');
+        const isSecure = window.location.protocol === 'https:';
+        if (!isSecure || isLocalhost) {
+          console.info(
+            '[paypal] Apple Pay skipped — requires a secure (HTTPS) registered-domain ' +
+            'origin on a real Apple device (Safari). Use the deployed sandbox domain to test.'
+          );
+          return null;
+        }
+      }
+
+      try {
+        const w = window as any;
+        const ApplePaySession = w.ApplePaySession;
+        // Browser capability gate: Apple Pay JS present, supported version, and the device
+        // can make payments (a card is provisioned). Any false → omit (non-fatal).
+        if (
+          !ApplePaySession ||
+          typeof ApplePaySession.supportsVersion !== 'function' ||
+          !ApplePaySession.supportsVersion(4) ||
+          typeof ApplePaySession.canMakePayments !== 'function' ||
+          !ApplePaySession.canMakePayments()
+        ) {
+          return null;
+        }
+
+        const applepay = paypal.Applepay();
+        // Merchant/domain capability: config() tells us whether this merchant+domain is
+        // set up for Apple Pay (registered domain, country/currency, merchant caps).
+        const config = await applepay.config();
+        if (!config || config.isEligible === false) return null;
+
+        const onClick = async () => {
+          try {
+            // DISPLAY total on the Apple Pay sheet. The ACTUAL charged amount is set
+            // SERVER-SIDE by createPaypalOrder (incl. any discountCode); the server stays
+            // authoritative, so a discounted wallet purchase charges the discounted amount.
+            const paymentRequest = {
+              countryCode: config.countryCode || 'US',
+              currencyCode: config.currencyCode || 'USD',
+              merchantCapabilities: config.merchantCapabilities || ['supports3DS'],
+              supportedNetworks: config.supportedNetworks || ['visa', 'masterCard', 'amex', 'discover'],
+              requiredBillingContactFields: ['name', 'postalAddress'],
+              total: {
+                label: oneTime.label || 'Shrey.Fit',
+                amount: (oneTime.amount / 100).toFixed(2),
+                type: 'final',
+              },
+            };
+
+            const session = new ApplePaySession(4, paymentRequest);
+
+            // Validate the merchant against Apple via PayPal, then hand Apple the
+            // resulting merchant session to open the sheet.
+            session.onvalidatemerchant = async (event: any) => {
+              try {
+                const merchantSession = await applepay.validateMerchant({
+                  validationUrl: event.validationURL,
+                });
+                // PayPal returns { merchantSession } (or the session directly depending
+                // on SDK version); pass whichever Apple expects.
+                session.completeMerchantValidation(
+                  merchantSession?.merchantSession ?? merchantSession
+                );
+              } catch (e) {
+                try { session.abort(); } catch { /* ignore */ }
+                opts.onError?.(e);
+              }
+            };
+
+            session.onpaymentauthorized = async (event: any) => {
+              try {
+                const { httpsCallable } = await import('firebase/functions');
+                const { functions } = await import('@/lib/firebase');
+
+                // Create the order server-side (amount + discount authoritative there).
+                const createOrder = httpsCallable(functions, 'createPaypalOrder');
+                const createRes = await createOrder({
+                  priceId: opts.priceId,
+                  userId: opts.userId,
+                  discountCode: opts.discountCode,
+                  paypalEnv: PAYPAL_ENV,
+                });
+                const orderId = (createRes?.data as { orderId?: string } | undefined)?.orderId;
+                if (!orderId) throw new Error('Failed to create PayPal order.');
+
+                // Confirm the order with the Apple Pay token.
+                const confirm = await applepay.confirmOrder({
+                  orderId,
+                  token: event.payment.token,
+                  billingContact: event.payment.billingContact,
+                  shippingContact: event.payment.shippingContact,
+                });
+                if (confirm?.status && confirm.status !== 'APPROVED') {
+                  session.completePayment(ApplePaySession.STATUS_FAILURE);
+                  throw new Error(`Apple Pay order not approved (status=${confirm.status}).`);
+                }
+                session.completePayment(ApplePaySession.STATUS_SUCCESS);
+
+                // Capture SERVER-SIDE (same as the button/card paths); returns the capture
+                // id so the success page can match an absolute fulfillment signal.
+                opts.onProcessing?.();
+                const capture = httpsCallable(functions, 'capturePaypalOrder');
+                const capRes = await capture({ orderId, paypalEnv: PAYPAL_ENV });
+                const transactionId = (capRes?.data as { transactionId?: string } | undefined)?.transactionId;
+                opts.onApproved(transactionId);
+              } catch (e) {
+                try { session.completePayment(ApplePaySession.STATUS_FAILURE); } catch { /* ignore */ }
+                opts.onError?.(e);
+              }
+            };
+
+            session.oncancel = () => {
+              // Buyer dismissed the sheet — non-fatal, nothing to surface.
+            };
+
+            session.begin();
+          } catch (e) {
+            opts.onError?.(e);
+          }
+        };
+
+        // Render an Apple Pay button. Use the native <apple-pay-button> custom element
+        // (available where Apple Pay JS is) styled to fill the box.
+        const btn = document.createElement('apple-pay-button') as HTMLElement;
+        btn.setAttribute('buttonstyle', 'black');
+        btn.setAttribute('type', 'plain');
+        btn.setAttribute('locale', 'en-US');
+        btn.style.setProperty('--apple-pay-button-width', '100%');
+        btn.style.setProperty('--apple-pay-button-height', '44px');
+        btn.style.display = 'block';
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', onClick);
+        mountEl.appendChild(btn);
+
+        return () => {
+          try { mountEl.innerHTML = ''; } catch { /* ignore */ }
+        };
+      } catch {
+        return null; // any failure → omit Apple Pay (non-fatal)
+      }
+    };
+
 
     // 1) Card (top) — guest, no PayPal account. HOSTED card flow — works WITHOUT the
+
     //    Reference Transactions capability vaulted-card subs require.
     await renderSection('Pay with Card', [{ fundingSource: FUNDING.CARD }]);
     // 2) PayPal family — branded PayPal button + Pay Later/Credit.
@@ -625,15 +792,18 @@ export const paypalProvider: PaymentProvider = {
       { fundingSource: FUNDING.PAYPAL, extraStyle: { label: 'paypal' } },
       { fundingSource: FUNDING.PAYLATER },
     ]);
-    // 3) Wallets — Venmo + Google Pay (one-time only; each eligibility-guarded and
-    //    non-fatal, so a non-eligible context simply omits it). Apple Pay slots in here
-    //    too once its domain is registered (T3/T4). Google Pay is a separate SDK
-    //    component (customMount) — it uses the SAME server createOrder + capture path,
-    //    so fulfillment + discounts are identical to the other buttons.
+    // 3) Wallets — Venmo + Google Pay + Apple Pay (one-time only; each eligibility-
+    //    guarded and non-fatal, so a non-eligible context simply omits it). Google/Apple
+    //    Pay are separate SDK components (customMount) — they use the SAME server
+    //    createOrder + capture path, so fulfillment + discounts are identical to the
+    //    other buttons. Apple Pay renders only on a capable Apple device (Safari) with the
+    //    domain registered in PayPal (T3); elsewhere it's silently omitted.
     await renderSection('More ways to pay', [
       { fundingSource: FUNDING.VENMO },
       { customMount: renderGooglePay },
+      { customMount: renderApplePay },
     ]);
+
 
 
     // Fallback: if NOTHING rendered (e.g. funding constants unavailable), render the
