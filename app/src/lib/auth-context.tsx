@@ -170,17 +170,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(authUser);
       
       if (authUser) {
-        const sessionKey = `login_tracked_${authUser.uid}`;
-        
-        // Track login if this is a new session
-        const hasTrackedThisSession = sessionStorage.getItem(sessionKey);
-        
-        if (!hasTrackedThisSession) {
+        // Only record a login in history when it came from an EXPLICIT credential
+        // sign-in on the login page (which sets `explicit_login_pending`). Firebase
+        // fires onAuthStateChanged on every tab open / token refresh / session
+        // restore too — counting those inflated the "Total Logins" number. Consume
+        // the one-shot marker so a single sign-in is tracked exactly once.
+        let explicitLogin = false;
+        try {
+          explicitLogin = sessionStorage.getItem('explicit_login_pending') === '1';
+          if (explicitLogin) sessionStorage.removeItem('explicit_login_pending');
+        } catch (e) {
+          explicitLogin = false;
+        }
+
+        if (explicitLogin) {
           trackSuccessfulLogin().catch(error => {
             console.error('Login tracking failed:', error);
           });
-          sessionStorage.setItem(sessionKey, 'true');
         }
+
         
         try {
           // Initial fetch to determine user type

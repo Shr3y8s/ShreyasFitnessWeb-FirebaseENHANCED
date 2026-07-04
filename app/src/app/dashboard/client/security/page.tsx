@@ -433,10 +433,11 @@ export default function SecurityPage() {
                 </p>
                 <button 
                   onClick={handleStartPasswordChange}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-sm text-primary hover:text-primary/80 font-medium"
                 >
                   Change Password
                 </button>
+
               </div>
 
               <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-emerald-300">
@@ -460,10 +461,11 @@ export default function SecurityPage() {
                 </div>
                 <button 
                   onClick={handleStartEmailChange}
-                  className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+                  className="text-sm text-primary hover:text-primary/80 font-medium"
                 >
                   Change Email
                 </button>
+
               </div>
 
               <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-emerald-300">
@@ -476,9 +478,13 @@ export default function SecurityPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Not enabled
                 </p>
-                <button className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                <button
+                  disabled
+                  className="text-sm text-gray-400 font-medium cursor-not-allowed"
+                >
                   Enable 2FA (Coming Soon)
                 </button>
+
               </div>
             </div>
 

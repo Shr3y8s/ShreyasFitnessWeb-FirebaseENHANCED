@@ -40,14 +40,21 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Mark this as an EXPLICIT credential login so the auth listener records it
+      // in Login History. (Set before sign-in because onAuthStateChanged can fire
+      // during signInUser.) Cleared on failure so a failed attempt isn't counted.
+      try { sessionStorage.setItem('explicit_login_pending', '1'); } catch {}
+
       const result = await signInUser(email, password);
       
       if (result.success) {
         router.push(getSafeNext());
       } else {
+        try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
         setError(getFirebaseErrorMessage(result.error));
       }
     } catch (err) {
+      try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
       setError(getFirebaseErrorMessage(err));
     } finally {
       setIsLoading(false);
@@ -59,14 +66,18 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Mark this as an EXPLICIT credential login (see note above).
+      try { sessionStorage.setItem('explicit_login_pending', '1'); } catch {}
       await signInWithGoogleAuth();
       router.push(getSafeNext());
     } catch (err) {
+      try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
       setError(getFirebaseErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
   };
+
 
 
   return (
