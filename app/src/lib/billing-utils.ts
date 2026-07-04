@@ -33,7 +33,11 @@ export interface Transaction {
   status: string;
   paymentMethod: string;
   receiptUrl: string | null;
+  // 'subscription' (recurring plan charge) vs 'one_time' (e.g. an in-person session
+  // purchase). Written by the payment webhook (fulfillment.js); defaults 'one_time'.
+  type: 'subscription' | 'one_time';
 }
+
 
 export interface BillingData {
   subscriptions: any[];
@@ -86,8 +90,10 @@ export async function fetchClientBillingData(userId: string): Promise<BillingDat
         status: t.status ?? 'succeeded',
         paymentMethod: t.provider ? (t.provider === 'paypal' ? 'PayPal' : t.provider) : 'Payment method',
         receiptUrl: t.receiptUrl ?? null,
+        type: t.type === 'subscription' ? 'subscription' : 'one_time',
       };
     });
+
 
     // Subscription status + next-payment info from the user doc (kept in sync by
     // fulfillment) plus the neutral subscription record for currentPeriodEnd.

@@ -2608,7 +2608,11 @@ export default function ClientDetailPage() {
                             {/* Subscription Transaction History */}
                             <div className="mb-6">
                               <h4 className="text-lg font-semibold mb-4 text-foreground">Subscription Transactions</h4>
-                              {clientBillingData.transactions.length > 0 ? (
+                              {/* Only recurring subscription charges belong here. One-time
+                                  purchases (e.g. in-person session packages) have their own
+                                  table below, so exclude type === 'one_time'. */}
+                              {clientBillingData.transactions.filter(t => t.type !== 'one_time').length > 0 ? (
+
                                 <div className="overflow-x-auto bg-white rounded-lg border">
                                   <table className="w-full">
                                     <thead className="border-b bg-gray-50">
@@ -2621,7 +2625,8 @@ export default function ClientDetailPage() {
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y">
-                                      {clientBillingData.transactions.slice(0, 5).map((transaction) => {
+                                      {clientBillingData.transactions.filter(t => t.type !== 'one_time').slice(0, 5).map((transaction) => {
+
                                         const date = new Date(transaction.date * 1000);
                                         const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                         
