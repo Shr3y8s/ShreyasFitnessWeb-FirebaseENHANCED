@@ -193,7 +193,72 @@ in the PayPal **live** dashboard.)
 
 ---
 
+## 10.5 Cost control — auto-rollout + build-artifact cleanup
+
+Every push to `main` triggers a **rollout on each backend bound to `main`** (prod AND
+staging), and every rollout runs a **Cloud Build** (`next build` → container) and stores
+the image in **Artifact Registry**. Idle serving is ~$0 (Cloud Run scales to zero), so
+the only creep is **build minutes** + **stored images**.
+
+### A. Turn OFF auto-rollout on the STAGING backend (stop wasted builds)
+Staging only needs a build when you actually wallet-test.
+- **Console:** App Hosting → `shreyfitweb-staging` → **Settings → GitHub / Deployment**
+  → disable **Automatic rollouts** (or disconnect the branch trigger).
+- **Deploy staging on demand** (when you want to test):
+  ```
+  firebase apphosting:rollouts:create shreyfitweb-staging --project shreyfitweb
+  ```
+  (Builds + deploys the latest `main` to staging.)
+- **Production:** leave auto-rollout ON (convenient), or also turn it off and roll out
+  manually with `firebase apphosting:rollouts:create <PROD_BACKEND> --project shreyfitweb`
+  if you want to gate what ships to `shrey.fit`.
+
+### B. Clean up accumulated build images (Artifact Registry)
+Past auto-rollouts have stored one container image per build. Storage is ~$0.10/GB/mo, so
+this is usually **cents–~$1/mo** — hygiene, not an emergency. **Keep the image the current
+live rollout uses** (and a few recent for rollback).
+
+**Console (no gcloud needed — `gcloud` is NOT installed on this machine):**
+1. Google Cloud Console → **Artifact Registry** → **Repositories** (project `shreyfitweb`).
+2. Open the App Hosting images repo — typically named **`firebaseapphosting-images`**
+   (region matches the backend, e.g. `us-central1`). There may be one per region.
+3. **Set a cleanup policy (recommended, self-maintaining):** repo → **Cleanup policies**
+   → create:
+   - **Keep most recent versions:** keep count = **5**, AND
+   - **Delete older than:** **30 days**.
+   - Run as **dry run** first to preview, then enable. This prunes old images now + going
+     forward automatically.
+4. **Or manual delete:** open the repo → sort images by update time → delete old
+   digests, **never** the one tagged as currently deployed.
+
+**gcloud reference (only if you later install the Google Cloud SDK):**
+```
+# list repos (find exact name + region)
+gcloud artifacts repositories list --project shreyfitweb
+
+# list images newest-first
+gcloud artifacts docker images list \
+  us-central1-docker.pkg.dev/shreyfitweb/firebaseapphosting-images \
+  --include-tags --sort-by=~UPDATE_TIME --project shreyfitweb
+
+# apply a keep-5 + delete->30d cleanup policy (preview with --dry-run first)
+gcloud artifacts repositories set-cleanup-policies firebaseapphosting-images \
+  --project shreyfitweb --location us-central1 --policy=policy.json
+```
+where `policy.json` is:
+```
+[{"name":"keep-recent","action":{"type":"KEEP"},"mostRecentVersions":{"keepCount":5}},
+ {"name":"delete-old","action":{"type":"DELETE"},"condition":{"olderThan":"2592000s"}}]
+```
+
+### C. (Optional) Cloud Storage build cache
+Cloud Build source/cache buckets (e.g. `*_cloudbuild`) are small; you can add a Storage
+**lifecycle rule** to delete objects older than 30 days. Low priority.
+
+---
+
 ## 11. Cost, safety, teardown
+
 
 - **Cost:** the staging backend scales to zero when idle → ~$0 between test sessions.
 - **Safety:** prod `shrey.fit` is a separate backend + untouched DNS; staging is sandbox

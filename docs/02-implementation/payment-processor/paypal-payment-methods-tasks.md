@@ -59,7 +59,21 @@ the neutral-interface rule (no wallet name in app/pages/components — only the 
 
 # PHASE 2 — Apple Pay & Google Pay
 
+> **⚠️ EXPANDED + SUPERSEDED (2026-07-04).** This thin Phase-2 stub has been replaced by
+> a dedicated, implementation-ready spec set. Use those instead of the T5–T10 tasks
+> below (kept for history):
+> - `applepay-googlepay-decision.md` — ADR (why Billing Plans, not Orders v2 + Vault;
+>   Option A one-time chosen, Option B recurring deferred).
+> - `applepay-googlepay-requirements.md`
+> - `applepay-googlepay-design.md`
+> - `applepay-googlepay-tasks.md`
+>
+> Key refinement from the original stub: scope is **one-time only** (session packages);
+> wallet-funded **recurring** is deferred (would need a Vault + Orders self-managed
+> billing engine beside the Billing-Plans model). Historical stub tasks:
+
 ## T5 — SDK components
+
 
 - [ ] **T5.1** Add `applepay,googlepay` to the single SDK load `components` string in
       `loadPayPal(...)` (confirm exact names vs current PayPal docs); ensure the

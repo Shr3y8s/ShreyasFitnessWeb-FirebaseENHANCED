@@ -138,7 +138,14 @@ function loadPayPal(intent: 'subscription' | 'capture'): Promise<any> {
 
   const options: Record<string, any> = {
     clientId: PAYPAL_CLIENT_ID,
-    components: 'buttons,card-fields',
+    // `applepay,googlepay` are SEPARATE SDK components (not funding sources on
+    // paypal.Buttons). They're added to the SINGLE load so the Apple/Google Pay
+    // wallet flows share the same SDK instance (a second loadScript would tear down
+    // the already-rendered buttons). They're only USED on the one-time (capture)
+    // path — see renderCheckout — but keeping the components string identical across
+    // intents keeps the loadPayPal cache key stable. (Feature 3 — Apple/Google Pay,
+    // one-time; see docs/.../applepay-googlepay-design.md §2.1.)
+    components: 'buttons,card-fields,applepay,googlepay',
     currency: 'USD',
     // Enable Venmo as a funding source (US buyers, eligible contexts only). The
     // @paypal/paypal-js loader maps `enableFunding` → the SDK's `enable-funding`
@@ -151,6 +158,7 @@ function loadPayPal(intent: 'subscription' | 'capture'): Promise<any> {
     intent: intent === 'subscription' ? 'subscription' : 'capture',
   };
 
+
   if (intent === 'subscription') {
     options.vault = true;
   }
@@ -160,9 +168,49 @@ function loadPayPal(intent: 'subscription' | 'capture'): Promise<any> {
   return promise;
 }
 
+// Google Pay needs Google's OWN script (the button + PaymentsClient live on
+// `window.google.payments.api`). This is NOT the PayPal SDK, so it does not violate
+// the single-PayPal-load rule — but we still load it ONCE (memoized) and only lazily
+// from the Google Pay path, so non-eligible/subscription contexts never fetch it.
+// See docs/.../applepay-googlepay-design.md §2.2.
+const GOOGLE_PAY_SDK_URL = 'https://pay.google.com/gp/p/js/pay.js';
+let googlePayScriptPromise: Promise<any> | null = null;
+
+function loadGooglePayScript(): Promise<any> {
+  if (typeof window === 'undefined') return Promise.reject(new Error('no window'));
+  const w = window as any;
+  if (w.google?.payments?.api) return Promise.resolve(w.google);
+  if (googlePayScriptPromise) return googlePayScriptPromise;
+
+  googlePayScriptPromise = new Promise((resolve, reject) => {
+    // Reuse an existing tag if one was already injected.
+    const existing = document.querySelector(
+      `script[src="${GOOGLE_PAY_SDK_URL}"]`
+    ) as HTMLScriptElement | null;
+    const onload = () => {
+      if (w.google?.payments?.api) resolve(w.google);
+      else reject(new Error('Google Pay script loaded but google.payments.api is unavailable.'));
+    };
+    if (existing) {
+      if (w.google?.payments?.api) return resolve(w.google);
+      existing.addEventListener('load', onload, { once: true });
+      existing.addEventListener('error', () => reject(new Error('Failed to load Google Pay script.')), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = GOOGLE_PAY_SDK_URL;
+    script.async = true;
+    script.onload = onload;
+    script.onerror = () => reject(new Error('Failed to load Google Pay script.'));
+    document.head.appendChild(script);
+  });
+  return googlePayScriptPromise;
+}
+
 
 
 export const paypalProvider: PaymentProvider = {
+
   name: 'paypal',
   capabilities: {
     buttonCheckout: true,
@@ -173,7 +221,12 @@ export const paypalProvider: PaymentProvider = {
     externalAdminDashboard: true,
     adminAnalytics: true,
     discounts: true, // app-managed discount codes (Feature 2)
+    // Device/OS wallet buttons (Apple Pay / Google Pay) for ONE-TIME checkout,
+    // rendered internally by renderCheckout (eligibility-gated). One-time only —
+    // wallet-funded recurring is deferred (see applepay-googlepay-decision.md).
+    wallets: true,
   },
+
 
   // Validate + preview a discount code for an item (READ-ONLY; records nothing).
   // Backed by the `previewDiscount` callable, which resolves the original amount
@@ -352,11 +405,19 @@ export const paypalProvider: PaymentProvider = {
     const closers: Array<() => void> = [];
     let renderedAny = false;
 
-    // Build a labeled, outlined section box, render the given funding sources into it,
-    // and append it to the checkout container ONLY if something rendered.
+    // A section item is EITHER a PayPal funding source (rendered via paypal.Buttons)
+    // OR a custom wallet mount (Apple/Google Pay — separate SDK components that aren't
+    // FUNDING.* sources). `customMount` renders into the provided element and returns a
+    // cleanup closer, or null when not eligible/failed (non-fatal — the box skips it).
+    type SectionItem =
+      | { fundingSource: unknown; extraStyle?: Record<string, unknown> }
+      | { customMount: (el: HTMLElement) => Promise<(() => void) | null> };
+
+    // Build a labeled, outlined section box, render the given items into it, and append
+    // it to the checkout container ONLY if something rendered.
     const renderSection = async (
       label: string,
-      items: Array<{ fundingSource: unknown; extraStyle?: Record<string, unknown> }>
+      items: Array<SectionItem>
     ): Promise<boolean> => {
       // Box: rounded rectangle outline with a small uppercase label at the top.
       const box = document.createElement('div');
@@ -374,7 +435,28 @@ export const paypalProvider: PaymentProvider = {
       opts.container.appendChild(box);
 
       let any = false;
-      for (const { fundingSource, extraStyle } of items) {
+      for (const item of items) {
+        // ---- Custom wallet mount (Apple/Google Pay) ----
+        if ('customMount' in item) {
+          try {
+            const el = document.createElement('div');
+            el.style.marginTop = any ? '8px' : '0';
+            buttonsWrap.appendChild(el);
+            const closer = await item.customMount(el);
+            if (!closer) {
+              el.remove(); // not eligible / failed → non-fatal, skip
+              continue;
+            }
+            closers.push(closer);
+            any = true;
+          } catch {
+            // Non-fatal — skip this wallet, keep the rest.
+          }
+          continue;
+        }
+
+        // ---- PayPal funding source (card / PayPal / Pay Later / Venmo) ----
+        const { fundingSource, extraStyle } = item;
         if (!fundingSource) continue;
         try {
           const candidate = paypal.Buttons({
@@ -404,6 +486,137 @@ export const paypalProvider: PaymentProvider = {
       return true;
     };
 
+    // Google Pay wallet mount (Feature 3 phase 2a — ONE-TIME only). Separate PayPal
+    // SDK component (`paypal.Googlepay()`) + Google's own `pay.js` button. Eligibility-
+    // gated + non-fatal: returns null (→ omitted) on any non-eligibility/error so the
+    // other buttons are unaffected. On tap: create the order SERVER-SIDE (amount +
+    // discount are server-authoritative), run the Google Pay sheet, confirm the order
+    // with PayPal, then capture server-side — the SAME fulfillment path as the buttons.
+    // See docs/.../applepay-googlepay-design.md §4. Google Pay's `environment` is TEST
+    // in sandbox (non-chargeable test credentials) / PRODUCTION on live.
+    const renderGooglePay = async (mountEl: HTMLElement): Promise<(() => void) | null> => {
+      // Wallets are one-time only (recurring via wallets is deferred — decision §4).
+      if (isSubscription) return null;
+      const oneTime = oneTimeAmount(opts.priceId);
+      if (!oneTime) return null;
+      if (!paypal.Googlepay) return null;
+
+      // ORIGIN GUARD: PayPal's Google Pay config endpoint (GetGooglePayConfig) only
+      // returns CORS headers for a SECURE context served from a REAL, resolvable
+      // domain. It rejects `localhost`/`127.0.0.1` (and any non-HTTPS origin) — so on
+      // a local dev box the config call 403s and the SDK logs `googlepay_config_error`,
+      // which Next's dev overlay then surfaces. We can't fix that from the client, so
+      // we SKIP Google Pay entirely on those origins (non-fatal — the other buttons are
+      // unaffected) and log a single quiet, explanatory line instead of the raw error.
+      // To test Google Pay locally, serve the app from a real HTTPS domain (a tunnel
+      // such as cloudflared/ngrok, or an App Hosting preview). See
+      // docs/.../applepay-googlepay-design.md §10.
+      if (typeof window !== 'undefined') {
+        const host = window.location.hostname;
+        const isLocalhost =
+          host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost');
+        const isSecure = window.location.protocol === 'https:';
+        if (!isSecure || isLocalhost) {
+          console.info(
+            '[paypal] Google Pay skipped — requires a secure (HTTPS) real-domain origin; ' +
+            'PayPal rejects localhost. Use a tunnel or a deployed preview to test it.'
+          );
+          return null;
+        }
+      }
+
+      try {
+        await loadGooglePayScript();
+
+        const w = window as any;
+        if (!w.google?.payments?.api) return null;
+
+        const googlepay = paypal.Googlepay();
+        const config = await googlepay.config();
+        if (!config || config.isEligible === false) return null;
+
+        const environment = PAYPAL_ENV === 'production' ? 'PRODUCTION' : 'TEST';
+        const paymentsClient = new w.google.payments.api.PaymentsClient({ environment });
+
+        const readyResult = await paymentsClient.isReadyToPay({
+          apiVersion: config.apiVersion,
+          apiVersionMinor: config.apiVersionMinor,
+          allowedPaymentMethods: config.allowedPaymentMethods,
+        });
+        if (!readyResult?.result) return null;
+
+        const onClick = async () => {
+          try {
+            // DISPLAY total on the Google Pay sheet. The ACTUAL charged amount is set
+            // SERVER-SIDE by createPaypalOrder (incl. any discountCode); we show the
+            // catalog amount here (the server remains authoritative). A discounted
+            // wallet purchase still charges the server-computed discounted amount.
+            const paymentDataRequest = {
+              apiVersion: config.apiVersion,
+              apiVersionMinor: config.apiVersionMinor,
+              allowedPaymentMethods: config.allowedPaymentMethods,
+              merchantInfo: config.merchantInfo,
+              transactionInfo: {
+                countryCode: config.countryCode || 'US',
+                currencyCode: 'USD',
+                totalPriceStatus: 'FINAL',
+                totalPrice: (oneTime.amount / 100).toFixed(2),
+              },
+            };
+            const paymentData = await paymentsClient.loadPaymentData(paymentDataRequest);
+
+            const { httpsCallable } = await import('firebase/functions');
+            const { functions } = await import('@/lib/firebase');
+
+            // Create the order server-side (amount + discount authoritative there).
+            const createOrder = httpsCallable(functions, 'createPaypalOrder');
+            const createRes = await createOrder({
+              priceId: opts.priceId,
+              userId: opts.userId,
+              discountCode: opts.discountCode,
+              paypalEnv: PAYPAL_ENV,
+            });
+            const orderId = (createRes?.data as { orderId?: string } | undefined)?.orderId;
+            if (!orderId) throw new Error('Failed to create PayPal order.');
+
+            // Confirm the order with the Google Pay payment credential.
+            const confirm = await googlepay.confirmOrder({
+              orderId,
+              paymentMethodData: paymentData.paymentMethodData,
+            });
+            if (confirm?.status && confirm.status !== 'APPROVED') {
+              throw new Error(`Google Pay order not approved (status=${confirm.status}).`);
+            }
+
+            // Capture SERVER-SIDE (same as the button/card paths); returns the capture
+            // id so the success page can match an absolute fulfillment signal.
+            opts.onProcessing?.();
+            const capture = httpsCallable(functions, 'capturePaypalOrder');
+            const capRes = await capture({ orderId, paypalEnv: PAYPAL_ENV });
+            const transactionId = (capRes?.data as { transactionId?: string } | undefined)?.transactionId;
+            opts.onApproved(transactionId);
+          } catch (e: any) {
+            // Google Pay sheet CANCEL is non-fatal (buyer dismissed) — don't surface it.
+            if (e && (e.statusCode === 'CANCELED' || e.statusCode === 'CANCELLED')) return;
+            opts.onError?.(e);
+          }
+        };
+
+        const buttonEl = paymentsClient.createButton({
+          onClick,
+          buttonType: 'plain',
+          buttonSizeMode: 'fill',
+        });
+        mountEl.appendChild(buttonEl);
+        return () => {
+          try { mountEl.innerHTML = ''; } catch { /* ignore */ }
+        };
+      } catch {
+        return null; // any failure → omit Google Pay (non-fatal)
+      }
+    };
+
+
     // 1) Card (top) — guest, no PayPal account. HOSTED card flow — works WITHOUT the
     //    Reference Transactions capability vaulted-card subs require.
     await renderSection('Pay with Card', [{ fundingSource: FUNDING.CARD }]);
@@ -412,8 +625,16 @@ export const paypalProvider: PaymentProvider = {
       { fundingSource: FUNDING.PAYPAL, extraStyle: { label: 'paypal' } },
       { fundingSource: FUNDING.PAYLATER },
     ]);
-    // 3) Wallets — Venmo (US-eligible contexts only; non-eligible = simply omitted).
-    await renderSection('More ways to pay', [{ fundingSource: FUNDING.VENMO }]);
+    // 3) Wallets — Venmo + Google Pay (one-time only; each eligibility-guarded and
+    //    non-fatal, so a non-eligible context simply omits it). Apple Pay slots in here
+    //    too once its domain is registered (T3/T4). Google Pay is a separate SDK
+    //    component (customMount) — it uses the SAME server createOrder + capture path,
+    //    so fulfillment + discounts are identical to the other buttons.
+    await renderSection('More ways to pay', [
+      { fundingSource: FUNDING.VENMO },
+      { customMount: renderGooglePay },
+    ]);
+
 
     // Fallback: if NOTHING rendered (e.g. funding constants unavailable), render the
     // combined auto-layout so checkout is never empty.

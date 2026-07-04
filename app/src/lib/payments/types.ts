@@ -151,7 +151,16 @@ export interface ProviderCapabilities {
    * PayPal ✅ (our own server-side discount system). Stripe ❌ here (no-op).
    */
   discounts?: boolean;
+  /**
+   * Provider exposes extra device/OS wallet buttons (Apple Pay / Google Pay) for
+   * ONE-TIME checkout, rendered internally by the adapter (eligibility-gated). The
+   * app may use this for neutral copy only; it must NOT branch on a specific wallet
+   * name. PayPal ✅ (one-time, via Orders v2). Stripe ❌ here.
+   * See docs/02-implementation/payment-processor/applepay-googlepay-design.md.
+   */
+  wallets?: boolean;
 }
+
 
 
 

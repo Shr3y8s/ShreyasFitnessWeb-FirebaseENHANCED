@@ -52,7 +52,10 @@ export const stripeProvider: PaymentProvider = {
     // App-managed discount codes (Feature 2) are a PayPal-only capability here.
     // Stripe is denied for live use on this app, so its adapter is a no-op.
     discounts: false,
+    // No device/OS wallet buttons (Apple/Google Pay) — Stripe is dormant here.
+    wallets: false,
   },
+
 
   // No-op preview so the neutral interface stays type-safe even if a caller
   // (incorrectly) asks Stripe for a discount. Records nothing; always invalid.

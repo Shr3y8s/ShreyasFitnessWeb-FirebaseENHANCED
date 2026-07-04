@@ -26,8 +26,16 @@ Each feature has a **requirements → design → tasks** set under
    - `paypal-payment-methods-requirements.md`
    - `paypal-payment-methods-design.md`
    - `paypal-payment-methods-tasks.md`
+   - **Apple Pay + Google Pay (Phase 2) — EXPANDED into a dedicated spec set (2026-07-04):**
+     - `applepay-googlepay-decision.md` — ADR: why Billing Plans (not Orders v2 +
+       Vault) for subscriptions; the two wallet integration options; chose **Option A**
+       (one-time via Orders v2) now, deferred **Option B** (wallet-funded recurring).
+     - `applepay-googlepay-requirements.md`
+     - `applepay-googlepay-design.md`
+     - `applepay-googlepay-tasks.md`
 
 These sit alongside the parent specs (`payment-processor-{requirements,design,tasks}.md`).
+
 
 ## Cross-cutting constraints (apply to all three)
 
