@@ -12,7 +12,7 @@ interface SessionBalanceCardProps {
 export default function SessionBalanceCard({ balance, packages, loading }: SessionBalanceCardProps) {
   if (loading) {
     return (
-      <div className="bg-card rounded-lg shadow-md p-6 animate-pulse border border-border">
+      <div className="dashboard-card rounded-lg p-6 animate-pulse">
         <div className="h-6 bg-muted rounded w-1/2 mb-4"></div>
         <div className="h-8 bg-muted rounded w-1/3"></div>
       </div>
@@ -40,7 +40,7 @@ export default function SessionBalanceCard({ balance, packages, loading }: Sessi
   );
 
   return (
-    <div className="bg-primary/10 rounded-lg shadow-md p-6 border border-primary/50">
+    <div className="dashboard-card rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-foreground flex items-center">
           <span className="text-2xl mr-2">📊</span>

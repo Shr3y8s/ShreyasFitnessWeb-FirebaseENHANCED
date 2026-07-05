@@ -89,7 +89,7 @@ export default function PlanPage() {
           onLogout={handleLogout}
         />
         <SidebarInset>
-          <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+          <div className="client-surface flex items-center justify-center">
             <div className="flex items-center gap-2 text-stone-600">
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading your plan...
@@ -113,7 +113,7 @@ export default function PlanPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div>

@@ -539,7 +539,7 @@ export default function ClientDashboardPage() {
           theme={theme}
         />
         <SidebarInset>
-          <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-foreground'} p-4 sm:p-6 lg:p-8`}>
+          <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'client-surface text-foreground'} p-4 sm:p-6 lg:p-8`}>
             <div className="max-w-5xl mx-auto space-y-6">
 
               {/* Header */}
@@ -664,8 +664,9 @@ export default function ClientDashboardPage() {
         theme={theme}
       />
       <SidebarInset>
-        <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-foreground'} p-4 sm:p-6 lg:p-8`}>
+        <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'client-surface'} p-4 sm:p-6 lg:p-8`}>
           <div className="max-w-7xl mx-auto space-y-6">
+
             {/* Header */}
             <WelcomeHeader
               name={userDataFromAuth?.name || 'Alex'}

@@ -53,7 +53,8 @@ export function CurrentPlan({ trainingProtocol }: CurrentPlanProps) {
   const title = phase ? `Current Phase: ${toTitleCase(phase)}` : 'Current Phase';
 
   return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+    <div className="rounded-xl border bg-primary/5 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+
       <div className="flex flex-col space-y-1.5 p-6">
         <div className="flex items-center gap-3">
           <Goal className="w-6 h-6 text-primary" />

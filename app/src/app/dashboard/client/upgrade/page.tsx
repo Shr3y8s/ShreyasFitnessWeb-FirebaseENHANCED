@@ -129,7 +129,7 @@ export default function UpgradePage() {
   if (loading || authLoading) {
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -144,7 +144,7 @@ export default function UpgradePage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto space-y-6">
             
             <Breadcrumb items={[

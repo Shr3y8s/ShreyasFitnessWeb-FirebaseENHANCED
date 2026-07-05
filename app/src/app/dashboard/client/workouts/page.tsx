@@ -130,7 +130,8 @@ export default function ClientWorkoutsPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen text-foreground p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
+
           <div className="max-w-7xl mx-auto">
             {/* Mobile: Tabbed Layout */}
             <div className="lg:hidden">

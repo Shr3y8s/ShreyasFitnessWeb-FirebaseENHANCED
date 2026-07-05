@@ -265,7 +265,7 @@ export default function ClientMessagesPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     );
@@ -273,7 +273,7 @@ export default function ClientMessagesPage() {
 
   if (!trainerData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-center">
           <MessageSquare className="h-16 w-16 text-gray-400 mb-4 mx-auto" />
           <h3 className="text-xl font-semibold text-gray-700 mb-2">No Coach Assigned</h3>
@@ -309,7 +309,7 @@ export default function ClientMessagesPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
@@ -320,7 +320,8 @@ export default function ClientMessagesPage() {
             </div>
 
         {/* Messages Container */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-emerald-200/60 overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 250px)' }}>
+        <div className="dashboard-card rounded-2xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 250px)' }}>
+
           {/* Chat Header */}
           <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
             <div className="flex items-center gap-4">
@@ -343,7 +344,8 @@ export default function ClientMessagesPage() {
           </div>
 
           {/* Messages Container */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 messages-container">
+          <div className="chat-dots flex-1 overflow-y-auto p-6 space-y-4 messages-container">
+
             {messages.length > 0 ? (
               messages.map((message) => {
                 const isClient = message.senderId === user?.uid;
@@ -354,17 +356,20 @@ export default function ClientMessagesPage() {
                   >
                     <div className={`max-w-[70%] ${isClient ? 'order-2' : 'order-1'}`}>
                       <div
-                        className={`rounded-lg p-4 ${
+                        className={`rounded-2xl px-4 py-2.5 shadow-sm ${
                           isClient
-                            ? 'bg-primary text-white'
-                            : 'bg-gray-100 text-gray-900'
+                            ? 'bg-primary text-white rounded-br-sm'
+                            : 'bg-neutral-600 text-white rounded-bl-sm'
+
+
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1 px-2">
+                      <p className={`text-xs text-muted-foreground mt-1 px-2 ${isClient ? 'text-right' : 'text-left'}`}>
                         {formatTime(message.createdAt)}
                       </p>
+
                     </div>
                   </div>
                 );
@@ -379,7 +384,8 @@ export default function ClientMessagesPage() {
           </div>
 
           {/* Message Input */}
-          <div className="p-4 border-t bg-gray-50 flex-shrink-0">
+          <div className="p-4 border-t border-primary/20 bg-primary/5 flex-shrink-0">
+
             <div className="flex gap-2">
               <input
                 ref={messageInputRef}

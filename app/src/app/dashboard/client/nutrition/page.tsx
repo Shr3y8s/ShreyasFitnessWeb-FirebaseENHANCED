@@ -718,8 +718,9 @@ export default function NutritionPage() {
           onLogout={handleLogout}
         />
         <SidebarInset>
-          <div className="min-h-screen text-foreground p-4 sm:p-6 lg:p-8 bg-primary/5">
+          <div className="client-surface p-4 sm:p-6 lg:p-8">
             <div className="max-w-3xl mx-auto space-y-6">
+
               <div className="space-y-2 mb-6">
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-3">
                   <Utensils className="w-8 h-8 text-primary" />
@@ -767,8 +768,9 @@ export default function NutritionPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen text-foreground p-4 sm:p-6 lg:p-8 bg-primary/5">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
+
             <div className="space-y-2 mb-6">
               <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-3">
                 <Utensils className="w-8 h-8 text-primary"/>
@@ -807,7 +809,8 @@ export default function NutritionPage() {
             </div>
 
             {/* Global Date Navigation - Always visible */}
-            <div className="border-green-200 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 border-2 rounded-lg p-4 shadow-lg transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
+            <div className="dashboard-card rounded-lg p-4">
+
               {/* Date context label - above date picker */}
               <div className="mb-3 text-center space-y-2">
                 <p className="text-sm font-semibold text-foreground">

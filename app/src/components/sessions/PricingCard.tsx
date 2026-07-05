@@ -34,11 +34,10 @@ export default function PricingCard({
 }: PricingCardProps) {
 
   return (
-    <div className={`relative rounded-lg shadow-lg overflow-hidden transition-transform hover:scale-105 h-full bg-card ${
-      featured 
-        ? 'border-2 border-primary' 
-        : 'border border-border'
+    <div className={`dashboard-card relative rounded-lg overflow-hidden h-full ${
+      featured ? 'ring-2 ring-primary' : ''
     }`}>
+
       {featured && (
         <div className="absolute top-0 right-0 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg shadow-md">
           BEST VALUE

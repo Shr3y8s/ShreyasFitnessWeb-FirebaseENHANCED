@@ -84,7 +84,8 @@ export default function ProgressPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
+
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">

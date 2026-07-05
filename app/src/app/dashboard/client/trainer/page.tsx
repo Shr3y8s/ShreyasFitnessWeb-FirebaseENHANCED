@@ -205,7 +205,7 @@ export default function YourTrainerPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-primary animate-spin" />
       </div>
     );
@@ -222,7 +222,7 @@ export default function YourTrainerPage() {
           onLogout={handleLogout}
         />
         <SidebarInset>
-          <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+          <div className="client-surface p-8">
             <div className="max-w-4xl mx-auto">
               <div className="text-center py-12">
                 <User className="h-16 w-16 text-gray-400 mb-4 mx-auto" />
@@ -249,7 +249,7 @@ export default function YourTrainerPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Page Header */}
             <div className="mb-8">

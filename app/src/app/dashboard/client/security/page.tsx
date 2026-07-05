@@ -401,7 +401,7 @@ export default function SecurityPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
           <div className="max-w-4xl mx-auto space-y-6">
       <Breadcrumb items={breadcrumbItems} />
       
@@ -419,7 +419,7 @@ export default function SecurityPage() {
 
             {/* Security Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-emerald-300">
+              <div className="dashboard-card rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <Key className="w-5 h-5 text-blue-600" />
@@ -440,7 +440,7 @@ export default function SecurityPage() {
 
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-emerald-300">
+              <div className="dashboard-card rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-purple-100 rounded-lg">
                     <Mail className="w-5 h-5 text-purple-600" />
@@ -468,7 +468,7 @@ export default function SecurityPage() {
 
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-emerald-300">
+              <div className="dashboard-card rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-orange-100 rounded-lg">
                     <Smartphone className="w-5 h-5 text-orange-600" />
@@ -490,7 +490,7 @@ export default function SecurityPage() {
 
             {/* Password Change Form */}
             {isChangingPassword && (
-              <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
+              <div className="dashboard-card rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h3>
                 
                 {passwordError && (
@@ -560,7 +560,7 @@ export default function SecurityPage() {
 
             {/* Email Change Form */}
             {isChangingEmail && (
-              <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-6 transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
+              <div className="dashboard-card rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
                   <Mail className="w-5 h-5 text-primary" />
                   Change Email Address

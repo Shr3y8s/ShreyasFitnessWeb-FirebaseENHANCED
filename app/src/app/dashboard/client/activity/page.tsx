@@ -353,7 +353,7 @@ export default function DailyActivityPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Header */}
             <div>
@@ -362,7 +362,8 @@ export default function DailyActivityPage() {
             </div>
 
             {/* Date Navigation */}
-            <div className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 rounded-lg p-4 shadow-lg">
+            <div className="dashboard-card rounded-lg p-4">
+
               <div className="mb-3 text-center">
                 <p className="text-sm font-semibold text-foreground">
                   Logging activity data for:{' '}

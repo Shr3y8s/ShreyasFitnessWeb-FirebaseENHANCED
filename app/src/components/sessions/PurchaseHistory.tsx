@@ -11,7 +11,7 @@ interface PurchaseHistoryProps {
 export default function PurchaseHistory({ packages, loading }: PurchaseHistoryProps) {
   if (loading) {
     return (
-      <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+      <div className="dashboard-card rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4 text-foreground">Session Purchase History</h3>
         <div className="animate-pulse space-y-3">
           <div className="h-12 bg-muted rounded"></div>
@@ -23,7 +23,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
 
   if (packages.length === 0) {
     return (
-      <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+      <div className="dashboard-card rounded-lg p-6">
         <h3 className="text-lg font-semibold mb-4 text-foreground">Session Purchase History</h3>
         <p className="text-muted-foreground text-center py-8">No purchases yet. Buy your first session package above!</p>
       </div>
@@ -48,7 +48,7 @@ export default function PurchaseHistory({ packages, loading }: PurchaseHistoryPr
   });
 
   return (
-    <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+    <div className="dashboard-card rounded-lg p-6">
       <h3 className="text-lg font-semibold mb-4 text-foreground">Session Purchase History</h3>
       
       {/* Desktop view */}

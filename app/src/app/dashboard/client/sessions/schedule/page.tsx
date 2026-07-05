@@ -343,7 +343,8 @@ export default function ScheduleSessionsPage() {
           onLogout={handleLogout}
         />
         <SidebarInset>
-          <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+          <div className="client-surface p-4 sm:p-6 lg:p-8">
+
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
@@ -372,7 +373,7 @@ export default function ScheduleSessionsPage() {
             <div className={`grid gap-8 ${hasAvailableCredits ? 'lg:grid-cols-2' : ''}`}>
               {/* Calendly Widget — only shown when credits available */}
               {hasAvailableCredits ? (
-                <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+                <div className="dashboard-card rounded-lg p-6">
                   <h2 className="text-xl font-semibold text-foreground mb-4">Book a Session</h2>
                   
                   {/* Calendly Inline Widget */}
@@ -401,7 +402,7 @@ export default function ScheduleSessionsPage() {
                 </div>
               ) : !hasUpcomingSessions ? (
                 /* No credits AND no upcoming sessions — show buy prompt */
-                <div className="bg-card rounded-lg shadow-md p-12 text-center border border-border">
+                <div className="dashboard-card rounded-lg p-12 text-center">
                   <div className="text-6xl mb-4">📅</div>
                   <h2 className="text-2xl font-bold text-foreground mb-3">No Sessions Available</h2>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
@@ -417,7 +418,7 @@ export default function ScheduleSessionsPage() {
               ) : null}
 
               {/* Upcoming Sessions — always visible when there are sessions */}
-              <div className="bg-card rounded-lg shadow-md p-6 border border-border">
+              <div className="dashboard-card rounded-lg p-6">
                 <h2 className="text-xl font-semibold text-foreground mb-4">Upcoming Sessions</h2>
                 
                 {loadingSessions ? (

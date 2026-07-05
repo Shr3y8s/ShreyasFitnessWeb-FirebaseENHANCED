@@ -226,7 +226,8 @@ export function QualitativeFeedback() {
         <div className="space-y-6">
             {/* Week Navigation */}
             {selectedWeekStart && (
-                <div className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 rounded-lg p-4 shadow-lg">
+                <div className="dashboard-card rounded-lg p-4">
+
                     <div className="mb-3 text-center">
                         <p className="text-sm font-semibold text-foreground">
                             Survey for week:{' '}
@@ -287,7 +288,7 @@ export function QualitativeFeedback() {
                 </div>
             )}
 
-            <Card className="card-hover-lift border-primary/50 animate-fade-in-up">
+            <Card className="border-primary/50 animate-fade-in-up">
                 <CardHeader>
                     <h3 className="text-xl font-semibold leading-none tracking-tight">Weekly Subjective Feedback</h3>
                     <CardDescription>Rate your experience over the past week. This helps your coach understand how you&apos;re feeling beyond the numbers.</CardDescription>
@@ -311,7 +312,7 @@ export function QualitativeFeedback() {
                 </CardContent>
             </Card>
 
-             <Card className="card-hover-lift border-primary/50 animate-fade-in-up stagger-1">
+             <Card className="border-primary/50 animate-fade-in-up stagger-1">
                 <CardHeader>
                     <h3 className="text-xl font-semibold leading-none tracking-tight">Program Adherence</h3>
                     <CardDescription>How challenging was it to stick to your plan this week?</CardDescription>
@@ -333,7 +334,7 @@ export function QualitativeFeedback() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="card-hover-lift border-primary/50 gradient-accent-green animate-fade-in-up stagger-2">
+                <Card className="border-primary/50 gradient-accent-green animate-fade-in-up stagger-2">
                     <CardHeader>
                         <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Check className="text-green-500 icon-hover-bounce" /> Wins for the week</h3>
                         <CardDescription>What went well? What are you proud of?</CardDescription>
@@ -350,7 +351,7 @@ export function QualitativeFeedback() {
                         />
                     </CardContent>
                 </Card>
-                 <Card className="card-hover-lift border-primary/50 bg-red-50/50 dark:bg-red-950/10 animate-fade-in-up stagger-3">
+                 <Card className="border-primary/50 bg-red-50/50 dark:bg-red-950/10 animate-fade-in-up stagger-3">
                     <CardHeader>
                          <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2"><Frown className="text-red-500 icon-hover-bounce" /> Challenges this week</h3>
                         <CardDescription>What was difficult? Where can we improve?</CardDescription>

@@ -209,7 +209,7 @@ export function ProgressCharts() {
 
   if (loading) {
     return (
-      <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+      <Card className="bg-primary/5 border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
         <CardHeader>
           <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
@@ -225,7 +225,7 @@ export function ProgressCharts() {
 
   if (chartData.length === 0) {
     return (
-      <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+      <Card className="bg-primary/5 border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
         <CardHeader>
           <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
@@ -252,7 +252,7 @@ export function ProgressCharts() {
   const yMax = Math.ceil(maxWeight + padding);
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
+    <Card className="bg-primary/5 border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="space-y-1">
           <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">

@@ -183,7 +183,8 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                           <Badge className="bg-orange-500 text-white text-xs px-1 py-0 h-4">Urgent</Badge>
                         )}
                         {isOverdue && (
-                          <Badge variant="destructive" className="text-xs px-1 py-0 h-4">Overdue</Badge>
+                          <Badge variant="destructive" className="text-xs px-1 py-0 h-4 text-white">Overdue</Badge>
+
                         )}
                       </div>
                       <p className={cn('text-xs mt-0.5', isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground')}>

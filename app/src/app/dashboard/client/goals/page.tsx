@@ -62,7 +62,7 @@ export default function ClientGoalsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading your goals...</div>
       </div>
     );
@@ -78,7 +78,7 @@ export default function ClientGoalsPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-6">

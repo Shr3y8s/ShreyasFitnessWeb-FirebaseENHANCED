@@ -3,6 +3,66 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Client Portal: shared surface + card standard ──────────────────────────
+   Centralizes the look & feel of every client dashboard page so backgrounds
+   and cards stay consistent. Use `client-surface` on the page wrapper; all
+   Card components inside automatically get the standard border + subtle hover. */
+@layer components {
+  .client-surface {
+    @apply min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-foreground;
+  }
+}
+
+/* Standard card look & feel for every client page.
+   Scoped to `.client-surface` so it does NOT affect the forest theme
+   (.client-dashboard) or trainer/admin areas. Applies to BOTH shadcn Cards
+   (data-slot="card") and hand-rolled cards tagged with `.dashboard-card`,
+   so every card shares the same faint-green tint, primary border, and the
+   fuzzy green glow + lift on hover. */
+.client-surface [data-slot="card"],
+.client-surface .dashboard-card {
+  background-color: oklch(65% 0.16 151 / 0.06) !important;   /* faint green tint over white */
+  border: 1px solid oklch(65% 0.16 151 / 0.45) !important;    /* visible primary-green border */
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+
+.client-surface [data-slot="card"]:hover,
+.client-surface .dashboard-card:hover {
+  box-shadow: var(--shadow-glow) !important;   /* full fuzzy green glow */
+  transform: translateY(-4px);
+  border-color: oklch(65% 0.16 151 / 0.7) !important;
+}
+
+/* Subtle WhatsApp-style dotted background for the coach chat message area.
+   Pure CSS (no image asset): faint green dots on a barely-there green wash. */
+.chat-dots {
+  background-color: oklch(65% 0.16 151 / 0.04);
+  background-image: radial-gradient(oklch(65% 0.16 151 / 0.18) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+/* Subtle, professional hover for sidebar nav items (light client/trainer/admin
+   sidebars — excludes the forest glass sidebar which has its own hover). Gentle
+   green tint + a small slide + smooth color shift. */
+[data-slot="sidebar"]:not(.forest-sidebar *) [data-sidebar="menu-button"]:not([data-active="true"]),
+.group\/sidebar-wrapper [data-sidebar="menu-button"]:not([data-active="true"]) {
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, padding-left 0.2s ease;
+}
+
+[data-slot="sidebar"]:not(.forest-sidebar *) [data-sidebar="menu-button"]:not([data-active="true"]):hover,
+.group\/sidebar-wrapper [data-sidebar="menu-button"]:not([data-active="true"]):hover {
+  background-color: oklch(65% 0.16 151 / 0.10);
+  color: var(--primary);
+  padding-left: 1rem;
+}
+
+
+
+
+
+
+
 @theme inline {
   --shadow-glow: 0 0 15px oklch(65% 0.16 151 / 0.25), 0 4px 20px oklch(65% 0.16 151 / 0.4);
   --color-background: var(--background);

@@ -156,7 +156,8 @@ export default function ClientTasksPage() {
             <span className={cn('font-medium text-sm', task.status === 'completed' && 'line-through text-muted-foreground')}>
               {task.title}
             </span>
-            {task.status === 'overdue' && <Badge variant="destructive" className="text-xs">Overdue</Badge>}
+            {task.status === 'overdue' && <Badge variant="destructive" className="text-xs text-white">Overdue</Badge>}
+
             {task.status === 'pending' && task.priority === 'urgent' && (
               <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Urgent</Badge>
             )}
@@ -205,7 +206,8 @@ export default function ClientTasksPage() {
         onLogout={handleLogout}
       />
       <SidebarInset>
-        <div className="p-6 max-w-4xl mx-auto space-y-6">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
+          <div className="max-w-4xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-bold">My Tasks</h1>
 
@@ -256,8 +258,10 @@ export default function ClientTasksPage() {
               )}
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       </SidebarInset>
+
     </SidebarProvider>
   );
 }
