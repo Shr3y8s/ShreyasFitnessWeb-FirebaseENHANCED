@@ -771,27 +771,34 @@ export const paypalProvider: PaymentProvider = {
             };
 
 
+            wdbg('ApplePay: session.begin (amount=' + (displayCents / 100).toFixed(2) + ')');
             const session = new ApplePaySession(4, paymentRequest);
 
             // Validate the merchant against Apple via PayPal, then hand Apple the
             // resulting merchant session to open the sheet.
             session.onvalidatemerchant = async (event: any) => {
+              wdbg('ApplePay: onvalidatemerchant url=' + (event?.validationURL || '?'));
               try {
                 const merchantSession = await applepay.validateMerchant({
                   validationUrl: event.validationURL,
                 });
+                wdbg('ApplePay: validateMerchant OK keys=' +
+                  (merchantSession ? Object.keys(merchantSession).join(',') : 'null'));
                 // PayPal returns { merchantSession } (or the session directly depending
                 // on SDK version); pass whichever Apple expects.
                 session.completeMerchantValidation(
                   merchantSession?.merchantSession ?? merchantSession
                 );
               } catch (e) {
+                wdbg('ApplePay: validateMerchant FAILED ' + ((e as Error)?.message || String(e)));
                 try { session.abort(); } catch { /* ignore */ }
                 opts.onError?.(e);
               }
             };
 
+
             session.onpaymentauthorized = async (event: any) => {
+              wdbg('ApplePay: onpaymentauthorized (got token)');
               try {
                 const { httpsCallable } = await import('firebase/functions');
                 const { functions } = await import('@/lib/firebase');
@@ -805,6 +812,7 @@ export const paypalProvider: PaymentProvider = {
                   paypalEnv: PAYPAL_ENV,
                 });
                 const orderId = (createRes?.data as { orderId?: string } | undefined)?.orderId;
+                wdbg('ApplePay: createPaypalOrder → ' + (orderId || 'NO orderId'));
                 if (!orderId) throw new Error('Failed to create PayPal order.');
 
                 // Confirm the order with the Apple Pay token.
@@ -814,11 +822,14 @@ export const paypalProvider: PaymentProvider = {
                   billingContact: event.payment.billingContact,
                   shippingContact: event.payment.shippingContact,
                 });
+                wdbg('ApplePay: confirmOrder status=' + (confirm?.status ?? 'none'));
                 if (confirm?.status && confirm.status !== 'APPROVED') {
                   session.completePayment(ApplePaySession.STATUS_FAILURE);
                   throw new Error(`Apple Pay order not approved (status=${confirm.status}).`);
                 }
                 session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                wdbg('ApplePay: completePayment SUCCESS → capturing');
+
 
                 // Capture SERVER-SIDE (same as the button/card paths); returns the capture
                 // id so the success page can match an absolute fulfillment signal.
@@ -828,20 +839,24 @@ export const paypalProvider: PaymentProvider = {
                 const transactionId = (capRes?.data as { transactionId?: string } | undefined)?.transactionId;
                 opts.onApproved(transactionId);
               } catch (e) {
+                wdbg('ApplePay: authorize FLOW FAILED ' + ((e as Error)?.message || String(e)));
                 try { session.completePayment(ApplePaySession.STATUS_FAILURE); } catch { /* ignore */ }
                 opts.onError?.(e);
               }
             };
 
             session.oncancel = () => {
+              wdbg('ApplePay: oncancel (buyer dismissed)');
               // Buyer dismissed the sheet — non-fatal, nothing to surface.
             };
 
             session.begin();
           } catch (e) {
+            wdbg('ApplePay: onClick threw ' + ((e as Error)?.message || String(e)));
             opts.onError?.(e);
           }
         };
+
 
         // Render the Apple Pay button. We DON'T use the native <apple-pay-button> custom
         // element — in this embedded context it upgrades to zero size and stays invisible

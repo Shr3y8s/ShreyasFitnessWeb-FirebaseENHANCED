@@ -66,8 +66,11 @@ const PLAN_TIER_MAP = {
   // sandbox QUARTERLY (2-cycle, interval_count 3), minted 2026-06-29 (prepay-plans Phase B)
   "P-2TA612087A1042525NJBQTAA": { tierId: "online_coaching", tierName: "Online Coaching", intervalCount: 3 },
   "P-0M212305WN6341942NJBQTAA": { tierId: "complete_transformation", tierName: "Complete Transformation", intervalCount: 3 },
-  // live QUARTERLY — minted at live cutover (B1.3); ids added then.
+  // live QUARTERLY (2-cycle, interval_count 3), minted 2026-07-04 (prepay-plans Phase B, B1.3)
+  "P-48720835E0191905HNJE4AXA": { tierId: "online_coaching", tierName: "Online Coaching", intervalCount: 3 },
+  "P-18941013R8532470FNJE4AXA": { tierId: "complete_transformation", tierName: "Complete Transformation", intervalCount: 3 },
 };
+
 
 
 

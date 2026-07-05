@@ -103,8 +103,30 @@ const BASE_PLANS = [
     intervalCount: 3,
     name: "Complete Transformation Quarterly",
   },
-  // live quarterly plans appended at cutover (B1.3).
+  {
+    // live 2-cycle quarterly, minted 2026-07-04. $540/qtr (10% off $200×3).
+    planId: "P-48720835E0191905HNJE4AXA",
+    productId: "PROD-8A5246863N608771L",
+    tierId: "online_coaching",
+    tierName: "Online Coaching",
+    env: "production",
+    amountMinor: 54000,
+    intervalCount: 3,
+    name: "Online Coaching Quarterly",
+  },
+  {
+    // live 2-cycle quarterly, minted 2026-07-04. $675/qtr (10% off $250×3).
+    planId: "P-18941013R8532470FNJE4AXA",
+    productId: "PROD-0YA71868YT116171P",
+    tierId: "complete_transformation",
+    tierName: "Complete Transformation",
+    env: "production",
+    amountMinor: 67500,
+    intervalCount: 3,
+    name: "Complete Transformation Quarterly",
+  },
 ];
+
 
 function planDoc(p) {
   return {

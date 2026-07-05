@@ -87,7 +87,10 @@ variable across the payment path; monthly behavior unchanged. Proceeding to Phas
   `seed-paypal-plans.js`) to mint a 2-cycle plan with `intervalCount: 3`.
 - [x] B1.2 Mint OC-Q + CT-Q in **sandbox** at the 10% quarterly price (OC 54000, CT 67500).
   OC-Q `P-2TA612087A1042525NJBQTAA`, CT-Q `P-0M212305WN6341942NJBQTAA`.
-- [ ] B1.3 (after sandbox verified) Mint OC-Q + CT-Q in **live**. Record plan ids.
+- [x] B1.3 (after sandbox verified) Mint OC-Q + CT-Q in **live** (2026-07-04).
+  OC-Q `P-48720835E0191905HNJE4AXA` ($540/qtr, product PROD-8A5246863N608771L),
+  CT-Q `P-18941013R8532470FNJE4AXA` ($675/qtr, product PROD-0YA71868YT116171P).
+
 - [x] B1.4 Add the sandbox ids to `SANDBOX_PLANS` under `ONLINE_COACHING_QUARTERLY` /
   `COMPLETE_TRANSFORMATION_QUARTERLY` (live keys present, values empty until B1.3).
 
