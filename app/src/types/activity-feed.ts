@@ -26,7 +26,13 @@ export type ActivityEventType =
   | 'progress_photo_uploaded'
   | 'client_message_received'
   | 'daily_habits_completed'
-  | 'cardio_session_logged';
+  | 'cardio_session_logged'
+  // Admin-broadcast (owner) events — see docs/02-implementation/admin-notifications/
+  | 'new_inquiry'
+  | 'new_pending_signup'
+  | 'new_client_activated'
+  | 'new_session_purchase';
+
 
 // ============================================================
 // Core Activity Feed Event
@@ -49,6 +55,10 @@ export interface ActivityFeedEvent {
   // State
   read: boolean;                  // Has trainer seen this? (default: false)
 
+  // Audience: 'trainer' (client-action events, default) | 'admin' (owner-directed
+  // business events). See docs/02-implementation/admin-notifications/.
+  audience?: 'trainer' | 'admin';
+
   // TTL
   expiresAt: Date;                // timestamp + 7 days (for scheduled cleanup)
 }
@@ -56,6 +66,7 @@ export interface ActivityFeedEvent {
 // Raw Firestore document (before Date conversion)
 export interface ActivityFeedEventDoc {
   type: ActivityEventType;
+  audience?: 'trainer' | 'admin';
   clientId: string;
   clientName: string;
   trainerId: string;
@@ -65,6 +76,7 @@ export interface ActivityFeedEventDoc {
   read: boolean;
   expiresAt: Timestamp;
 }
+
 
 // ============================================================
 // Event-Specific Metadata Types
@@ -190,7 +202,13 @@ export const ACTIVITY_EVENT_ICONS: Record<ActivityEventType, string> = {
   client_message_received: '💬',
   daily_habits_completed: '✅',
   cardio_session_logged: '❤️',
+  // Admin-broadcast (owner) events
+  new_inquiry: '📨',
+  new_pending_signup: '📝',
+  new_client_activated: '🎉',
+  new_session_purchase: '💳',
 };
+
 
 export const ACTIVITY_EVENT_LABELS: Record<ActivityEventType, string> = {
   client_login: 'Logged In',
@@ -212,6 +230,11 @@ export const ACTIVITY_EVENT_LABELS: Record<ActivityEventType, string> = {
   client_message_received: 'Sent Message',
   daily_habits_completed: 'Completed Daily Habits',
   cardio_session_logged: 'Logged Cardio Session',
+  // Admin-broadcast (owner) events
+  new_inquiry: 'New Inquiry',
+  new_pending_signup: 'Pending Signup',
+  new_client_activated: 'New Client',
+  new_session_purchase: 'New Purchase',
 };
 
 // Filter categories for the UI filter pills
@@ -224,4 +247,7 @@ export const ACTIVITY_FILTER_CATEGORIES = [
   { key: 'sessions', label: 'Sessions', types: ['session_scheduled', 'checkin_scheduled', 'session_canceled', 'session_rescheduled', 'session_purchased'] as ActivityEventType[] },
   { key: 'logins', label: 'Logins', types: ['client_login'] as ActivityEventType[] },
   { key: 'account', label: 'Account', types: ['new_client_signup', 'subscription_canceled', 'weekly_survey_submitted'] as ActivityEventType[] },
+  { key: 'admin', label: 'Owner', types: ['new_inquiry', 'new_pending_signup', 'new_client_activated', 'new_session_purchase'] as ActivityEventType[] },
 ] as const;
+
+

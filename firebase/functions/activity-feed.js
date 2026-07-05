@@ -35,6 +35,7 @@ async function writeActivityEvent({ type, clientId, clientName, trainerId, messa
 
     await admin.firestore().collection('activityFeed').add({
       type,
+      audience: 'trainer',
       clientId,
       clientName: clientName || 'Unknown Client',
       trainerId: trainerId || '',
@@ -84,4 +85,47 @@ async function getClientInfoForActivityFeed(clientId) {
   }
 }
 
-module.exports = { writeActivityEvent, getClientInfoForActivityFeed };
+/**
+ * Write an ADMIN-BROADCAST activity event to the activityFeed collection.
+ *
+ * Unlike writeActivityEvent, this has no client/trainer scope — it is owner-directed
+ * (audience: 'admin'). It surfaces in the notification bell for admin users (who query
+ * all events / are not restricted to their own trainerId). Trainer-only employees never
+ * see these because their query filters on trainerId === uid and these have an empty
+ * trainerId. Reuses the same collection + 7-day TTL. Never throws.
+ *
+ * @param {Object} params
+ * @param {string} params.type - Admin event type key (e.g., 'new_inquiry')
+ * @param {string} params.message - Human-readable event summary
+ * @param {Object} [params.metadata={}] - Event-specific data (name, ctaUrl, etc.)
+ */
+async function writeAdminActivityEvent({ type, message, metadata = {} }) {
+  try {
+    const now = admin.firestore.Timestamp.now();
+    const expiresAt = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() + SEVEN_DAYS_MS
+    );
+
+    await admin.firestore().collection('activityFeed').add({
+      type,
+      audience: 'admin',
+      clientId: metadata.clientId || '',
+      clientName: metadata.name || '',
+      trainerId: '',
+      message,
+      metadata,
+      read: false,
+      timestamp: now,
+      expiresAt,
+    });
+
+    logger.info('[ActivityFeed] admin event written', { type });
+  } catch (error) {
+    logger.error('[ActivityFeed] Failed to write admin event', {
+      type,
+      error: error.message,
+    });
+  }
+}
+
+module.exports = { writeActivityEvent, writeAdminActivityEvent, getClientInfoForActivityFeed };

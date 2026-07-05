@@ -26,6 +26,12 @@ const resendKey = defineSecret("RESEND_API_KEY");
 // docs/02-implementation/email-notifications/.
 const { sendNotification } = require("./notifications/send-notification");
 
+// Admin (owner) notifications (global-switch-gated, fail-soft) — see
+// docs/02-implementation/admin-notifications/.
+const { notifyAdmin } = require("./notifications/admin-notifications");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+
+
 
 // Provider-neutral account deletion path. The deletion logic lives in a shared
 // helper (also reused by the bulk-delete-test-accounts.js script) and uses the
@@ -392,10 +398,14 @@ exports.createPaymentMethodPortalSession = onCall({
  * @return {Object} Success response with access end date
  */
 exports.cancelSubscription = onCall({
+  // PAYPAL_SECRETS already includes RESEND_API_KEY (see payments/index.js), so we do
+  // NOT add resendKey again — a duplicate secret env var fails the Cloud Run update.
   region: sharedConfig.region,
   secrets: [stripeKey, ...PAYPAL_SECRETS],
   cors: true,
 }, async (request) => {
+
+
   try {
     // Verify authentication
     if (!request.auth) {
@@ -511,12 +521,27 @@ exports.cancelSubscription = onCall({
       logger.warn("[ActivityFeed] Failed to write subscription_canceled event", { userId, error: err.message });
     });
 
+    // ADMIN (owner) notification: subscription_canceled — revenue-impacting business
+    // event. Email + admin-broadcast feed row, gated by the admin master switch. Fail-soft.
+    {
+      let adminResendKey = null;
+      try { adminResendKey = resendKey.value(); } catch (e) { adminResendKey = null; }
+      notifyAdmin({
+        type: "subscription_canceled",
+        data: { name: userData.name || "Client", tierName: userData.tierName || "", clientId: userId },
+        resendApiKey: adminResendKey,
+      }).catch(err => {
+        logger.warn("[AdminNotify] subscription_canceled failed (non-fatal)", { userId, error: err.message });
+      });
+    }
+
     return {
       success: true,
       message: "Subscription canceled successfully",
       accessUntil: accessUntil.toISOString(),
       currentPeriodEnd: currentPeriodEndSec,
     };
+
   } catch (error) {
     logger.error("Error canceling subscription", {
 
@@ -3624,8 +3649,79 @@ exports.cleanupExpiredActivityFeed = onSchedule({
   }
 });
 
+/**
+ * ADMIN NOTIFICATIONS: New inquiry (lead inbox) trigger.
+ * Fires when a contact-form submission is created. Emails the admin (owner) +
+ * writes an admin-broadcast dashboard feed row. Fail-soft; binds RESEND_API_KEY.
+ * See docs/02-implementation/admin-notifications/ (FR-1).
+ */
+exports.onContactSubmissionCreate = onDocumentCreated({
+  document: "contact_form_submissions/{submissionId}",
+  region: sharedConfig.region,
+  secrets: [resendKey],
+}, async (event) => {
+  try {
+    const snap = event.data;
+    if (!snap) return null;
+    const d = snap.data() || {};
+    // Contact-form fields are capitalized (Name/Email/Service/Message) — see contact-api.ts.
+    const name = d.Name || d.name || "Someone";
+    const email = d.Email || d.email || "";
+    const service = d.Service || d.service || "";
+    const message = d.Message || d.message || "";
+
+    let resendApiKey = null;
+    try { resendApiKey = resendKey.value(); } catch (e) { resendApiKey = null; }
+
+    await notifyAdmin({
+      type: "new_inquiry",
+      data: { name, email, service, message },
+      resendApiKey,
+    });
+  } catch (error) {
+    logger.error("[AdminNotify] onContactSubmissionCreate failed (non-fatal)", { error: error.message });
+  }
+  return null;
+});
+
+/**
+ * ADMIN NOTIFICATIONS: New pending signup trigger.
+ * Fires when a users/{uid} doc is created for a client who hasn't paid yet
+ * (role === 'client' && accountActivated === false). Emails the admin (owner) +
+ * writes an admin-broadcast dashboard feed row. Fail-soft; binds RESEND_API_KEY.
+ * Fires once per user (onCreate). See docs/02-implementation/admin-notifications/ (FR-2).
+ */
+exports.onUserPendingCreate = onDocumentCreated({
+  document: "users/{userId}",
+  region: sharedConfig.region,
+  secrets: [resendKey],
+}, async (event) => {
+  try {
+    const snap = event.data;
+    if (!snap) return null;
+    const d = snap.data() || {};
+
+    // Only fire for pending client signups (payment not yet completed).
+    if (d.role !== "client") return null;
+    if (d.accountActivated === true) return null;
+
+    let resendApiKey = null;
+    try { resendApiKey = resendKey.value(); } catch (e) { resendApiKey = null; }
+
+    await notifyAdmin({
+      type: "new_pending_signup",
+      data: { name: d.name || "New signup", email: d.email || "", clientId: event.params.userId },
+      resendApiKey,
+    });
+  } catch (error) {
+    logger.error("[AdminNotify] onUserPendingCreate failed (non-fatal)", { error: error.message });
+  }
+  return null;
+});
+
 /* ============================================================================
  * PROVIDER-NEUTRAL PAYMENTS (PayPal launch — payment-processor spec Phase 3)
+
  *
  * The generic `paymentWebhook` (payments/index.js) verifies + parses a provider
  * webhook and runs neutral fulfillment (payments/fulfillment.js). Here we (a)
@@ -3714,9 +3810,51 @@ async function onFirstActivation({ userId, userData, tierId, trainerId }) {
   } catch (error) {
     logger.warn("onFirstActivation: new_client_signup event failed (non-fatal)", { userId, error: error.message });
   }
+
+  // 4) Admin (owner) notification: new_client_activated — money/business event, plus a
+  //    dashboard feed row. Independent of the trainer feed item above (FR-8). Fail-soft.
+  try {
+    const fresh = await admin.firestore().collection("users").doc(userId).get();
+    const u = fresh.data() || userData || {};
+    let resendApiKey = null;
+    try { resendApiKey = resendKey.value(); } catch (e) { resendApiKey = null; }
+    await notifyAdmin({
+      type: "new_client_activated",
+      data: { name: u.name || "New client", tierName: u.tierName || "", clientId: userId },
+      resendApiKey,
+    });
+  } catch (error) {
+    logger.warn("onFirstActivation: admin new_client_activated failed (non-fatal)", { userId, error: error.message });
+  }
 }
 
-paymentsModule.setFulfillmentHooks({ onFirstActivation });
+/**
+ * Session/4-pack purchase hook (money/business event) → notify the ADMIN (owner).
+ * Fires on EVERY package fulfillment (incl. repeat purchases) from inside the
+ * transaction-deduped block of fulfillSessionPackage, so a webhook retry for the same
+ * transaction never double-notifies. Fail-soft.
+ */
+async function onSessionPurchase({ userId, productName, amount }) {
+  try {
+    let name = "";
+    try {
+      const snap = await admin.firestore().collection("users").doc(userId).get();
+      name = (snap.exists && snap.data().name) || "";
+    } catch (e) { /* name optional */ }
+    let resendApiKey = null;
+    try { resendApiKey = resendKey.value(); } catch (e) { resendApiKey = null; }
+    await notifyAdmin({
+      type: "new_session_purchase",
+      data: { name, productName: productName || "Training sessions", amountMinor: amount, clientId: userId },
+      resendApiKey,
+    });
+  } catch (error) {
+    logger.warn("onSessionPurchase: admin notify failed (non-fatal)", { userId, error: error.message });
+  }
+}
+
+paymentsModule.setFulfillmentHooks({ onFirstActivation, onSessionPurchase });
+
 
 // Generic provider webhook (HTTP) + PayPal cancel callable.
 exports.paymentWebhook = paymentsModule.paymentWebhook;

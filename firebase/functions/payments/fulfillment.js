@@ -385,6 +385,11 @@ async function fulfillSessionPackage(p, hooks = {}) {
 
   const userRef = admin.firestore().collection("users").doc(userId);
 
+  // Set inside the transaction so the admin-notify (and any future post-write side
+  // effect) fires exactly once per NEW package — a webhook retry for the same
+  // transactionId dedupes here and leaves this false (NFR-2 / AC-4).
+  let newlyFulfilled = false;
+
   await admin.firestore().runTransaction(async (t) => {
     const userDoc = await t.get(userRef);
     const userData = userDoc.data() || {};
@@ -396,6 +401,8 @@ async function fulfillSessionPackage(p, hooks = {}) {
       logger.info("Session package already exists for transaction, skipping", { userId, transactionId });
       return;
     }
+    newlyFulfilled = true;
+
 
     // Provider-NEUTRAL package shape (no stripe* fields). `productId` is the app
     // product id (e.g. in_person_4pack); `providerTransactionId` is the provider's
@@ -477,8 +484,23 @@ async function fulfillSessionPackage(p, hooks = {}) {
 
   logger.info("Session package created (neutral fulfillment)", { userId, quantity, provider, transactionId });
 
+  // Admin (owner) notification: new_session_purchase — money/business event. Fires on
+  // EVERY newly-fulfilled purchase (incl. repeat buys), but NOT on webhook retries for
+  // the same transaction (newlyFulfilled stays false when the idempotency guard hits).
+  if (newlyFulfilled && typeof hooks.onSessionPurchase === "function") {
+    try {
+      await hooks.onSessionPurchase({
+        userId,
+        productName: productName || null,
+        amount: amount ?? 0,
+      });
+    } catch (e) {
+      logger.error("onSessionPurchase hook failed (non-fatal)", { userId, error: e.message });
+    }
+  }
 
   // Parity side effects (welcome email / activity feed) via hook — ONLY on first
+
   // activation, so repeat webhooks for the same buyer don't re-send. One-time
   // session buyers have no subscription tier, so tierId is undefined; the setup
   // goal inside onFirstActivation is tier-gated and correctly skips for them.

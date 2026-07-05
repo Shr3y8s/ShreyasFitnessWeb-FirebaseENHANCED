@@ -27,6 +27,15 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
 
+  // Admin (owner) notifications — global on/off for owner alerts (inquiries, signups,
+  // purchases, cancellations). See docs/02-implementation/admin-notifications/.
+  const [adminEnabled, setAdminEnabled] = useState(true);
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminLastUpdated, setAdminLastUpdated] = useState<{ at?: Date; by?: string } | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
+  const [adminSavedFlash, setAdminSavedFlash] = useState(false);
+
+
   useEffect(() => {
     // Wait for auth to resolve before guarding — otherwise a hard reload (when
     // user/role are momentarily null) would bounce the admin to /dashboard/trainer.
@@ -57,6 +66,20 @@ export default function AdminSettingsPage() {
           // Missing doc defaults to enabled
           setEmailEnabled(true);
         }
+
+        // Admin (owner) notifications setting — separate doc, independent switch.
+        const adminSnap = await getDoc(doc(db, 'appSettings', 'adminNotifications'));
+        if (cancelled) return;
+        if (adminSnap.exists()) {
+          const adminData = adminSnap.data() as NotificationSettings & { enabled?: boolean };
+          setAdminEnabled(adminData.enabled !== false);
+          setAdminLastUpdated({
+            at: adminData.updatedAt?.toDate ? adminData.updatedAt.toDate() : undefined,
+            by: adminData.updatedBy,
+          });
+        } else {
+          setAdminEnabled(true);
+        }
       } catch (err: any) {
         if (!cancelled) setError('Failed to load notification settings.');
       } finally {
@@ -68,6 +91,7 @@ export default function AdminSettingsPage() {
       cancelled = true;
     };
   }, [authLoading, user, canAccessAdminDashboard]);
+
 
   const handleToggle = async () => {
     if (saving || !user) return;
@@ -96,7 +120,35 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const handleAdminToggle = async () => {
+    if (adminSaving || !user) return;
+    const next = !adminEnabled;
+    setAdminSaving(true);
+    setAdminError(null);
+    setAdminSavedFlash(false);
+    try {
+      await setDoc(
+        doc(db, 'appSettings', 'adminNotifications'),
+        {
+          enabled: next,
+          updatedAt: serverTimestamp(),
+          updatedBy: userData?.name || user.email || user.uid,
+        },
+        { merge: true }
+      );
+      setAdminEnabled(next);
+      setAdminLastUpdated({ at: new Date(), by: userData?.name || user.email || user.uid });
+      setAdminSavedFlash(true);
+      setTimeout(() => setAdminSavedFlash(false), 2500);
+    } catch (err: any) {
+      setAdminError('Failed to save. Please try again.');
+    } finally {
+      setAdminSaving(false);
+    }
+  };
+
   return (
+
     <SidebarProvider>
       <AdminSidebar currentPage="settings" />
       <SidebarInset>
@@ -198,11 +250,97 @@ export default function AdminSettingsPage() {
               )}
             </div>
 
+            {/* Admin (Owner) Notifications Card */}
+            <div className="bg-white rounded-xl border p-6 md:p-8 mt-6">
+              <div className="flex items-start gap-3 mb-6">
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <Bell className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Admin Notifications</h2>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Owner alerts for business events — new inquiries, new signups, new
+                    clients, purchases, and cancellations (email to admin@shrey.fit +
+                    dashboard notifications).
+                  </p>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="flex items-center gap-2 text-gray-500 py-6">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Loading settings…</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border bg-gray-50 p-4">
+                    <div>
+                      <p className="font-medium text-gray-900">Admin notifications</p>
+                      <p className="text-sm text-gray-600 mt-0.5">
+                        {adminEnabled
+                          ? 'Enabled — you receive owner alerts by email and in the dashboard.'
+                          : 'Disabled — no owner alerts are sent by email or written to the dashboard.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={adminEnabled}
+                      aria-label="Toggle admin notifications"
+                      disabled={adminSaving}
+                      onClick={handleAdminToggle}
+                      className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50 ${
+                        adminEnabled ? 'bg-emerald-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                          adminEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Status row */}
+                  <div className="mt-4 flex items-center gap-3 min-h-[24px]">
+                    {adminSaving && (
+                      <span className="flex items-center gap-2 text-sm text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Saving…
+                      </span>
+                    )}
+                    {adminSavedFlash && !adminSaving && (
+                      <span className="flex items-center gap-2 text-sm text-emerald-600">
+                        <CheckCircle2 className="h-4 w-4" /> Saved
+                      </span>
+                    )}
+                    {adminError && (
+                      <span className="flex items-center gap-2 text-sm text-red-600">
+                        <AlertTriangle className="h-4 w-4" /> {adminError}
+                      </span>
+                    )}
+                  </div>
+
+                  {adminLastUpdated?.at && (
+                    <p className="mt-3 text-xs text-gray-400">
+                      Last changed{adminLastUpdated.by ? ` by ${adminLastUpdated.by}` : ''} on{' '}
+                      {adminLastUpdated.at.toLocaleString()}
+                    </p>
+                  )}
+
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                    <strong>Note:</strong> This is a global on/off for owner alerts only.
+                    It does not affect client notification emails or account/billing emails.
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="mt-6">
               <Button variant="outline" onClick={() => router.push('/dashboard/admin')}>
                 Back to Dashboard
               </Button>
             </div>
+
           </div>
         </div>
       </SidebarInset>
