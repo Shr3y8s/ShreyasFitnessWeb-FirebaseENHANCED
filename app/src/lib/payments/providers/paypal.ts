@@ -843,19 +843,26 @@ export const paypalProvider: PaymentProvider = {
           }
         };
 
-        // Render an Apple Pay button. Use the native <apple-pay-button> custom element
-        // (available where Apple Pay JS is) styled to fill the box.
-        const btn = document.createElement('apple-pay-button') as HTMLElement;
-        btn.setAttribute('buttonstyle', 'black');
-        btn.setAttribute('type', 'plain');
-        btn.setAttribute('locale', 'en-US');
-        btn.style.setProperty('--apple-pay-button-width', '100%');
-        btn.style.setProperty('--apple-pay-button-height', '44px');
-        btn.style.display = 'block';
-        btn.style.cursor = 'pointer';
+        // Render the Apple Pay button. We DON'T use the native <apple-pay-button> custom
+        // element — in this embedded context it upgrades to zero size and stays invisible
+        // even though it's in the DOM. Instead we render a brand-compliant black button
+        // with the official Apple Pay lockup: the Apple logo (the '\uF8FF' glyph renders
+        // as the real Apple mark in Safari/WebKit) followed by "Pay", in the system font.
+        // Same click handler → same ApplePaySession flow. Sized to match Venmo/Google Pay.
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', 'Apple Pay');
+        btn.style.cssText =
+          'display:flex;align-items:center;justify-content:center;gap:2px;width:100%;' +
+          'height:44px;border:0;border-radius:8px;background:#000;color:#fff;cursor:pointer;' +
+          "font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;" +
+          'font-size:20px;font-weight:500;line-height:1;-webkit-appearance:none;padding:0;';
+        // '\uF8FF' = Apple logo glyph (renders as the Apple mark on Apple platforms).
+        btn.textContent = '\uF8FF\u2009Pay';
         btn.addEventListener('click', onClick);
         mountEl.appendChild(btn);
-        wdbg('ApplePay: RENDERED button ✓');
+        wdbg('ApplePay: RENDERED button ✓ (styled)');
+
 
         return () => {
           try { mountEl.innerHTML = ''; } catch { /* ignore */ }
