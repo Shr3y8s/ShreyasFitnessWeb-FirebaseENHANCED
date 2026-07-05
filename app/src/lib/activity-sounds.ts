@@ -21,6 +21,13 @@ export const ACTIVITY_EVENT_SOUNDS: Record<ActivityEventType, SoundCategory> = {
   new_client_signup:          'fanfare',
   session_purchased:          'fanfare',
 
+  // 🎉 Owner admin-broadcast events (biggest = new client/purchase; info = inquiries/signups)
+  new_client_activated:       'fanfare',
+  new_session_purchase:       'fanfare',
+  new_inquiry:                'info',
+  new_pending_signup:         'info',
+
+
   // 💪 Achievement — client hit something significant
   workout_completed:          'achievement',
   goal_completed:             'achievement',

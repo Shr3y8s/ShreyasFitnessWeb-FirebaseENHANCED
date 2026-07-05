@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(), // Use app/ directory as Turbopack root
   },
+  // Ensure the Apple Pay domain-association data files (read at runtime via fs by
+  // the /.well-known/apple-developer-merchantid-domain-association route) are traced
+  // into the server bundle. Without this, the readFileSync would 500 in production.
+  outputFileTracingIncludes: {
+    '/.well-known/apple-developer-merchantid-domain-association': [
+      './src/lib/applepay/domain-association.*',
+    ],
+  },
+
   eslint: {
     // Don't fail production builds (e.g. Firebase App Hosting / Cloud Build) on
     // ESLint errors. Linting is enforced in development and can be run
