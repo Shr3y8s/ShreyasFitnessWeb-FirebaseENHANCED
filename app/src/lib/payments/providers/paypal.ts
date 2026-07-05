@@ -405,6 +405,28 @@ export const paypalProvider: PaymentProvider = {
     const closers: Array<() => void> = [];
     let renderedAny = false;
 
+    // TEMP wallet-eligibility debug (remove after diagnosis). When the checkout URL
+    // has `?walletdebug=1`, append an on-screen panel and let the wallet mounts push
+    // human-readable reasons for why Apple/Google Pay did or didn't render — so we can
+    // diagnose on a phone without a desktop console. No-op unless the flag is present.
+    const walletDebugOn =
+      typeof window !== 'undefined' && /[?&]walletdebug=1\b/.test(window.location.search);
+    let walletDebugEl: HTMLElement | null = null;
+    const wdbg = (line: string) => {
+      if (!walletDebugOn) return;
+      if (typeof window !== 'undefined') console.info('[walletdebug]', line);
+      if (!walletDebugEl) {
+        walletDebugEl = document.createElement('pre');
+        walletDebugEl.style.cssText =
+          'white-space:pre-wrap;font-size:12px;line-height:1.4;background:#111;color:#0f0;' +
+          'padding:10px;border-radius:8px;margin:0 0 12px;overflow:auto;max-height:40vh;';
+        walletDebugEl.textContent = 'WALLET DEBUG\n';
+        opts.container.appendChild(walletDebugEl);
+      }
+      walletDebugEl.textContent += line + '\n';
+    };
+
+
     // A section item is EITHER a PayPal funding source (rendered via paypal.Buttons)
     // OR a custom wallet mount (Apple/Google Pay — separate SDK components that aren't
     // FUNDING.* sources). `customMount` renders into the provided element and returns a
@@ -486,7 +508,47 @@ export const paypalProvider: PaymentProvider = {
       return true;
     };
 
+    // Resolve the DISPLAY total (minor units) for the wallet sheets (Google/Apple Pay).
+    // The wallet sheet total is set CLIENT-SIDE, so it must reflect what will actually
+    // be captured. The server stays authoritative for the charge (createPaypalOrder
+    // recomputes amount + discount), but showing the catalog $75 while capturing the
+    // discounted $67.50 is wrong (and Google Pay uses totalPriceStatus:'FINAL'). So when
+    // a discount code is present we ask the SAME `previewDiscount` callable the checkout
+    // summary uses for the server-computed, post-floor discounted amount. Memoized so
+    // both wallets share ONE call; falls back to the catalog amount on any error/invalid
+    // (never blocks the wallet). See docs/.../applepay-googlepay-design.md §9.
+    let walletDisplayCentsPromise: Promise<number> | null = null;
+    const resolveWalletDisplayCents = (catalogCents: number): Promise<number> => {
+      if (walletDisplayCentsPromise) return walletDisplayCentsPromise;
+      walletDisplayCentsPromise = (async () => {
+        if (!opts.discountCode) return catalogCents;
+        try {
+          const productId = buildCatalog().find((e) => e.price.id === opts.priceId)?.productId;
+          if (!productId) return catalogCents;
+          const { httpsCallable } = await import('firebase/functions');
+          const { functions } = await import('@/lib/firebase');
+          const preview = httpsCallable(functions, 'previewDiscount');
+          const res = await preview({
+            code: opts.discountCode,
+            productId,
+            mode: 'payment',
+            priceId: opts.priceId,
+            paypalEnv: PAYPAL_ENV,
+          });
+          const data = res?.data as { valid?: boolean; discountedAmount?: number } | undefined;
+          if (data?.valid && typeof data.discountedAmount === 'number' && data.discountedAmount > 0) {
+            return data.discountedAmount;
+          }
+          return catalogCents;
+        } catch {
+          return catalogCents; // non-fatal → show catalog amount
+        }
+      })();
+      return walletDisplayCentsPromise;
+    };
+
     // Google Pay wallet mount (Feature 3 phase 2a — ONE-TIME only). Separate PayPal
+
     // SDK component (`paypal.Googlepay()`) + Google's own `pay.js` button. Eligibility-
     // gated + non-fatal: returns null (→ omitted) on any non-eligibility/error so the
     // other buttons are unaffected. On tap: create the order SERVER-SIDE (amount +
@@ -547,10 +609,12 @@ export const paypalProvider: PaymentProvider = {
 
         const onClick = async () => {
           try {
-            // DISPLAY total on the Google Pay sheet. The ACTUAL charged amount is set
-            // SERVER-SIDE by createPaypalOrder (incl. any discountCode); we show the
-            // catalog amount here (the server remains authoritative). A discounted
-            // wallet purchase still charges the server-computed discounted amount.
+            // DISPLAY total on the Google Pay sheet (totalPriceStatus:'FINAL'). It must
+            // MATCH what the server captures, so when a discount code is present we use
+            // the server-computed discounted amount (via previewDiscount); otherwise the
+            // catalog amount. The server (createPaypalOrder) remains authoritative for
+            // the actual charge — this only fixes the displayed/authorized total.
+            const displayCents = await resolveWalletDisplayCents(oneTime.amount);
             const paymentDataRequest = {
               apiVersion: config.apiVersion,
               apiVersionMinor: config.apiVersionMinor,
@@ -560,9 +624,10 @@ export const paypalProvider: PaymentProvider = {
                 countryCode: config.countryCode || 'US',
                 currencyCode: 'USD',
                 totalPriceStatus: 'FINAL',
-                totalPrice: (oneTime.amount / 100).toFixed(2),
+                totalPrice: (displayCents / 100).toFixed(2),
               },
             };
+
             const paymentData = await paymentsClient.loadPaymentData(paymentDataRequest);
 
             const { httpsCallable } = await import('firebase/functions');
@@ -626,10 +691,12 @@ export const paypalProvider: PaymentProvider = {
     // domain to be registered in PayPal + the /.well-known/apple-developer-merchantid-
     // domain-association file served at 200 (T3). NOT testable on localhost / non-Safari.
     const renderApplePay = async (mountEl: HTMLElement): Promise<(() => void) | null> => {
+      wdbg('ApplePay: start');
       // Wallets are one-time only (recurring via wallets is deferred — decision §4).
-      if (isSubscription) return null;
+      if (isSubscription) { wdbg('ApplePay: SKIP isSubscription'); return null; }
       const oneTime = oneTimeAmount(opts.priceId);
-      if (!oneTime) return null;
+      if (!oneTime) { wdbg('ApplePay: SKIP no oneTime amount for ' + opts.priceId); return null; }
+      wdbg('ApplePay: paypal.Applepay = ' + (paypal.Applepay ? 'present' : 'UNDEFINED (merchant not Apple Pay-enabled?)'));
       if (!paypal.Applepay) return null;
 
       // ORIGIN GUARD: Apple Pay requires a SECURE (HTTPS) context on a REAL, registered
@@ -642,6 +709,7 @@ export const paypalProvider: PaymentProvider = {
           host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost');
         const isSecure = window.location.protocol === 'https:';
         if (!isSecure || isLocalhost) {
+          wdbg('ApplePay: SKIP origin guard (secure=' + isSecure + ' host=' + host + ')');
           console.info(
             '[paypal] Apple Pay skipped — requires a secure (HTTPS) registered-domain ' +
             'origin on a real Apple device (Safari). Use the deployed sandbox domain to test.'
@@ -653,6 +721,11 @@ export const paypalProvider: PaymentProvider = {
       try {
         const w = window as any;
         const ApplePaySession = w.ApplePaySession;
+        wdbg(
+          'ApplePay: ApplePaySession=' + (ApplePaySession ? 'present' : 'MISSING') +
+          ' supportsV4=' + (ApplePaySession?.supportsVersion ? String(ApplePaySession.supportsVersion(4)) : 'n/a') +
+          ' canMakePayments=' + (ApplePaySession?.canMakePayments ? String(ApplePaySession.canMakePayments()) : 'n/a')
+        );
         // Browser capability gate: Apple Pay JS present, supported version, and the device
         // can make payments (a card is provisioned). Any false → omit (non-fatal).
         if (
@@ -662,6 +735,7 @@ export const paypalProvider: PaymentProvider = {
           typeof ApplePaySession.canMakePayments !== 'function' ||
           !ApplePaySession.canMakePayments()
         ) {
+          wdbg('ApplePay: SKIP browser capability gate');
           return null;
         }
 
@@ -669,13 +743,20 @@ export const paypalProvider: PaymentProvider = {
         // Merchant/domain capability: config() tells us whether this merchant+domain is
         // set up for Apple Pay (registered domain, country/currency, merchant caps).
         const config = await applepay.config();
-        if (!config || config.isEligible === false) return null;
+        wdbg('ApplePay: config.isEligible=' + (config ? String(config.isEligible) : 'no config') +
+          ' countryCode=' + (config?.countryCode ?? '?'));
+        if (!config || config.isEligible === false) { wdbg('ApplePay: SKIP config not eligible'); return null; }
+
+
+        // DISPLAY total on the Apple Pay sheet. Like Google Pay, it must MATCH the
+        // server-captured amount, so when a discount code is present we use the
+        // server-computed discounted amount (previewDiscount); otherwise the catalog
+        // amount. Resolved before creating the session (Apple requires the total up
+        // front). The server (createPaypalOrder) stays authoritative for the charge.
+        const displayCents = await resolveWalletDisplayCents(oneTime.amount);
 
         const onClick = async () => {
           try {
-            // DISPLAY total on the Apple Pay sheet. The ACTUAL charged amount is set
-            // SERVER-SIDE by createPaypalOrder (incl. any discountCode); the server stays
-            // authoritative, so a discounted wallet purchase charges the discounted amount.
             const paymentRequest = {
               countryCode: config.countryCode || 'US',
               currencyCode: config.currencyCode || 'USD',
@@ -684,10 +765,11 @@ export const paypalProvider: PaymentProvider = {
               requiredBillingContactFields: ['name', 'postalAddress'],
               total: {
                 label: oneTime.label || 'Shrey.Fit',
-                amount: (oneTime.amount / 100).toFixed(2),
+                amount: (displayCents / 100).toFixed(2),
                 type: 'final',
               },
             };
+
 
             const session = new ApplePaySession(4, paymentRequest);
 
@@ -773,14 +855,17 @@ export const paypalProvider: PaymentProvider = {
         btn.style.cursor = 'pointer';
         btn.addEventListener('click', onClick);
         mountEl.appendChild(btn);
+        wdbg('ApplePay: RENDERED button ✓');
 
         return () => {
           try { mountEl.innerHTML = ''; } catch { /* ignore */ }
         };
-      } catch {
+      } catch (e) {
+        wdbg('ApplePay: SKIP threw ' + ((e as Error)?.message || String(e)));
         return null; // any failure → omit Apple Pay (non-fatal)
       }
     };
+
 
 
     // 1) Card (top) — guest, no PayPal account. HOSTED card flow — works WITHOUT the
