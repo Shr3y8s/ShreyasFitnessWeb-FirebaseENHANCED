@@ -65,6 +65,39 @@ const TIER_CT = 'complete_transformation';
 
 const fmtCents = (c: number) => `$${(Math.max(0, c) / 100).toFixed(2)}`;
 
+// ---- Expiry date helpers (America/Los_Angeles) ----
+// Discount expiry is a CALENDAR DATE the admin picks (a <input type="date"> "YYYY-MM-DD").
+// We store it as the LAST instant of that day in Pacific time (23:59:59.999 PT) so the
+// server's `expMs < Date.now()` check means "valid through the end of the selected day
+// in Pacific" — not UTC midnight (which expired a day early in Pacific). Both the list
+// and edit views then format the stored ms back in Pacific so they always agree.
+// Seattle-based business → Pacific is intentional (handles PST/PDT automatically).
+const PACIFIC_TZ = 'America/Los_Angeles';
+
+// 'YYYY-MM-DD' (picked day) → epoch ms for 23:59:59.999 Pacific of that day.
+function pacificEndOfDayMs(ymd: string): number {
+  const [y, m, d] = ymd.split('-').map(Number);
+  if (!y || !m || !d) return NaN;
+  // Start from the UTC wall-clock instant, then correct by Pacific's offset at that
+  // date so the stored instant is truly 23:59:59.999 Pacific (DST-safe).
+  const utcGuess = Date.UTC(y, m - 1, d, 23, 59, 59, 999);
+  const asPacific = new Date(utcGuess).toLocaleString('en-US', { timeZone: PACIFIC_TZ });
+  const offsetMs = new Date(utcGuess).getTime() - new Date(asPacific).getTime();
+  return utcGuess + offsetMs;
+}
+
+// epoch ms → 'YYYY-MM-DD' as seen in Pacific (for the <input type="date"> prefill).
+function pacificYMD(ms: number): string {
+  // en-CA yields ISO-style YYYY-MM-DD parts.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: PACIFIC_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(ms));
+}
+
+
 export default function AdminDiscountCodesPage() {
   const router = useRouter();
   const { user, loading: authLoading, canAccessAdminDashboard } = useAuth();
@@ -200,7 +233,8 @@ export default function AdminDiscountCodesPage() {
     setMinFloorDollars((row.minChargeFloor / 100).toFixed(2));
     setMaxRedemptions(row.maxRedemptions != null ? String(row.maxRedemptions) : '');
     setPerUserLimit(row.perUserLimit != null ? String(row.perUserLimit) : '');
-    setExpiresAt(row.expiresAt ? new Date(row.expiresAt).toISOString().slice(0, 10) : '');
+    setExpiresAt(row.expiresAt ? pacificYMD(row.expiresAt) : '');
+
     setFreeComp(row.freeComp);
     setDiscountScope(
       row.discountScope === 'first_cycle' || row.discountScope === 'recurring'
@@ -291,7 +325,10 @@ export default function AdminDiscountCodesPage() {
           minChargeFloor: Math.round((Number(minFloorDollars) || 1) * 100),
           maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
           perUserLimit: perUserLimit.trim() ? Number(perUserLimit) : null,
-          expiresAt: expiresAt ? new Date(expiresAt).getTime() : null,
+          // Store as END of the selected day in Pacific (see pacificEndOfDayMs) so the
+          // server's expMs<Date.now() means "valid through end of that day" in Pacific.
+          expiresAt: expiresAt ? pacificEndOfDayMs(expiresAt) : null,
+
           freeComp,
           discountScope,
           introCycles: discountScope === 'first_cycle' ? Math.max(1, Number(introCycles) || 1) : 1,
@@ -330,12 +367,14 @@ export default function AdminDiscountCodesPage() {
         minChargeFloor: Math.round((Number(minFloorDollars) || 1) * 100),
         maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
         perUserLimit: perUserLimit.trim() ? Number(perUserLimit) : null,
-        expiresAt: expiresAt ? new Date(expiresAt).getTime() : null,
+        // End of the selected day in Pacific (see pacificEndOfDayMs) — matches edit save.
+        expiresAt: expiresAt ? pacificEndOfDayMs(expiresAt) : null,
         freeComp,
         discountScope,
         introCycles: discountScope === 'first_cycle' ? Math.max(1, Number(introCycles) || 1) : 1,
         appliesTo: buildAppliesTo(),
         active: true,
+
       });
       resetForm();
       await loadCodes();
@@ -757,7 +796,10 @@ export default function AdminDiscountCodesPage() {
                               {row.perUserLimit != null ? `${row.perUserLimit}/user` : '—'}
                             </td>
                             <td className="px-4 py-3 text-gray-600">
-                              {row.expiresAt ? new Date(row.expiresAt).toLocaleDateString() : 'Never'}
+                              {row.expiresAt
+                                ? new Date(row.expiresAt).toLocaleDateString('en-US', { timeZone: PACIFIC_TZ })
+                                : 'Never'}
+
                             </td>
                             <td className="px-4 py-3">
                               <span
