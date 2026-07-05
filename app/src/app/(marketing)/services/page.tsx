@@ -96,7 +96,7 @@ export default function ServicesPage() {
                 <h3 className="service-card-title">In-Person Training</h3>
                 <p className="service-card-tagline">Get expert 1-on-1 guidance</p>
                 <div className="service-card-price">$75<span>/session</span></div>
-                <p className="service-card-desc">Expert in-person coaching sessions focused on technique, form, and effective workouts tailored to your goals.</p>
+                <p className="service-card-desc">Expert in-person coaching sessions focused on technique, form, and effective workouts tailored to your goals. <strong>Includes essential SHREY.FIT app access</strong> &mdash; book &amp; buy sessions, message your coach, and manage billing (full coaching features are Online/Complete only).</p>
                 <span className="service-card-format">Seattle Area Only</span>
                 <div className="card-action-buttons">
                   <button className="btn-secondary details-modal-btn" data-modal="personalDetailsModal">Learn More</button>
@@ -203,7 +203,7 @@ export default function ServicesPage() {
               <p>Buy sessions, manage your subscription, and view invoices &mdash; all self-service.</p>
             </div>
           </div>
-          <p className="platform-note"><i className="fas fa-circle-info"></i> Full platform access is included with <strong>Online Coaching</strong> and <strong>Complete Transformation</strong>. In-Person Training is sessions-only.</p>
+          <p className="platform-note"><i className="fas fa-circle-info"></i> Full platform access is included with <strong>Online Coaching</strong> and <strong>Complete Transformation</strong>. <strong>In-Person Training</strong> includes essential app access &mdash; booking, coach chat, and billing.</p>
         </div>
       </section>
 
@@ -238,7 +238,7 @@ export default function ServicesPage() {
               <tbody>
                 <tr>
                   <td className="cc-feature">SHREY.FIT Platform Access <span className="cc-seattle">(full client app)</span></td>
-                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
+                  <td className="cc-cell"><span className="cc-partial"><i className="fas fa-check"></i> Essentials</span><br /><span className="cc-sub cc-sub-partial">Book sessions, coach chat &amp; billing</span></td>
                   <td className="cc-cell"><span className="cc-inc"><i className="fas fa-check"></i> Full access</span></td>
                   <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Full access</strong></span></td>
                 </tr>
@@ -297,10 +297,10 @@ export default function ServicesPage() {
                   <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Monthly + as-needed</strong></span></td>
                 </tr>
                 <tr>
-                  <td className="cc-feature">Habit &amp; Accountability Coaching</td>
+                  <td className="cc-feature">Habit &amp; Accountability</td>
                   <td className="cc-cell">&mdash;</td>
-                  <td className="cc-cell cc-no"><i className="fas fa-times"></i></td>
-                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> Included</span></td>
+                  <td className="cc-cell"><span className="cc-partial"><i className="fas fa-check"></i> Tracker only</span><br /><span className="cc-sub cc-sub-partial">self-guided in app</span></td>
+                  <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>Full 1-on-1 coaching</strong></span></td>
                 </tr>
                 <tr>
                   <td className="cc-feature">In-Person Check-In Meetings <span className="cc-seattle">(Seattle &middot; FaceTime if remote)</span></td>
@@ -315,18 +315,28 @@ export default function ServicesPage() {
                   <td className="cc-cell cc-best"><span className="cc-inc"><i className="fas fa-check"></i> <strong>$60/session</strong></span><br /><span className="cc-sub">best rate anywhere</span></td>
                 </tr>
               </tbody>
-              <tfoot>
-                <tr>
-                  <td className="cc-feature cc-cta-label">Ready to start?</td>
-                  <td className="cc-cell"><Link href="/connect" className="cc-cta">Book a Session</Link></td>
-                  <td className="cc-cell"><Link href="/connect" className="cc-cta">Choose Online</Link></td>
-                  <td className="cc-cell cc-best"><Link href="/connect" className="cc-cta cc-cta-best">Get Complete</Link></td>
-                </tr>
-              </tfoot>
             </table>
           </div>
-          <p className="comparison-chart-note"><i className="fas fa-phone-volume" style={{color: '#4CAF50', marginRight: '6px'}}></i>Every plan starts with a free intro call so I understand exactly what I&apos;m helping you with before we begin.</p>
-          <p className="comparison-chart-note">Online coaching is available worldwide. In-person sessions are available in the Seattle area only.</p>
+          {/* Two next-step lanes: pre-sale questions vs. ready-to-buy */}
+          <div className="next-step-cards">
+            <div className="next-step-card">
+              <div className="next-step-icon"><i className="fas fa-circle-question"></i></div>
+              <div className="next-step-body">
+                <h4>Still deciding?</h4>
+                <p>Have a question about the options or not sure which fits? Book a free intro call &mdash; no commitment, just clarity.</p>
+                <Link href="/connect" className="next-step-btn next-step-btn-outline">Book a free intro call <i className="fas fa-arrow-right"></i></Link>
+              </div>
+            </div>
+            <div className="next-step-card next-step-card-primary">
+              <div className="next-step-icon"><i className="fas fa-rocket"></i></div>
+              <div className="next-step-body">
+                <h4>Ready to begin?</h4>
+                <p>Pick your plan and get instant access. Right after, you&apos;ll book a free setup call in your dashboard where we map out your personalized plan together.</p>
+                <Link href="/signup" className="next-step-btn next-step-btn-solid">Get started <i className="fas fa-arrow-right"></i></Link>
+              </div>
+            </div>
+          </div>
+          <p className="comparison-chart-note"><i className="fas fa-location-dot" style={{color: '#999', marginRight: '6px'}}></i>Online coaching is available worldwide. In-person sessions are available in the Seattle area only.</p>
         </div>
       </section>
 
@@ -589,6 +599,13 @@ export default function ServicesPage() {
                   <p>Learn how to properly use equipment for maximum effectiveness and safety</p>
                 </div>
               </li>
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Essential App Access</strong>
+                  <p>Your own SHREY.FIT account to book &amp; buy sessions, message your coach anytime, and manage billing &mdash; all in one place (full coaching features are Online/Complete only)</p>
+                </div>
+              </li>
             </ul>
             
             <div className="missing-container">
@@ -664,6 +681,13 @@ export default function ServicesPage() {
             
             <h3>What&apos;s Included:</h3>
             <ul className="modal-features">
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Your Coaching &amp; Accountability Command Center</strong>
+                  <p>Full access to the SHREY.FIT app &mdash; your live plan, interactive workouts, nutrition hub, progress analytics, goals, check-ins, and direct coach chat, all in one place</p>
+                </div>
+              </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
@@ -767,8 +791,8 @@ export default function ServicesPage() {
                   <li>
                     <i className="fas fa-times"></i>
                     <div>
-                      <strong>Habit &amp; Accountability Coaching</strong>
-                      <p>A structured behavior-change system that builds the daily habits that actually drive long-term results</p>
+                      <strong>Hands-On Habit &amp; Accountability Coaching</strong>
+                      <p>Online Coaching includes the self-guided habit tracker in the app &mdash; Complete adds me actively coaching your daily habits and holding you accountable, not just handing you the tracker</p>
                     </div>
                   </li>
                   <li>
@@ -840,6 +864,13 @@ export default function ServicesPage() {
             
             <h3>What&apos;s Included:</h3>
             <ul className="modal-features">
+              <li>
+                <i className="fas fa-check"></i>
+                <div>
+                  <strong>Your Full Coaching &amp; Accountability Command Center</strong>
+                  <p>The complete SHREY.FIT app experience &mdash; live plan, interactive workouts, nutrition hub, progress analytics, goals, weekly check-ins, and priority coach chat, all in one place</p>
+                </div>
+              </li>
               <li>
                 <i className="fas fa-check"></i>
                 <div>
@@ -1079,6 +1110,104 @@ export default function ServicesPage() {
           font-size: 0.8rem;
         }
 
+        /* ===== Comparison chart: "Essentials" partial-access cell (amber) ===== */
+        .cc-partial {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 6px;
+          color: #b26a00;
+          font-weight: 600;
+        }
+        .cc-partial i {
+          color: #f0a500;
+          font-size: 0.8rem;
+        }
+        .cc-sub-partial {
+          color: #b26a00;
+        }
+
+        /* ===== Next-step lanes (below comparison chart) ===== */
+        .next-step-cards {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          max-width: 1000px;
+          margin: 28px auto 0;
+        }
+        .next-step-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 16px;
+          background: #fff;
+          border: 1px solid #e6e6e6;
+          border-radius: 14px;
+          padding: 24px;
+          text-align: left;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .next-step-card:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 10px 26px rgba(0,0,0,0.09);
+        }
+        .next-step-card-primary {
+          border-color: rgba(76,175,80,0.5);
+          background: linear-gradient(135deg, #f1faf1 0%, #ffffff 60%);
+        }
+        .next-step-icon {
+          flex-shrink: 0;
+          width: 46px;
+          height: 46px;
+          border-radius: 12px;
+          background: rgba(76,175,80,0.12);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .next-step-icon i { color: #4CAF50; font-size: 1.2rem; }
+        .next-step-body { flex: 1; }
+        .next-step-body h4 {
+          margin: 0 0 6px;
+          font-size: 1.15rem;
+          font-weight: 700;
+          color: #1f2d1f;
+        }
+        .next-step-body p {
+          margin: 0 0 16px;
+          color: #666;
+          font-size: 0.92rem;
+          line-height: 1.6;
+        }
+        .next-step-btn {
+          display: inline-block;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.9rem;
+          text-decoration: none;
+          transition: all 0.2s ease;
+        }
+        .next-step-btn-outline {
+          background: #fff;
+          color: #2e7d32;
+          border: 2px solid #4CAF50;
+        }
+        .next-step-btn-outline:hover {
+          background: rgba(76,175,80,0.08);
+        }
+        .next-step-btn-solid {
+          background: linear-gradient(135deg, #4CAF50, #2E7D32);
+          color: #fff;
+          border: 2px solid transparent;
+        }
+        .next-step-btn-solid:hover {
+          box-shadow: 0 6px 16px rgba(76,175,80,0.35);
+          transform: translateY(-1px);
+        }
+        @media (max-width: 700px) {
+          .next-step-cards { grid-template-columns: 1fr; gap: 14px; }
+        }
+
         /* ===== Mobile: horizontal-scroll for wide tables + swipe hint ===== */
         @media (max-width: 768px) {
           /* Big value-breakdown table scrolls sideways instead of squishing */
@@ -1101,10 +1230,15 @@ export default function ServicesPage() {
             color: #4CAF50;
             padding: 6px 0 8px;
           }
-          /* Comfortable tap targets for the chart CTAs */
-          .cc-cta {
-            padding: 11px 14px;
-            font-size: 0.82rem;
+        }
+
+        /* ===== Small phones: full-width next-step buttons ===== */
+        @media (max-width: 480px) {
+          .next-step-card { padding: 20px; }
+          .next-step-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
           }
         }
 
@@ -1360,21 +1494,6 @@ export default function ServicesPage() {
           border-radius: 999px;
           margin-bottom: 6px;
         }
-        .cc-cta {
-          display: inline-block;
-          padding: 9px 16px;
-          border-radius: 8px;
-          background: #eee;
-          color: #333;
-          text-decoration: none;
-          font-weight: 600;
-          font-size: 0.85rem;
-          transition: all 0.25s ease;
-        }
-        .cc-cta:hover { background: #ddd; }
-        .cc-cta-best { background: #4CAF50; color: #fff; }
-        .cc-cta-best:hover { background: #3d9140; }
-        .cc-cta-label { font-weight: 700; }
         .comparison-chart-note {
           text-align: center;
           color: #888;
