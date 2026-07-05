@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Sun, Moon, Leaf } from 'lucide-react';
 import { CoachUpdates } from '@/components/dashboard/coach-updates';
 
-type Theme = 'light' | 'dark' | 'forest';
+type Theme = 'default' | 'dark' | 'forest';
+
 
 interface WelcomeHeaderProps {
   name: string;
@@ -18,7 +19,8 @@ interface WelcomeHeaderProps {
 
 export function WelcomeHeader({ name, theme, onCycleTheme, isDarkMode = false, onToggleTheme }: WelcomeHeaderProps) {
   // Resolve active theme — new 3-way prop takes priority
-  const activeTheme: Theme = theme ?? (isDarkMode ? 'dark' : 'light');
+  const activeTheme: Theme = theme ?? (isDarkMode ? 'dark' : 'default');
+
   const handleThemeClick = onCycleTheme ?? onToggleTheme;
   const [greeting, setGreeting] = useState('');
   const [subtext, setSubtext] = useState('');
@@ -56,7 +58,8 @@ export function WelcomeHeader({ name, theme, onCycleTheme, isDarkMode = false, o
     ? <Leaf className="h-[1.2rem] w-[1.2rem] transition-all" />
     : <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />;
 
-  const themeLabel = activeTheme === 'dark' ? 'Dark mode' : activeTheme === 'forest' ? 'Forest mode' : 'Light mode';
+  const themeLabel = activeTheme === 'dark' ? 'Dark mode' : activeTheme === 'forest' ? 'Forest mode' : 'App theme';
+
 
   // Prevent hydration mismatch by not rendering dynamic content until mounted
   if (!mounted) {

@@ -51,12 +51,18 @@ export default function ClientDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [setupGoal, setSetupGoal] = useState<Record<string, unknown> | null>(null);
   const [setupGoalLoading, setSetupGoalLoading] = useState(true);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'forest'>(() => {
+  // 'default' = the app's signature look (light green gradient, matches the rest of the app).
+  // 'dark' and 'forest' remain available via the header toggle.
+  const [theme, setTheme] = useState<'default' | 'dark' | 'forest'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('dashboardTheme') as 'light' | 'dark' | 'forest') || 'forest';
+      const stored = localStorage.getItem('dashboardTheme');
+      // Migrate the legacy 'light' key to the new 'default' key.
+      if (stored === 'light') return 'default';
+      return (stored as 'default' | 'dark' | 'forest') || 'default';
     }
-    return 'light';
+    return 'default';
   });
+
   const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');
   const [loadingNextSession, setLoadingNextSession] = useState(true);
@@ -377,17 +383,19 @@ export default function ClientDashboardPage() {
 
   const cycleTheme = () => {
     setTheme(prev => {
-      const next = prev === 'light' ? 'dark' : prev === 'dark' ? 'forest' : 'light';
+      // Cycle order: App theme (default) → Dark → Forest → back to App theme
+      const next = prev === 'default' ? 'dark' : prev === 'dark' ? 'forest' : 'default';
       localStorage.setItem('dashboardTheme', next);
-      if (next === 'dark' || prev === 'forest') {
+      // Only the 'dark' theme applies the .dark class; 'default' and 'forest' remove it.
+      if (next === 'dark') {
         document.documentElement.classList.add('dark');
-      }
-      if (next === 'light' || next === 'forest') {
+      } else {
         document.documentElement.classList.remove('dark');
       }
       return next;
     });
   };
+
 
   const handleToggleHabit = async (habitId: string, completed: boolean) => {
     if (!user) return;
@@ -531,8 +539,9 @@ export default function ClientDashboardPage() {
           theme={theme}
         />
         <SidebarInset>
-          <div className={`${theme === 'forest' ? 'client-dashboard' : 'min-h-screen bg-background text-foreground'} p-4 sm:p-6 lg:p-8`}>
+          <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-foreground'} p-4 sm:p-6 lg:p-8`}>
             <div className="max-w-5xl mx-auto space-y-6">
+
               {/* Header */}
               <WelcomeHeader
                 name={userDataFromAuth?.name || 'there'}
@@ -655,7 +664,7 @@ export default function ClientDashboardPage() {
         theme={theme}
       />
       <SidebarInset>
-        <div className={`${theme === 'forest' ? 'client-dashboard' : 'min-h-screen bg-background text-foreground'} p-4 sm:p-6 lg:p-8`}>
+        <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-foreground'} p-4 sm:p-6 lg:p-8`}>
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <WelcomeHeader

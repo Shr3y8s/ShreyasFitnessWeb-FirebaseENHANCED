@@ -63,7 +63,8 @@ interface ClientSidebarProps {
   userProfilePhoto?: string;
   onLogout?: () => void;
   onShowWelcome?: () => void;
-  theme?: 'light' | 'dark' | 'forest';
+  theme?: 'default' | 'dark' | 'forest';
+
 }
 
 export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogout, onShowWelcome, theme }: ClientSidebarProps) {
