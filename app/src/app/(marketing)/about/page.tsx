@@ -8,15 +8,18 @@ import {
   Award,
   BookHeart,
   BrainCircuit,
+  Code2,
   Dumbbell,
   GraduationCap,
   Instagram,
   Linkedin,
   Quote,
   Scale,
+  Sparkles,
   Target,
   TrendingUp,
 } from 'lucide-react';
+
 
 export const metadata = {
   title: 'About Me - SHREY.FIT',
@@ -133,8 +136,9 @@ export default function AboutPage() {
               </h2>
               <div className="mt-8 space-y-4">
                 {CREDENTIALS.map((c) => (
-                  <Card key={c.title} className="border-emerald-600/20 bg-white/80">
+                  <Card key={c.title} className="border-emerald-600/20 bg-white/80 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
                     <CardContent className="flex items-start gap-4 p-5">
+
                       <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
                         <c.icon className="size-5" />
                       </div>
@@ -222,10 +226,38 @@ export default function AboutPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Fun fact — built the platform himself */}
+          <Card className="mt-8 overflow-hidden border-emerald-600/30 bg-gradient-to-br from-emerald-50 to-teal-50 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/50 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
+            <CardContent className="flex flex-col gap-5 p-8 sm:flex-row sm:items-start">
+              <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white">
+                <Code2 className="size-7" />
+              </div>
+              <div>
+                <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                  <Sparkles className="size-3.5" /> Fun fact
+                </div>
+                <h3 className="text-xl font-bold text-stone-900">
+                  I built this entire platform myself.
+                </h3>
+                <p className="mt-3 text-stone-700">
+                  Most coaches run on scattered spreadsheets and DMs — I wanted better for my
+                  clients, so I designed and built SHREY.FIT from the ground up (yes, plenty of late
+                  nights, with modern AI as my pair-programmer). Your live plan, workouts, nutrition,
+                  progress, and our chat all live in one place because I sweated every detail of it.
+                </p>
+                <p className="mt-3 font-medium text-emerald-800">
+                  The same drive I bring to solving my own problems is exactly what I bring to solving
+                  yours.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
       {/* ===================== PHILOSOPHY ===================== */}
+
       <section className="py-10 md:py-14">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mx-auto max-w-2xl text-center">
