@@ -16,7 +16,8 @@ import OTPVerificationStep from './components/OTPVerificationStep';
 import DetailsStep from './components/DetailsStep';
 import ServiceTierStep from './components/ServiceTierStep';
 import { Footer } from '@/components/Footer';
-import { AuthHeader } from '@/components/AuthHeader';
+import { MarketingNav } from '@/components/MarketingNav';
+
 
 // Service tier type - matching Firebase interface
 export interface ServiceTier {
@@ -423,9 +424,11 @@ export default function SignupPage() {
   const stepTitles = ['Email', 'Verify', 'Details', 'Plan'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <AuthHeader />
-      <div className="container mx-auto px-4 py-8">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <MarketingNav />
+      <div className="container mx-auto flex-1 px-4 pb-8 pt-28">
+
+
         
         {/* Header Section */}
         <div className="text-center mb-8">
@@ -494,8 +497,9 @@ export default function SignupPage() {
 
             {/* Signup Form */}
             <div className="lg:col-span-2 order-1 lg:order-2">
-              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="shadow-xl border border-emerald-600/20 bg-white/80 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
                 <CardHeader className="pb-6">
+
                   {/* Progress indicator */}
                   <div className="mb-6">
                     <div className="flex items-center justify-center gap-2 sm:gap-4">

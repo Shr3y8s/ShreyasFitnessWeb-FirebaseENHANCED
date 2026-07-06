@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { AlertCircle, Mail, Lock, Eye, EyeOff, Shield, Clock, Users, Award, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
-import { AuthHeader } from '@/components/AuthHeader';
+import { MarketingNav } from '@/components/MarketingNav';
+
 
 /**
  * Post-login destination. Honors a `?next=<relative path>` param (e.g. signup sends
@@ -81,9 +82,11 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <AuthHeader />
-      <div className="container mx-auto px-4 py-8">
+    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+      <MarketingNav />
+      <div className="container mx-auto flex-1 px-4 pb-8 pt-28">
+
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mb-4">
@@ -100,10 +103,11 @@ export default function LoginPage() {
             
             {/* Login Form */}
             <div className="order-2 lg:order-1">
-              <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <Card className="shadow-xl border border-emerald-600/20 bg-white/80 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
                 <CardHeader className="text-center pb-6">
                   <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full mx-auto mb-4">
                     <Lock className="w-6 h-6 text-white" />
+
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900">Sign In</h2>
                   <p className="text-gray-600">Enter your credentials to access your account</p>
@@ -266,7 +270,8 @@ export default function LoginPage() {
                     description: 'Monitor your transformation with detailed analytics and milestone celebrations.'
                   }
                 ].map((feature, index) => (
-                  <div key={index} className="flex items-start space-x-4 p-6 bg-white/60 backdrop-blur-sm rounded-xl border border-white/20">
+                  <div key={index} className="flex items-start space-x-4 p-6 bg-white/70 backdrop-blur-sm rounded-xl border border-emerald-600/20 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
+
                     <div className="flex-shrink-0">
                       <div className="w-12 h-12 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg flex items-center justify-center">
                         <feature.icon className="w-6 h-6 text-white" />

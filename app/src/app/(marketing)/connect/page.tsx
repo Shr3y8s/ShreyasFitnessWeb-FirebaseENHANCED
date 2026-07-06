@@ -1,13 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, FormEvent } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useEffect, useRef, useState, FormEvent } from 'react';
+
 import { validateAndFormatPhone } from '@/lib/phoneUtils';
 import Mailcheck from 'mailcheck';
 import disposableDomains from 'disposable-email-domains/index.json';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  ArrowRight,
+  CalendarCheck,
+  CheckCircle2,
+  Clock,
+  Dumbbell,
+
+  Handshake,
+  Info,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  Send,
+  ShieldCheck,
+  User,
+} from 'lucide-react';
 
 export default function ConnectPage() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'message'>('schedule');
@@ -17,15 +35,46 @@ export default function ConnectPage() {
     phone: '',
     service: '',
     message: '',
-    newsletter: false
+    newsletter: false,
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const calendlyRef = useRef<HTMLDivElement>(null);
+
+  // Calendly's widget.js only auto-scans `.calendly-inline-widget` ONCE on script
+  // load. Because the schedule panel unmounts when you switch to "Send a Message",
+  // switching back mounts a fresh empty div the script never re-scans — so it stayed
+  // blank until a full reload. Explicitly (re)initialize whenever the schedule tab
+  // is active and the div is mounted.
+  useEffect(() => {
+    if (activeTab !== 'schedule') return;
+    let cancelled = false;
+    const init = () => {
+      if (cancelled) return;
+      const el = calendlyRef.current;
+      const Calendly = (window as any).Calendly;
+      if (el && Calendly?.initInlineWidget) {
+        el.innerHTML = ''; // clear any prior render before re-initializing
+        Calendly.initInlineWidget({
+          url: 'https://calendly.com/shreyas-annapureddy/30min',
+          parentElement: el,
+        });
+      } else {
+        // Script may still be loading on first mount — retry shortly.
+        setTimeout(init, 200);
+      }
+    };
+    init();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
 
   useEffect(() => {
+
     // Check for #message hash in URL
     if (window.location.hash === '#message') {
       setActiveTab('message');
@@ -61,8 +110,6 @@ export default function ConnectPage() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData({ ...formData, phone: value });
-    
-    // Clear error on change
     if (phoneError) {
       setPhoneError(null);
     }
@@ -71,8 +118,6 @@ export default function ConnectPage() {
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setFormData({ ...formData, email: value });
-    
-    // Clear suggestion on change
     if (emailSuggestion) {
       setEmailSuggestion(null);
     }
@@ -83,8 +128,6 @@ export default function ConnectPage() {
       setEmailSuggestion(null);
       return;
     }
-
-    // Check for email typos with mailcheck
     Mailcheck.run({
       email: formData.email,
       suggested: (suggestion: { full: string }) => {
@@ -92,7 +135,7 @@ export default function ConnectPage() {
       },
       empty: () => {
         setEmailSuggestion(null);
-      }
+      },
     });
   };
 
@@ -108,13 +151,11 @@ export default function ConnectPage() {
       setPhoneError(null);
       return;
     }
-
     const validation = validateAndFormatPhone(formData.phone);
     if (!validation.isValid) {
       setPhoneError(validation.errorMessage || 'Invalid phone number');
     } else {
       setPhoneError(null);
-      // Auto-format on blur
       setFormData({ ...formData, phone: validation.formatted });
     }
   };
@@ -124,14 +165,12 @@ export default function ConnectPage() {
     setIsSubmitting(true);
     setSubmitError('');
 
-    // Validate email
     if (!validateEmail(formData.email)) {
       setSubmitError('Please enter a valid email address.');
       setIsSubmitting(false);
       return;
     }
 
-    // Check for disposable email domain
     const emailDomain = formData.email.split('@')[1]?.toLowerCase();
     if (emailDomain && disposableDomains.includes(emailDomain)) {
       setSubmitError('Disposable email addresses are not allowed. Please use a permanent email address.');
@@ -139,7 +178,6 @@ export default function ConnectPage() {
       return;
     }
 
-    // Validate phone if provided
     if (formData.phone.trim()) {
       const phoneValidation = validateAndFormatPhone(formData.phone);
       if (!phoneValidation.isValid) {
@@ -151,18 +189,14 @@ export default function ConnectPage() {
     }
 
     try {
-      // Execute reCAPTCHA verification
       const recaptchaToken = await executeRecaptcha('contact_form');
 
-      // Format phone for storage (E.164 format)
       const phoneValidation = validateAndFormatPhone(formData.phone);
       const phoneToStore = phoneValidation.isValid ? phoneValidation.e164 : null;
-      
-      // Get service display text
+
       const serviceSelect = document.getElementById('service') as HTMLSelectElement;
       const serviceDisplayText = serviceSelect?.options[serviceSelect.selectedIndex]?.text || '';
 
-      // Submit to secure API route
       const response = await fetch('/api/submit-contact', {
         method: 'POST',
         headers: {
@@ -193,7 +227,7 @@ export default function ConnectPage() {
         phone: '',
         service: '',
         message: '',
-        newsletter: false
+        newsletter: false,
       });
     } catch (error: any) {
       console.error('Error sending message:', error);
@@ -211,380 +245,431 @@ export default function ConnectPage() {
     return 'our services';
   };
 
-  return (
-    <div className="marketing-content">
-      <link rel="stylesheet" href="/css/styles.css" />
-      <link rel="stylesheet" href="/css/connect.css" />
+  const inputClass =
+    'w-full rounded-lg border border-emerald-600/25 bg-white px-4 py-2.5 text-stone-800 outline-none transition-colors placeholder:text-stone-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30';
 
-      {/* Motivational Banner */}
-      <section className="motivational-banner">
-        <div className="motivation-top">
-          <div className="container">
-            <h2 className="motivation-headline">
-              THE BEST TIME TO START WAS YESTERDAY.<br />THE SECOND BEST TIME IS TODAY.
-            </h2>
-          </div>
-        </div>
-        
-        <div className="motivation-bottom">
-          <div className="container">
-            <div className="motivation-content">
-              <p>
-                As your dedicated fitness coach, I&apos;ll provide the <strong>expert guidance</strong>, <strong>accountability</strong>, and <strong>personalized attention</strong> you need to achieve lasting results – whether you&apos;re a <span className="emphasis">complete beginner</span> or looking to reach <span className="emphasis">new heights</span>.
-              </p>
-              
-              <Link href="/services" className="motivation-button">
-                Take the first step toward the stronger, healthier you that&apos;s waiting on the other side of action
-                <i className="fas fa-arrow-right"></i>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-stone-800">
+      {/* ===================== MOTIVATIONAL BANNER ===================== */}
+      <section className="pt-28 pb-8 md:pt-32">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-600 px-8 py-12 text-center shadow-xl md:px-14">
+            <h1 className="text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl">
+              THE BEST TIME TO START WAS YESTERDAY.
+              <br />
+              THE SECOND BEST TIME IS TODAY.
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-emerald-50">
+              As your dedicated fitness coach, I&apos;ll provide the <strong>expert guidance</strong>,{' '}
+              <strong>accountability</strong>, and <strong>personalized attention</strong> you need to
+              achieve lasting results – whether you&apos;re a{' '}
+              <span className="font-semibold text-white">complete beginner</span> or looking to reach{' '}
+              <span className="font-semibold text-white">new heights</span>.
+            </p>
+            <Button
+              asChild
+              size="lg"
+              className="mt-6 rounded-full bg-white px-7 text-base text-emerald-700 hover:bg-emerald-50"
+            >
+              <Link href="/services">
+                Take the first step <ArrowRight className="size-4" />
               </Link>
-            </div>
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Connect Content */}
-      <section id="connect-options" className="connect-page">
-        <div className="container">
-          {/* Connection Cards */}
-          <div className="connection-cards">
-            <div 
-              className={`connection-card ${activeTab === 'schedule' ? 'active' : ''}`}
+      {/* ===================== CONNECT OPTIONS ===================== */}
+      <section id="connect-options" className="pb-16">
+        <div className="mx-auto max-w-5xl px-6">
+          {/* Connection cards / tab switcher */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <button
+              type="button"
               onClick={() => setActiveTab('schedule')}
+              className={`flex items-start gap-4 rounded-2xl border p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)] ${
+                activeTab === 'schedule'
+                  ? 'border-emerald-600 bg-emerald-50/70 shadow-[0_0_18px_oklch(65%_0.16_151_/_0.2)]'
+                  : 'border-emerald-600/25 bg-white hover:border-emerald-600/40'
+              }`}
+
             >
-              <div className="card-icon">
-                <i className="fas fa-calendar-check"></i>
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <CalendarCheck className="size-6" />
               </div>
-              <h3>Schedule a Free Consultation</h3>
-              <p>Book a 15-minute slot directly on my calendar</p>
-              <div className="card-cta">
-                <span>Select this option</span>
-                <i className="fas fa-chevron-right"></i>
+              <div>
+                <h3 className="font-semibold text-stone-900">Schedule a Free Consultation</h3>
+                <p className="mt-1 text-sm text-stone-600">
+                  Book a 15-minute slot directly on my calendar
+                </p>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-emerald-700">
+                  Select this option <ArrowRight className="size-3.5" />
+                </span>
               </div>
-            </div>
-            
-            <div 
-              className={`connection-card ${activeTab === 'message' ? 'active' : ''}`}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('message')}
+              className={`flex items-start gap-4 rounded-2xl border p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)] ${
+                activeTab === 'message'
+                  ? 'border-emerald-600 bg-emerald-50/70 shadow-[0_0_18px_oklch(65%_0.16_151_/_0.2)]'
+                  : 'border-emerald-600/25 bg-white hover:border-emerald-600/40'
+              }`}
+
             >
-              <div className="card-icon">
-                <i className="fas fa-paper-plane"></i>
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <Send className="size-6" />
               </div>
-              <h3>Send a Message</h3>
-              <p>Get a response within 2-4 hours</p>
-              <div className="card-cta">
-                <span>Select this option</span>
-                <i className="fas fa-chevron-right"></i>
+              <div>
+                <h3 className="font-semibold text-stone-900">Send a Message</h3>
+                <p className="mt-1 text-sm text-stone-600">Get a response within 2-4 hours</p>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-emerald-700">
+                  Select this option <ArrowRight className="size-3.5" />
+                </span>
               </div>
-            </div>
+            </button>
           </div>
-          
-          {/* Content Area */}
-          <div className="connection-content-area">
-            {/* Schedule Content */}
-            <div 
-              id="schedule-content" 
-              className={`connection-content ${activeTab === 'schedule' ? 'active' : ''}`}
-            >
-              <div className="schedule-panel">
-                <div className="panel-header">
-                  <div className="header-icon">
-                    <i className="fas fa-calendar-check"></i>
+
+          {/* Content area */}
+          <div className="mt-8">
+            {/* Schedule content */}
+            {activeTab === 'schedule' && (
+              <Card className="border-emerald-600/25 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
+
+                <CardContent className="p-6 md:p-8">
+                  <div className="text-center">
+                    <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <CalendarCheck className="size-6" />
+
+                    </div>
+                    <h2 className="mt-4 text-2xl font-bold text-stone-900">
+                      Schedule a Free Consultation
+                    </h2>
+                    <p className="mt-2 text-stone-600">
+                      Book a 15-minute consultation directly on my calendar
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1.5 text-sm text-emerald-700">
+                      <Clock className="size-4" />
+                      Available Monday-Friday, 8am-6pm PST
+                    </div>
                   </div>
-                  <h2>Schedule a Free Consultation</h2>
-                  <p>Book a 15-minute consultation directly on my calendar</p>
-                  <div className="response-time">
-                    <i className="fas fa-clock"></i>
-                    <span>Available Monday-Friday, 8am-6pm PST</span>
+
+                  <div className="mt-6">
+                    <div
+                      ref={calendlyRef}
+                      className="calendly-inline-widget"
+                      style={{ minWidth: '320px', height: '800px' }}
+                    ></div>
                   </div>
-                </div>
-                
-                <div className="calendly-container">
-                  <div 
-                    className="calendly-inline-widget" 
-                    data-url="https://calendly.com/shreyas-annapureddy/30min" 
-                    style={{ minWidth: '320px', height: '800px' }}
-                  ></div>
-                </div>
-                
-                <div className="scheduling-note-enhanced">
-                  <div className="privacy-note">
-                    <i className="fas fa-info-circle"></i>
-                    <span>Select a time that works for you. You&apos;ll receive a confirmation email with details</span>
+
+
+                  <div className="mt-4 flex items-center justify-center gap-2 text-sm text-stone-500">
+                    <Info className="size-4 text-emerald-600" />
+                    <span>
+                      Select a time that works for you. You&apos;ll receive a confirmation email with
+                      details
+                    </span>
                   </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Message Content */}
-            <div 
-              id="message-content" 
-              className={`connection-content ${activeTab === 'message' ? 'active' : ''}`}
-            >
-              <div className="message-panel">
-                <div id="message" className="panel-header">
-                  <div className="header-icon">
-                    <i className="fas fa-paper-plane"></i>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Message content */}
+            {activeTab === 'message' && (
+              <Card id="message" className="border-emerald-600/25 bg-white transition-all duration-300 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.2)]">
+
+                <CardContent className="p-6 md:p-8">
+                  <div className="text-center">
+                    <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <Send className="size-6" />
+                    </div>
+                    <h2 className="mt-4 text-2xl font-bold text-stone-900">Send a Message</h2>
+                    <p className="mt-2 text-stone-600">
+                      Fill out the form below and I&apos;ll get back to you within 24 hours
+                    </p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-1.5 text-sm text-emerald-700">
+                      <Clock className="size-4" />
+                      Typical response time: 2-4 hours
+                    </div>
                   </div>
-                  <h2>Send a Message</h2>
-                  <p>Fill out the form below and I&apos;ll get back to you within 24 hours</p>
-                  <div className="response-time">
-                    <i className="fas fa-clock"></i>
-                    <span>Typical response time: 2-4 hours</span>
-                  </div>
-                </div>
-                
-                {!submitSuccess ? (
-                  <form onSubmit={handleSubmit} id="contact-form">
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="name">
-                          <i className="fas fa-user"></i> Your Name <span className="required">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          id="name"
-                          name="name"
-                          autoComplete="name"
-                          placeholder="Enter your full name"
-                          required
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                      </div>
-                      
-                      <div className="form-group">
-                        <label htmlFor="email">
-                          <i className="fas fa-envelope"></i> Email Address <span className="required">*</span>
-                        </label>
-                        <input
-                          type="email"
-                          id="email"
-                          name="email"
-                          autoComplete="email"
-                          placeholder="Enter your email address"
-                          required
-                          value={formData.email}
-                          onChange={handleEmailChange}
-                          onBlur={handleEmailBlur}
-                        />
-                        {emailSuggestion && (
-                          <div style={{ 
-                            marginTop: '0.5rem', 
-                            padding: '0.5rem', 
-                            backgroundColor: '#fff3cd', 
-                            border: '1px solid #ffc107',
-                            borderRadius: '4px',
-                            fontSize: '0.875rem'
-                          }}>
-                            <span style={{ color: '#856404' }}>
+
+                  {!submitSuccess ? (
+                    <form onSubmit={handleSubmit} id="contact-form" className="mt-8 space-y-5">
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <div>
+                          <label htmlFor="name" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700">
+                            <User className="size-4 text-emerald-600" /> Your Name{' '}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            autoComplete="name"
+                            placeholder="Enter your full name"
+                            required
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className={inputClass}
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="email" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700">
+                            <Mail className="size-4 text-emerald-600" /> Email Address{' '}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            autoComplete="email"
+                            placeholder="Enter your email address"
+                            required
+                            value={formData.email}
+                            onChange={handleEmailChange}
+                            onBlur={handleEmailBlur}
+                            className={inputClass}
+                          />
+                          {emailSuggestion && (
+                            <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800">
                               Did you mean{' '}
                               <button
                                 type="button"
                                 onClick={acceptEmailSuggestion}
-                                style={{
-                                  color: '#0066cc',
-                                  textDecoration: 'underline',
-                                  background: 'none',
-                                  border: 'none',
-                                  padding: 0,
-                                  cursor: 'pointer',
-                                  font: 'inherit'
-                                }}
+                                className="font-medium text-emerald-700 underline"
                               >
                                 {emailSuggestion}
                               </button>
                               ?
-                            </span>
-                          </div>
-                        )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label htmlFor="phone">
-                          <i className="fas fa-phone"></i> Phone Number <span className="optional">(Optional)</span>
-                        </label>
-                        <input
-                          type="tel"
-                          id="phone"
-                          name="phone"
-                          autoComplete="tel"
-                          placeholder="(555) 123-4567"
-                          value={formData.phone}
-                          onChange={handlePhoneChange}
-                          onBlur={handlePhoneBlur}
-                          className={phoneError ? 'error' : ''}
-                        />
-                        {phoneError && (
-                          <span className="error-text" style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                            {phoneError}
-                          </span>
-                        )}
+
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <div>
+                          <label htmlFor="phone" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700">
+                            <Phone className="size-4 text-emerald-600" /> Phone Number{' '}
+                            <span className="text-stone-400">(Optional)</span>
+                          </label>
+                          <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            autoComplete="tel"
+                            placeholder="(555) 123-4567"
+                            value={formData.phone}
+                            onChange={handlePhoneChange}
+                            onBlur={handlePhoneBlur}
+                            className={`${inputClass} ${phoneError ? 'border-red-400 focus:border-red-400 focus:ring-red-400/30' : ''}`}
+                          />
+                          {phoneError && (
+                            <span className="mt-1 block text-sm text-red-500">{phoneError}</span>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="service" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700">
+                            <Dumbbell className="size-4 text-emerald-600" /> Service Interest{' '}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            id="service"
+                            name="service"
+                            required
+                            value={formData.service}
+                            onChange={(e) => setFormData({ ...formData, service: e.target.value })}
+                            className={inputClass}
+                          >
+                            <option value="" disabled>
+                              Select a service
+                            </option>
+                            <option value="inperson">In-Person Training</option>
+                            <option value="online">Online Coaching</option>
+                            <option value="complete">Complete Transformation</option>
+                            <option value="questions">General Questions</option>
+                            <option value="other">Other Inquiry</option>
+                          </select>
+                        </div>
                       </div>
-                      
-                      <div className="form-group">
-                        <label htmlFor="service">
-                          <i className="fas fa-dumbbell"></i> Service Interest <span className="required">*</span>
+
+                      <div>
+                        <label htmlFor="message-text" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700">
+                          <MessageSquare className="size-4 text-emerald-600" /> Your Message{' '}
+                          <span className="text-red-500">*</span>
                         </label>
-                        <select
-                          id="service"
-                          name="service"
+                        <textarea
+                          id="message-text"
+                          name="message"
+                          rows={5}
+                          placeholder="Tell me about your fitness goals, current fitness level, any injuries or concerns, and what you hope to achieve through training..."
                           required
-                          value={formData.service}
-                          onChange={(e) => setFormData({ ...formData, service: e.target.value })}
-                        >
-                          <option value="" disabled>Select a service</option>
-                          <option value="inperson">In-Person Training</option>
-                          <option value="online">Online Coaching</option>
-                          <option value="complete">Complete Transformation</option>
-                          <option value="questions">General Questions</option>
-                          <option value="other">Other Inquiry</option>
-                        </select>
+                          value={formData.message}
+                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                          className={inputClass}
+                        ></textarea>
                       </div>
-                    </div>
-                    
-                    <div className="form-group full-width">
-                      <label htmlFor="message-text">
-                        <i className="fas fa-comment-dots"></i> Your Message <span className="required">*</span>
-                      </label>
-                      <textarea
-                        id="message-text"
-                        name="message"
-                        rows={5}
-                        placeholder="Tell me about your fitness goals, current fitness level, any injuries or concerns, and what you hope to achieve through training..."
-                        required
-                        value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      ></textarea>
-                    </div>
-                    
-                    <div className="form-group checkbox-group-enhanced">
-                      <div className="custom-checkbox">
+
+                      <label
+                        htmlFor="newsletter"
+                        className="flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-600/20 bg-emerald-50/40 p-4"
+                      >
                         <input
                           type="checkbox"
                           id="newsletter"
                           name="newsletter"
                           checked={formData.newsletter}
                           onChange={(e) => setFormData({ ...formData, newsletter: e.target.checked })}
+                          className="mt-1 size-4 accent-emerald-600"
                         />
-                        <label htmlFor="newsletter">
-                          <span className="checkmark"></span>
-                          <span className="checkbox-text">
-                            <strong>Subscribe to my fitness newsletter</strong>
-                            <small>Get weekly tips, workout ideas, and nutrition advice</small>
+                        <span>
+                          <span className="block font-medium text-stone-800">
+                            Subscribe to my fitness newsletter
                           </span>
-                        </label>
-                      </div>
-                    </div>
-                    
-                    {submitError && (
-                      <div className="error-message" style={{ marginBottom: '1rem' }}>
-                        {submitError}
-                      </div>
-                    )}
-                    
-                    <button 
-                      type="submit" 
-                      className="btn-primary-enhanced full-width"
-                      disabled={isSubmitting}
-                    >
-                      <i className="fas fa-paper-plane"></i>
-                      <span>{isSubmitting ? 'Sending...' : 'Send Message'}</span>
-                    </button>
-                    
-                    <div className="form-footer">
-                      <div className="privacy-note">
-                        <i className="fas fa-shield-alt"></i>
+                          <span className="block text-sm text-stone-500">
+                            Get weekly tips, workout ideas, and nutrition advice
+                          </span>
+                        </span>
+                      </label>
+
+                      {submitError && (
+                        <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                          {submitError}
+                        </div>
+                      )}
+
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="h-12 w-full rounded-full bg-emerald-600 text-base hover:bg-emerald-700"
+                      >
+                        <Send className="size-4" />
+                        {isSubmitting ? 'Sending...' : 'Send Message'}
+                      </Button>
+
+                      <div className="flex items-center justify-center gap-2 text-sm text-stone-500">
+                        <ShieldCheck className="size-4 text-emerald-600" />
                         <span>Your information is secure and will never be shared</span>
                       </div>
+                    </form>
+                  ) : (
+                    <div className="mt-8 text-center">
+                      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                        <CheckCircle2 className="size-8" />
+                      </div>
+                      <h3 className="mt-4 text-xl font-bold text-stone-900">
+                        Message Sent Successfully!
+                      </h3>
+                      <p className="mx-auto mt-2 max-w-md text-stone-600">
+                        Thank you for reaching out. I&apos;ll get back to you regarding your interest
+                        in <strong>{serviceDisplayName()}</strong> within 2-4 hours.
+                      </p>
+                      <Button
+                        onClick={() => setSubmitSuccess(false)}
+                        className="mt-6 rounded-full bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        Send Another Message <Send className="size-4" />
+                      </Button>
                     </div>
-                  </form>
-                ) : (
-                  <div className="success-message">
-                    <div className="success-icon">
-                      <i className="fas fa-check-circle"></i>
-                    </div>
-                    <h3>Message Sent Successfully!</h3>
-                    <p>
-                      Thank you for reaching out. I&apos;ll get back to you regarding your interest in{' '}
-                      <strong>{serviceDisplayName()}</strong> within 2-4 hours.
-                    </p>
-                    <button
-                      onClick={() => setSubmitSuccess(false)}
-                      className="btn-primary"
-                    >
-                      <span>Send Another Message</span>
-                      <i className="fas fa-paper-plane"></i>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
-          
+
           {/* Get In Touch Section */}
-          <div className="get-in-touch-section">
-            <div className="panel-header">
-              <div className="header-icon">
-                <i className="fas fa-handshake"></i>
+          <div className="mt-14">
+            <div className="text-center">
+              <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <Handshake className="size-6" />
               </div>
-              <h2>Get In Touch</h2>
-              <p>Have questions or ready to start your fitness journey? I&apos;m here to help</p>
-              <div className="response-time">
-                <i className="fas fa-comments"></i>
-                <span>Multiple ways to connect with me</span>
-              </div>
+              <h2 className="mt-4 text-2xl font-bold text-stone-900">Get In Touch</h2>
+              <p className="mt-2 text-stone-600">
+                Have questions or ready to start your fitness journey? I&apos;m here to help
+              </p>
             </div>
-            
-            <div className="contact-grid-map-focused">
-              <div className="contact-info-column">
-                <div className="contact-method-enhanced">
-                  <div className="header-icon">
-                    <i className="fas fa-envelope"></i>
-                  </div>
-                  <div className="method-details">
-                    <h3>Email</h3>
-                    <p><a href="mailto:info@shrey.fit">info@shrey.fit</a></p>
-                  </div>
-                </div>
-                
-                <div className="contact-method-enhanced">
-                  <div className="header-icon">
-                    <i className="fab fa-whatsapp"></i>
-                  </div>
-                  <div className="method-details">
-                    <h3>WhatsApp</h3>
-                    <p><a href="https://wa.me/14258299961" target="_blank" rel="noopener noreferrer">(425) 829-9961</a></p>
-                    <p className="detail-note">Available Monday-Friday, 8am-6pm PST</p>
-                  </div>
-                </div>
-                
-                <div className="contact-method-enhanced">
-                  <div className="header-icon">
-                    <i className="fas fa-location-dot"></i>
-                  </div>
-                  <div className="method-details">
-                    <h3>Location</h3>
-                    <p>Ironworks Gym</p>
-                    <p><a href="https://maps.google.com/?q=12708+Northup+Way,+Bellevue,+WA+98005" target="_blank" rel="noopener noreferrer">12708 Northup Way, Bellevue, WA 98005</a></p>
-                    <p className="detail-note">In-person sessions available at this location</p>
-                  </div>
-                </div>
+
+            <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              <div className="space-y-4">
+                <Card className="border-emerald-600/20 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
+                  <CardContent className="flex items-start gap-4 p-5">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <Mail className="size-5" />
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-stone-900">Email</h3>
+                      <p className="mt-1 text-sm">
+                        <a href="mailto:info@shrey.fit" className="text-emerald-700 hover:underline">
+                          info@shrey.fit
+                        </a>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-emerald-600/20 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
+                  <CardContent className="flex items-start gap-4 p-5">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <Phone className="size-5" />
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-stone-900">WhatsApp</h3>
+                      <p className="mt-1 text-sm">
+                        <a
+                          href="https://wa.me/14258299961"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 hover:underline"
+                        >
+                          (425) 829-9961
+                        </a>
+                      </p>
+                      <p className="text-xs text-stone-500">Available Monday-Friday, 8am-6pm PST</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-emerald-600/20 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
+                  <CardContent className="flex items-start gap-4 p-5">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                      <MapPin className="size-5" />
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-stone-900">Location</h3>
+                      <p className="mt-1 text-sm text-stone-700">Ironworks Gym</p>
+                      <p className="text-sm">
+                        <a
+                          href="https://maps.google.com/?q=12708+Northup+Way,+Bellevue,+WA+98005"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 hover:underline"
+                        >
+                          12708 Northup Way, Bellevue, WA 98005
+                        </a>
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        In-person sessions available at this location
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              
-              <div className="map-column">
-                <div className="map-container">
-                  <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3427.596730827469!2d-122.17353032360579!3d47.62884567119191!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x54906cfb814a2ebb%3A0x19407c747d7bf0e2!2s12708%20Northup%20Way%2C%20Bellevue%2C%20WA%2098005!5e1!3m2!1sen!2sus!4v1753525549530!5m2!1sen!2sus" 
-                    width="100%" 
-                    height="100%" 
-                    style={{ border: 0 }} 
-                    allowFullScreen 
-                    loading="lazy" 
-                    referrerPolicy="no-referrer-when-downgrade"
-                  ></iframe>
-                </div>
+
+              <div className="overflow-hidden rounded-2xl border border-emerald-600/20 bg-white">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3427.596730827469!2d-122.17353032360579!3d47.62884567119191!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x54906cfb814a2ebb%3A0x19407c747d7bf0e2!2s12708%20Northup%20Way%2C%20Bellevue%2C%20WA%2098005!5e1!3m2!1sen!2sus!4v1753525549530!5m2!1sen!2sus"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, minHeight: '360px' }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                ></iframe>
               </div>
             </div>
           </div>

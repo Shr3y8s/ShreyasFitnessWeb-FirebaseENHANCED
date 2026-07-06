@@ -8,61 +8,22 @@ export const metadata = {
 
 export default function LibraryPage() {
   return (
-    <>
-      <style>{`
-        .ex-page-header .container {
-          text-align: left;
-          max-width: 1280px;
-          padding: 0 20px;
-        }
-
-        .ex-page-header h1 {
-          font-size: 2.8rem;
-          margin-bottom: 20px;
-          position: relative;
-          display: inline-block;
-        }
-        .ex-page-header h1:after {
-          content: "";
-          display: block;
-          width: 80px;
-          height: 3px;
-          background-color: var(--primary);
-          margin: 15px 0;
-        }
-        .ex-header-subtitle {
-          max-width: 800px;
-          margin: 0;
-          font-size: 1.1rem;
-          line-height: 1.7;
-          color: var(--dark-gray);
-          font-weight: 400;
-        }
-        @media (max-width: 768px) {
-          .ex-page-header h1 { font-size: 2.2rem; }
-          .ex-header-subtitle { font-size: 1rem; }
-        }
-        /* Tighten the large desktop top gap on phones (nav is ~70px) */
-        @media (max-width: 576px) {
-          .marketing-content .ex-page-header { padding-top: 110px; }
-        }
-      `}</style>
-
-      <section className="page-header ex-page-header">
-        <div className="container">
-          <h1>
-            Video <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Library</span>
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-stone-800">
+      <section className="pt-28 pb-8 md:pt-32">
+        <div className="mx-auto max-w-7xl px-6">
+          <h1 className="text-4xl font-bold tracking-tight text-stone-900 sm:text-5xl">
+            Video <span className="text-emerald-600">Library</span>
           </h1>
-          <p className="ex-header-subtitle">
-            Free, no-nonsense fitness content straight from my YouTube channel.
-            Filter by full workouts or quick tips, browse by topic and muscle group,
-            and watch proper form, nutrition advice, and mindset talks. New videos
-            added regularly.
+          <div className="mt-4 h-1 w-20 rounded-full bg-emerald-600" />
+          <p className="mt-5 max-w-2xl text-lg text-stone-600">
+            Free, no-nonsense fitness content straight from my YouTube channel. Filter by full
+            workouts or quick tips, browse by topic and muscle group, and watch proper form,
+            nutrition advice, and mindset talks. New videos added regularly.
           </p>
         </div>
       </section>
 
       <ExerciseGallery />
-    </>
+    </div>
   );
 }

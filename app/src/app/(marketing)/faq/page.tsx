@@ -371,7 +371,8 @@ export default function FAQPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <main className="mx-auto max-w-4xl px-4 pt-28 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 pt-28 pb-16 sm:px-6 sm:pb-20 lg:px-8">
+
         {/* Header */}
         <div className="mb-8 text-center">
           <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
