@@ -669,6 +669,47 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
     const capture = result?.purchase_units?.[0]?.payments?.captures?.[0];
     const status = result?.status || capture?.status;
 
+    // AUTHORITATIVE capture log: environment (sandbox vs live/shrey.fit), amount,
+    // capture status, and which PayPal merchant (payee) actually received it. cfg.base
+    // is api-m.paypal.com for LIVE (shrey.fit) and api-m.sandbox.paypal.com for SANDBOX
+    // (staging). This makes every capture self-documenting (no more guessing env/account).
+    const _isLive = cfg?.base === "api-m.paypal.com";
+    const _capAmount = capture?.amount || {};
+    const _payee = result?.purchase_units?.[0]?.payee || {};
+    const _payer = result?.payer || {};
+    logger.info("capturePaypalOrder: capture result", {
+      uid,
+      orderId,
+      env: _isLive ? "LIVE (shrey.fit)" : "SANDBOX (staging)",
+      apiBase: cfg?.base || null,
+      status: status || null,
+      captureId: capture?.id || null,
+      amount: _capAmount.value || null,
+      currency: _capAmount.currency_code || null,
+      payeeEmail: _payee.email_address || null,
+      payeeMerchantId: _payee.merchant_id || null,
+      payerEmail: _payer.email_address || null,
+    });
+
+    // MONEY-SAFETY GATE: only treat the payment as successful when PayPal reports the
+    // capture COMPLETED. A non-COMPLETED capture (PENDING/DECLINED, or a 201 created-
+    // but-not-captured) must NOT fulfill and must NOT report success to the client —
+    // otherwise the site shows "payment completed" with no money captured (the Apple
+    // Pay symptom). Return ok:false so the client shows a real failure.
+    if (status !== "COMPLETED") {
+      logger.error("capturePaypalOrder: capture NOT COMPLETED — not fulfilling", {
+        uid,
+        orderId,
+        env: _isLive ? "LIVE (shrey.fit)" : "SANDBOX (staging)",
+        status: status || null,
+        captureId: capture?.id || null,
+        processorResponse: capture?.processor_response || null,
+        statusDetails: capture?.status_details || result?.status_details || null,
+      });
+      return { ok: false, status: status || "UNKNOWN", transactionId: capture?.id || null };
+    }
+
+
     // SYNCHRONOUS fulfillment (PayPal best practice): the capture response is the
     // authoritative "money received" signal — fulfill immediately on COMPLETED
     // instead of waiting on the PAYMENT.CAPTURE.COMPLETED webhook (which is slow/
@@ -744,7 +785,9 @@ const capturePaypalOrder = onCall({ region: "us-west1", secrets: PAYPAL_SECRETS 
     // sessionPackages[].providerTransactionId === this id). This avoids the
     // baseline-rise race where synchronous fulfillment already incremented the
     // session balance before the success page mounts.
-    return { ok: true, status: status || "COMPLETED", transactionId: capture?.id || null };
+    // status is guaranteed COMPLETED here (non-COMPLETED returned ok:false above).
+    return { ok: true, status: "COMPLETED", transactionId: capture?.id || null };
+
   } catch (err) {
     logger.error("capturePaypalOrder failed", { uid, orderId, error: err.message });
     throw new HttpsError("internal", "Failed to capture order.");

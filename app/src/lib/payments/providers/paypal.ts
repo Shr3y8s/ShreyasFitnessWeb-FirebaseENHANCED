@@ -827,17 +827,27 @@ export const paypalProvider: PaymentProvider = {
                   session.completePayment(ApplePaySession.STATUS_FAILURE);
                   throw new Error(`Apple Pay order not approved (status=${confirm.status}).`);
                 }
-                session.completePayment(ApplePaySession.STATUS_SUCCESS);
-                wdbg('ApplePay: completePayment SUCCESS → capturing');
-
-
-                // Capture SERVER-SIDE (same as the button/card paths); returns the capture
-                // id so the success page can match an absolute fulfillment signal.
+                // Capture SERVER-SIDE FIRST, then tell Apple the result. The server only
+                // returns ok:true when PayPal reports the capture COMPLETED (money-safety
+                // gate), so we must NOT flash the sheet green before we know money moved —
+                // otherwise the site shows "payment completed" on a non-captured order (the
+                // Apple Pay bug). Apple allows this async work inside onpaymentauthorized.
+                wdbg('ApplePay: confirmOrder OK → capturing (awaiting COMPLETED)');
                 opts.onProcessing?.();
                 const capture = httpsCallable(functions, 'capturePaypalOrder');
                 const capRes = await capture({ orderId, paypalEnv: PAYPAL_ENV });
-                const transactionId = (capRes?.data as { transactionId?: string } | undefined)?.transactionId;
+                const capData = capRes?.data as { ok?: boolean; status?: string; transactionId?: string } | undefined;
+                const transactionId = capData?.transactionId;
+                if (capData?.ok !== true || !transactionId) {
+                  const st = capData?.status || 'UNKNOWN';
+                  wdbg('ApplePay: capture NOT COMPLETED status=' + st);
+                  session.completePayment(ApplePaySession.STATUS_FAILURE);
+                  throw new Error(`Apple Pay payment not completed (status=${st}).`);
+                }
+                session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                wdbg('ApplePay: capture COMPLETED → completePayment SUCCESS');
                 opts.onApproved(transactionId);
+
               } catch (e) {
                 wdbg('ApplePay: authorize FLOW FAILED ' + ((e as Error)?.message || String(e)));
                 try { session.completePayment(ApplePaySession.STATUS_FAILURE); } catch { /* ignore */ }
