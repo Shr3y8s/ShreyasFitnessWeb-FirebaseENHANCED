@@ -428,7 +428,8 @@ export default function FAQPage() {
               <section
                 key={cat.id}
                 id={cat.id}
-                className="scroll-mt-24 overflow-hidden rounded-2xl border border-emerald-100 bg-white/90 shadow-sm backdrop-blur"
+                className="scroll-mt-24 overflow-hidden rounded-2xl border border-emerald-100 bg-white/90 shadow-sm backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]"
+
               >
                 <div className="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-teal-50 px-6 py-4">
                   <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
