@@ -42,36 +42,17 @@ export default function ConnectPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const calendlyRef = useRef<HTMLDivElement>(null);
 
-  // Calendly's widget.js only auto-scans `.calendly-inline-widget` ONCE on script
-  // load. Because the schedule panel unmounts when you switch to "Send a Message",
-  // switching back mounts a fresh empty div the script never re-scans — so it stayed
-  // blank until a full reload. Explicitly (re)initialize whenever the schedule tab
-  // is active and the div is mounted.
-  useEffect(() => {
-    if (activeTab !== 'schedule') return;
-    let cancelled = false;
-    const init = () => {
-      if (cancelled) return;
-      const el = calendlyRef.current;
-      const Calendly = (window as any).Calendly;
-      if (el && Calendly?.initInlineWidget) {
-        el.innerHTML = ''; // clear any prior render before re-initializing
-        Calendly.initInlineWidget({
-          url: 'https://calendly.com/shreyas-annapureddy/30min',
-          parentElement: el,
-        });
-      } else {
-        // Script may still be loading on first mount — retry shortly.
-        setTimeout(init, 200);
-      }
-    };
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab]);
+  // Calendly widget initialization is handled ENTIRELY by widget.js's built-in
+  // auto-scan of the `.calendly-inline-widget` div (via its `data-url`). We do
+  // NOT call `initInlineWidget` manually — combining a manual init with the
+  // auto-scan is what previously created two stacked widgets intermittently.
+  //
+  // The widget div is also kept ALWAYS MOUNTED and toggled with CSS `display`
+  // (see the Schedule panel in the JSX below) instead of being conditionally
+  // rendered. That way the single auto-scanned iframe persists across tab
+  // switches — so switching to "Send a Message" and back never leaves a blank
+  // widget and never needs a page reload.
 
   useEffect(() => {
 
@@ -333,8 +314,10 @@ export default function ConnectPage() {
 
           {/* Content area */}
           <div className="mt-8">
-            {/* Schedule content */}
-            {activeTab === 'schedule' && (
+            {/* Schedule content — ALWAYS MOUNTED, toggled with CSS `display` so the
+                single auto-scanned Calendly iframe persists across tab switches
+                (never unmounted → never blank on return, never duplicated). */}
+            <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }}>
               <Card className="border-emerald-600/25 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-600/40 hover:shadow-[0_0_15px_oklch(65%_0.16_151_/_0.25),0_4px_20px_oklch(65%_0.16_151_/_0.25)]">
 
                 <CardContent className="p-6 md:p-8">
@@ -356,9 +339,12 @@ export default function ConnectPage() {
                   </div>
 
                   <div className="mt-6">
+                    {/* Auto-scanned by Calendly's widget.js via data-url — no manual
+                        init. Kept mounted (parent toggles display) so the iframe
+                        survives tab switches. */}
                     <div
-                      ref={calendlyRef}
                       className="calendly-inline-widget"
+                      data-url="https://calendly.com/shreyas-annapureddy/30min"
                       style={{ minWidth: '320px', height: '800px' }}
                     ></div>
                   </div>
@@ -373,7 +359,7 @@ export default function ConnectPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            </div>
 
             {/* Message content */}
             {activeTab === 'message' && (
