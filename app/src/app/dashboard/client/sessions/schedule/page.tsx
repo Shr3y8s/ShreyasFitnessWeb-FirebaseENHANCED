@@ -192,7 +192,15 @@ export default function ScheduleSessionsPage() {
         // Clear any existing content first to prevent duplicates
         widgetEl.innerHTML = '';
         
-        // Initialize the widget
+        // Initialize the widget using the URL from the data-url attribute.
+        // IMPORTANT: keep data-url on the div (see JSX below) even though we
+        // also manually call initInlineWidget here. On this page the widget
+        // div only exists in the DOM after Firestore delivers the session
+        // balance asynchronously, so Calendly's one-time auto-scan (which
+        // runs immediately when widget.js loads) essentially never finds
+        // this div in time — it never double-inits. Removing data-url here
+        // previously caused an internal widget.js crash that broke reload
+        // reliability, so it must stay.
         window.Calendly.initInlineWidget({
           url: widgetEl.getAttribute('data-url'),
           parentElement: widgetEl
