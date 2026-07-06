@@ -13,7 +13,10 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
 import { TrainingSession, SessionBalance } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
-import { Calendar, MapPin } from 'lucide-react';
+import { Calendar, MapPin, ExternalLink } from 'lucide-react';
+
+const CALENDLY_BASE_URL = 'https://calendly.com/shreyas-annapureddy/1-1-training-session';
+
 
 // Declare Calendly types
 declare global {
@@ -44,6 +47,8 @@ export default function ScheduleSessionsPage() {
     lastUpdated: Timestamp.now()
   });
   const [nextExpirationDate, setNextExpirationDate] = useState<Date | null>(null);
+  const [showCalendlyFallback, setShowCalendlyFallback] = useState(false);
+
 
   // Listen to user document for real-time session balance
   useEffect(() => {
@@ -182,7 +187,9 @@ export default function ScheduleSessionsPage() {
     if (sessionBalance.available <= 0) return;
 
     let mounted = true;
-    
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50; // ~5 seconds at 100ms intervals
+
     const initWidget = () => {
       if (!mounted) return;
       
@@ -206,6 +213,14 @@ export default function ScheduleSessionsPage() {
           parentElement: widgetEl
         });
       } else if (!window.Calendly && mounted) {
+        attempts += 1;
+        if (attempts >= MAX_ATTEMPTS) {
+          // Calendly script never became available (likely blocked by an ad
+          // blocker, content filter, or offline network). Stop retrying and
+          // show the fallback link instead of retrying forever.
+          setShowCalendlyFallback(true);
+          return;
+        }
         // Calendly script not loaded yet, retry after a short delay
         setTimeout(initWidget, 100);
       }
@@ -222,6 +237,7 @@ export default function ScheduleSessionsPage() {
       }
     };
   }, [sessionBalance.available]); // Re-init when session balance changes
+
 
   const handleLogout = async () => {
     try {
@@ -342,7 +358,9 @@ export default function ScheduleSessionsPage() {
       <Script 
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
+        onError={() => setShowCalendlyFallback(true)}
       />
+
       <SidebarProvider>
         <ClientSidebar
           userName={userData?.name}
@@ -393,7 +411,22 @@ export default function ScheduleSessionsPage() {
                     ></div>
                   </div>
 
+                  {showCalendlyFallback && (
+                    <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-center text-sm text-amber-800">
+                      <span>Having trouble loading the scheduler?</span>
+                      <a
+                        href={`${CALENDLY_BASE_URL}?hide_gdpr_banner=1&primary_color=4caf50${userData?.name ? `&name=${encodeURIComponent(userData.name)}` : ''}${userData?.email ? `&email=${encodeURIComponent(userData.email)}` : ''}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 font-medium text-primary underline hover:text-primary/80"
+                      >
+                        Book directly on Calendly <ExternalLink className="size-3.5" />
+                      </a>
+                    </div>
+                  )}
+
                   <div className="mt-6 space-y-3 text-sm text-muted-foreground">
+
                     <div className="flex items-start">
                       <span className="text-green-600 mr-2">✓</span>
                       <span>One session credit will be deducted when you book</span>

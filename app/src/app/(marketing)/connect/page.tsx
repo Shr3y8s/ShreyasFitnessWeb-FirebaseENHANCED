@@ -16,6 +16,7 @@ import {
   Clock,
   Dumbbell,
 
+  ExternalLink,
   Handshake,
   Info,
   Mail,
@@ -26,6 +27,9 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
+
+const CALENDLY_URL = 'https://calendly.com/shreyas-annapureddy/30min';
+
 
 export default function ConnectPage() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'message'>('schedule');
@@ -42,6 +46,8 @@ export default function ConnectPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [showCalendlyFallback, setShowCalendlyFallback] = useState(false);
+
 
   // Calendly widget initialization is handled ENTIRELY by widget.js's built-in
   // auto-scan of the `.calendly-inline-widget` div (via its `data-url`). We do
@@ -67,11 +73,28 @@ export default function ConnectPage() {
       }, 100);
     }
 
-    // Load Calendly script
+    // Load Calendly script. If the script itself fails to load (blocked by an
+    // ad blocker, content filter, or offline network), show the fallback link
+    // immediately rather than leaving a permanently blank widget area.
     const script = document.createElement('script');
     script.src = 'https://assets.calendly.com/assets/external/widget.js';
     script.async = true;
+    script.onerror = () => {
+      setShowCalendlyFallback(true);
+    };
     document.body.appendChild(script);
+
+    // Safety-net timeout: even if the script loads, Calendly's auto-scan may
+    // be blocked further downstream (e.g. the iframe request itself is
+    // blocked). If no iframe has appeared inside the widget container after
+    // a few seconds, show the fallback too.
+    const fallbackTimer = setTimeout(() => {
+      const widgetEl = document.querySelector('.calendly-inline-widget');
+      const hasIframe = widgetEl?.querySelector('iframe');
+      if (!hasIframe) {
+        setShowCalendlyFallback(true);
+      }
+    }, 6000);
 
     // Load reCAPTCHA script
     loadRecaptcha().catch((error) => {
@@ -80,8 +103,10 @@ export default function ConnectPage() {
 
     return () => {
       document.body.removeChild(script);
+      clearTimeout(fallbackTimer);
     };
   }, []);
+
 
   const validateEmail = (email: string) => {
     const re = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
@@ -349,8 +374,22 @@ export default function ConnectPage() {
                     ></div>
                   </div>
 
+                  {showCalendlyFallback && (
+                    <div className="mt-4 flex flex-col items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4 text-center text-sm text-amber-800">
+                      <span>Having trouble loading the scheduler?</span>
+                      <a
+                        href={CALENDLY_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 font-medium text-emerald-700 underline hover:text-emerald-800"
+                      >
+                        Book directly on Calendly <ExternalLink className="size-3.5" />
+                      </a>
+                    </div>
+                  )}
 
                   <div className="mt-4 flex items-center justify-center gap-2 text-sm text-stone-500">
+
                     <Info className="size-4 text-emerald-600" />
                     <span>
                       Select a time that works for you. You&apos;ll receive a confirmation email with
