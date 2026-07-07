@@ -1,3 +1,4 @@
+/* eslint-disable max-len, object-curly-spacing, operator-linebreak, valid-jsdoc, require-jsdoc */
 /**
  * Admin Notification Templates
  *
@@ -25,7 +26,7 @@ function money(amountMinor) {
 function shell({ heading, bodyHtml, ctaLabel, ctaUrl }) {
   const cta = ctaLabel && ctaUrl
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
-         <tr><td style="border-radius: 8px; background: ${ACCENT};">
+         <tr><td style="border-radius: 9999px; background: ${ACCENT};">
            <a href="${ctaUrl}" style="display: inline-block; padding: 12px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none;">${ctaLabel}</a>
          </td></tr>
        </table>`
@@ -36,9 +37,9 @@ function shell({ heading, bodyHtml, ctaLabel, ctaUrl }) {
 <body style="margin: 0; padding: 0; background: #f3f4f6; font-family: Arial, Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; padding: 24px 0;">
     <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #ffffff; border-radius: 12px; overflow: hidden;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
         <!-- Header -->
-        <tr><td style="background: ${ACCENT}; padding: 20px 32px;">
+        <tr><td style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); padding: 20px 32px;">
           <span style="font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">Shrey.Fit</span>
           <span style="font-size: 12px; color: #d1fae5; margin-left: 8px;">Owner alert</span>
         </td></tr>
