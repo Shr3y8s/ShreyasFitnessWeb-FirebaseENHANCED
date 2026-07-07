@@ -28,6 +28,7 @@ import {
   Inbox,
   Tag,
   Layers,
+  Megaphone,
 } from 'lucide-react';
 
 
@@ -152,6 +153,28 @@ export default function AdminSidebar({ currentPage }: AdminSidebarProps) {
                   <Link href="/dashboard/admin/subscriptions">
                     <Layers className="w-4 h-4" />
                     <span className="font-medium">Subscription Management</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Marketing Section */}
+        <SidebarGroup className="-mb-2">
+          <SidebarGroupLabel className="text-xs font-medium text-sidebar-foreground/70 px-2">
+            Marketing
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  className={pathname?.startsWith('/dashboard/admin/campaigns') ? 'bg-primary text-white hover:bg-primary/90' : ''}
+                >
+                  <Link href="/dashboard/admin/campaigns">
+                    <Megaphone className="w-4 h-4" />
+                    <span className="font-medium">Email Campaigns</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

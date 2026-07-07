@@ -4009,5 +4009,18 @@ exports.processScheduledPaypalSubscriptionActions = onSchedule({
 });
 
 
+/* ============================================================================
+ * MARKETING CAMPAIGNS
+ * Admin-authored email campaigns with optional time-limited discount codes.
+ * See docs/02-implementation/marketing-campaigns/.
+ * ========================================================================== */
+const campaignsModule = require("./campaigns");
+exports.sendCampaign = campaignsModule.sendCampaign;
+exports.sendCampaignTest = campaignsModule.sendCampaignTest;
+exports.previewCampaign = campaignsModule.previewCampaign;
+exports.unsubscribeEmail = campaignsModule.unsubscribeEmail;
+
+
+
 
 

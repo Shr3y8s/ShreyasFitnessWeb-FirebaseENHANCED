@@ -443,6 +443,24 @@ service cloud.firestore {
 
     }
 
+    // Marketing campaigns (marketing-campaigns/design.md §7).
+    // Admin-only client access; the send engine uses the Admin SDK (bypasses rules).
+    match /campaigns/{campaignId} {
+      allow read, write: if isAdmin();
+      match /recipients/{recipientId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Email suppression list (unsubscribes/bounces). Admin may read for
+    // visibility; NO client writes — suppression is written server-side only
+    // (unsubscribe route/callable via Admin SDK).
+    match /emailSuppression/{emailHash} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+
     match /discount_redemptions/{redemptionId} {
       allow read, write: if false;
     }
