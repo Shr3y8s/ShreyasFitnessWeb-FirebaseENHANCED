@@ -233,7 +233,7 @@ export default function HomePage() {
                 className="mb-5 rounded-full border border-emerald-600/30 bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700"
               >
                 <Sparkles className="mr-1.5 size-3.5" />
-                Personal training + a real fitness app
+                1-on-1 coaching with a real coach — powered by a real app
               </Badge>
               <h1 className="text-4xl font-bold leading-tight tracking-tight text-stone-900 sm:text-5xl lg:text-6xl">
                 Real coaching. Real results.{' '}
@@ -244,6 +244,14 @@ export default function HomePage() {
                 this differently — expert 1-on-1 coaching paired with a full platform that
                 keeps your plan, workouts, nutrition, and progress in one place, wherever you are.
               </p>
+              <p className="mt-4 max-w-xl text-base text-stone-600">
+                <strong className="text-stone-800">
+                  Every plan is built and adjusted by me personally — never by AI.
+                </strong>{' '}
+                The app is simply where it all lives: your workouts, nutrition, progress,
+                billing, and our conversations in one place, instead of a messy Google Doc.
+              </p>
+
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button
                   asChild
@@ -273,7 +281,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Hero visual: framed dashboard screenshot */}
+            {/* Hero visual: framed dashboard screenshot + coach card overlay */}
             <div className="relative">
               <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-tr from-emerald-200/50 to-teal-100/40 blur-2xl" />
               <div className="relative overflow-hidden rounded-2xl border border-emerald-600/30 bg-white shadow-[0_20px_60px_-15px_rgba(16,120,80,0.3)]">
@@ -294,7 +302,34 @@ export default function HomePage() {
                   className="w-full"
                 />
               </div>
+
+              {/* Floating coach card — makes the human behind the app explicit */}
+              <div className="absolute -bottom-4 left-2 flex max-w-[calc(100%-1rem)] items-center gap-2.5 rounded-2xl border border-emerald-600/20 bg-white/95 px-3 py-2.5 shadow-[0_12px_30px_-10px_rgba(16,120,80,0.35)] backdrop-blur sm:-bottom-5 sm:-left-5 sm:max-w-none sm:gap-3 sm:px-4 sm:py-3">
+                <div className="relative shrink-0">
+                  <Image
+                    src="/assets/Shreyas-profile.jpg"
+                    alt="Shreyas — your coach"
+                    width={56}
+                    height={56}
+                    className="size-11 rounded-full object-cover ring-2 ring-emerald-500/40 sm:size-14"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-white bg-emerald-500" />
+                </div>
+                <div className="pr-1">
+                  <div className="text-sm font-bold leading-tight text-stone-900">Shreyas</div>
+                  <div className="text-xs font-medium text-emerald-700">
+                    Your Coach · NASM Certified
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Caption reinforcing the human behind the platform */}
+            <p className="mt-10 text-center text-sm text-stone-500 lg:col-span-2">
+              Built and run by your coach, Shreyas — the app is the hub, the coaching is always human.
+            </p>
+
+
           </div>
         </div>
       </section>

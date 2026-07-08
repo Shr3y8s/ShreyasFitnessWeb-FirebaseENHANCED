@@ -424,7 +424,7 @@ export default function SignupPage() {
   const stepTitles = ['Email', 'Verify', 'Details', 'Plan'];
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <MarketingNav />
       <div className="container mx-auto flex-1 px-4 pb-8 pt-28">
 

@@ -16,7 +16,11 @@ export default function MarketingLayout({
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
       <MarketingNav />
-      {children}
+      {/* Defensive guard: decorative blurs/absolute elements can never cause
+          horizontal scroll on phones */}
+      <div className="overflow-x-hidden">
+        {children}
+      </div>
       <Footer />
     </>
   );

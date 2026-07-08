@@ -246,13 +246,13 @@ export function ActivityAlerts() {
   // All-clear state: show positive message
   if (visible.length === 0) {
     return (
-      <Card className="rounded-xl border bg-green-50/40 border-green-200 shadow-sm">
+      <Card className="rounded-xl border bg-green-50/40 dark:bg-green-950/30 border-green-200 dark:border-green-900/40 shadow-sm">
         <CardContent className="px-4 py-5">
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-green-800">You&apos;re on top of everything today! 🎉</p>
-              <p className="text-xs text-green-700 mt-0.5">No activity reminders — keep up the great work!</p>
+              <p className="text-sm font-semibold text-green-800 dark:text-green-300">You&apos;re on top of everything today! 🎉</p>
+              <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">No activity reminders — keep up the great work!</p>
             </div>
           </div>
         </CardContent>
@@ -261,7 +261,7 @@ export function ActivityAlerts() {
   }
 
   return (
-    <Card className="rounded-xl border bg-amber-50/30 border-amber-200 shadow-sm">
+    <Card className="rounded-xl border bg-amber-50/30 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40 shadow-sm">
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <TriangleAlert className="h-4 w-4 text-amber-500" />
@@ -272,20 +272,20 @@ export function ActivityAlerts() {
         {visible.map(group => (
           <div
             key={group.type}
-            className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2"
+            className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/30 px-3 py-2"
           >
             <div className="flex items-center gap-2">
               <span className="text-base shrink-0">{group.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold">{group.label}</span>
+                  <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">{group.label}</span>
                   {group.count > 1 && (
-                    <span className="text-xs text-amber-700 bg-amber-100 rounded px-1 py-0.5 font-medium">
+                    <span className="text-xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 rounded px-1 py-0.5 font-medium">
                       {group.count >= 7 ? '7d+ missed' : `${group.count}d missed`}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-snug">
+                <p className="text-xs text-amber-700/80 dark:text-amber-200/70 mt-0.5 line-clamp-2 leading-snug">
                   {group.latestMessage}
                 </p>
               </div>

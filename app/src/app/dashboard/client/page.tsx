@@ -386,15 +386,29 @@ export default function ClientDashboardPage() {
       // Cycle order: App theme (default) → Dark → Forest → back to App theme
       const next = prev === 'default' ? 'dark' : prev === 'dark' ? 'forest' : 'default';
       localStorage.setItem('dashboardTheme', next);
-      // Only the 'dark' theme applies the .dark class; 'default' and 'forest' remove it.
-      if (next === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
       return next;
     });
+    // NOTE: The .dark class on <html> is applied/removed by the useEffect below,
+    // which is the single source of truth (and also cleans up on unmount).
   };
+
+
+  // Theming is confined to THIS main dashboard page (Option A). The .dark class
+  // lives on <html> (global), so we must apply it only while the dashboard is
+  // mounted and strip it on unmount — otherwise every other client page
+  // (Plan, Nutrition, Progress, Tasks, Activity…) would inherit a half-styled
+  // dark mode. Those pages are intentionally light-only for now.
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return () => {
+      // Leaving the dashboard: always reset to light for the rest of the app.
+      document.documentElement.classList.remove('dark');
+    };
+  }, [theme]);
 
 
   const handleToggleHabit = async (habitId: string, completed: boolean) => {
