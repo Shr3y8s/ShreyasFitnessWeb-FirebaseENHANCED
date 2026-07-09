@@ -47,3 +47,18 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  # ---- Canonical SEO origin for the staging origin ----
+  # MUST be overridden explicitly: the base apphosting.yaml hard-sets
+  # NEXT_PUBLIC_SITE_URL to the PRODUCTION origin, and that base value always
+  # wins unless overridden here (it does NOT "fall back" to NEXT_PUBLIC_APP_URL
+  # when the base sets it). Pointing this at the sandbox host makes
+  # seo.ts's isProductionSite() return false, so robots.ts emits `Disallow: /`
+  # and no production canonicals/JSON-LD leak from the sandbox.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: "https://sandbox.shrey.fit"
+    availability:
+      - BUILD
+      - RUNTIME
+
+
