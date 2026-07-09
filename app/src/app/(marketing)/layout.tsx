@@ -16,7 +16,11 @@ export default function MarketingLayout({
       <JsonLd data={[organizationJsonLd(), webSiteJsonLd()]} />
 
       <MarketingNav />
-      {children}
+      {/* Defensive guard: decorative blurs/absolute elements can never cause
+          horizontal scroll on phones */}
+      <div className="overflow-x-hidden">
+        {children}
+      </div>
       <Footer />
     </>
   );

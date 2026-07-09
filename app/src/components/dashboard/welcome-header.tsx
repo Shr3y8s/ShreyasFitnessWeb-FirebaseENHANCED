@@ -95,13 +95,13 @@ export function WelcomeHeader({ name, theme, onCycleTheme, isDarkMode = false, o
     <div className="flex justify-between items-center">
       <div className="flex items-center gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+          <h1 className="dashboard-greeting text-3xl md:text-4xl font-bold text-foreground">
             {greeting},{' '}
             <span className="text-primary transition-all duration-300 hover:drop-shadow-[0_0_8px_hsl(var(--primary))] hover:-translate-y-1 inline-block">
               {firstName}
             </span>
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="dashboard-subtext text-muted-foreground mt-2">
             {subtext}
           </p>
         </div>

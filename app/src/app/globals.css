@@ -347,9 +347,18 @@
   .gradient-accent-green {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(21, 128, 61, 0.05) 100%);
   }
+  /* Dark mode: the light-green wash over a near-black card composites to a muddy
+     brown/olive. Use a subtle dark-green tint instead so tiles read clean green. */
+  .dark .gradient-accent-green {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(21, 128, 61, 0.06) 100%), rgba(0, 0, 0, 0.28);
+  }
 
   .gradient-accent-gold {
     background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.08) 100%);
+  }
+  /* Dark mode: keep the gold readable over a dark card (avoids muddy brown). */
+  .dark .gradient-accent-gold {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.20) 0%, rgba(245, 158, 11, 0.12) 100%);
   }
 
   .gradient-accent-blue {
@@ -401,6 +410,17 @@
 .dark .client-dashboard {
   background: linear-gradient(135deg, #082a15 0%, #0d3d20 40%, #0a2e18 70%, #061f10 100%);
 }
+
+/* Welcome greeting/subtext sit OUTSIDE a card, so the glass white-text rule
+   doesn't reach them. In forest, force them light for readable contrast on the
+   dark-green background. (Default + dark already read fine via text-foreground.) */
+.client-dashboard .dashboard-greeting {
+  color: white !important;
+}
+.client-dashboard .dashboard-subtext {
+  color: rgba(255, 255, 255, 0.70) !important;
+}
+
 
 /* Glass card effect — applies to all Card components inside .client-dashboard */
 .client-dashboard [class*="rounded-xl"] {
@@ -475,6 +495,43 @@
 .client-dashboard .bg-red-100 * {
   color: rgb(254, 202, 202) !important;
 }
+
+/* Amber badges (e.g. Activity Alerts "Xd missed") — the broad white-text rule
+   makes light-amber badges invisible. Give a translucent amber bg + light text. */
+.client-dashboard .bg-amber-100 {
+  background: rgba(245, 158, 11, 0.30) !important;
+  color: rgb(253, 230, 138) !important;
+}
+.client-dashboard .bg-amber-100 * {
+  color: rgb(253, 230, 138) !important;
+}
+
+/* Light row tints (e.g. Coach Outreach overdue/urgent task rows) — the broad
+   white-text rule makes light-on-light rows invisible. Give translucent tints. */
+.client-dashboard .bg-red-50\/60,
+.client-dashboard .bg-red-50 {
+  background: rgba(239, 68, 68, 0.18) !important;
+}
+.client-dashboard .bg-orange-50\/60,
+.client-dashboard .bg-orange-50 {
+  background: rgba(249, 115, 22, 0.18) !important;
+}
+
+/* Daily Habits rows — hover states must stay translucent over the glass, else
+   they flash opaque light-green/grey. Mirror the non-hover overrides on :hover. */
+.client-dashboard .hover\:bg-green-100:hover {
+  background: rgba(34, 197, 94, 0.30) !important;
+}
+.client-dashboard .hover\:bg-accent:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* CircularProgress 0% label uses text-gray-300 — too faint on forest glass.
+   Lift it to a legible light tone. */
+.client-dashboard .text-gray-300 {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
 
 /* Dark badge text overrides (text-green-800, text-red-800 etc) */
 .client-dashboard .text-green-800,

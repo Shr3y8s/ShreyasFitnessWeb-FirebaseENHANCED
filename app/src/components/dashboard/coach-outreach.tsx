@@ -164,8 +164,8 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                   key={task.id}
                   className={cn(
                     'rounded-lg border p-2.5',
-                    isOverdue ? 'border-red-200 bg-red-50/60' :
-                    task.priority === 'urgent' ? 'border-orange-200 bg-orange-50/60' :
+                    isOverdue ? 'border-red-200 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/30' :
+                    task.priority === 'urgent' ? 'border-orange-200 bg-orange-50/60 dark:border-orange-900/40 dark:bg-orange-950/30' :
                     'border-border bg-card/60'
                   )}
                 >

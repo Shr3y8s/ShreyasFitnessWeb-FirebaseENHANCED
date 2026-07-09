@@ -95,7 +95,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
                   🎉 Meet Your Coach - {trainerInfo.name}
                 </h2>
                 <p className="text-lg text-foreground italic">
-                  "Welcome to Shrey.Fit! I'm excited to help you achieve your fitness goals and transform your life."
+                  &ldquo;Welcome to Shrey.Fit! I&apos;m excited to help you achieve your fitness goals and transform your life.&rdquo;
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -161,7 +161,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
               <Circle className="w-6 h-6 text-amber-500" />
               <div>
                 <p className="font-semibold">Initial Assessment</p>
-                <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700">
+                <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
                   Pending
                 </span>
               </div>
@@ -170,7 +170,7 @@ export function WelcomeScreen({ onContinue }: WelcomeScreenProps) {
               <Circle className="w-6 h-6 text-amber-500" />
               <div>
                 <p className="font-semibold">Custom Plan Creation</p>
-                <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700">
+                <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
                   Pending
                 </span>
               </div>
