@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { absoluteUrl } from '@/lib/seo';
 import { BLOG_POSTS } from '@/lib/blog-posts';
+import { exerciseVideos } from '@/lib/exercise-videos';
 
 /**
  * XML sitemap for the PUBLIC marketing surface only.
@@ -38,5 +39,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...blogRoutes];
+  // Per-video library pages (visible videos only) so each shareable video is
+  // independently indexable. Mirrors the /library/[videoId] generateStaticParams.
+  const libraryRoutes: MetadataRoute.Sitemap = exerciseVideos
+    .filter((v) => !v.hidden)
+    .map((v) => ({
+      url: absoluteUrl(`/library/${v.videoId}`),
+      lastModified: v.publishedAt ? new Date(v.publishedAt) : now,
+      changeFrequency: 'yearly',
+      priority: 0.5,
+    }));
+
+  return [...staticRoutes, ...blogRoutes, ...libraryRoutes];
 }

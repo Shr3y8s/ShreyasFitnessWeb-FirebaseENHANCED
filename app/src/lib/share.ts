@@ -12,7 +12,14 @@
 import { absoluteUrl } from './seo';
 
 /** Supported share networks (plus `copy` for the copy-link affordance). */
-export type ShareNetwork = 'linkedin' | 'x' | 'facebook' | 'copy';
+export type ShareNetwork =
+  | 'linkedin'
+  | 'x'
+  | 'facebook'
+  | 'whatsapp'
+  | 'email'
+  | 'copy';
+
 
 /** UTM parameters attached to an outbound share link. */
 export type UtmParams = {
@@ -45,7 +52,10 @@ const NETWORK_SOURCE: Record<Exclude<ShareNetwork, 'copy'>, string> = {
   linkedin: 'linkedin',
   x: 'x',
   facebook: 'facebook',
+  whatsapp: 'whatsapp',
+  email: 'email',
 };
+
 
 /**
  * Build the canonical, UTM-tagged destination URL for a page being shared.
@@ -60,11 +70,14 @@ export function shareTargetUrl(
   campaign = 'share_button',
 ): string {
   const source = network === 'copy' ? 'copy_link' : NETWORK_SOURCE[network];
+  // Email is its own GA4 channel; everything else is a social share.
+  const medium = network === 'email' ? 'email' : 'social';
   return withUtm(absoluteUrl(path), {
     source,
-    medium: 'social',
+    medium,
     campaign,
   });
+
 }
 
 /**
@@ -99,7 +112,26 @@ export function shareIntentUrl(params: {
       return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
         target,
       )}`;
+    case 'whatsapp': {
+      // wa.me opens the app on mobile and WhatsApp Web on desktop.
+      const text = title ? `${title} ${target}` : target;
+      return `https://wa.me/?text=${encodeURIComponent(text)}`;
+    }
+    case 'email': {
+      // mailto: can only carry plain text (no HTML / no OG image preview by
+      // spec). The recipient's mail client unfurls the link into a rich card
+      // from the page's OG tags once received. We just supply friendly copy.
+      const subject = title ? `Thought you'd like this: ${title}` : 'Thought you might like this';
+      const body = title
+        ? `I came across this and thought of you:\n\n${title}\n${target}`
+        : `I came across this and thought of you:\n\n${target}`;
+      return `mailto:?subject=${encodeURIComponent(
+        subject,
+      )}&body=${encodeURIComponent(body)}`;
+    }
+
     case 'copy':
+
     default:
       return target;
   }

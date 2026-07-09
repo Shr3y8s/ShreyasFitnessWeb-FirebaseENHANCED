@@ -8,12 +8,26 @@
  * inbound clicks back to the network. Network share links open in a popup;
  * copy-link writes the tagged URL to the clipboard with a toast confirmation.
  *
+ * When `enableNativeShare` is set and the browser supports the Web Share API
+ * (primarily mobile), a native "Share" button is shown first — ideal for
+ * short-form video that spreads via WhatsApp/iMessage/Instagram DMs.
+ *
  * Growth & Acquisition — Phase 2 (social presence & launch), task Track B.1.
  * See docs/02-implementation/growth-acquisition/requirements.md (US-4 / AC-4.1).
  */
 
-import { useState } from 'react';
-import { Linkedin, Facebook, Link2, Check, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import {
+  Linkedin,
+  Facebook,
+  Link2,
+  Check,
+  Share2,
+  Send,
+  MessageCircle,
+  Mail,
+} from 'lucide-react';
+
 import { shareIntentUrl, shareTargetUrl } from '@/lib/share';
 import { SITE } from '@/lib/seo';
 import { useToast } from '@/hooks/use-toast';
@@ -22,12 +36,17 @@ import { cn } from '@/lib/utils';
 interface ShareButtonsProps {
   /** Root-relative path being shared, e.g. `/blog/forty-sixty-rule`. */
   path: string;
-  /** Title used for the X/Twitter compose text. */
+  /** Title used for the X/Twitter compose text (and native share sheet). */
   title: string;
   /** Optional campaign label to override the default `share_button`. */
   campaign?: string;
   /** Optional heading shown above the buttons. */
   label?: string;
+  /**
+   * Show a native OS share button when the Web Share API is available.
+   * Best for video/mobile-first content. Falls back silently on desktop.
+   */
+  enableNativeShare?: boolean;
   className?: string;
 }
 
@@ -48,12 +67,21 @@ export function ShareButtons({
   title,
   campaign,
   label = 'Share this article',
+  enableNativeShare = false,
   className,
 }: ShareButtonsProps) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
 
-  const openPopup = (network: 'linkedin' | 'x' | 'facebook') => {
+  // Detect Web Share API on the client only (avoids SSR/hydration mismatch).
+  useEffect(() => {
+    if (enableNativeShare && typeof navigator !== 'undefined' && !!navigator.share) {
+      setCanNativeShare(true);
+    }
+  }, [enableNativeShare]);
+
+  const openPopup = (network: 'linkedin' | 'x' | 'facebook' | 'whatsapp') => {
     const url = shareIntentUrl({
       path,
       network,
@@ -62,6 +90,22 @@ export function ShareButtons({
       campaign,
     });
     window.open(url, '_blank', 'noopener,noreferrer,width=600,height=600');
+  };
+
+  const shareByEmail = () => {
+    // mailto: must navigate the current window; a popup would be blank/blocked.
+    window.location.href = shareIntentUrl({ path, network: 'email', title, campaign });
+  };
+
+
+  const nativeShare = async () => {
+    // Reuse the copy-link UTM tagging (source=copy_link) for native shares.
+    const url = shareTargetUrl(path, 'copy', campaign);
+    try {
+      await navigator.share({ title, url });
+    } catch {
+      // User cancelled or share failed — no-op (not an error worth surfacing).
+    }
   };
 
   const copyLink = async () => {
@@ -87,6 +131,17 @@ export function ShareButtons({
         {label}
       </span>
       <div className="flex items-center gap-2">
+        {canNativeShare && (
+          <button
+            type="button"
+            onClick={nativeShare}
+            className={BTN}
+            aria-label="Share"
+            title="Share"
+          >
+            <Send className="size-[18px]" />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => openPopup('linkedin')}
@@ -116,7 +171,26 @@ export function ShareButtons({
         </button>
         <button
           type="button"
+          onClick={() => openPopup('whatsapp')}
+          className={BTN}
+          aria-label="Share on WhatsApp"
+          title="Share on WhatsApp"
+        >
+          <MessageCircle className="size-[18px]" />
+        </button>
+        <button
+          type="button"
+          onClick={shareByEmail}
+          className={BTN}
+          aria-label="Share by email"
+          title="Share by email"
+        >
+          <Mail className="size-[18px]" />
+        </button>
+        <button
+          type="button"
           onClick={copyLink}
+
           className={cn(BTN, copied && 'border-emerald-600/50 text-emerald-700')}
           aria-label="Copy link"
           title="Copy link"

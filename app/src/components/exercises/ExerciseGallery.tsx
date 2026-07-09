@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
   exerciseVideos as allExerciseVideos,
@@ -31,15 +32,16 @@ function landscapeFallbacks(videoId: string) {
  * - Shorts render as 9:16 portrait cards (true vertical thumbnail).
  * - Full workouts render as 16:9 landscape cards.
  * - "All" view shows two sections (Full Workouts, then Quick Tips).
- * - Click a card -> lightbox loads the youtube-nocookie embed only on click.
+ * - Click a card -> navigates to /library/[videoId] (own shareable page).
  * Styles are in a CSS Module to avoid the global marketing stylesheet
+
  * overriding scoped styles.
  */
 export function ExerciseGallery() {
   const [format, setFormat] = useState<FormatFilter>('all');
   const [topic, setTopic] = useState<TopicFilter>('All');
   const [bodyPart, setBodyPart] = useState<BodyPart | 'All'>('All');
-  const [selected, setSelected] = useState<ExerciseVideo | null>(null);
+
 
   const topicsPresent = useMemo(() => {
     const present = new Set(exerciseVideos.map((v) => v.topic));
@@ -97,12 +99,13 @@ export function ExerciseGallery() {
       .join(' · ');
 
     return (
-      <button
+      <Link
         key={video.videoId}
+        href={`/library/${video.videoId}`}
         className={styles.card}
-        onClick={() => setSelected(video)}
         aria-label={`Play ${video.title}`}
       >
+
         <div
           className={`${styles.thumb} ${
             isShort ? styles.thumbPortrait : styles.thumbLandscape
@@ -150,9 +153,10 @@ export function ExerciseGallery() {
             {video.summary}
           </p>
         </div>
-      </button>
+      </Link>
     );
   };
+
 
   return (
     <div className={styles.wrap}>
@@ -254,52 +258,8 @@ export function ExerciseGallery() {
           ) : null
         )
       )}
-
-      {selected && (
-        <div
-          className={styles.overlay}
-          onClick={() => setSelected(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className={`${styles.modal} ${
-              selected.format === 'short' ? styles.modalShort : styles.modalLong
-            }`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className={`${styles.player} ${
-                selected.format === 'short' ? styles.playerShort : styles.playerLong
-              }`}
-            >
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${selected.videoId}?autoplay=1&rel=0`}
-                title={selected.title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-            <div className={styles.modalBody}>
-              <h3 className={styles.modalTitle}>{selected.title}</h3>
-              <p className={styles.modalSummary}>{selected.summary}</p>
-              <div className={styles.modalActions}>
-                <a
-                  className={styles.ytLink}
-                  href={selected.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <i className="fab fa-youtube" /> Watch on YouTube
-                </a>
-                <button className={styles.close} onClick={() => setSelected(null)}>
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
+
