@@ -175,10 +175,28 @@ export default function MembershipPage() {
     });
   };
 
-  // Calculate next billing date (lastPaymentDate + N months). N = the billing
-  // cadence in months (prepay-plans Phase A): 1 monthly (default), 3 quarterly.
-  // Only a FALLBACK — the UI prefers PayPal's currentPeriodEnd when present.
+  // Calculate next billing date.
+  //
+  // PRIMARY: PayPal's authoritative `currentPeriodEnd` (its `next_billing_time`),
+  // synced onto the user doc by the payment webhook. This is the exact instant
+  // PayPal will charge and is the SAME value the dashboard Account Summary card
+  // reads (via provider.getActiveSubscription().currentPeriodEnd). Using it here
+  // keeps both surfaces in lockstep.
+  //
+  // FALLBACK (only when currentPeriodEnd is absent, e.g. before the first sync):
+  // lastPaymentDate + N months, where N = billing cadence in months
+  // (prepay-plans Phase A): 1 monthly (default), 3 quarterly.
+  //
+  // NOTE: both this page's formatDate() and the Account Summary card format in the
+  // viewer's LOCAL timezone, so a payment captured late in the local day can land
+  // on a date whose UTC calendar date is the next day. Reading the same source
+  // eliminates the previous source-mismatch drift (e.g. Jul 30 vs Aug 1).
   const getNextBillingDate = () => {
+    // Prefer the authoritative synced period end.
+    if (userData?.currentPeriodEnd) {
+      return formatDate(userData.currentPeriodEnd);
+    }
+
     if (!userData?.lastPaymentDate) return 'N/A';
 
     const months =
@@ -193,6 +211,7 @@ export default function MembershipPage() {
 
     return formatDate(nextBilling);
   };
+
 
 
   // Handle successful cancellation - set loading state, let Firestore update UI
