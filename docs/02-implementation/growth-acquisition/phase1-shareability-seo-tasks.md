@@ -138,10 +138,28 @@ For each, set a unique `title` (bare, uses template), `description`, and
   **(2026-07-08: Domain verified in Search Console; `sitemap.xml` submitted at
   `https://shrey.fit/sitemap.xml`. Console showed "Sitemap could not be read" immediately
   after submit — a known Google fetch-queue lag, not a real error; the sitemap opens fine
-  in-browser and lists the correct `https://shrey.fit` URLs. Awaiting flip to "Success"
-  (usually within hours). NOTE: verification is per Google account and permanent — a
-  re-verify prompt in another browser means a different account/property, NOT a lost
-  verification; do not add a second DNS TXT record. Prefer the single Domain property.)**
+  in-browser and lists the correct `https://shrey.fit` URLs. NOTE: verification is per Google
+  account and permanent — a re-verify prompt in another browser means a different
+  account/property, NOT a lost verification; do not add a second DNS TXT record. Prefer the
+  single Domain property.)**
+
+  **RESOLVED — CONFIRMED COSMETIC (2026-07-09):** The "Sitemap could not be read" status
+  persisted >10h and re-submitting did not clear it. Diagnosed as Search Console
+  reprocessing lag on a brand-new property, **not** a site bug — verified three ways:
+  1. `curl -i https://shrey.fit/sitemap.xml` → `200`, `content-type: application/xml`,
+     well-formed `<urlset>`, all 12 `<loc>`s absolute `https://shrey.fit/...`, no redirects.
+  2. Same request with a `Googlebot` User-Agent → identical valid XML (no UA-specific
+     block/redirect). `robots.txt` → `200`, `Allow: /`, references `Sitemap:` correctly.
+  3. **URL Inspection on `https://shrey.fit/` → "URL is on Google / Page is indexed",
+     Crawl allowed: Yes, Page fetch: Successful, Indexing allowed: Yes.** Homepage was
+     discovered & indexed via an internal link (referring page `/legal/privacy`), NOT the
+     sitemap — proving discovery/indexing is unblocked. The inspection's "No referring
+     sitemaps detected" is the same reprocessing lag from the other side of the mirror.
+
+  **Action:** do NOT re-submit repeatedly (it can reset Google's queue timer). The
+  "could not be read" + "no referring sitemaps" labels self-resolve on Google's schedule
+  (~2–7 days on a new property) and flip to "Success / 12 discovered pages." **Not a launch
+  blocker** — indexing is confirmed working.
 - [ ] **8.2** Capture 2–3 "known-good" share URLs (home, a blog post) for the Phase 2 launch
   posts so the first LinkedIn/IG/X shares render correct cards.
 

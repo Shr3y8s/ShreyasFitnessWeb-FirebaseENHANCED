@@ -48,7 +48,9 @@ export default function MindMuscleBlog() {
       title="Why I Never Let Clients Chase Numbers"
 
       date="May 22, 2026"
+      sharePath={`/blog/${post.slug}`}
       prevPost={{ href: '/blog/control-first', title: 'Previous' }}
+
       nextPost={{ href: '/blog/sustainable-approach', title: 'Next' }}
       relatedPosts={relatedPosts}
     >

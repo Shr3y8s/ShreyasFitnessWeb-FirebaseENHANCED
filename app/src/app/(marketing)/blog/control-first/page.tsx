@@ -47,7 +47,9 @@ export default function ControlFirstBlog() {
     <BlogPost 
       title="The Control-First Approach Most Trainers Miss"
       date="June 10, 2026"
+      sharePath={`/blog/${post.slug}`}
       nextPost={{ href: '/blog/mind-muscle', title: 'Next' }}
+
       relatedPosts={relatedPosts}
     >
 

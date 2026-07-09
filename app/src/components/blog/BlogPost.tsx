@@ -9,11 +9,14 @@ import {
   Lightbulb,
   Star,
 } from 'lucide-react';
+import { ShareButtons } from './ShareButtons';
 
 interface BlogPostProps {
   title: string;
   date: string;
   children: ReactNode;
+  /** Root-relative path of this post (e.g. `/blog/forty-sixty-rule`). Enables share buttons. */
+  sharePath?: string;
   nextPost?: { href: string; title: string };
   prevPost?: { href: string; title: string };
   relatedPosts: Array<{
@@ -24,7 +27,8 @@ interface BlogPostProps {
   }>;
 }
 
-export function BlogPost({ title, date, children, nextPost, prevPost, relatedPosts }: BlogPostProps) {
+export function BlogPost({ title, date, children, sharePath, nextPost, prevPost, relatedPosts }: BlogPostProps) {
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 text-stone-800">
       {/* Header */}
@@ -57,9 +61,15 @@ export function BlogPost({ title, date, children, nextPost, prevPost, relatedPos
               <span>{date}</span>
             </div>
           </div>
+          {sharePath && (
+            <div className="mt-6">
+              <ShareButtons path={sharePath} title={title} />
+            </div>
+          )}
           <div className="mt-6 h-px w-full bg-emerald-600/15" />
         </div>
       </header>
+
 
       {/* Content */}
       <div className="mx-auto max-w-3xl px-6 pb-20">
@@ -74,7 +84,17 @@ export function BlogPost({ title, date, children, nextPost, prevPost, relatedPos
           {children}
         </article>
 
+        {sharePath && (
+          <div className="mt-10 flex flex-col gap-3 rounded-xl border border-emerald-600/20 bg-white/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium text-stone-700">
+              Found this helpful? Share it with someone who needs it.
+            </p>
+            <ShareButtons path={sharePath} title={title} label="Share" />
+          </div>
+        )}
+
         {/* Post Navigation */}
+
         <div className="mt-12 flex items-center justify-between border-t border-emerald-600/15 pt-6">
           {prevPost ? (
             <Link

@@ -29,7 +29,8 @@ export default function FortySixtyRuleBlog() {
   return (
     <>
       <JsonLd data={jsonLd} />
-    <BlogPost title="The 40/60 Rule: Why What You Do Outside the Gym Matters Most" date="June 25, 2026" prevPost={{ href: '/blog/nutrition-framework', title: 'Previous' }} relatedPosts={relatedPosts}>
+    <BlogPost title="The 40/60 Rule: Why What You Do Outside the Gym Matters Most" date="June 25, 2026" sharePath={`/blog/${post.slug}`} prevPost={{ href: '/blog/nutrition-framework', title: 'Previous' }} relatedPosts={relatedPosts}>
+
 
       <p>When you think about fitness transformation, what comes to mind? For most people, it's intense workouts, sweat-drenched training sessions, and pushing to the limit in the gym. But what if I told you that your workouts—even the most intense ones—account for only about 40% of your results?</p>
       
