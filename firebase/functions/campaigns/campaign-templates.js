@@ -48,8 +48,19 @@ function esc(s) {
 }
 
 /**
+ * Escape a text run, then convert lightweight **markdown** emphasis to HTML.
+ * We escape FIRST (so any real <, >, & in the copy stays safe), then turn
+ * the escaped `**bold**` markers into <strong> tags. Only `**` is supported
+ * to keep authoring simple and the output predictable.
+ */
+function inlineFormat(run) {
+  return esc(run).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+}
+
+/**
  * Convert lightweight body text into HTML paragraphs.
  * Blank-line separated blocks become <p>; single newlines become <br>.
+ * Supports **bold** emphasis inside paragraphs.
  */
 function bodyToHtml(body) {
   const blocks = String(body || "")
@@ -60,12 +71,13 @@ function bodyToHtml(body) {
   return blocks
     .map(
       (b) =>
-        `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #374151;">${esc(
+        `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #374151;">${inlineFormat(
           b
         ).replace(/\n/g, "<br>")}</p>`
     )
     .join("");
 }
+
 
 /** Append UTM params to a CTA href for attribution. */
 function withUtm(url, campaignId) {
@@ -221,12 +233,19 @@ function renderCampaign(campaign = {}, recipient = {}, opts = {}) {
 
   const html = shell({ innerHtml, unsubscribeUrl });
 
+  // Plain-text fallback: drop the **bold** markers so they don't show as
+  // literal asterisks in text-only clients.
+  const bodyText = String(t.body || "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .trim();
+
   const text =
     `${headline}\n\n` +
     `Hi ${name},\n\n` +
-    `${String(t.body || "").trim()}\n\n` +
+    `${bodyText}\n\n` +
     (code ? `Use code ${code}${expiry ? ` (expires ${expiry})` : ""}.\n\n` : "") +
     `${ctaLabel}: ${ctaUrl}` +
+
     footerText(unsubscribeUrl);
 
   return { subject, html, text };

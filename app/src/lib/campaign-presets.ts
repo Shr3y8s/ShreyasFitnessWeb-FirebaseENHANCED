@@ -84,8 +84,29 @@ export const CAMPAIGN_PRESETS: CampaignPreset[] = [
     expiryDate: 'Jan 31, 2026',
   },
   {
+    id: 'friends-family-beta',
+    label: 'Friends & Family (Exclusive Early Access)',
+    description:
+      'VIP early-reveal invite for a hand-picked inner circle to test the full experience before public launch, with an insider discount.',
+    name: 'Friends & Family — Early Access',
+    subject: 'You’re in — a private first look at SHREY.FIT ✨',
+    headline: 'You’ve been hand-picked for the first look',
+    body:
+      'Before SHREY.FIT opens to the public, I wanted a small, trusted circle to step inside first — and **you’re one of the few I chose.**\n\n' +
+      'This is an exclusive early reveal, and I’d love for you to really use it. Create your account and pick a coaching plan — either **Online Coaching** or the **Complete Transformation** — so you can experience the full client dashboard, workouts, nutrition, and progress tracking the way a real member would. While you’re at it, take your time exploring the site itself — the services, the story, and every page I’ve poured a lot into.\n\n' +
+      '**Don’t worry about the cost.** The code below applies a heavy insider discount on the Online Coaching and Complete Transformation plans — it’s there so you can test everything freely, not to charge you real money. (Heads up: the code works only on those two subscription plans. If you’d also like to try booking a one-on-one training session, just reach out and I’ll send you a separate code for that.)\n\n' +
+      'Once you’re inside, poke around, click everything, and see how it feels. I’ll follow up with you personally to hear your thoughts — or you can message me anytime right inside the coach chat in your dashboard.\n\n' +
+      'Thank you for being part of this from the very beginning. It genuinely means a lot to have you in my corner.',
+
+    ctaLabel: 'Claim My Access',
+    ctaTarget: 'signup',
+    discountCode: '',
+    expiryDate: '',
+  },
+  {
     id: 'services-tour',
     label: 'Services Tour (No discount)',
+
     description: 'Straightforward invite to browse services, no promo code.',
     name: 'Explore Our Services',
     subject: 'See what coaching with SHREY.FIT looks like',
