@@ -91,9 +91,12 @@ For each, set a unique `title` (bare, uses template), `description`, and
   card (5.2) covers all routes; a static fallback is a nice-to-have, not launch-blocking.
 - [x] **5.2** `app/src/app/opengraph-image.tsx` — dynamic default card via
   `next/og` `ImageResponse` (brand lockup + tagline). Serves as `og:image`/`twitter:image`
-  for every route at the app root. **(2026-07-08: bumped 1200×630 → 1600×840 to clear the
-  LinkedIn Post Inspector "image must be ≥1600×400px" warning; font sizes/padding scaled
-  proportionally. Same 1.91:1 ratio, still valid for FB/X.)**
+  for every route at the app root. **(2026-07-08: restyled to match the app 1:1 — the exact
+  light body gradient (`emerald-50→white→teal-50`) with dark gray-800 SHREY·FIT letters and
+  the signature emerald-600 dot, reproducing the MarketingNav lockup. Dark-on-light is the
+  highest-contrast, most on-brand option. Kept at the universal 1200×630: a brief bump to
+  1600×840 (for LinkedIn's ≥1600px *hint*) tripped opengraph.xyz's "expects exactly 1200×630"
+  check — the universal standard wins since 1200×630 renders fine on LinkedIn anyway.)**
 - [~] **5.3** DEFERRED — per-post OG images. Blog posts fall back to the default card for
   launch; per-post cards are a Phase 2 polish item.
 - [x] **5.4** Verify the `opengraph-image` route returns a 1200×630 PNG in `next build`.

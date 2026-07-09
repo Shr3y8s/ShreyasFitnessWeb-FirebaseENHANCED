@@ -5,9 +5,11 @@
  * it as the default social-share image for every route that doesn't define its
  * own. Uses the default brand tagline.
  *
- * Sized at 1600x840 (1.91:1) — larger than the 1200x630 OG baseline so LinkedIn
- * renders a crisp, full-size card (its Post Inspector warns when images are
- * under ~1600px wide). Still valid for Facebook/X, which cap display anyway.
+ * Sized at the universal 1200x630 (1.91:1) OG standard — the dimension every
+ * platform (Facebook, X, LinkedIn, WhatsApp, Discord, Slack) is built around
+ * and that validators expect exactly. (LinkedIn's Post Inspector "prefers"
+ * >=1600px wide, but that is a soft hint, not a requirement — 1200x630 renders
+ * correctly there; matching the universal standard is the higher-value choice.)
  *
  * Growth & Acquisition — Phase 1 (shareability & SEO).
  */
@@ -16,7 +18,7 @@ import { SITE } from '@/lib/seo';
 
 export const runtime = 'edge';
 export const alt = `${SITE.name} — Personal Training & Fitness Coaching`;
-export const size = { width: 1600, height: 840 };
+export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default function OpengraphImage() {
@@ -30,38 +32,39 @@ export default function OpengraphImage() {
           flexDirection: 'column',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          padding: '106px',
-          // App-brand emerald gradient (light → medium green) so the white
-          // wordmark stays legible while matching the marketing site palette.
+          padding: '80px',
+          // The exact app body background: bg-gradient-to-br from-emerald-50
+          // via-white to-teal-50. Dark text on this light wash is the highest-
+          // contrast, most on-brand option and matches the marketing site 1:1.
           background:
-            'linear-gradient(135deg, #34d399 0%, #10b981 45%, #059669 100%)',
-          color: '#ffffff',
+            'linear-gradient(135deg, #ecfdf5 0%, #ffffff 50%, #f0fdfa 100%)',
+          color: '#1f2937',
           fontFamily: 'sans-serif',
         }}
       >
-        {/* SHREY·FIT wordmark — white text with the signature green dot,
-            mirroring the marketing nav lockup. */}
+        {/* SHREY·FIT wordmark — reproduces the MarketingNav lockup exactly:
+            gray-800 letters with the signature emerald-600 dot. */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            fontSize: 46,
+            fontSize: 34,
             fontWeight: 700,
             letterSpacing: '0.14em',
-            color: '#ffffff',
-            marginBottom: 37,
+            color: '#1f2937',
+            marginBottom: 28,
           }}
         >
           <div style={{ display: 'flex' }}>SHREY</div>
           <div
             style={{
               display: 'flex',
-              color: '#064e3b',
-              fontSize: 58,
+              color: '#059669',
+              fontSize: 44,
               fontWeight: 800,
               margin: '0 2px',
               position: 'relative',
-              top: -4,
+              top: -3,
             }}
           >
             .
@@ -70,21 +73,21 @@ export default function OpengraphImage() {
         </div>
         <div
           style={{
-            fontSize: 88,
+            fontSize: 66,
             fontWeight: 800,
             lineHeight: 1.1,
-            maxWidth: 1280,
+            maxWidth: 960,
           }}
         >
           Personal Training &amp; Fitness Coaching
         </div>
         <div
           style={{
-            fontSize: 40,
+            fontSize: 30,
             fontWeight: 400,
-            color: '#ecfdf5',
-            marginTop: 42,
-            maxWidth: 1280,
+            color: '#4b5563',
+            marginTop: 32,
+            maxWidth: 960,
             lineHeight: 1.35,
           }}
         >
