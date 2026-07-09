@@ -1,11 +1,25 @@
+import type { Metadata } from 'next';
 import { BlogPost, BlogSection, ProTip, KeyTakeaway, SummaryBox, PullQuote } from '@/components/blog/BlogPost';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { pageMetadata, articleJsonLd } from '@/lib/seo';
+import { getBlogPost } from '@/lib/blog-posts';
 
-export const metadata = {
-  title: 'Why I Never Let Clients Chase Numbers - SHREY.FIT',
-  description: 'Developing a strong mind-muscle connection is far more important than lifting heavy weights.',
-};
+const post = getBlogPost('mind-muscle')!;
+
+export const metadata: Metadata = pageMetadata({
+  title: post.title,
+  description: post.excerpt,
+  path: `/blog/${post.slug}`,
+});
 
 export default function MindMuscleBlog() {
+  const jsonLd = articleJsonLd({
+    title: post.title,
+    description: post.excerpt,
+    path: `/blog/${post.slug}`,
+    datePublished: post.isoDate,
+  });
+
   const relatedPosts = [
     {
       href: '/blog/control-first',
@@ -28,8 +42,11 @@ export default function MindMuscleBlog() {
   ];
 
   return (
+    <>
+      <JsonLd data={jsonLd} />
     <BlogPost 
       title="Why I Never Let Clients Chase Numbers"
+
       date="May 22, 2026"
       prevPost={{ href: '/blog/control-first', title: 'Previous' }}
       nextPost={{ href: '/blog/sustainable-approach', title: 'Next' }}
@@ -76,5 +93,8 @@ export default function MindMuscleBlog() {
       
       <p>You might be surprised to discover muscles you didn't even know you were supposed to be using. This is the beginning of developing a true mind-muscle connection—the foundation of effective training that delivers lasting results.</p>
     </BlogPost>
+    </>
   );
 }
+
+

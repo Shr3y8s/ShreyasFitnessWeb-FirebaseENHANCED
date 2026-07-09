@@ -1,11 +1,25 @@
+import type { Metadata } from 'next';
 import { BlogPost, BlogSection, ProTip, KeyTakeaway, SummaryBox, PullQuote } from '@/components/blog/BlogPost';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { pageMetadata, articleJsonLd } from '@/lib/seo';
+import { getBlogPost } from '@/lib/blog-posts';
 
-export const metadata = {
-  title: 'The 40/60 Rule: Why What You Do Outside the Gym Matters Most - SHREY.FIT',
-  description: 'Your workouts account for only 40% of results. The other 60% comes from daily lifestyle choices.',
-};
+const post = getBlogPost('forty-sixty-rule')!;
+
+export const metadata: Metadata = pageMetadata({
+  title: post.title,
+  description: post.excerpt,
+  path: `/blog/${post.slug}`,
+});
 
 export default function FortySixtyRuleBlog() {
+  const jsonLd = articleJsonLd({
+    title: post.title,
+    description: post.excerpt,
+    path: `/blog/${post.slug}`,
+    datePublished: post.isoDate,
+  });
+
   const relatedPosts = [
     { href: '/blog/nutrition-framework', title: "The 'Less Is More' Nutrition Framework", description: 'Simplify your nutrition approach for better results.', icon: <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
     { href: '/blog/sustainable-approach', title: 'The Sustainable Approach', description: 'Why consistency beats perfection.', icon: <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
@@ -13,7 +27,10 @@ export default function FortySixtyRuleBlog() {
   ];
 
   return (
+    <>
+      <JsonLd data={jsonLd} />
     <BlogPost title="The 40/60 Rule: Why What You Do Outside the Gym Matters Most" date="June 25, 2026" prevPost={{ href: '/blog/nutrition-framework', title: 'Previous' }} relatedPosts={relatedPosts}>
+
       <p>When you think about fitness transformation, what comes to mind? For most people, it's intense workouts, sweat-drenched training sessions, and pushing to the limit in the gym. But what if I told you that your workouts—even the most intense ones—account for only about 40% of your results?</p>
       
       <p>After years of working with clients who were crushing their workouts but still not seeing the results they wanted, I've discovered a fundamental truth: what you do during the other 23 hours of your day matters more than what you do during your workout hour.</p>
@@ -59,5 +76,8 @@ export default function FortySixtyRuleBlog() {
       
       <p>Remember that fitness transformation isn't about heroic efforts—it's about consistent choices repeated day after day. By mastering the 60% that happens outside the gym, you'll build a foundation for lasting results.</p>
     </BlogPost>
+    </>
   );
 }
+
+

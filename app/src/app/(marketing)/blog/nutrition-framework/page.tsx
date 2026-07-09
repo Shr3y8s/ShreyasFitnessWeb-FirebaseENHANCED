@@ -1,11 +1,25 @@
+import type { Metadata } from 'next';
 import { BlogPost, BlogSection, ProTip, KeyTakeaway, SummaryBox, PullQuote } from '@/components/blog/BlogPost';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { pageMetadata, articleJsonLd } from '@/lib/seo';
+import { getBlogPost } from '@/lib/blog-posts';
 
-export const metadata = {
-  title: "The 'Less Is More' Nutrition Framework - SHREY.FIT",
-  description: 'Simplify nutrition by focusing on key principles. The 80/20 rule for sustainable eating.',
-};
+const post = getBlogPost('nutrition-framework')!;
+
+export const metadata: Metadata = pageMetadata({
+  title: post.title,
+  description: post.excerpt,
+  path: `/blog/${post.slug}`,
+});
 
 export default function NutritionFrameworkBlog() {
+  const jsonLd = articleJsonLd({
+    title: post.title,
+    description: post.excerpt,
+    path: `/blog/${post.slug}`,
+    datePublished: post.isoDate,
+  });
+
   const relatedPosts = [
     { href: '/blog/sustainable-approach', title: 'The Sustainable Approach', description: 'Why consistency beats perfection.', icon: <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
     { href: '/blog/forty-sixty-rule', title: 'The 40/60 Rule', description: 'Daily habits matter more than workouts.', icon: <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg> },
@@ -13,7 +27,10 @@ export default function NutritionFrameworkBlog() {
   ];
 
   return (
+    <>
+      <JsonLd data={jsonLd} />
     <BlogPost title="The 'Less Is More' Nutrition Framework" date="April 20, 2026" prevPost={{ href: '/blog/sustainable-approach', title: 'Previous' }} nextPost={{ href: '/blog/forty-sixty-rule', title: 'Next' }} relatedPosts={relatedPosts}>
+
       <p>If you've ever tried to improve your nutrition, you've likely encountered the overwhelming complexity of modern diet advice. Macros, micros, meal timing, supplements—it's enough to make anyone give up before they even begin.</p>
       
       <PullQuote>"The nutrition approach that works best isn't the one that's theoretically 'perfect'—it's the one you can actually follow consistently."</PullQuote>
@@ -46,5 +63,8 @@ export default function NutritionFrameworkBlog() {
       <h2 className="text-2xl font-bold text-gray-900 mt-12 mb-4">Simplicity Is the Ultimate Sophistication</h2>
       <p>Start by focusing on just one or two principles—perhaps prioritizing protein at each meal and increasing water intake. Once these become habits, you can gradually add more layers.</p>
     </BlogPost>
+    </>
   );
 }
+
+

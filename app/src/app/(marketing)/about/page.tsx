@@ -1,6 +1,9 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import { pageMetadata } from '@/lib/seo';
 import { Button } from '@/components/ui/button';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,11 +24,13 @@ import {
 } from 'lucide-react';
 
 
-export const metadata = {
-  title: 'About Me - SHREY.FIT',
+export const metadata: Metadata = pageMetadata({
+  title: 'About',
   description:
     'Learn about Shreyas Annapureddy, NASM Certified Personal Trainer with 3+ years of experience specializing in sustainable weight loss and lifestyle coaching.',
-};
+  path: '/about',
+});
+
 
 const CREDENTIALS = [
   {

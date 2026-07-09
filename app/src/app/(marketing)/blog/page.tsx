@@ -1,7 +1,9 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { pageMetadata } from '@/lib/seo';
 import {
   ArrowRight,
   Scale,
@@ -12,11 +14,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-export const metadata = {
-  title: 'Blog - SHREY.FIT',
+export const metadata: Metadata = pageMetadata({
+  title: 'Blog',
   description:
     'Evidence-based fitness advice, practical training tips, and motivational content to help you on your fitness journey.',
-};
+  path: '/blog',
+});
+
 
 type Post = {
   href: string;

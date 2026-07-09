@@ -1,11 +1,25 @@
+import type { Metadata } from 'next';
 import { BlogPost, BlogSection, ProTip, KeyTakeaway, SummaryBox, PullQuote } from '@/components/blog/BlogPost';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { pageMetadata, articleJsonLd } from '@/lib/seo';
+import { getBlogPost } from '@/lib/blog-posts';
 
-export const metadata = {
-  title: 'The Control-First Approach Most Trainers Miss - SHREY.FIT',
-  description: 'Master control and proper form before chasing heavy weights. This approach builds better muscle connection, prevents injuries, and delivers superior results.',
-};
+const post = getBlogPost('control-first')!;
+
+export const metadata: Metadata = pageMetadata({
+  title: post.title,
+  description: post.excerpt,
+  path: `/blog/${post.slug}`,
+});
 
 export default function ControlFirstBlog() {
+  const jsonLd = articleJsonLd({
+    title: post.title,
+    description: post.excerpt,
+    path: `/blog/${post.slug}`,
+    datePublished: post.isoDate,
+  });
+
   const relatedPosts = [
     {
       href: '/blog/mind-muscle',
@@ -28,12 +42,15 @@ export default function ControlFirstBlog() {
   ];
 
   return (
+    <>
+      <JsonLd data={jsonLd} />
     <BlogPost 
       title="The Control-First Approach Most Trainers Miss"
       date="June 10, 2026"
       nextPost={{ href: '/blog/mind-muscle', title: 'Next' }}
       relatedPosts={relatedPosts}
     >
+
       <p>
         When most beginners start their fitness journey, they're immediately bombarded with advice to "go heavy" or "push your limits." This approach is not just ineffective—it's often counterproductive and can lead to injury, frustration, and eventually giving up.
       </p>
@@ -126,5 +143,8 @@ export default function ControlFirstBlog() {
         Your fitness journey is exactly that—a journey. By focusing on control first, you're setting yourself up for long-term success and a body that not only looks better but functions better too.
       </p>
     </BlogPost>
+    </>
   );
 }
+
+

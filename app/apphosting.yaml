@@ -68,6 +68,16 @@ env:
       - BUILD
       - RUNTIME
 
+  # ---- Canonical SEO origin (metadata, sitemap, robots, JSON-LD) ----
+  # Read by app/src/lib/seo.ts. Falls back to NEXT_PUBLIC_APP_URL if unset, so the
+  # staging override (sandbox.shrey.fit) inherits the sandbox origin automatically.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: "https://shrey.fit"
+    availability:
+      - BUILD
+      - RUNTIME
+
+
   # ---- Stripe publishable key (PUBLIC). Replace value with the LIVE pk_live_... ----
 
   - variable: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY

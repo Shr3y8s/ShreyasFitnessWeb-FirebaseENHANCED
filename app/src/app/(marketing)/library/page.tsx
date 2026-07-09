@@ -1,10 +1,14 @@
+import type { Metadata } from 'next';
 import { ExerciseGallery } from '@/components/exercises/ExerciseGallery';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata = {
-  title: 'Video Library - SHREY.FIT',
+export const metadata: Metadata = pageMetadata({
+  title: 'Video Library',
   description:
     'Free workout, nutrition, and mindset videos from coach Shrey. Learn proper form and technique across every muscle group.',
-};
+  path: '/library',
+});
+
 
 export default function LibraryPage() {
   return (
