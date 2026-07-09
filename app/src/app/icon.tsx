@@ -3,7 +3,9 @@
  *
  * Next.js generates the browser tab icon from this file via the Edge runtime,
  * replacing the framework default that was previously 404/500-ing. Renders the
- * brand mark ("S") on the brand gradient at 32x32.
+ * brand mark ("S" + the signature dot) on the app emerald gradient at 32x32.
+ * A filled emerald tile with a white glyph stays legible in the browser tab
+ * strip (a light-background mark would nearly disappear at 32px).
  *
  * Growth & Acquisition — Phase 1 (shareability & SEO).
  */
@@ -23,7 +25,8 @@ export default function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0ea5e9 0%, #0f172a 100%)',
+          // App-brand emerald gradient (matches --primary / MarketingNav).
+          background: 'linear-gradient(135deg, #34d399 0%, #059669 100%)',
           color: '#ffffff',
           fontSize: 22,
           fontWeight: 800,
