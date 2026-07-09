@@ -1,6 +1,9 @@
 # Growth & Acquisition — Phase 1: Shareability & SEO — Tasks
 
-> **Status:** Implemented — pending post-deploy verification (§7.4–7.6, §8)
+> **Status:** ✅ COMPLETE — deployed & verified in production (2026-07-08). Prod
+> `robots.txt` emits `Allow: /` + disallow list + `Host`/`Sitemap`; sandbox emits
+> `Disallow: /`. Root cause of the staging leak (missing `NEXT_PUBLIC_SITE_URL`
+> override on the staging backend) fixed and documented in `sandbox-staging-setup.md` §4.
 > **Design:** `phase1-shareability-seo-design.md`
 > **Requirements:** `requirements.md` (Phase 1)
 > **Estimate:** ~1 week, low risk, no data model / payments / auth changes.
@@ -88,7 +91,9 @@ For each, set a unique `title` (bare, uses template), `description`, and
   card (5.2) covers all routes; a static fallback is a nice-to-have, not launch-blocking.
 - [x] **5.2** `app/src/app/opengraph-image.tsx` — dynamic default card via
   `next/og` `ImageResponse` (brand lockup + tagline). Serves as `og:image`/`twitter:image`
-  for every route at the app root.
+  for every route at the app root. **(2026-07-08: bumped 1200×630 → 1600×840 to clear the
+  LinkedIn Post Inspector "image must be ≥1600×400px" warning; font sizes/padding scaled
+  proportionally. Same 1.91:1 ratio, still valid for FB/X.)**
 - [~] **5.3** DEFERRED — per-post OG images. Blog posts fall back to the default card for
   launch; per-post cards are a Phase 2 polish item.
 - [x] **5.4** Verify the `opengraph-image` route returns a 1200×630 PNG in `next build`.
@@ -112,16 +117,28 @@ For each, set a unique `title` (bare, uses template), `description`, and
   `opengraph-image` route resolve. (Earlier robots/sitemap/favicon 500s fixed.)
 - [x] **7.2** Local `<head>` spot-check (home, one blog post, `/services`): unique
   title/description, canonical present, `og:image` absolute, `twitter:card` present.
-- [ ] **7.3** Deploy to **staging**; confirm `robots.txt` blocks all and pages are `noindex`.
+- [x] **7.3** Deploy to **staging**; confirm `robots.txt` blocks all and pages are `noindex`.
+  **(Verified 2026-07-08: sandbox.shrey.fit `robots.txt` → `Disallow: /`, no Host/Sitemap.
+  Required setting `NEXT_PUBLIC_SITE_URL=https://sandbox.shrey.fit` on the staging backend as
+  a Console env var — `apphosting.staging.yaml` is not auto-merged on this CLI version. Prod
+  re-verified: `Allow: /` + disallow list + `Host`/`Sitemap`.)**
 - [ ] **7.4** Run social validators against staging/prod: LinkedIn Post Inspector, X Card
-  Validator, Facebook OG debugger — confirm rich cards render.
+  Validator, Facebook OG debugger — confirm rich cards render. *(Phase 2 launch prep.)*
 - [ ] **7.5** Google Rich Results Test on a blog post (Article) + home (Organization) +
-  `/connect` (Person/Service). Fix any warnings. View-source check that `sameAs` emits.
+  `/connect` (Person/Service). Fix any warnings. View-source check that `sameAs` emits. *(Phase 2.)*
 - [ ] **7.6** Regression: dashboard routes emit `noindex` and are absent from `sitemap.xml`.
+
 
 ## 8. Launch handoff (to Phase 2)
 
-- [ ] **8.1** After prod deploy: submit `sitemap.xml` in Google Search Console; verify domain.
+- [~] **8.1** After prod deploy: submit `sitemap.xml` in Google Search Console; verify domain.
+  **(2026-07-08: Domain verified in Search Console; `sitemap.xml` submitted at
+  `https://shrey.fit/sitemap.xml`. Console showed "Sitemap could not be read" immediately
+  after submit — a known Google fetch-queue lag, not a real error; the sitemap opens fine
+  in-browser and lists the correct `https://shrey.fit` URLs. Awaiting flip to "Success"
+  (usually within hours). NOTE: verification is per Google account and permanent — a
+  re-verify prompt in another browser means a different account/property, NOT a lost
+  verification; do not add a second DNS TXT record. Prefer the single Domain property.)**
 - [ ] **8.2** Capture 2–3 "known-good" share URLs (home, a blog post) for the Phase 2 launch
   posts so the first LinkedIn/IG/X shares render correct cards.
 

@@ -3,7 +3,11 @@
  *
  * Next.js renders this at build/request time via the Edge runtime and serves
  * it as the default social-share image for every route that doesn't define its
- * own. Uses the default brand tagline. 1200x630 is the standard OG size.
+ * own. Uses the default brand tagline.
+ *
+ * Sized at 1600x840 (1.91:1) — larger than the 1200x630 OG baseline so LinkedIn
+ * renders a crisp, full-size card (its Post Inspector warns when images are
+ * under ~1600px wide). Still valid for Facebook/X, which cap display anyway.
  *
  * Growth & Acquisition — Phase 1 (shareability & SEO).
  */
@@ -12,7 +16,7 @@ import { SITE } from '@/lib/seo';
 
 export const runtime = 'edge';
 export const alt = `${SITE.name} — Personal Training & Fitness Coaching`;
-export const size = { width: 1200, height: 630 };
+export const size = { width: 1600, height: 840 };
 export const contentType = 'image/png';
 
 export default function OpengraphImage() {
@@ -26,41 +30,61 @@ export default function OpengraphImage() {
           flexDirection: 'column',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          padding: '80px',
+          padding: '106px',
+          // App-brand emerald gradient (light → medium green) so the white
+          // wordmark stays legible while matching the marketing site palette.
           background:
-            'linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #334155 100%)',
+            'linear-gradient(135deg, #34d399 0%, #10b981 45%, #059669 100%)',
           color: '#ffffff',
           fontFamily: 'sans-serif',
         }}
       >
+        {/* SHREY·FIT wordmark — white text with the signature green dot,
+            mirroring the marketing nav lockup. */}
         <div
           style={{
-            fontSize: 34,
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: 46,
             fontWeight: 700,
-            letterSpacing: '0.18em',
-            color: '#38bdf8',
-            marginBottom: 28,
+            letterSpacing: '0.14em',
+            color: '#ffffff',
+            marginBottom: 37,
           }}
         >
-          {SITE.name}
+          <div style={{ display: 'flex' }}>SHREY</div>
+          <div
+            style={{
+              display: 'flex',
+              color: '#064e3b',
+              fontSize: 58,
+              fontWeight: 800,
+              margin: '0 2px',
+              position: 'relative',
+              top: -4,
+            }}
+          >
+            .
+          </div>
+          <div style={{ display: 'flex' }}>FIT</div>
         </div>
         <div
           style={{
-            fontSize: 66,
+            fontSize: 88,
             fontWeight: 800,
             lineHeight: 1.1,
-            maxWidth: 960,
+            maxWidth: 1280,
           }}
         >
           Personal Training &amp; Fitness Coaching
         </div>
         <div
           style={{
-            fontSize: 30,
+            fontSize: 40,
             fontWeight: 400,
-            color: '#cbd5e1',
-            marginTop: 32,
-            maxWidth: 960,
+            color: '#ecfdf5',
+            marginTop: 42,
+            maxWidth: 1280,
             lineHeight: 1.35,
           }}
         >

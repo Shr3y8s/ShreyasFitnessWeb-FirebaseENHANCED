@@ -82,15 +82,26 @@ set the sandbox env (§4) and add the custom domain (§5) next.
 
 Because the CLI create can't bind an "environment", set the overrides **directly on the
 staging backend** in the Console → your `shreyfitweb-staging` backend → **Settings →
-Environment variables** (or **Edit configuration**). Add these three (they override the
+Environment variables** (or **Edit configuration**). Add these four (they override the
 production values baked into the base `apphosting.yaml`):
 
 - `NEXT_PUBLIC_PAYPAL_ENV = sandbox`
 - `NEXT_PUBLIC_PAYPAL_CLIENT_ID = AXP13FxA55KA3kK__Omtw717gTa8ot6Tkq-ZZde28A77Y_p7V_KrqyOdwVCHuK2rWVNYrofmxNCvuZYi`
 - `NEXT_PUBLIC_APP_URL = https://sandbox.shrey.fit`
+- `NEXT_PUBLIC_SITE_URL = https://sandbox.shrey.fit`
 
 Set availability to **BUILD + RUNTIME** (these are `NEXT_PUBLIC_*`, compiled into the
 client bundle at build time). Save, then trigger a rollout so the values take effect.
+
+> **⚠️ `NEXT_PUBLIC_SITE_URL` is NOT optional — omitting it leaks the sandbox to Google.**
+> This var drives `app/src/app/robots.ts` and `sitemap.ts`. If it inherits the production
+> value (`https://shrey.fit`) from the base `apphosting.yaml`, the sandbox emits a
+> **crawlable** `robots.txt` (`Allow: /` + production `Host`/`Sitemap`) and search engines
+> can index `sandbox.shrey.fit` — a duplicate-content / staging-leak risk. Setting it to
+> the sandbox origin makes `robots.ts` return `Disallow: /` (it branches on
+> `isProductionSite()`, which compares the canonical URL). Must be **BUILD + RUNTIME** and
+> you must **roll out after setting it** for the new bundle to take effect. This was the
+> exact cause of the 2026-07-08 sandbox indexing leak.
 
 > **Why backend-level (not the committed file):** on this CLI version there's no
 > environment-name binding, so App Hosting won't automatically merge

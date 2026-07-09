@@ -26,9 +26,13 @@ export const SITE = {
   url: SITE_URL,
   name: 'SHREY.FIT',
   shortName: 'SHREY.FIT',
-  /** Default meta description / OG description used when a page sets none. */
+  /**
+   * Default meta description / OG description used when a page sets none.
+   * Kept under ~125 chars so social previews (FB/LinkedIn/X) don't truncate it,
+   * while still front-loading the primary keywords.
+   */
   description:
-    'Personal training and fitness coaching — a sustainable, control-first approach that builds real strength, better habits, and lasting results.',
+    'Personal training & fitness coaching — a sustainable, control-first approach for real strength and lasting habits.',
   /** Light, non-spammy keyword set for the site default. */
   keywords: [
     'personal training',
