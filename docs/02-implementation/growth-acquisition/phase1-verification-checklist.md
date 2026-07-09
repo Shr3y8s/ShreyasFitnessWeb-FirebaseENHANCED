@@ -13,13 +13,19 @@ Related:
 
 ## 1. Crawl infrastructure
 
-- [ ] `GET /robots.txt` returns **200** with `text/plain` and includes a
+- [x] `GET /robots.txt` returns **200** with `text/plain` and includes a
       `Sitemap:` line pointing at `<origin>/sitemap.xml`.
+      **(Prod verified 2026-07-08: `Allow: /` + disallow list + `Host: https://shrey.fit/`
+      + `Sitemap: https://shrey.fit/sitemap.xml`.)**
 - [ ] `GET /sitemap.xml` returns **200** with valid XML and lists the marketing
       routes (home, services, about, faq, connect, blog posts).
 - [ ] Sitemap URLs use the canonical origin (no `localhost` / preview host).
-- [ ] Staging origin sets `NEXT_PUBLIC_SITE_URL` to the sandbox domain so it
+- [x] Staging origin sets `NEXT_PUBLIC_SITE_URL` to the sandbox domain so it
       does **not** emit production canonicals.
+      **(Verified 2026-07-08: set `NEXT_PUBLIC_SITE_URL=https://sandbox.shrey.fit` on the
+      staging backend as a Console env var + rolled out; sandbox `robots.txt` → `Disallow: /`
+      with no `Host`/`Sitemap`. NOTE: `apphosting.staging.yaml` is NOT auto-merged on this
+      CLI version — the value must be set as a Console env var. See `sandbox-staging-setup.md` §4.)**
 
 ## 2. Favicon & icons
 
