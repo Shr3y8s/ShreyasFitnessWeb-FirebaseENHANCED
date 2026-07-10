@@ -14,7 +14,8 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
+import { db, trackEvent } from '@/lib/firebase';
+import { getAttribution } from '@/lib/attribution';
 import { getCheckoutItem } from '@/lib/constants';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,10 @@ function SuccessInner() {
   // 'timeout' = soft fallback (continue anyway).
   const [status, setStatus] = useState<'waiting' | 'done' | 'timeout'>('waiting');
   const baselinePurchasedRef = useRef<number | null>(null);
+  // Guard so the GA4 conversion fires exactly once — onSnapshot can deliver
+  // multiple 'done'-qualifying snapshots and React StrictMode double-invokes
+  // effects in dev; without this the purchase would be counted more than once.
+  const conversionFiredRef = useRef(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -121,6 +126,22 @@ function SuccessInner() {
       clearTimeout(timer);
     };
   }, [authLoading, user, item, router]);
+
+  // GA4 funnel close: fire `checkout_complete` exactly once when fulfillment is
+  // CONFIRMED (status === 'done'). We deliberately do NOT fire on 'timeout' —
+  // that state means we couldn't verify the payment, so counting it would inflate
+  // conversions. Attribution is spread flat so the purchase is credited to the
+  // acquisition channel (first-touch) in GA4 reporting.
+  useEffect(() => {
+    if (status !== 'done' || conversionFiredRef.current) return;
+    conversionFiredRef.current = true;
+    trackEvent('checkout_complete', {
+      item: itemKey || undefined,
+      label: item?.label,
+      mode: item?.mode,
+      ...getAttribution(),
+    });
+  }, [status, itemKey, item]);
 
   // CONFIRMED success → go to the after-payment destination (e.g.
   // /dashboard?payment=success → Welcome). UNCONFIRMED (timeout/listener error) →

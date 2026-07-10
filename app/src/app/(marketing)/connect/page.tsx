@@ -7,6 +7,8 @@ import { validateAndFormatPhone } from '@/lib/phoneUtils';
 import Mailcheck from 'mailcheck';
 import disposableDomains from 'disposable-email-domains/index.json';
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
+import { trackEvent } from '@/lib/firebase';
+import { getAttribution, getAttributionForRecord } from '@/lib/attribution';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -217,6 +219,10 @@ export default function ConnectPage() {
           message: formData.message.trim(),
           newsletter: formData.newsletter,
           recaptchaToken: recaptchaToken,
+          // Marketing attribution (UTM/gclid) so the lead can be traced back to
+          // the channel that drove it. null when the visitor arrived with no
+          // campaign params (e.g. direct/organic).
+          attribution: getAttributionForRecord(),
         }),
       });
 
@@ -225,6 +231,13 @@ export default function ConnectPage() {
       if (!response.ok) {
         throw new Error(result.error || 'Submission failed');
       }
+
+      // GA4 funnel: lead captured. Attribution is spread flat so it surfaces as
+      // event params in GA4 (source/medium/campaign) for channel reporting.
+      trackEvent('connect_form_submit', {
+        service: formData.service || undefined,
+        ...getAttribution(),
+      });
 
       setSubmitSuccess(true);
       setFormData({

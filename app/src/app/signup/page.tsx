@@ -6,6 +6,7 @@ import { auth, db, trackEvent } from '@/lib/firebase';
 import { onAuthStateChanged, createUserWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCheckoutKeyForProductCadence } from '@/lib/constants';
+import { getAttribution, getAttributionForRecord } from '@/lib/attribution';
 
 import { loadRecaptcha, executeRecaptcha } from '@/lib/recaptcha';
 
@@ -353,8 +354,19 @@ export default function SignupPage() {
         role: 'client',
         recaptchaToken: recaptchaToken || null,
         recaptchaVerified: false,
+        // Marketing attribution (UTM/gclid) captured on first touch, stamped on
+        // the user doc so a converted client can be traced back to the channel
+        // that acquired them. null for direct/organic (no campaign params).
+        attribution: getAttributionForRecord(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+
+      // GA4 funnel: account created (attribution spread flat as event params so
+      // acquisition channel shows in GA4 reporting).
+      trackEvent('signup_complete', {
+        tier: formData.tier.name,
+        ...getAttribution(),
       });
 
       // GA4 begin_checkout

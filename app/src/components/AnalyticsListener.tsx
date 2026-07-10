@@ -3,6 +3,8 @@
 import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { trackEvent } from '@/lib/firebase';
+import { captureUtmFromUrl } from '@/lib/attribution';
+
 
 /**
  * Fires a Firebase Analytics `page_view` event on every client-side route change.
@@ -18,6 +20,9 @@ function AnalyticsListenerInner() {
 
   useEffect(() => {
     if (!pathname) return;
+    // Capture any UTM/gclid params on this landing before we emit page_view, so
+    // first-touch attribution is stored the moment a campaign link is opened.
+    captureUtmFromUrl();
     const query = searchParams?.toString();
     const page_path = query ? `${pathname}?${query}` : pathname;
     trackEvent('page_view', {

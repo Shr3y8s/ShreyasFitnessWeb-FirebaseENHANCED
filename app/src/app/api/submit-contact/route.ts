@@ -38,6 +38,29 @@ async function verifyRecaptcha(token: string): Promise<{ success: boolean; score
 }
 
 /**
+ * Sanitize the client-supplied marketing attribution (UTM/gclid) before storing.
+ *
+ * The browser sends the persisted first-touch attribution alongside the form so
+ * a lead can be traced to the channel that drove it. We NEVER trust the client
+ * blindly: only the six known campaign keys are copied, each coerced to a string
+ * and length-capped. These are non-PII campaign tags. Returns null when there is
+ * no usable attribution so the field is omitted rather than stored empty.
+ */
+function sanitizeAttribution(input: unknown): Record<string, string> | null {
+  if (!input || typeof input !== 'object') return null;
+  const allowed = ['source', 'medium', 'campaign', 'term', 'content', 'gclid'];
+  const src = input as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  for (const key of allowed) {
+    const value = src[key];
+    if (typeof value === 'string' && value.trim()) {
+      out[key] = value.trim().slice(0, 100);
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/**
  * Validate email syntax
  */
 function validateEmailSyntax(email: string): boolean {
@@ -75,6 +98,7 @@ export async function POST(request: NextRequest) {
       message,
       newsletter,
       recaptchaToken,
+      attribution,
     } = body;
 
     // Validate required fields
@@ -129,7 +153,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // All validations passed - save to Firestore
+    // All validations passed - save to Firestore.
+    // Marketing attribution (UTM/gclid) is sanitized server-side and only
+    // included when present, so direct/organic leads don't store an empty map.
+    const cleanAttribution = sanitizeAttribution(attribution);
     const submissionData = {
       Name: name.trim(),
       Email: email.trim(),
@@ -149,6 +176,9 @@ export async function POST(request: NextRequest) {
       recaptchaScore: recaptchaResult.score,
       recaptchaVerified: true,
       submissionSource: 'web',
+
+      // Marketing attribution — spread only when present (null → omitted).
+      ...(cleanAttribution ? { Attribution: cleanAttribution } : {}),
     };
 
     const docRef = await addDoc(
