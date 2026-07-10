@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInUser, signInWithGoogleAuth, getFirebaseErrorMessage } from '@/lib/firebase';
+import { signInUser, signInWithGoogleAuth, signOutUser, userHasProfile, getFirebaseErrorMessage } from '@/lib/firebase';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +36,19 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  // Surface the "orphaned account" case: the dashboard safety-net (and the Google
+  // sign-in check below) redirect here with ?error=no-account when an authenticated
+  // user has no profile doc (e.g. a Google sign-in that never completed signup).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const errParam = new URLSearchParams(window.location.search).get('error');
+    if (errParam === 'no-account') {
+      setError('No account is associated with that Google account. Please sign up first.');
+    }
+  }, []);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
+
     e.preventDefault();
     setIsLoading(true);
     setError('');
@@ -69,7 +82,22 @@ export default function LoginPage() {
     try {
       // Mark this as an EXPLICIT credential login (see note above).
       try { sessionStorage.setItem('explicit_login_pending', '1'); } catch {}
-      await signInWithGoogleAuth();
+      const result = await signInWithGoogleAuth();
+
+      // Google is LOGIN-ONLY here — it must not create new accounts. signInWithPopup
+      // always authenticates the Google user (creating a Firebase Auth user on first
+      // use), but a real account also needs a profile doc (written by the email/password
+      // signup flow). If there's no profile, this is an "orphaned" sign-in: sign back
+      // out so we don't leave a half-authenticated session that hangs the dashboard,
+      // then show a clear "no account" message.
+      const hasProfile = await userHasProfile(result.user.uid);
+      if (!hasProfile) {
+        try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
+        await signOutUser();
+        setError('No account is associated with that Google account. Please sign up first.');
+        return;
+      }
+
       router.push(getSafeNext());
     } catch (err) {
       try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
@@ -78,6 +106,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
 
 

@@ -25,8 +25,23 @@ export default function DashboardWelcomePage() {
         router.push('/login');
         return;
       }
-      
+
+      // SAFETY-NET: authenticated but NO profile doc in any collection.
+      // auth-context sets userData=null + loading=false in this case. This is an
+      // "orphaned" Firebase Auth user — e.g. a Google sign-in that never completed
+      // the email/password signup that writes the users/{uid} doc. Previously this
+      // fell through to the perpetual "Loading..." screen (the effect only handled
+      // `user && userData`), so the page hung forever. Sign the orphaned session out
+      // and bounce to login with a clear message instead.
+      if (!authLoading && user && !userData) {
+        console.log('[Dashboard] Authenticated user has no profile - signing out');
+        await signOutUser();
+        router.push('/login?error=no-account');
+        return;
+      }
+
       if (!authLoading && user && userData) {
+
         try {
           // Check if returning from successful Stripe payment
           const urlParams = new URLSearchParams(window.location.search);

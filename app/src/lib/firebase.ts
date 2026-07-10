@@ -231,6 +231,27 @@ export async function signInWithGoogleAuth() {
   }
 }
 
+/**
+ * Returns true if the given UID has a profile document in ANY of the three
+ * account collections (admins → trainers → users). Mirrors the waterfall lookup
+ * in auth-context.
+ *
+ * Used to distinguish a real, onboarded account from an "orphaned" Firebase Auth
+ * user — e.g. someone who clicked "Continue with Google" on the login page but
+ * never completed the email/password signup flow (which is what writes the
+ * users/{uid} doc). Google is a LOGIN-ONLY method here: it must not create new
+ * accounts, so callers reject sign-ins where this returns false.
+ */
+export async function userHasProfile(uid: string): Promise<boolean> {
+  const [adminDoc, trainerDoc, clientDoc] = await Promise.all([
+    getDoc(doc(db, 'admins', uid)),
+    getDoc(doc(db, 'trainers', uid)),
+    getDoc(doc(db, 'users', uid)),
+  ]);
+  return adminDoc.exists() || trainerDoc.exists() || clientDoc.exists();
+}
+
+
 // Function to sign out user
 export async function signOutUser() {
   try {
