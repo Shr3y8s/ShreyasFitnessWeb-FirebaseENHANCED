@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Check, ExternalLink, Monitor } from 'lucide-react';
 import { FormData, ServiceTier as ServiceTierType } from '../page';
@@ -19,6 +19,10 @@ interface ServiceTierStepProps {
   nextStep: () => void;
   prevStep: () => void;
   error: string;
+  /** When the chosen email already has an account, this is the checkout-carrying
+   * login URL (/login?next=<checkout>). Presence of this value means we show an
+   * explicit "Go to Login" CTA instead of the generic error styling. */
+  loginUrl?: string;
   isSubmitting: boolean;
 }
 
@@ -56,15 +60,27 @@ export default function ServiceTierStep({
   nextStep,
   prevStep,
   error,
+  loginUrl,
   isSubmitting
 }: ServiceTierStepProps) {
   const [products, setProducts] = useState<EnhancedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>('');
 
+  // The error banner lives at the TOP of the form, but "Continue" is at the BOTTOM
+  // of a long plan list. Without this, an error (e.g. "account already exists")
+  // appears off-screen and the user never sees it. Scroll it into view on error.
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
   // Hide "Back" for an already-authenticated, un-activated user who returned from
   // /checkout (login→checkout→Back).
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [error]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -245,20 +261,29 @@ export default function ServiceTierStep({
       <h3 className="text-lg font-medium">Select Your Service Tier</h3>
 
       {error && (
-        <div className="text-sm text-red-700 bg-red-50 border border-red-200 p-4 rounded-lg">
+        <div
+          ref={errorRef}
+          className={`text-sm p-4 rounded-lg border ${
+            loginUrl
+              ? 'text-amber-800 bg-amber-50 border-amber-200'
+              : 'text-red-700 bg-red-50 border-red-200'
+          }`}
+        >
           <div className="flex items-center space-x-2 mb-2">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span className="font-medium">Account Creation Error</span>
+            <span className="font-medium">
+              {loginUrl ? 'Account Already Exists' : 'Account Creation Error'}
+            </span>
           </div>
           <p className="mb-3">{error}</p>
-          {error.includes('email is already registered') && (
-            <div className="pt-2 border-t border-red-200">
+          {loginUrl && (
+            <div className="pt-2 border-t border-amber-200">
               <Link
-                href="/login"
-                className="inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                href={loginUrl}
+                className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
               >
-                <ExternalLink className="w-4 h-4 mr-1" />
-                Go to Login Page
+                <ExternalLink className="w-4 h-4 mr-1.5" />
+                Go to Login
               </Link>
             </div>
           )}

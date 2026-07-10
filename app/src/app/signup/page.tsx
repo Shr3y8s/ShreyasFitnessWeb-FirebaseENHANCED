@@ -59,6 +59,10 @@ export default function SignupPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [error, setError] = useState('');
+  // When the chosen email already has an account, we surface an explicit
+  // "Go to Login" CTA (Option A) instead of a silent auto-redirect. This holds
+  // the checkout-carrying login URL so the button lands the user on payment.
+  const [existingAccountLoginUrl, setExistingAccountLoginUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -305,23 +309,29 @@ export default function SignupPage() {
           formData.password
         );
       } catch (authError: any) {
-        console.error('Firebase Auth error:', authError);
         if (authError?.code === 'auth/email-already-in-use') {
-          // Account exists (e.g. a prior signup whose payment failed). Send them to
-          // log in, carrying the checkout target so they land straight on payment.
+          // Expected, handled case — an account already exists (e.g. a prior signup
+          // whose payment failed, or the user signed up before). This is NOT a crash,
+          // so log it as info to avoid a scary red console error. Instead of a silent
+          // auto-redirect (which the user never sees behind the long plan list), we
+          // surface an explicit "Go to Login" CTA (Option A) that carries the checkout
+          // target so they land straight on payment after logging in.
           // return='/signup?step=plan' so checkout Back takes them to the 4-package
           // step to re-pick (account already exists → Continue updates tier + returns
           // to checkout); next='/dashboard?payment=success' (Welcome landing after pay).
+          console.info('Signup: email already in use — prompting user to log in.');
           const nextUrl =
             `/checkout?item=${itemKey}` +
             `&return=${encodeURIComponent('/signup?step=plan')}` +
             `&next=${encodeURIComponent('/dashboard?payment=success')}`;
 
-
-          setError('This email already has an account. Redirecting you to log in so you can finish your purchase…');
-          setTimeout(() => router.push(`/login?next=${encodeURIComponent(nextUrl)}`), 2500);
+          setExistingAccountLoginUrl(`/login?next=${encodeURIComponent(nextUrl)}`);
+          setError(
+            `An account already exists for ${formData.email}. Please log in to continue — ` +
+            `we'll take you straight to checkout.`
+          );
         } else {
-
+          console.error('Firebase Auth error:', authError);
           setError(authError?.message || 'Failed to create your account.');
         }
         setIsSubmitting(false);
@@ -406,6 +416,7 @@ export default function SignupPage() {
             nextStep={handleTierSelectionComplete} 
             prevStep={prevStep}
             error={error}
+            loginUrl={existingAccountLoginUrl}
             isSubmitting={isSubmitting}
           />
         );
