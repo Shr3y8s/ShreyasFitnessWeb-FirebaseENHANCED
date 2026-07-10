@@ -43,7 +43,10 @@ export default function LoginPage() {
     if (typeof window === 'undefined') return;
     const errParam = new URLSearchParams(window.location.search).get('error');
     if (errParam === 'no-account') {
-      setError('No account is associated with that Google account. Please sign up first.');
+      setError(
+        'No account is linked to that Google email yet. Please sign up first — ' +
+        'you can use the same email address.'
+      );
     }
   }, []);
 
@@ -87,16 +90,34 @@ export default function LoginPage() {
       // Google is LOGIN-ONLY here — it must not create new accounts. signInWithPopup
       // always authenticates the Google user (creating a Firebase Auth user on first
       // use), but a real account also needs a profile doc (written by the email/password
-      // signup flow). If there's no profile, this is an "orphaned" sign-in: sign back
-      // out so we don't leave a half-authenticated session that hangs the dashboard,
-      // then show a clear "no account" message.
+      // signup flow). If there's no profile, this is an "orphaned" sign-in.
+      //
+      // CRITICAL (loop fix): simply signing OUT leaves the freshly-created, profile-less
+      // Firebase Auth user in place. That orphan permanently OWNS the email address, so
+      // the user can never sign up (createUserWithEmailAndPassword → auth/email-already-in-use)
+      // AND can never log in (no password credential exists for a Google-only user) AND
+      // "forgot password" no-ops — a dead-end loop. So we DELETE the orphaned Auth user
+      // (allowed because the Google credential is fresh from the popup) to free the email,
+      // then sign out. This lets them go sign up normally with the same address.
       const hasProfile = await userHasProfile(result.user.uid);
       if (!hasProfile) {
         try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
-        await signOutUser();
-        setError('No account is associated with that Google account. Please sign up first.');
+        try {
+          await result.user.delete();
+        } catch (delErr) {
+          // Delete can fail if Firebase considers the credential stale
+          // (auth/requires-recent-login). We still sign out below; worst case the
+          // orphan lingers, but the fresh-popup path above should normally succeed.
+          console.warn('Could not delete orphaned Google auth user:', delErr);
+          await signOutUser();
+        }
+        setError(
+          'No account is linked to that Google email yet. Please sign up first — ' +
+          'you can use the same email address.'
+        );
         return;
       }
+
 
       router.push(getSafeNext());
     } catch (err) {
