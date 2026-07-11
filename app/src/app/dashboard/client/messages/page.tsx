@@ -323,7 +323,7 @@ export default function ClientMessagesPage() {
         <div className="dashboard-card rounded-2xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 250px)' }}>
 
           {/* Chat Header */}
-          <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
+          <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-teal-50 flex-shrink-0">
             <div className="flex items-center gap-4">
               {trainerData.profilePhotoSmall ? (
                 <img
@@ -399,7 +399,7 @@ export default function ClientMessagesPage() {
                   }
                 }}
                 placeholder="Type a message..."
-                className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="flex-1 px-4 py-2 bg-white border border-emerald-200 rounded-lg transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                 disabled={sending}
               />
               <Button

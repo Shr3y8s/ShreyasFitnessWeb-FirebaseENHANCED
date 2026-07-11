@@ -290,7 +290,7 @@ export default function WorkoutLibraryPage() {
     <SidebarProvider>
       <TrainerSidebar currentPage="workouts" />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div>
@@ -313,7 +313,8 @@ export default function WorkoutLibraryPage() {
           </div>
 
           {/* Summary Stats Bar */}
-          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-4">
+          <div className="dashboard-card rounded-xl p-4">
+
             <div className="flex items-center justify-center gap-8 text-sm">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-700">Your Library:</span>
@@ -338,7 +339,7 @@ export default function WorkoutLibraryPage() {
 
           {/* Search and Filters */}
           {workoutTemplates.length > 0 && (
-            <div className="bg-white rounded-xl border p-6">
+            <div className="dashboard-card rounded-xl border p-6">
               <div className="space-y-4">
                 {/* Search Bar */}
                 <div className="relative">
@@ -525,7 +526,9 @@ export default function WorkoutLibraryPage() {
 
           {/* Section Header */}
           {filteredWorkouts.length > 0 && (
-            <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
+            <div className="dashboard-card !bg-emerald-50 rounded-xl p-4 sticky top-0 z-10 shadow-sm">
+
+
               <div className="flex items-center gap-3">
                 <Dumbbell className="h-5 w-5 text-primary" />
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -544,7 +547,7 @@ export default function WorkoutLibraryPage() {
               {filteredWorkouts.map((workout) => (
                 <div
                   key={workout.id}
-                  className="bg-white rounded-xl border hover:shadow-lg transition-all group"
+                  className="dashboard-card rounded-xl border transition-all group"
                 >
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-3">
@@ -672,7 +675,7 @@ export default function WorkoutLibraryPage() {
               ))}
             </div>
           ) : workoutTemplates.length === 0 ? (
-            <div className="bg-white rounded-xl border p-12 text-center">
+            <div className="dashboard-card rounded-xl border p-12 text-center">
               <Dumbbell className="h-16 w-16 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-semibold mb-2">No Workouts Yet</h3>
               <p className="text-gray-600 mb-6">Create your first workout template to get started!</p>
@@ -684,7 +687,7 @@ export default function WorkoutLibraryPage() {
               </Link>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border p-12 text-center">
+            <div className="dashboard-card rounded-xl border p-12 text-center">
               <Search className="h-16 w-16 mx-auto text-gray-400 mb-4" />
               <h3 className="text-xl font-semibold mb-2">No Workouts Found</h3>
               <p className="text-gray-600 mb-6">Try adjusting your search or filters</p>

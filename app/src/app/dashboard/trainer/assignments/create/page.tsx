@@ -418,18 +418,20 @@ function CreateAssignmentPageInner() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     );
   }
 
+
   return (
     <SidebarProvider>
       <TrainerSidebar currentPage="assignments" />
       <SidebarInset>
-        <div className="min-h-screen bg-stone-50">
+        <div className="client-surface">
           {/* Header */}
+
           <div className="bg-white border-b">
             <div className="max-w-7xl mx-auto px-6 py-4">
               <Breadcrumb items={[
@@ -929,11 +931,12 @@ function StepIndicator({ step, label, active, completed, onClick }: { step: numb
 export default function CreateAssignmentPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     }>
       <CreateAssignmentPageInner />
+
     </Suspense>
   );
 }

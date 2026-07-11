@@ -369,18 +369,20 @@ function CreateWorkoutTemplatePageInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     );
   }
 
+
   return (
     <SidebarProvider>
       <TrainerSidebar currentPage="workouts" />
       <SidebarInset>
-        <div className="min-h-screen bg-stone-50">
+        <div className="client-surface">
           {/* Header */}
+
           <div className="bg-white border-b">
             <div className="max-w-7xl mx-auto px-6 py-4">
               <Breadcrumb items={[
@@ -866,10 +868,11 @@ function CreateWorkoutTemplatePageInner() {
 export default function CreateWorkoutTemplatePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     }>
+
       <CreateWorkoutTemplatePageInner />
     </Suspense>
   );

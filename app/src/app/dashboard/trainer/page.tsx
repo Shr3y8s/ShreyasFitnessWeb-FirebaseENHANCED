@@ -221,9 +221,10 @@ export default function TrainerDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading trainer dashboard...</div>
       </div>
+
     );
   }
 
@@ -263,8 +264,9 @@ export default function TrainerDashboardPage() {
     <SidebarProvider>
       <TrainerSidebar currentPage="overview" />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
         <div className="max-w-7xl mx-auto space-y-8">
+
           {/* Header */}
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-foreground">
@@ -499,7 +501,8 @@ export default function TrainerDashboardPage() {
           {/* Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Client Activity */}
-            <div className="bg-white rounded-xl border p-6">
+            <div className="dashboard-card rounded-xl border p-6">
+
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Recent Client Activity</h3>
                 <Link href="/dashboard/trainer/activity">
@@ -510,7 +513,8 @@ export default function TrainerDashboardPage() {
             </div>
 
             {/* Upcoming Deadlines */}
-            <div className="bg-white rounded-xl border p-6">
+            <div className="dashboard-card rounded-xl border p-6">
+
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Upcoming Deadlines</h3>
                 <Link href="/dashboard/trainer/assignments">

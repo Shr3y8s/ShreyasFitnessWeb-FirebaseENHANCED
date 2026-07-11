@@ -524,7 +524,7 @@ function ClientMessagesPageInner() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     );
@@ -534,7 +534,8 @@ function ClientMessagesPageInner() {
     <SidebarProvider>
       <TrainerSidebar currentPage="messages" />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
+
         {/* Header with Breadcrumb */}
         <div className="mb-6">
           <Breadcrumb items={[
@@ -549,13 +550,13 @@ function ClientMessagesPageInner() {
 
         {/* Mode Toggle - Segmented Control */}
         <div className="flex justify-center mb-6">
-          <div className="inline-flex rounded-lg border border-gray-300 bg-gray-100 p-1">
+          <div className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 p-1">
             <button
               onClick={() => setMode('compose')}
               className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
                 mode === 'compose'
                   ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-stone-600 hover:text-primary'
               }`}
             >
               <MessageSquarePlus className="h-4 w-4 inline mr-2" />
@@ -566,7 +567,7 @@ function ClientMessagesPageInner() {
               className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
                 mode === 'view'
                   ? 'bg-white text-primary shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-stone-600 hover:text-primary'
               }`}
             >
               <Eye className="h-4 w-4 inline mr-2" />
@@ -578,7 +579,7 @@ function ClientMessagesPageInner() {
         {/* Master-Detail Split View */}
         <div className="flex gap-6 h-[calc(100vh-280px)]">
           {/* LEFT PANEL */}
-          <div className="w-[35%] flex flex-col bg-white rounded-xl border overflow-hidden">
+          <div className="dashboard-card w-[35%] flex flex-col rounded-2xl overflow-hidden">
             {mode === 'compose' ? (
               /* COMPOSE MODE: Client Selector */
               <>
@@ -586,8 +587,8 @@ function ClientMessagesPageInner() {
                   <h3 className="font-semibold mb-3">Select Recipients</h3>
                   
                   {showPreSelectionBanner && (
-                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                      <p className="text-blue-800">
+                    <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm">
+                      <p className="text-emerald-800">
                         {selectedClientIds.length} client{selectedClientIds.length !== 1 ? 's' : ''} pre-selected from Client Management
                       </p>
                     </div>
@@ -600,7 +601,7 @@ function ClientMessagesPageInner() {
                       placeholder="Search clients..."
                       value={clientSearchQuery}
                       onChange={(e) => setClientSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-emerald-200 rounded-lg transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                     />
                   </div>
                   
@@ -623,8 +624,8 @@ function ClientMessagesPageInner() {
                     return (
                       <div
                         key={client.id}
-                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer ${
-                          isSelected ? 'bg-blue-50' : ''
+                        className={`p-4 border-b transition-colors cursor-pointer hover:bg-emerald-50/60 ${
+                          isSelected ? 'bg-emerald-50 border-l-4 border-l-primary' : ''
                         }`}
                         onClick={() => toggleClientSelection(client.id)}
                       >
@@ -694,7 +695,7 @@ function ClientMessagesPageInner() {
                       placeholder="Search conversations..."
                       value={conversationSearchQuery}
                       onChange={(e) => setConversationSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-emerald-200 rounded-lg transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                     />
                   </div>
                 </div>
@@ -710,9 +711,9 @@ function ClientMessagesPageInner() {
                           <button
                             key={client.id}
                             onClick={() => setActiveClientId(client.id)}
-                            className={`w-full p-4 hover:bg-gray-50 transition-colors text-left ${
-                              activeClientId === client.id ? 'bg-blue-50 border-l-4 border-primary' : ''
-                            } ${hasUnread ? 'bg-blue-50/30' : ''}`}
+                            className={`w-full p-4 hover:bg-emerald-50/60 transition-colors text-left ${
+                              activeClientId === client.id ? 'bg-emerald-50 border-l-4 border-primary' : ''
+                            } ${hasUnread && activeClientId !== client.id ? 'bg-emerald-50/30' : ''}`}
                           >
                             <div className="flex items-center gap-3 mb-2">
                               {client.profilePhotoSmall ? (
@@ -769,7 +770,7 @@ function ClientMessagesPageInner() {
           </div>
 
           {/* RIGHT PANEL */}
-          <div className="w-[65%] bg-white rounded-xl border overflow-hidden flex flex-col">
+          <div className="dashboard-card w-[65%] rounded-2xl overflow-hidden flex flex-col">
             {mode === 'compose' ? (
               /* COMPOSE MODE: Message Composer */
               selectedClientIds.length === 0 ? (
@@ -781,7 +782,7 @@ function ClientMessagesPageInner() {
               ) : (
                 <>
                   {/* Header */}
-                  <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
+                  <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-teal-50 flex-shrink-0">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-lg font-semibold">Sending to {selectedClientIds.length} Recipient{selectedClientIds.length !== 1 ? 's' : ''}</h3>
                       <Button variant="ghost" size="sm" onClick={clearSelection}>
@@ -794,7 +795,7 @@ function ClientMessagesPageInner() {
                         const client = clients.find(c => c.id === clientId);
                         if (!client) return null;
                         return (
-                          <span key={clientId} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                          <span key={clientId} className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm">
                             {client.name}
                           </span>
                         );
@@ -811,7 +812,7 @@ function ClientMessagesPageInner() {
                         onChange={(e) => setMessageBody(e.target.value)}
                         placeholder="Type your message to send to all selected clients..."
                         rows={16}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                        className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-lg transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary resize-none"
                       />
                       <p className="text-sm text-gray-500 mt-2">
                         {messageBody.length} characters • {selectedClientIds.length} recipient{selectedClientIds.length !== 1 ? 's' : ''}
@@ -845,7 +846,7 @@ function ClientMessagesPageInner() {
               activeClient ? (
                 <>
                   {/* Chat Header */}
-                  <div className="p-6 border-b bg-gradient-to-r from-primary/5 to-blue-50 flex-shrink-0">
+                  <div className="p-6 border-b bg-gradient-to-r from-emerald-50 to-teal-50 flex-shrink-0">
                     <div className="flex items-center gap-4">
                       {activeClient.profilePhotoSmall ? (
                         <img
@@ -866,7 +867,7 @@ function ClientMessagesPageInner() {
                   </div>
 
                   {/* Messages Container */}
-                  <div className="flex-1 overflow-y-auto p-6 space-y-4 messages-container">
+                  <div className="chat-dots flex-1 overflow-y-auto p-6 space-y-4 messages-container">
                     {messages.length > 0 ? (
                       messages.map((message) => {
                         const isTrainer = message.senderId === user?.uid;
@@ -916,7 +917,7 @@ function ClientMessagesPageInner() {
                           }
                         }}
                         placeholder="Type a message..."
-                        className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="flex-1 px-4 py-2 bg-white border border-emerald-200 rounded-lg transition-colors hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary"
                         disabled={sending}
                       />
                       <Button
@@ -948,10 +949,11 @@ function ClientMessagesPageInner() {
 export default function ClientMessagesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading...</div>
       </div>
     }>
+
       <ClientMessagesPageInner />
     </Suspense>
   );

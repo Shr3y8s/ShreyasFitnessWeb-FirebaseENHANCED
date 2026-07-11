@@ -55,6 +55,17 @@ export default function ClientDashboardPage() {
   // 'dark' and 'forest' remain available via the header toggle.
   const [theme, setTheme] = useState<'default' | 'dark' | 'forest'>(() => {
     if (typeof window !== 'undefined') {
+      // One-time migration: the portal previously defaulted to the dark-green
+      // ('forest') scheme. The app's signature light-green gradient is now the
+      // default, so reset any legacy stored preference once. Users can still
+      // re-select dark/forest via the header toggle (which stores their choice
+      // and sets this migration flag so we never override it again).
+      const migrated = localStorage.getItem('dashboardThemeDefaultMigrated');
+      if (!migrated) {
+        localStorage.setItem('dashboardTheme', 'default');
+        localStorage.setItem('dashboardThemeDefaultMigrated', '1');
+        return 'default';
+      }
       const stored = localStorage.getItem('dashboardTheme');
       // Migrate the legacy 'light' key to the new 'default' key.
       if (stored === 'light') return 'default';
@@ -62,6 +73,7 @@ export default function ClientDashboardPage() {
     }
     return 'default';
   });
+
 
   const [nextSession, setNextSession] = useState<Session | null>(null);
   const [nextSessionLocation, setNextSessionLocation] = useState<string>('');

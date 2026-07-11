@@ -457,9 +457,10 @@ export default function ExerciseLibraryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading exercise library...</div>
       </div>
+
     );
   }
 
@@ -467,7 +468,8 @@ export default function ExerciseLibraryPage() {
     <SidebarProvider>
       <TrainerSidebar currentPage="exercises" />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8">
+        <div className="client-surface p-8">
+
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
           <div>
@@ -492,7 +494,8 @@ export default function ExerciseLibraryPage() {
 
           <div className="space-y-6">
         {/* Summary Stats Bar */}
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 p-4">
+        <div className="dashboard-card rounded-xl p-4">
+
           <div className="flex items-center justify-center gap-8 text-sm">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-gray-700">Your Library:</span>
@@ -516,7 +519,8 @@ export default function ExerciseLibraryPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl border p-6">
+        <div className="dashboard-card rounded-xl p-6">
+
           <div className="flex flex-col gap-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -585,7 +589,8 @@ export default function ExerciseLibraryPage() {
 
         {/* Create Exercise Form */}
         {isCreating && (
-          <div className="bg-white rounded-xl border p-6 mb-6">
+          <div className="dashboard-card rounded-xl p-6 mb-6">
+
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">Add New Exercise</h3>
               <Button variant="ghost" size="sm" onClick={() => setIsCreating(false)}>
@@ -1002,7 +1007,8 @@ export default function ExerciseLibraryPage() {
         )}
 
         {/* Exercise List */}
-        <div className="bg-white rounded-xl border">
+        <div className="dashboard-card rounded-xl">
+
           <div className="p-6 border-b">
             <div className="flex justify-between items-center">
               <div>
@@ -1036,7 +1042,8 @@ export default function ExerciseLibraryPage() {
           ) : (
             <div className="divide-y">
               {filteredExercises.map((exercise) => (
-                <div key={exercise.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div key={exercise.id} className="p-6 hover:bg-emerald-100/70 transition-colors">
+
                   {editingId === exercise.id ? (
                     /* Edit Form - Complete form matching create form */
                     <div className="space-y-6 bg-blue-50 p-6 rounded-lg border border-blue-200">
@@ -1475,7 +1482,9 @@ export default function ExerciseLibraryPage() {
                       </div>
 
                       {/* Row 1: 4-Column Metadata Grid (matching workout view) */}
-                      <div className="bg-white rounded-lg border p-3">
+                      <div className="bg-white/40 rounded-lg border border-emerald-100/70 p-3">
+
+
                         <div className="grid grid-cols-4 gap-4 text-sm">
                           {/* Category */}
                           <div>
@@ -1549,7 +1558,9 @@ export default function ExerciseLibraryPage() {
                       </div>
 
                       {/* Row 2: Created/Updated/Usage Metadata */}
-                      <div className="bg-gray-50 rounded-lg border p-3">
+                      <div className="bg-white/25 rounded-lg border border-emerald-100/70 p-3">
+
+
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div className="flex items-center gap-2">
                             <span className="text-gray-600">Created {exercise.createdAt ? new Date(exercise.createdAt).toLocaleDateString() : 'Unknown'}</span>

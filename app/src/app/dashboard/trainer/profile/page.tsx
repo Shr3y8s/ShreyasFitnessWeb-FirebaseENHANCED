@@ -16,7 +16,19 @@ import { ImageCropModal } from '@/components/profile/ImageCropModal';
 import { processAndUploadProfilePhoto } from '@/lib/imageUtils';
 import { validateAndFormatPhone, formatPhoneForDisplay } from '@/lib/phoneUtils';
 
+// Default Shrey.Fit social media links (used as fallbacks when a trainer
+// has not set their own). Built from the brand's public handles.
+const DEFAULT_SOCIAL_LINKS = {
+  linkedinUrl: 'https://linkedin.com/company/shreyfit/',
+  facebookUrl: 'https://facebook.com/Shrey.Fit',
+  youtubeUrl: 'https://youtube.com/@shreyasfit',
+  instagramUrl: 'https://instagram.com/shreyfitness',
+  twitterUrl: 'https://x.com/SHREY_FIT',
+  tiktokUrl: 'https://tiktok.com/@shrey.fit',
+};
+
 export default function TrainerProfilePage() {
+
   const router = useRouter();
   const { user, userData, loading: authLoading, updateUserData, canAccessTrainerDashboard } = useAuth();
   const { toast } = useToast();
@@ -65,6 +77,8 @@ export default function TrainerProfilePage() {
   const [editedFacebookUrl, setEditedFacebookUrl] = useState('');
   const [editedYoutubeUrl, setEditedYoutubeUrl] = useState('');
   const [editedInstagramUrl, setEditedInstagramUrl] = useState('');
+  const [editedTwitterUrl, setEditedTwitterUrl] = useState('');
+  const [editedTiktokUrl, setEditedTiktokUrl] = useState('');
   const [savingSocialMedia, setSavingSocialMedia] = useState(false);
 
   // Security Settings edit state
@@ -663,10 +677,14 @@ export default function TrainerProfilePage() {
   };
 
   const handleEditSocialMedia = () => {
-    setEditedLinkedinUrl(userData?.linkedinUrl || '');
-    setEditedFacebookUrl(userData?.facebookUrl || '');
-    setEditedYoutubeUrl(userData?.youtubeUrl || '');
-    setEditedInstagramUrl(userData?.instagramUrl || '');
+    // Pre-fill with the trainer's saved value, falling back to the
+    // default Shrey.Fit link so the fields are populated by default.
+    setEditedLinkedinUrl(userData?.linkedinUrl || DEFAULT_SOCIAL_LINKS.linkedinUrl);
+    setEditedFacebookUrl(userData?.facebookUrl || DEFAULT_SOCIAL_LINKS.facebookUrl);
+    setEditedYoutubeUrl(userData?.youtubeUrl || DEFAULT_SOCIAL_LINKS.youtubeUrl);
+    setEditedInstagramUrl(userData?.instagramUrl || DEFAULT_SOCIAL_LINKS.instagramUrl);
+    setEditedTwitterUrl(userData?.twitterUrl || DEFAULT_SOCIAL_LINKS.twitterUrl);
+    setEditedTiktokUrl(userData?.tiktokUrl || DEFAULT_SOCIAL_LINKS.tiktokUrl);
     setIsEditingSocialMedia(true);
   };
 
@@ -676,7 +694,10 @@ export default function TrainerProfilePage() {
     setEditedFacebookUrl('');
     setEditedYoutubeUrl('');
     setEditedInstagramUrl('');
+    setEditedTwitterUrl('');
+    setEditedTiktokUrl('');
   };
+
 
   const handleSaveSocialMedia = async () => {
     if (!user) return;
@@ -714,6 +735,22 @@ export default function TrainerProfilePage() {
       });
       return;
     }
+    if (editedTwitterUrl.trim() && !isValidUrl(editedTwitterUrl)) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid X (Twitter) URL (must start with http:// or https://)",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (editedTiktokUrl.trim() && !isValidUrl(editedTiktokUrl)) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid TikTok URL (must start with http:// or https://)",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSavingSocialMedia(true);
     try {
@@ -722,6 +759,8 @@ export default function TrainerProfilePage() {
         facebookUrl: editedFacebookUrl.trim() || null,
         youtubeUrl: editedYoutubeUrl.trim() || null,
         instagramUrl: editedInstagramUrl.trim() || null,
+        twitterUrl: editedTwitterUrl.trim() || null,
+        tiktokUrl: editedTiktokUrl.trim() || null,
       };
 
       await updateDoc(doc(db, 'admins', user.uid), updatedData);
@@ -810,8 +849,9 @@ export default function TrainerProfilePage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="client-surface flex items-center justify-center">
         <div className="text-stone-600">Loading profile...</div>
+
       </div>
     );
   }
@@ -820,7 +860,8 @@ export default function TrainerProfilePage() {
     <SidebarProvider>
       <TrainerSidebar currentPage="profile" />
       <SidebarInset>
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-6 lg:p-8">
+        <div className="client-surface p-4 sm:p-6 lg:p-8">
+
           <div className="max-w-4xl mx-auto space-y-6">
             
             {/* Page Header */}
@@ -1551,6 +1592,36 @@ export default function TrainerProfilePage() {
                           placeholder="https://instagram.com/yourprofile"
                         />
                       </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <svg className="h-4 w-4 text-black" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                          </svg>
+                          X (Twitter) Profile
+                        </label>
+                        <input
+                          type="url"
+                          value={editedTwitterUrl}
+                          onChange={(e) => setEditedTwitterUrl(e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                          placeholder="https://x.com/yourprofile"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <svg className="h-4 w-4 text-black" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                          </svg>
+                          TikTok Profile
+                        </label>
+                        <input
+                          type="url"
+                          value={editedTiktokUrl}
+                          onChange={(e) => setEditedTiktokUrl(e.target.value)}
+                          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                          placeholder="https://tiktok.com/@yourprofile"
+                        />
+                      </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
                       <button
@@ -1584,13 +1655,14 @@ export default function TrainerProfilePage() {
                           LinkedIn
                         </label>
                         <p className="text-base font-medium ml-6">
-                          {userData?.linkedinUrl ? (
-                            <a href={userData.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                              {userData.linkedinUrl}
-                            </a>
-                          ) : (
-                            'Not set'
-                          )}
+                          {(() => {
+                            const url = userData?.linkedinUrl || DEFAULT_SOCIAL_LINKS.linkedinUrl;
+                            return (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {url}
+                              </a>
+                            );
+                          })()}
                         </p>
                       </div>
                       <div>
@@ -1601,13 +1673,14 @@ export default function TrainerProfilePage() {
                           Facebook
                         </label>
                         <p className="text-base font-medium ml-6">
-                          {userData?.facebookUrl ? (
-                            <a href={userData.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                              {userData.facebookUrl}
-                            </a>
-                          ) : (
-                            'Not set'
-                          )}
+                          {(() => {
+                            const url = userData?.facebookUrl || DEFAULT_SOCIAL_LINKS.facebookUrl;
+                            return (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {url}
+                              </a>
+                            );
+                          })()}
                         </p>
                       </div>
                       <div>
@@ -1618,13 +1691,14 @@ export default function TrainerProfilePage() {
                           YouTube
                         </label>
                         <p className="text-base font-medium ml-6">
-                          {userData?.youtubeUrl ? (
-                            <a href={userData.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                              {userData.youtubeUrl}
-                            </a>
-                          ) : (
-                            'Not set'
-                          )}
+                          {(() => {
+                            const url = userData?.youtubeUrl || DEFAULT_SOCIAL_LINKS.youtubeUrl;
+                            return (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {url}
+                              </a>
+                            );
+                          })()}
                         </p>
                       </div>
                       <div>
@@ -1635,13 +1709,50 @@ export default function TrainerProfilePage() {
                           Instagram
                         </label>
                         <p className="text-base font-medium ml-6">
-                          {userData?.instagramUrl ? (
-                            <a href={userData.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                              {userData.instagramUrl}
-                            </a>
-                          ) : (
-                            'Not set'
-                          )}
+                          {(() => {
+                            const url = userData?.instagramUrl || DEFAULT_SOCIAL_LINKS.instagramUrl;
+                            return (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {url}
+                              </a>
+                            );
+                          })()}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground flex items-center gap-2">
+                          <svg className="h-4 w-4 text-black" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                          </svg>
+                          X (Twitter)
+                        </label>
+                        <p className="text-base font-medium ml-6">
+                          {(() => {
+                            const url = userData?.twitterUrl || DEFAULT_SOCIAL_LINKS.twitterUrl;
+                            return (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {url}
+                              </a>
+                            );
+                          })()}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground flex items-center gap-2">
+                          <svg className="h-4 w-4 text-black" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                          </svg>
+                          TikTok
+                        </label>
+                        <p className="text-base font-medium ml-6">
+                          {(() => {
+                            const url = userData?.tiktokUrl || DEFAULT_SOCIAL_LINKS.tiktokUrl;
+                            return (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                {url}
+                              </a>
+                            );
+                          })()}
                         </p>
                       </div>
                     </div>

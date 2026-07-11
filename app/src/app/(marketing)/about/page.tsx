@@ -116,7 +116,7 @@ export default function AboutPage() {
                     <Linkedin className="size-5" />
                   </a>
                   <a
-                    href="https://www.instagram.com/shreybeast"
+                    href="https://www.instagram.com/shreyfitness"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Instagram"
