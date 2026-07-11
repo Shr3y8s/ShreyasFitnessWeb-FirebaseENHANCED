@@ -16,7 +16,9 @@ import {
   GraduationCap,
   Instagram,
   Linkedin,
+  Youtube,
   Quote,
+
   Scale,
   Sparkles,
   Target,
@@ -107,15 +109,6 @@ export default function AboutPage() {
                 <p className="mt-1 text-emerald-700">Personal Trainer &amp; Fitness Coach</p>
                 <div className="mt-4 flex justify-center gap-3">
                   <a
-                    href="https://www.linkedin.com/in/shreyasannapureddy/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="LinkedIn"
-                    className="flex size-10 items-center justify-center rounded-full border border-emerald-600/30 bg-white text-emerald-700 transition-colors hover:bg-emerald-600 hover:text-white"
-                  >
-                    <Linkedin className="size-5" />
-                  </a>
-                  <a
                     href="https://www.instagram.com/shreyfitness"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -124,7 +117,26 @@ export default function AboutPage() {
                   >
                     <Instagram className="size-5" />
                   </a>
+                  <a
+                    href="https://www.youtube.com/@shreyasfit"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="YouTube"
+                    className="flex size-10 items-center justify-center rounded-full border border-emerald-600/30 bg-white text-emerald-700 transition-colors hover:bg-emerald-600 hover:text-white"
+                  >
+                    <Youtube className="size-5" />
+                  </a>
+                  <a
+                    href="https://www.linkedin.com/company/shreyfit"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="LinkedIn"
+                    className="flex size-10 items-center justify-center rounded-full border border-emerald-600/30 bg-white text-emerald-700 transition-colors hover:bg-emerald-600 hover:text-white"
+                  >
+                    <Linkedin className="size-5" />
+                  </a>
                 </div>
+
               </div>
             </div>
 
