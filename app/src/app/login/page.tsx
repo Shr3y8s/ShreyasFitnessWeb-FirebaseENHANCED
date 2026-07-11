@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInUser, signInWithGoogleAuth, signOutUser, userHasProfile, getFirebaseErrorMessage } from '@/lib/firebase';
+import { signInUser, signInWithGoogleAuth, signOutUser, userHasProfile, checkResetEligibility, getFirebaseErrorMessage } from '@/lib/firebase';
+
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,9 +69,31 @@ export default function LoginPage() {
         router.push(getSafeNext());
       } else {
         try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
+
+        // Email Enumeration Protection collapses "wrong password" and "no password
+        // credential exists" into a single opaque auth/invalid-credential. So when a
+        // Google-only user tries the email/password form, they'd otherwise just see
+        // "invalid password" forever. Ask the server whether this email is actually a
+        // Google-only account and, if so, nudge them to the Google button instead.
+        const code = String((result.error as { code?: string })?.code || '').toLowerCase();
+        if (code.includes('invalid-credential') || code.includes('invalid-login-credentials')) {
+          try {
+            const status = await checkResetEligibility(email);
+            if (status === 'google_only') {
+              setError(
+                'This account uses Google to sign in. Please click "Continue with Google" below instead of entering a password.'
+              );
+              return;
+            }
+          } catch {
+            // Eligibility check is best-effort; fall through to the generic message.
+          }
+        }
+
         setError(getFirebaseErrorMessage(result.error));
       }
     } catch (err) {
+
       try { sessionStorage.removeItem('explicit_login_pending'); } catch {}
       setError(getFirebaseErrorMessage(err));
     } finally {

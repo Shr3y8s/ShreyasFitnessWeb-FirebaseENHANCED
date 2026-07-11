@@ -269,11 +269,34 @@ export async function signOutUser() {
 }
 
 /**
+ * Check whether an email is eligible for a password reset (server-side, Admin SDK).
+ *
+ * Email Enumeration Protection is enabled, so the client cannot reliably inspect
+ * provider state — this delegates to the `checkResetEligibility` Cloud Function.
+ * Returns one of:
+ *  - "ok"          → a password credential exists → caller may send the reset email.
+ *  - "google_only" → real Google-only account → caller should nudge to Google sign-in.
+ *  - "not_found"   → no account (or a Type-1 orphan was just reaped) → caller guides to sign up.
+ */
+export type ResetEligibilityStatus = 'ok' | 'google_only' | 'not_found';
+
+export async function checkResetEligibility(email: string): Promise<ResetEligibilityStatus> {
+  const { httpsCallable } = await import('firebase/functions');
+  const fn = httpsCallable<{ email: string }, { status: ResetEligibilityStatus }>(
+    functions,
+    'checkResetEligibility'
+  );
+  const res = await fn({ email });
+  return res.data.status;
+}
+
+/**
  * Send password reset email to user
  * @param email - User's email address
  * @returns Promise with success status
  */
 export async function sendPasswordResetEmail(email: string): Promise<{ success: boolean; error?: any }> {
+
   try {
     await firebaseSendPasswordResetEmail(auth, email);
     return { success: true };

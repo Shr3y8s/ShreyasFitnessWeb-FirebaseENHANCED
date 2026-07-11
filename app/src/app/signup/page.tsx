@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, db, trackEvent } from '@/lib/firebase';
+import { auth, db, trackEvent, signInWithGoogleAuth, signOutUser, userHasProfile, getFirebaseErrorMessage } from '@/lib/firebase';
+
+
 import { onAuthStateChanged, createUserWithEmailAndPassword, User as FirebaseUser } from 'firebase/auth';
+
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCheckoutKeyForProductCadence } from '@/lib/constants';
 import { getAttribution, getAttributionForRecord } from '@/lib/attribution';
@@ -67,7 +70,15 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
+  // Option B (Google signup). isGoogleLoading drives the button spinner on the
+  // Email step. isGoogleSignup flags that the currently-authenticated user arrived
+  // via the Google popup with NO profile doc yet — so the Plan-step completion must
+  // write a FULL users/{uid} doc (not the partial re-entry merge, which assumes an
+  // existing profile). Persisted display name/email come straight from Google.
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleSignup, setIsGoogleSignup] = useState(false);
   const router = useRouter();
+
 
   // Check URL parameters and load data (from sessionStorage or existing user)
   useEffect(() => {
@@ -207,7 +218,57 @@ export default function SignupPage() {
   
   const prevStep = () => setCurrentStep(currentStep - 1);
 
+  // Option B — "Continue with Google" as a SIGNUP method. Google authenticates the
+  // user and asserts their email is verified, so this path SKIPS the OTP + password
+  // steps and jumps straight to the Plan step. We do NOT write the users/{uid} doc
+  // here — that happens at Plan-step completion (handleTierSelectionComplete), so a
+  // drive-by Google click that abandons before picking a plan leaves only a transient
+  // Auth user (cleaned up by the login orphan-delete + dashboard safety-net), never a
+  // junk client record.
+  const handleGoogleSignup = async () => {
+    setIsGoogleLoading(true);
+    setError('');
+
+    try {
+      const result = await signInWithGoogleAuth();
+      const gUser = result.user;
+
+      // Belt-and-suspenders: Google always returns emailVerified === true, but gate
+      // on it explicitly so the shortcut can never persist an unverified email if the
+      // provider set ever changes. If somehow false, tear down and fall back to OTP.
+      if (!gUser.emailVerified) {
+        try { await gUser.delete(); } catch { await signOutUser(); }
+        setError('We could not verify that Google email. Please sign up with your email instead.');
+        return;
+      }
+
+      // If a profile ALREADY exists, this isn't a signup — it's an existing user. Send
+      // them to login (which carries them on to their dashboard) rather than making a
+      // duplicate. We keep them signed in; login will honor the session.
+      const hasProfile = await userHasProfile(gUser.uid);
+      if (hasProfile) {
+        router.push('/login');
+        return;
+      }
+
+      // Fresh Google user, no profile yet → prefill name/email from Google and jump to
+      // the Plan step. Mark isGoogleSignup so completion writes a FULL user doc.
+      setIsGoogleSignup(true);
+      setEmailVerified(true);
+      updateFormData({
+        name: gUser.displayName || '',
+        email: gUser.email || '',
+      });
+      setCurrentStep(4);
+    } catch (err) {
+      setError(getFirebaseErrorMessage(err));
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   // Create the Firebase account, then hand off to the GENERIC checkout flow.
+
   // Per the reusability rule, /checkout assumes an authenticated user and contains
   // NO account-creation logic — so we do reCAPTCHA + auth + the users/{uid} doc
   // HERE, then route to /checkout?item=<key>. `formData.tier.id` is the app
@@ -249,7 +310,44 @@ export default function SignupPage() {
       `&next=${encodeURIComponent('/dashboard?payment=success')}`;
 
 
-    // RE-ENTRY PATH (checked FIRST, before field validation): the user returned
+    // GOOGLE SIGNUP PATH (Option B): the user is already authenticated via the Google
+    // popup but has NO profile doc yet (isGoogleSignup). Unlike the re-entry merge
+    // below, we must write a FULL users/{uid} doc here — this is where the Google
+    // account actually becomes a client record (payment NOT yet completed). No
+    // password exists (Google-managed), and the email is already verified by Google.
+    const googleUser = auth.currentUser;
+    if (isGoogleSignup && googleUser) {
+      try {
+        await setDoc(doc(db, 'users', googleUser.uid), {
+          name: formData.name || googleUser.displayName || '',
+          email: formData.email || googleUser.email || '',
+          phone: formData.phone || null,
+          tier: formData.tier.id,
+          tierName: formData.tier.name,
+          emailVerified: true,          // Google-verified
+          authProvider: 'google',       // provenance
+          accountActivated: false,
+          gdprDeleted: false,
+          role: 'client',
+          attribution: getAttributionForRecord(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        trackEvent('signup_complete', { tier: formData.tier.name, method: 'google', ...getAttribution() });
+        trackEvent('begin_checkout', { tier: formData.tier.name, value: formData.tier.price || 0 });
+
+        sessionStorage.removeItem('pendingSignup');
+        router.push(checkoutBack);
+      } catch (e) {
+        console.error('Failed to create Google user doc:', e);
+        setError((e as Error).message);
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // RE-ENTRY PATH (checked before field validation): the user returned
     // from /checkout via Back and may have picked a DIFFERENT package. Their
     // account already exists and they're still authenticated, but the form's
     // password isn't in state on re-entry — so we must NOT run the new-signup
@@ -276,6 +374,7 @@ export default function SignupPage() {
       }
       return;
     }
+
 
     // NEW SIGNUP: validate all required fields, then create the account.
     if (!formData.email || !formData.name || !formData.password) {
@@ -309,8 +408,10 @@ export default function SignupPage() {
           formData.email,
           formData.password
         );
-      } catch (authError: any) {
-        if (authError?.code === 'auth/email-already-in-use') {
+      } catch (authError: unknown) {
+        const authErr = authError as { code?: string; message?: string };
+        if (authErr?.code === 'auth/email-already-in-use') {
+
           // Expected, handled case — an account already exists (e.g. a prior signup
           // whose payment failed, or the user signed up before). This is NOT a crash,
           // so log it as info to avoid a scary red console error. Instead of a silent
@@ -333,8 +434,9 @@ export default function SignupPage() {
           );
         } else {
           console.error('Firebase Auth error:', authError);
-          setError(authError?.message || 'Failed to create your account.');
+          setError(authErr?.message || 'Failed to create your account.');
         }
+
         setIsSubmitting(false);
         return;
       }
@@ -397,8 +499,11 @@ export default function SignupPage() {
             email={formData.email}
             onEmailUpdate={(email) => updateFormData({ email })}
             onCodeSent={nextStep}
+            onGoogleSignup={handleGoogleSignup}
+            isGoogleLoading={isGoogleLoading}
           />
         );
+
       case 2:
         return (
           <OTPVerificationStep

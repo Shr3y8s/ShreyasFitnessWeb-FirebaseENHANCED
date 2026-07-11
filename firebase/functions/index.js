@@ -1726,11 +1726,151 @@ exports.verifyRecaptcha = onDocumentWritten({
  * 
  * This prevents database bloat from abandoned signups and test accounts
  */
+/**
+ * CHECK PASSWORD-RESET ELIGIBILITY (Admin SDK, single source of truth)
+ *
+ * Email Enumeration Protection is ENABLED, so the client-side
+ * fetchSignInMethodsForEmail is unreliable/empty. We must resolve provider +
+ * profile state on the server.
+ *
+ * Rule: password reset is only valid for accounts that actually have a
+ * `password` provider. For a Google-only account, Firebase's reset flow would
+ * silently BOLT ON a password credential the user never intended — so we block
+ * it and nudge them to "Continue with Google" instead.
+ *
+ * Returns { status } where status is one of:
+ *  - "ok"           → a password provider exists → caller sends the reset email.
+ *  - "google_only"  → Google-only REAL account (has profile) → nudge to Google.
+ *  - "not_found"    → no Auth user (generic; preserves enumeration protection).
+ *
+ * Type-1 orphan reap: if the email maps to a Google-only user with NO profile
+ * doc (a login-only "Continue with Google" that never completed signup), we
+ * DELETE that Auth user here to free the email, then return "not_found" so the
+ * caller guides them to sign up with the same address.
+ */
+exports.checkResetEligibility = onCall({
+  region: sharedConfig.region,
+  cors: true,
+}, async (request) => {
+  const rawEmail = request.data && request.data.email;
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  if (!email) {
+    throw new Error("A valid email address is required.");
+  }
+
+  let userRecord;
+  try {
+    userRecord = await admin.auth().getUserByEmail(email);
+  } catch (err) {
+    if (err.code === "auth/user-not-found") {
+      return {status: "not_found"};
+    }
+    logger.error("checkResetEligibility: getUserByEmail failed", {
+      error: err.message,
+    });
+    throw new Error("Unable to verify this email right now. Please try again.");
+  }
+
+  const providers = (userRecord.providerData || []).map((p) => p.providerId);
+  const hasPassword = providers.includes("password");
+
+  // Password credential exists → normal reset flow is valid.
+  if (hasPassword) {
+    return {status: "ok"};
+  }
+
+  // No password credential → Google-only. Distinguish REAL (has profile) from
+  // a Type-1 orphan (no profile) using the same waterfall lookup as the client.
+  const uid = userRecord.uid;
+  const [adminDoc, trainerDoc, clientDoc] = await Promise.all([
+    admin.firestore().collection("admins").doc(uid).get(),
+    admin.firestore().collection("trainers").doc(uid).get(),
+    admin.firestore().collection("users").doc(uid).get(),
+  ]);
+  const hasProfile = adminDoc.exists || trainerDoc.exists || clientDoc.exists;
+
+  if (hasProfile) {
+    // Real Google account — do NOT send a reset (would add a password cred).
+    return {status: "google_only"};
+  }
+
+  // Type-1 orphan: Google-only + no profile. Delete to free the email.
+  try {
+    await admin.auth().deleteUser(uid);
+    logger.info("checkResetEligibility: reaped Type-1 orphan", {uid, email});
+  } catch (delErr) {
+    logger.warn("checkResetEligibility: failed to delete orphan", {
+      uid,
+      error: delErr.message,
+    });
+  }
+  return {status: "not_found"};
+});
+
+/**
+ * TYPE-1 ORPHAN AUTH SWEEP (safety net for cleanupPendingAccounts).
+ *
+ * Type-1 orphans are Firebase Auth users created by "Continue with Google" that
+ * never completed signup, so they have NO profile doc and the Firestore-driven
+ * Type-2 query cannot see them. This paginates Firebase Auth itself and deletes
+ * a user ONLY when all three hold (see docs/02-implementation/auth/...):
+ *   1. Google-only  — exactly one provider and it is google.com (never password).
+ *   2. Older than 48h — creationTime < cutoffMillis (avoids racing live signups).
+ *   3. No profile doc — users/{uid} does not exist (definition of a Type-1 orphan).
+ *
+ * Real Google accounts (have a profile) and real password accounts (have a
+ * password provider) are therefore never touched. Returns the number deleted.
+ * @param {number} cutoffMillis - Epoch ms; users created after this are skipped.
+ * @return {Promise<number>} Count of orphaned Auth users deleted.
+ */
+async function sweepType1Orphans(cutoffMillis) {
+  let orphansDeleted = 0;
+  let pageToken;
+
+  do {
+    const listResult = await admin.auth().listUsers(1000, pageToken);
+    pageToken = listResult.pageToken;
+
+    for (const userRecord of listResult.users) {
+      // Check #1: Google-only (no password credential).
+      const providers = (userRecord.providerData || []).map((p) => p.providerId);
+      const isGoogleOnly = providers.length === 1 && providers[0] === "google.com";
+      if (!isGoogleOnly) continue;
+
+      // Check #2: older than the 48h window.
+      const createdMs = userRecord.metadata && userRecord.metadata.creationTime
+        ? new Date(userRecord.metadata.creationTime).getTime()
+        : 0;
+      if (!createdMs || createdMs >= cutoffMillis) continue;
+
+      // Check #3: no profile doc (Type-1 orphan). A completed Google signup has
+      // a users/{uid} doc and is skipped.
+      const uid = userRecord.uid;
+      const clientDoc = await admin.firestore().collection("users").doc(uid).get();
+      if (clientDoc.exists) continue;
+
+      try {
+        await admin.auth().deleteUser(uid);
+        orphansDeleted++;
+        logger.info("Swept Type-1 orphan (google-only, no profile, >48h)", {
+          uid,
+          email: userRecord.email,
+        });
+      } catch (delErr) {
+        logger.warn("Failed to delete Type-1 orphan", {uid, error: delErr.message});
+      }
+    }
+  } while (pageToken);
+
+  return orphansDeleted;
+}
+
 exports.cleanupPendingAccounts = onSchedule({
   schedule: "0 2 * * *", // Every day at 2 AM UTC
   timeZone: "UTC",
   region: sharedConfig.region,
 }, async (event) => {
+
   try {
     logger.info("Starting pending account cleanup job");
 
@@ -1748,11 +1888,15 @@ exports.cleanupPendingAccounts = onSchedule({
     const snapshot = await pendingAccountsQuery.get();
 
     if (snapshot.empty) {
-      logger.info("No pending accounts to clean up");
-      return null;
+      logger.info("No pending (Type-2) accounts to clean up");
+      // Still run the Type-1 orphan auth sweep (it's independent of Firestore docs).
+      const orphansDeleted = await sweepType1Orphans(fortyEightHoursAgo.toMillis());
+      logger.info("Pending account cleanup completed (no Type-2)", {orphansDeleted});
+      return {success: true, accountsDeleted: 0, orphansDeleted};
     }
 
     logger.info(`Found ${snapshot.size} pending accounts to clean up`);
+
 
     const batch = admin.firestore().batch();
     let deleteCount = 0;
