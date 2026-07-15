@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { signOutUser, db, userHasProfile } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { redirectToCheckoutForTier } from '@/lib/constants';
 
@@ -29,11 +29,31 @@ export default function DashboardWelcomePage() {
       // SAFETY-NET: authenticated but NO profile doc in any collection.
       // auth-context sets userData=null + loading=false in this case. This is an
       // "orphaned" Firebase Auth user — e.g. a Google sign-in that never completed
-      // the email/password signup that writes the users/{uid} doc. Previously this
-      // fell through to the perpetual "Loading..." screen (the effect only handled
-      // `user && userData`), so the page hung forever. Sign the orphaned session out
-      // and bounce to login with a clear message instead.
+      // the email/password signup that writes the users/{uid} doc.
+      //
+      // IMPORTANT: userData=null is ALSO a transient state on a fresh sign-in — the
+      // new ID token can take a moment to propagate to Firestore, so auth-context's
+      // profile lookup may not have populated userData yet. Signing out on that race
+      // bounced legitimate users back to login (production-only latency race). So
+      // before treating this as a true orphan, do an AUTHORITATIVE re-check: force a
+      // token refresh and look the profile up directly. Only sign out if the profile
+      // genuinely does not exist; otherwise keep showing "Loading..." and let
+      // auth-context's listener catch up.
       if (!authLoading && user && !userData) {
+        try {
+          await user.getIdToken(true);
+          const hasProfile = await userHasProfile(user.uid);
+          if (hasProfile) {
+            console.log('[Dashboard] Profile exists but userData not yet loaded - waiting for auth-context');
+            return; // stay on "Loading..."; auth-context will populate userData
+          }
+        } catch (verifyError) {
+          // Verification itself failed (e.g. still a token race). Do NOT sign out on
+          // an inconclusive check — wait and let a later effect run resolve it.
+          console.warn('[Dashboard] Orphan verification inconclusive - waiting:', verifyError);
+          return;
+        }
+
         console.log('[Dashboard] Authenticated user has no profile - signing out');
         await signOutUser();
         router.push('/login?error=no-account');

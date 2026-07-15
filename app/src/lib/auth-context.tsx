@@ -191,28 +191,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         
         try {
-          // Initial fetch to determine user type
+          // Initial fetch to determine user type. On a fresh sign-in (especially a
+          // Google popup) the new ID token may not have propagated to Firestore's
+          // backend yet, so these reads can transiently fail with `permission-denied`.
+          // We self-heal: force a token refresh and retry a few times before
+          // concluding the user has no profile. Without this, a transient permission
+          // error resolved to userData=null and the dashboard's orphan safety-net
+          // signed the user out (a production-only latency race).
           let userType: 'admin' | 'trainer' | 'client' | null = null;
           let sourceCollection: 'admins' | 'trainers' | 'users' | null = null;
-          
-          // 1. Check admins collection
-          const adminDoc = await getDoc(doc(db, 'admins', authUser.uid));
-          if (adminDoc.exists()) {
-            userType = 'admin';
-            sourceCollection = 'admins';
-          } else {
-            // 2. Check trainers collection
-            const trainerDoc = await getDoc(doc(db, 'trainers', authUser.uid));
-            if (trainerDoc.exists()) {
-              userType = 'trainer';
-              sourceCollection = 'trainers';
-            } else {
-              // 3. Check users collection (clients)
-              const userDoc = await getDoc(doc(db, 'users', authUser.uid));
-              if (userDoc.exists()) {
-                userType = 'client';
-                sourceCollection = 'users';
+
+          const maxWaterfallAttempts = 4;
+          for (let attempt = 0; attempt < maxWaterfallAttempts; attempt++) {
+            try {
+              // 1. Check admins collection
+              const adminDoc = await getDoc(doc(db, 'admins', authUser.uid));
+              if (adminDoc.exists()) {
+                userType = 'admin';
+                sourceCollection = 'admins';
+              } else {
+                // 2. Check trainers collection
+                const trainerDoc = await getDoc(doc(db, 'trainers', authUser.uid));
+                if (trainerDoc.exists()) {
+                  userType = 'trainer';
+                  sourceCollection = 'trainers';
+                } else {
+                  // 3. Check users collection (clients)
+                  const userDoc = await getDoc(doc(db, 'users', authUser.uid));
+                  if (userDoc.exists()) {
+                    userType = 'client';
+                    sourceCollection = 'users';
+                  }
+                }
               }
+              // Reads succeeded (found a profile, or definitively found none). Done.
+              break;
+            } catch (error) {
+              const code = (error as { code?: string })?.code;
+              if (code === 'permission-denied' && attempt < maxWaterfallAttempts - 1) {
+                // Token race on fresh sign-in — refresh token, back off, then retry.
+                await authUser.getIdToken(true).catch(() => { /* retry regardless */ });
+                await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+                continue;
+              }
+              // Non-permission error, or retries exhausted — propagate to outer catch.
+              throw error;
             }
           }
           
