@@ -57,6 +57,8 @@ import {
   sendCampaign,
   sendCampaignTest,
   previewCampaign,
+  listActiveDiscountCodes,
+  type DiscountCodeOption,
 } from '@/lib/campaigns-api';
 
 import type {
@@ -65,7 +67,9 @@ import type {
   CampaignTemplate,
   CtaTarget,
   RecipientStatus,
+  RecipientInput,
 } from '@/types/campaigns';
+
 
 const RECIPIENT_STATUS_STYLES: Record<RecipientStatus, string> = {
   pending: 'bg-gray-100 text-gray-700',
@@ -110,6 +114,14 @@ export default function CampaignEditorPage() {
   const [emailBlock, setEmailBlock] = useState('');
   const [testEmail, setTestEmail] = useState('');
   const [selectedPreset, setSelectedPreset] = useState('');
+
+  // Active discount codes for the code dropdowns (campaign-level + per-recipient).
+  const [activeCodes, setActiveCodes] = useState<DiscountCodeOption[]>([]);
+  // Per-recipient code overrides chosen via the dropdowns, keyed by lowercased
+  // email. '' means "use the campaign code". A key absent from this map means
+  // "not yet touched" → fall back to whatever the paste line parsed (pipe code).
+  const [codeOverrides, setCodeOverrides] = useState<Record<string, string>>({});
+
 
 
   // Single morphing send dialog. One dialog steps through three phases:
@@ -171,7 +183,39 @@ export default function CampaignEditorPage() {
     };
   }, [isNew, rawId]);
 
+  // Fetch active discount codes once for the code dropdowns. Fail-soft: on error
+  // the helper returns [] and the dropdowns simply show no preset options (the
+  // admin can still type a code in the campaign field).
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const codes = await listActiveDiscountCodes();
+      if (active) setActiveCodes(codes);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // The effective per-recipient code for a parsed row: an explicit dropdown
+  // override wins; otherwise fall back to any pipe-parsed code on the line;
+  // otherwise '' (→ use the campaign code at send time).
+  function effectiveRecipientCode(r: RecipientInput): string {
+    const key = r.email.toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(codeOverrides, key)) {
+      return codeOverrides[key];
+    }
+    return r.discountCode || '';
+  }
+
+  // Whether the campaign-level code is a real code that isn't in the active list
+  // (e.g. an older/typed code on a loaded draft). Drives the "(not in active
+  // list)" note so nothing silently changes on old drafts.
+  const campaignCodeNotInList =
+    !!discountCode && !activeCodes.some((c) => c.code === discountCode);
+
   function buildDraftInput() {
+
     const template: CampaignTemplate = {
       headline: headline.trim(),
       body: body.trim(),
@@ -213,14 +257,21 @@ export default function CampaignEditorPage() {
       } else {
         await updateCampaign(id, input);
       }
-      // Persist recipients if the admin pasted a fresh list.
+      // Persist recipients if the admin pasted a fresh list. Merge each row's
+      // effective code (dropdown override → pipe code → none) before saving.
       if (parsedRecipients.length > 0) {
-        const count = await setRecipients(id, parsedRecipients);
+        const withCodes = parsedRecipients.map((r) => ({
+          ...r,
+          discountCode: effectiveRecipientCode(r) || undefined,
+        }));
+        const count = await setRecipients(id, withCodes);
         setNotice(`Saved. ${count} unique recipient(s) on the list.`);
         setEmailBlock('');
+        setCodeOverrides({});
         const r = await listRecipients(id);
         setRecipientsState(r);
       } else {
+
         setNotice('Saved.');
       }
       if (isNew) {
@@ -518,19 +569,39 @@ export default function CampaignEditorPage() {
               disabled={!isDraft}
               className="bg-transparent"
             />
-
+            <p className="text-xs text-muted-foreground">
+              Tip: type <span className="font-mono">{'{{code_terms}}'}</span> where you want an
+              auto-written sentence describing each recipient’s discount code (the % or $ off, which
+              plans it applies to, and how long). Leave it out to keep your own wording. Wrap text
+              in <span className="font-mono">**double asterisks**</span> to make it bold.
+            </p>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="discount">Discount code (optional)</Label>
-              <Input
+              <select
                 id="discount"
                 value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                placeholder="LAUNCH25"
+                onChange={(e) => setDiscountCode(e.target.value)}
                 disabled={!isDraft}
-              />
+                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50"
+              >
+                <option value="">No code</option>
+                {campaignCodeNotInList && (
+                  <option value={discountCode}>{discountCode} (not in active list)</option>
+                )}
+                {activeCodes.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Default for everyone. Per-recipient picks below override it.
+              </p>
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="expiry">Offer expires (optional)</Label>
               <Input
@@ -586,19 +657,70 @@ export default function CampaignEditorPage() {
                 value={emailBlock}
                 onChange={(e) => setEmailBlock(e.target.value)}
                 rows={4}
-                placeholder={'jane@example.com, John Doe <john@example.com>\nsam@example.com'}
+                placeholder={
+                  'jane@example.com, John Doe <john@example.com>\nsam@example.com | SAM20'
+                }
                 className="bg-transparent"
               />
 
               <p className="text-xs text-muted-foreground">
-                Separate with commas or new lines. Supports “Name &lt;email&gt;”. Duplicates are
-                removed automatically. {parsedRecipients.length > 0 && (
+                Separate with commas or new lines. Supports “Name &lt;email&gt;”. Pick a personal
+                discount code for anyone below — leave it on “Use campaign code” to fall back to
+                the campaign’s code above. Duplicates are removed automatically.{' '}
+                {parsedRecipients.length > 0 && (
                   <span className="text-foreground font-medium">
                     {parsedRecipients.length} valid email(s) detected.
                   </span>
                 )}
               </p>
+
+              {/* Live parse preview + per-recipient code picker so the admin can
+                  assign/verify each email↔code mapping BEFORE saving/sending. */}
+              {parsedRecipients.length > 0 && (
+                <div className="border rounded-md divide-y max-h-56 overflow-auto mt-1">
+                  {parsedRecipients.map((r) => {
+                    const eff = effectiveRecipientCode(r);
+                    const effNotInList = !!eff && !activeCodes.some((c) => c.code === eff);
+                    return (
+                      <div
+                        key={r.email}
+                        className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs"
+                      >
+                        <span className="truncate min-w-0">
+                          {r.name ? `${r.name} · ` : ''}
+                          {r.email}
+                        </span>
+                        <select
+                          value={eff}
+                          onChange={(e) =>
+                            setCodeOverrides((prev) => ({
+                              ...prev,
+                              [r.email.toLowerCase()]: e.target.value,
+                            }))
+                          }
+                          className="h-7 shrink-0 rounded-md border border-input bg-transparent px-2 text-xs max-w-[45%]"
+                        >
+                          <option value="">
+                            Use campaign code{discountCode ? ` (${discountCode})` : ' (none)'}
+                          </option>
+                          {/* Preserve a pipe-typed / legacy code not in the active list. */}
+                          {effNotInList && (
+                            <option value={eff}>{eff} (not in active list)</option>
+                          )}
+                          {activeCodes.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.code}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
             </div>
+
           )}
 
           {recipients.length > 0 && (

@@ -83,8 +83,44 @@ async function assertAdmin(uid) {
   }
 }
 
+/**
+ * Fetch the discount-code docs referenced by a campaign + its recipients into a
+ * { CODE_UPPER: { code, ...docData } } map, for Feature C's {{code_terms}}
+ * wording. Code doc ids are the uppercased code string (see payments/discounts.js).
+ * Fail-soft: any read error just omits that code (the placeholder collapses).
+ *
+ * @param {string[]} codes  raw code strings (campaign-level + per-recipient)
+ */
+async function fetchCodeDocs(codes) {
+  const unique = [
+    ...new Set(
+      (codes || [])
+        .map((c) => String(c || "").trim().toUpperCase())
+        .filter(Boolean)
+    ),
+  ];
+  const map = {};
+  if (!unique.length) return map;
+  const db = admin.firestore();
+  await Promise.all(
+    unique.map(async (codeId) => {
+      try {
+        const snap = await db.collection("discount_codes").doc(codeId).get();
+        if (snap.exists) map[codeId] = { code: codeId, ...snap.data() };
+      } catch (e) {
+        logger.warn("[Campaign] code doc fetch failed (non-fatal)", {
+          codeId,
+          error: e.message,
+        });
+      }
+    })
+  );
+  return map;
+}
+
 /** True if the email is currently suppressed. Fail-soft (errs on NOT suppressed). */
 async function isSuppressed(email) {
+
   try {
     const snap = await admin
       .firestore()
@@ -136,12 +172,20 @@ async function runTestSend({ campaignId, toEmail, resendApiKey, unsubSecret }) {
   if (!snap.exists) throw new HttpsError("not-found", "Campaign not found.");
   const campaign = { id: campaignId, ...snap.data() };
 
+  // Feature C: resolve the campaign-level code doc for {{code_terms}} (a test
+  // send has no recipient doc, so only the campaign code applies).
+  const codeDocs = await fetchCodeDocs([
+    campaign.discountCode,
+    campaign.template && campaign.template.discountCode,
+  ]);
+
   const token = signUnsubscribeToken(to, campaignId, unsubSecret);
   const { subject, html, text } = renderCampaign(
     campaign,
     { email: to },
-    { unsubscribeUrl: unsubscribeUrl(token) }
+    { unsubscribeUrl: unsubscribeUrl(token), codeDocs }
   );
+
 
   const resend = new Resend(resendApiKey);
   const res = await sendOne(resend, { to, subject: `[TEST] ${subject}`, html, text });
@@ -191,7 +235,17 @@ async function runSend({ campaignId, mode = "all", resendApiKey, unsubSecret }) 
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
+  // Feature C: pre-fetch every code doc referenced by the campaign or any
+  // recipient once, so {{code_terms}} can be resolved per-recipient without a
+  // per-email read. Fail-soft (missing codes just collapse the placeholder).
+  const codeDocs = await fetchCodeDocs([
+    campaign.discountCode,
+    campaign.template && campaign.template.discountCode,
+    ...recipients.map((r) => r.discountCode),
+  ]);
+
   const resend = new Resend(resendApiKey);
+
   let sentCount = 0;
   let failedCount = 0;
   let suppressedCount = 0;
@@ -212,9 +266,11 @@ async function runSend({ campaignId, mode = "all", resendApiKey, unsubSecret }) 
             r.unsubscribeToken || signUnsubscribeToken(email, campaignId, unsubSecret);
           const { subject, html, text } = renderCampaign(
             campaign,
-            { email, name: r.name },
-            { unsubscribeUrl: unsubscribeUrl(token) }
+            { email, name: r.name, discountCode: r.discountCode || "" },
+            { unsubscribeUrl: unsubscribeUrl(token), codeDocs }
           );
+
+
           const res = await sendOne(resend, { to: email, subject, html, text });
           if (res.ok) {
             sentCount += 1;

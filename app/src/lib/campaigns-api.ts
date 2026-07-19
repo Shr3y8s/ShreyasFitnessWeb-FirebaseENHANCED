@@ -50,6 +50,33 @@ export async function sendCampaign(
   return call('sendCampaign', { campaignId });
 }
 
+/** A discount code option for the campaign editor's code pickers. */
+export interface DiscountCodeOption {
+  code: string;
+  active: boolean;
+  discountScope?: string;
+  type?: string;
+  value?: number;
+}
+
+/**
+ * Fetch the admin's discount codes (via the admin-gated `listDiscountCodes`
+ * callable) for the campaign editor's code dropdowns. Returns ACTIVE codes only,
+ * sorted alphabetically. Fail-soft: returns [] on any error so the editor still
+ * works (the admin can always fall back to typing a code).
+ */
+export async function listActiveDiscountCodes(): Promise<DiscountCodeOption[]> {
+  try {
+    const data = await call<{ codes?: DiscountCodeOption[] }>('listDiscountCodes', {});
+    return (data.codes || [])
+      .filter((c) => c && c.code && c.active)
+      .sort((a, b) => a.code.localeCompare(b.code));
+  } catch {
+    return [];
+  }
+}
+
+
 /**
  * Render a campaign exactly as a recipient would see it, without sending.
  * Pass a saved `campaignId` and/or an inline `draft` (to preview unsaved edits).
@@ -193,11 +220,15 @@ export async function setRecipients(
         email: r.email,
         name: r.name || '',
         source: r.source,
+        // Per-recipient discount code (optional). Always written so re-pasting a
+        // list WITHOUT a code for someone clears any stale code on their doc.
+        discountCode: r.discountCode || '',
         status: 'pending',
       },
       { merge: true },
     );
   }
+
 
   await setDoc(
     doc(db, CAMPAIGNS, campaignId),
@@ -210,6 +241,10 @@ export async function setRecipients(
 
 /** Parse a pasted block of emails (comma / newline / semicolon separated). */
 export function parseEmailList(raw: string): RecipientInput[] {
+  // Recipients are separated by commas / semicolons / newlines. An optional
+  // per-recipient discount code can be appended after a pipe: "… | CODE".
+  // (The pipe is unambiguous — commas/semicolons already delimit recipients
+  // and angle brackets wrap the email.)
   const parts = raw
     .split(/[\n,;]+/)
     .map((s) => s.trim())
@@ -217,18 +252,32 @@ export function parseEmailList(raw: string): RecipientInput[] {
   const out: RecipientInput[] = [];
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   for (const part of parts) {
+    // Split off an optional trailing "| CODE" first, so the code never
+    // interferes with name/email parsing.
+    let entry = part;
+    let discountCode: string | undefined;
+    const pipeIdx = entry.indexOf('|');
+    if (pipeIdx !== -1) {
+      const codeRaw = entry.slice(pipeIdx + 1).trim();
+      entry = entry.slice(0, pipeIdx).trim();
+      if (codeRaw) discountCode = codeRaw.toUpperCase();
+    }
+
     // Support "Name <email@x.com>" and bare "email@x.com".
-    const match = part.match(/^(.*?)<([^>]+)>$/);
+    const match = entry.match(/^(.*?)<([^>]+)>$/);
     if (match) {
       const name = match[1].trim();
       const email = match[2].trim();
-      if (emailRe.test(email)) out.push({ email, name: name || undefined, source: 'pasted' });
-    } else if (emailRe.test(part)) {
-      out.push({ email: part, source: 'pasted' });
+      if (emailRe.test(email)) {
+        out.push({ email, name: name || undefined, source: 'pasted', discountCode });
+      }
+    } else if (emailRe.test(entry)) {
+      out.push({ email: entry, source: 'pasted', discountCode });
     }
   }
   return out;
 }
+
 
 /** Best-effort millis extraction from a Firestore Timestamp-ish value. */
 export function tsToMillis(v: unknown): number | null {

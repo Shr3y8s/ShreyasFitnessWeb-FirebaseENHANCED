@@ -343,7 +343,8 @@ export default function OutreachPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Client Outreach</h1>
+          <h1 className="text-2xl font-bold">Tasks &amp; Reminders</h1>
+
           <p className="text-muted-foreground text-sm mt-1">Assign tasks and send reminders to your clients</p>
         </div>
       </div>

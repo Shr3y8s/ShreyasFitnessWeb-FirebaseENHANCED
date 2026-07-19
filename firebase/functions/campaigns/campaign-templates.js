@@ -79,8 +79,72 @@ function bodyToHtml(body) {
 }
 
 
+/**
+ * Build a short, human sentence describing what a discount code is good for,
+ * derived from the code's own properties (Feature C). Feeds the {{code_terms}}
+ * placeholder so the email copy can never contradict the code's real rules.
+ *
+ * Examples:
+ *   - "Your code **BRYAN** gets you 20% off Online Coaching or the Complete
+ *      Transformation, every month for as long as you're subscribed."
+ *   - "Your code **SESSION10** gets you $10.00 off a one-on-one training session."
+ *
+ * Returns "" when the code doc is missing/unknown (so the placeholder collapses
+ * cleanly rather than printing something misleading).
+ *
+ * @param {object} codeDoc  discount_codes/{CODE} document data (+ code)
+ */
+function describeCode(codeDoc) {
+  if (!codeDoc || !codeDoc.code) return "";
+
+  // Amount phrase (mirrors discounts.js computeDiscountedAmount labels).
+  let amount = "";
+  if (codeDoc.type === "percentage") {
+    const pct = Math.max(0, Math.min(100, Number(codeDoc.value) || 0));
+    if (!pct) return "";
+    amount = `${pct}% off`;
+  } else if (codeDoc.type === "fixed") {
+    const off = Math.max(0, Math.round(Number(codeDoc.value) || 0));
+    if (!off) return "";
+    amount = `$${(off / 100).toFixed(2)} off`;
+  } else {
+    return "";
+  }
+
+  // What it applies to + how long.
+  const scope = codeDoc.discountScope || "one_time";
+  let target = "";
+  let duration = "";
+  if (scope === "one_time") {
+    target = "a one-on-one training session";
+  } else {
+    const productIds =
+      codeDoc.appliesTo && Array.isArray(codeDoc.appliesTo.productIds)
+        ? codeDoc.appliesTo.productIds
+        : [];
+    const hasOC = productIds.includes("online_coaching");
+    const hasCT = productIds.includes("complete_transformation");
+    if (hasOC && !hasCT) target = "Online Coaching";
+    else if (hasCT && !hasOC) target = "the Complete Transformation";
+    else target = "Online Coaching or the Complete Transformation";
+
+    if (scope === "recurring") {
+      duration = ", every month for as long as you're subscribed";
+    } else if (scope === "first_cycle") {
+      const n =
+        codeDoc.introCycles != null
+          ? Math.max(1, Math.round(Number(codeDoc.introCycles)))
+          : 1;
+      duration = n > 1 ? `, for your first ${n} months` : ", for your first month";
+    }
+  }
+
+  return `Your code **${codeDoc.code}** gets you ${amount} ${target}${duration}.`;
+}
+
 /** Append UTM params to a CTA href for attribution. */
 function withUtm(url, campaignId) {
+
   const sep = url.includes("?") ? "&" : "?";
   const params = [
     "utm_source=email",
@@ -215,10 +279,39 @@ function renderCampaign(campaign = {}, recipient = {}, opts = {}) {
   // Template mode (default).
   const t = campaign.template || {};
   const headline = t.headline || "Come train with Shrey.Fit";
-  const code = campaign.discountCode || t.discountCode || "";
+  // Discount-code precedence: a per-recipient code wins, then the campaign-level
+  // code, then the template default. This lets one campaign carry a different
+  // code per person (Feature A) while staying backward-compatible (recipients
+  // without a code fall through to the shared campaign code exactly as before).
+  const code =
+    (recipient && recipient.discountCode) ||
+    campaign.discountCode ||
+    t.discountCode ||
+    "";
   const expiry = t.expiryDate || "";
+
   const ctaLabel = t.ctaLabel || "Explore Services";
   const ctaUrl = resolveCtaUrl(campaign);
+
+  // Feature C — {{code_terms}} placeholder. Resolve the applicable code's doc
+  // (opts.codeDocs is a { CODE: codeDoc } map the send/preview path supplies)
+  // into a short sentence describing what the code is good for, then substitute
+  // it into the body. Absent token → body unchanged (zero risk). Token present
+  // but no describable code → the token (and any leftover blank line) is removed.
+  const codeDocs = opts.codeDocs || {};
+  const codeTerms = code ? describeCode(codeDocs[String(code).toUpperCase()]) : "";
+  const applyCodeTerms = (s) => {
+    const str = String(s || "");
+    if (!str.includes("{{code_terms}}")) return str;
+    if (codeTerms) return str.split("{{code_terms}}").join(codeTerms);
+    // Remove the token and collapse a blank line it may have occupied alone.
+    return str
+      .split("{{code_terms}}")
+      .join("")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  };
+  const bodyHtmlSource = applyCodeTerms(t.body);
 
   const innerHtml =
     `<h1 style="margin: 0 0 20px 0; font-size: 26px; line-height: 1.3; color: #111827;">${esc(
@@ -227,17 +320,18 @@ function renderCampaign(campaign = {}, recipient = {}, opts = {}) {
     `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.7; color: #374151;">Hi ${esc(
       name
     )},</p>` +
-    bodyToHtml(t.body) +
+    bodyToHtml(bodyHtmlSource) +
     discountBlock(code, expiry) +
     ctaButton(ctaLabel, ctaUrl);
 
   const html = shell({ innerHtml, unsubscribeUrl });
 
-  // Plain-text fallback: drop the **bold** markers so they don't show as
-  // literal asterisks in text-only clients.
-  const bodyText = String(t.body || "")
+  // Plain-text fallback: substitute {{code_terms}}, then drop the **bold**
+  // markers so they don't show as literal asterisks in text-only clients.
+  const bodyText = applyCodeTerms(t.body)
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .trim();
+
 
   const text =
     `${headline}\n\n` +

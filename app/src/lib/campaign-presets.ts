@@ -94,7 +94,8 @@ export const CAMPAIGN_PRESETS: CampaignPreset[] = [
     body:
       'Before SHREY.FIT opens to the public, I wanted a small, trusted circle to step inside first — and **you’re one of the few I chose.**\n\n' +
       'This is an exclusive early reveal, and I’d love for you to really use it. Create your account and pick a coaching plan — either **Online Coaching** or the **Complete Transformation** — so you can experience the full client dashboard, workouts, nutrition, and progress tracking the way a real member would. While you’re at it, take your time exploring the site itself — the services, the story, and every page I’ve poured a lot into.\n\n' +
-      '**Don’t worry about the cost.** The code below applies a heavy insider discount on the Online Coaching and Complete Transformation plans — it’s there so you can test everything freely, not to charge you real money. (Heads up: the code works only on those two subscription plans. If you’d also like to try booking a one-on-one training session, just reach out and I’ll send you a separate code for that.)\n\n' +
+      '**Don’t worry about the cost.** The code below is a heavy insider discount — it’s there so you can test everything freely, not to charge you real money. {{code_terms}} If you’d also like to try booking a one-on-one training session, just reach out and I’ll send you a separate code for that.\n\n' +
+
       'Once you’re inside, poke around, click everything, and see how it feels. I’ll follow up with you personally to hear your thoughts — or you can message me anytime right inside the coach chat in your dashboard.\n\n' +
       'Thank you for being part of this from the very beginning. It genuinely means a lot to have you in my corner.',
 

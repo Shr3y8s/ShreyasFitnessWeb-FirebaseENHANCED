@@ -21,8 +21,9 @@ import {
   UserCircle,
   Calendar,
   Activity,
-  Send,
+  ClipboardCheck,
 } from 'lucide-react';
+
 import {
   Sidebar,
   SidebarContent,
@@ -256,8 +257,10 @@ export default function TrainerSidebar({ currentPage }: TrainerSidebarProps) {
                   className={pathname === '/dashboard/trainer/outreach' || currentPage === 'outreach' ? 'bg-primary text-white hover:bg-primary/90' : ''}
                 >
                   <Link href="/dashboard/trainer/outreach">
-                    <Send className="w-4 h-4" />
-                    <span className="font-medium">Outreach</span>
+                    <ClipboardCheck className="w-4 h-4" />
+                    <span className="font-medium">Tasks &amp; Reminders</span>
+
+
                     {openTaskCount > 0 && (
                       <SidebarMenuBadge className="ml-auto bg-orange-500 text-white flex items-center justify-center w-5 h-5 p-0">
                         {openTaskCount > 9 ? '9+' : openTaskCount}

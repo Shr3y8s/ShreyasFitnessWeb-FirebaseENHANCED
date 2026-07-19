@@ -76,8 +76,11 @@ export interface CampaignRecipient {
   name?: string;
   source: RecipientSource;
   status: RecipientStatus;
+  /** Optional per-recipient discount code (overrides the campaign-level code). */
+  discountCode?: string;
   /** Last error message (when status === "failed"). */
   error?: string;
+
   /** Signed unsubscribe token embedded in this recipient's email. */
   unsubscribeToken?: string;
   sentAt?: unknown;
@@ -109,4 +112,8 @@ export interface RecipientInput {
   email: string;
   name?: string;
   source: RecipientSource;
+  /** Optional per-recipient discount code (from `Name <email> | CODE`). */
+  discountCode?: string;
 }
+
+

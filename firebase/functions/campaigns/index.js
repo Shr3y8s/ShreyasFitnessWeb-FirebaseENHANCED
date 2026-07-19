@@ -102,11 +102,34 @@ const previewCampaign = onCall({ region: REGION }, async (req) => {
     throw new HttpsError("invalid-argument", "Provide a campaignId or a draft to preview.");
   }
 
+  // Feature C: resolve the campaign-level code doc so a {{code_terms}} preview
+  // renders the real sentence. Doc id is the uppercased code (payments/discounts.js).
+  const codeDocs = {};
+  const previewCode = String(
+    campaign.discountCode || (campaign.template && campaign.template.discountCode) || ""
+  ).trim().toUpperCase();
+  if (previewCode) {
+    try {
+      const codeSnap = await admin
+        .firestore()
+        .collection("discount_codes")
+        .doc(previewCode)
+        .get();
+      if (codeSnap.exists) codeDocs[previewCode] = { code: previewCode, ...codeSnap.data() };
+    } catch (e) {
+      logger.warn("[Campaign] preview code doc fetch failed (non-fatal)", {
+        error: e.message,
+      });
+    }
+  }
+
   const sampleRecipient = { email: "alex@example.com", name: "Alex" };
   const { subject, html } = renderCampaign(campaign, sampleRecipient, {
     unsubscribeUrl: "#",
+    codeDocs,
   });
   return { subject, html };
+
 });
 
 /**
