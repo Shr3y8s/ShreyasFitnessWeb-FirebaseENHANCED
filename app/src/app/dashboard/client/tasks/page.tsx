@@ -190,14 +190,14 @@ export default function ClientTasksPage() {
 
   return (
     <ClientPageShell>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <div>
           <h1 className="text-2xl font-bold">My Tasks</h1>
           <p className="text-muted-foreground text-sm mt-1">Tasks assigned by your coach</p>
         </div>
 
         <Tabs defaultValue="pending">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
             <TabsTrigger value="pending" className="gap-2">
               Pending
               {pendingTasks.length > 0 && (
