@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { redirectToCheckoutForTier } from '@/lib/constants';
 
-import { signOutUser, db, auth } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, MapPin, Bell, Phone, Shield, AlertTriangle, Camera, Loader2 } from 'lucide-react';
 import { ImageCropModal } from '@/components/profile/ImageCropModal';
@@ -171,19 +170,6 @@ export default function ProfilePage() {
     // Update pending verification state
     setPendingEmailVerification(true);
     setPendingNewEmail(newEmail);
-  };
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      } else {
-        console.error('Logout failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
   };
 
   const formatPasswordLastChanged = () => {
@@ -781,17 +767,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userTierName={userData?.tierName}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
             
             {/* Page Header */}
             <div className="mb-8">
@@ -1664,9 +1641,7 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-          </div>
-        </div>
-      </SidebarInset>
+      </div>
 
       {/* Image Crop Modal */}
       {imageSrc && !uploading && (
@@ -1684,6 +1659,6 @@ export default function ProfilePage() {
         currentEmail={userData?.email || ''}
         onSuccess={handleChangeEmailSuccess}
       />
-    </SidebarProvider>
+    </ClientPageShell>
   );
 }

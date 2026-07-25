@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db, trackEvent } from '@/lib/firebase';
+import { db, trackEvent } from '@/lib/firebase';
 
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,18 +39,6 @@ export default function UpgradePage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscriptionOptions, setSubscriptionOptions] = useState<SubscriptionOption[]>([]);
-
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -136,16 +123,8 @@ export default function UpgradePage() {
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-6xl mx-auto space-y-6">
             
             <Breadcrumb items={[
               { label: 'Dashboard', href: '/dashboard/client' },
@@ -253,9 +232,7 @@ export default function UpgradePage() {
                 ← Back to Membership
               </Button>
             </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

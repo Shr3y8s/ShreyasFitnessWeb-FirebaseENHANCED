@@ -3,11 +3,8 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { redirectToCheckoutForTier } from '@/lib/constants';
-import { signOutUser, db } from '@/lib/firebase';
-
 import { doc, onSnapshot } from 'firebase/firestore';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -351,19 +348,6 @@ export default function MembershipPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      } else {
-        console.error('Logout failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -373,17 +357,8 @@ export default function MembershipPage() {
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userTierName={userData?.tierName}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
             
             {/* Breadcrumb */}
             <Breadcrumb 
@@ -592,7 +567,7 @@ export default function MembershipPage() {
                       <Alert className="mb-4">
                         <AlertTriangle className="w-4 h-4" />
                         <AlertDescription>
-                          Your subscription has been canceled. You'll have access until {userData?.currentPeriodEnd ? formatDate(userData.currentPeriodEnd) : 'the end of your billing period'}.
+                          Your subscription has been canceled. You&apos;ll have access until {userData?.currentPeriodEnd ? formatDate(userData.currentPeriodEnd) : 'the end of your billing period'}.
                         </AlertDescription>
                       </Alert>
                       <Button 
@@ -793,8 +768,6 @@ export default function MembershipPage() {
             </Card>
 
           </div>
-        </div>
-      </SidebarInset>
 
       {/* Dialogs */}
       <CancelSubscriptionDialog
@@ -807,6 +780,6 @@ export default function MembershipPage() {
         onOpenChange={setShowPauseDialog}
         onSuccess={handlePauseSuccess}
       />
-    </SidebarProvider>
+    </ClientPageShell>
   );
 }

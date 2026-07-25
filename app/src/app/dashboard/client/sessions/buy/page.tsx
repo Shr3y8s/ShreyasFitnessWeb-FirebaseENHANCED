@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Timestamp } from 'firebase/firestore';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 
 import {
   getPaymentProvider,
@@ -15,8 +15,7 @@ import {
 } from '@/lib/payments';
 import { SERVICE_TIERS, type CheckoutItemKey } from '@/lib/constants';
 
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import SessionBalanceCard from '@/components/sessions/SessionBalanceCard';
 import PricingCard from '@/components/sessions/PricingCard';
 
@@ -103,17 +102,6 @@ export default function BuySessionsPage() {
     };
   }, [user]);
 
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   // Route to the unified, reusable checkout page (design §2.7).
   const goToCheckout = (productId: string) => {
     const item = checkoutItemForProduct(productId);
@@ -129,17 +117,8 @@ export default function BuySessionsPage() {
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-
-          <div className="max-w-6xl mx-auto">
+    <ClientPageShell>
+      <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-foreground mb-2">Buy 1-on-1 Training Sessions</h1>
@@ -212,9 +191,7 @@ export default function BuySessionsPage() {
                 </li>
               </ul>
             </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

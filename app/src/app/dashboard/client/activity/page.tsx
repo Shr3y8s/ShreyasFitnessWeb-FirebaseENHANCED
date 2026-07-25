@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -128,18 +127,6 @@ export default function DailyActivityPage() {
 
     loadData();
   }, [user, selectedDate, refreshKey]);
-
-  const handleLogout = async () => {
-    const { signOutUser } = await import('@/lib/firebase');
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   // Handler functions with optimistic updates
   const handleSaveSteps = async (steps: number) => {
@@ -345,16 +332,8 @@ export default function DailyActivityPage() {
 
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData.name}
-        userTier={userData.tier}
-        userProfilePhoto={userData.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Log Daily Activities</h1>
@@ -493,15 +472,13 @@ export default function DailyActivityPage() {
                 {!planData?.stepGoal && !planData?.waterGoal && !planData?.dailyHabits && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
                     <p className="text-sm text-blue-800">
-                      Your trainer hasn't set up daily activity goals yet. Once they do, you'll be able to track your steps, water intake, and daily habits here!
+                      Your trainer hasn&apos;t set up daily activity goals yet. Once they do, you&apos;ll be able to track your steps, water intake, and daily habits here!
                     </p>
                   </div>
                 )}
               </>
             )}
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

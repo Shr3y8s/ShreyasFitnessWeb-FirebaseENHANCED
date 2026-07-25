@@ -3,9 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser } from '@/lib/firebase';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Card } from '@/components/ui/card';
 import { Target, Star } from 'lucide-react';
 import { Goal, getCategoryMetadata, calculateGoalCompletion } from '@/types/goals';
@@ -44,17 +42,6 @@ export default function ClientGoalsPage() {
     loadGoals();
   }, [user, authLoading, router]);
 
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   // Tier gating: in-person clients don't have goals & milestones.
   if (userData && !getClientFeatureAccess(userData.tier).goals) {
     return <FeatureLockedShell feature="goals" />;
@@ -70,16 +57,8 @@ export default function ClientGoalsPage() {
 
 
   return (
-    <SidebarProvider>
-      <ClientSidebar 
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-8">
-          <div className="max-w-6xl mx-auto">
+    <ClientPageShell>
+      <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-3xl font-bold flex items-center gap-2 mb-2">
@@ -164,9 +143,7 @@ export default function ClientGoalsPage() {
                 })}
               </div>
             )}
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

@@ -4,10 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser } from '@/lib/firebase';
 import { CALENDLY_URLS } from '@/lib/constants';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -37,17 +35,6 @@ export default function ConsultationSchedulePage() {
   const { user, userData } = useAuth();
   const [loading, setLoading] = useState(true);
   const [consultation, setConsultation] = useState<CheckinSession | null>(null);
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   useEffect(() => {
     if (!user || !userData) {
@@ -135,26 +122,16 @@ export default function ConsultationSchedulePage() {
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
       />
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="client-surface p-4 sm:p-6 lg:p-8">
-            <div className="max-w-6xl mx-auto space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Onboarding Consultation</h1>
-                <p className="text-muted-foreground">Loading your consultation status...</p>
-              </div>
-              <Skeleton className="h-64" />
-              <Skeleton className="h-96" />
+      <ClientPageShell>
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Onboarding Consultation</h1>
+            <p className="text-muted-foreground">Loading your consultation status...</p>
           </div>
+          <Skeleton className="h-64" />
+          <Skeleton className="h-96" />
         </div>
-      </SidebarInset>
-      </SidebarProvider>
+      </ClientPageShell>
     </>
   );
 }
@@ -165,16 +142,8 @@ export default function ConsultationSchedulePage() {
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
       />
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
+      <ClientPageShell>
+        <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold mb-2">30-Minute Planning Consultation</h1>
@@ -308,10 +277,8 @@ export default function ConsultationSchedulePage() {
           </div>
         </CardContent>
       </Card>
-          </div>
         </div>
-      </SidebarInset>
-      </SidebarProvider>
+      </ClientPageShell>
     </>
   );
 }

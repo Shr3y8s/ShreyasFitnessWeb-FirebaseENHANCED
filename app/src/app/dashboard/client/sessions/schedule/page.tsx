@@ -7,10 +7,9 @@ import Script from 'next/script';
 import { Timestamp, collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { signOutUser, db, functions } from '@/lib/firebase';
+import { db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { TrainingSession, SessionBalance } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
 import { Calendar, MapPin, ExternalLink } from 'lucide-react';
@@ -239,17 +238,6 @@ export default function ScheduleSessionsPage() {
   }, [sessionBalance.available]); // Re-init when session balance changes
 
 
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   const confirmCancelSession = async () => {
     if (!sessionToCancel) return;
     
@@ -361,16 +349,7 @@ export default function ScheduleSessionsPage() {
         onError={() => setShowCalendlyFallback(true)}
       />
 
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="client-surface p-4 sm:p-6 lg:p-8">
-
+      <ClientPageShell>
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
@@ -611,9 +590,7 @@ export default function ScheduleSessionsPage() {
               </div>
             )}
           </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </ClientPageShell>
     </>
   );
 }

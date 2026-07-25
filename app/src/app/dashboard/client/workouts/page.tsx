@@ -1,13 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, CheckCircle, Loader2 } from 'lucide-react';
 import { Workout } from '@/types/workout';
@@ -16,23 +14,11 @@ import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 import { getClientFeatureAccess } from '@/lib/constants';
 
 export default function ClientWorkoutsPage() {
-  const router = useRouter();
   const { userData, user } = useAuth();
 
   const [upcomingWorkouts, setUpcomingWorkouts] = useState<Workout[]>([]);
   const [completedWorkouts, setCompletedWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   // Fetch workout assignments in real-time
   useEffect(() => {
@@ -101,38 +87,21 @@ export default function ClientWorkoutsPage() {
 
   if (loading) {
     return (
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall || undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">Loading your workouts...</p>
-            </div>
+      <ClientPageShell>
+        <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading your workouts...</p>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </ClientPageShell>
     );
   }
 
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-
-          <div className="max-w-7xl mx-auto">
+    <ClientPageShell>
+      <div className="max-w-7xl mx-auto">
             {/* Mobile: Tabbed Layout */}
             <div className="lg:hidden">
               <Tabs defaultValue="upcoming">
@@ -286,9 +255,7 @@ export default function ClientWorkoutsPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

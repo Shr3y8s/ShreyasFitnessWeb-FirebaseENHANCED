@@ -19,8 +19,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { Send, MessageSquare, ArrowLeft } from 'lucide-react';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 
 interface Message {
   id: string;
@@ -286,31 +285,9 @@ export default function ClientMessagesPage() {
     );
   }
 
-  const handleLogout = async () => {
-    try {
-      const { signOutUser } = await import('@/lib/firebase');
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      } else {
-        console.error('Logout failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-8">
-          <div className="max-w-7xl mx-auto">
+    <ClientPageShell>
+      <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-2xl font-bold text-foreground">Coach Inbox</h1>
@@ -412,9 +389,7 @@ export default function ClientMessagesPage() {
             </div>
           </div>
             </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

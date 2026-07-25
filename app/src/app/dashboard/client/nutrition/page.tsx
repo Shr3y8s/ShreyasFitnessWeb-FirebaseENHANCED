@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { MealAccordion, FoodItem, MealCategory } from '@/components/nutrition-hub/meal-accordion';
 import { MealPlanView } from '@/components/nutrition-hub/meal-plan-view';
 import { NutritionHabitTracker } from '@/components/nutrition-hub/nutrition-habit-tracker';
@@ -20,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, db, storage } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { registerListener, unregisterListener } from '@/lib/listener-registry';
@@ -49,7 +47,6 @@ const formatDateDisplay = (dateStr: string) => {
 const getThirtyDaysAgo = () => getDaysAgo(30);
 
 export default function NutritionPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const { user, userData } = useAuth();
   const [dailyLog, setDailyLog] = useState<Record<MealCategory, FoodItem[]>>({
@@ -93,17 +90,6 @@ export default function NutritionPage() {
     monthlyGoalsTotal: 0 
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   // Helper function to determine visible tabs based on approach
   const getVisibleTabs = (approach: any) => {
@@ -687,22 +673,14 @@ export default function NutritionPage() {
   // which spun forever for clients whose coach hadn't configured a nutrition approach.
   if (loading || !planLoaded) {
     return (
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall || undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">Loading nutrition hub...</p>
-            </div>
+      <ClientPageShell>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading nutrition hub...</p>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </ClientPageShell>
     );
   }
 
@@ -710,16 +688,8 @@ export default function NutritionPage() {
   // infinite spinner or a half-rendered hub (the banner/tabs assume a real approach).
   if (!nutritionApproach) {
     return (
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall || undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="client-surface p-4 sm:p-6 lg:p-8">
-            <div className="max-w-3xl mx-auto space-y-6">
+      <ClientPageShell>
+        <div className="max-w-3xl mx-auto space-y-6">
 
               <div className="space-y-2 mb-6">
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-3">
@@ -750,26 +720,15 @@ export default function NutritionPage() {
                   </Button>
                 </Link>
               </div>
-            </div>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </ClientPageShell>
     );
   }
 
 
   return (
-
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-7xl mx-auto space-y-6">
 
             <div className="space-y-2 mb-6">
               <h1 className="text-3xl md:text-4xl font-bold text-foreground flex items-center gap-3">
@@ -1164,9 +1123,7 @@ export default function NutritionPage() {
                 </TabsContent>
               )}
             </Tabs>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

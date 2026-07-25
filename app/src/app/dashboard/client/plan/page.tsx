@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
 
-import { signOutUser } from '@/lib/firebase';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
 import { ClipboardList, Loader2, Calendar, TrendingUp, Dumbbell, Apple } from 'lucide-react';
@@ -63,17 +61,6 @@ export default function PlanPage() {
     loadPlan();
   }, [userData, authLoading, user, router]);
 
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   // Tier gating: in-person clients don't have a coach-built plan.
   if (!authLoading && userData && !getClientFeatureAccess(userData.tier).plan) {
     return <FeatureLockedShell feature="plan" />;
@@ -81,22 +68,14 @@ export default function PlanPage() {
 
   if (loading || authLoading) {
     return (
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall || undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="client-surface flex items-center justify-center">
-            <div className="flex items-center gap-2 text-stone-600">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Loading your plan...
-            </div>
+      <ClientPageShell>
+        <div className="flex items-center justify-center py-20">
+          <div className="flex items-center gap-2 text-stone-600">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading your plan...
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </ClientPageShell>
     );
   }
 
@@ -105,16 +84,8 @@ export default function PlanPage() {
   const hasPlanData = plan && (plan.vision || plan.stepGoal || plan.lissCardio || plan.weeklyFocus);
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3 text-foreground">
@@ -241,8 +212,8 @@ export default function PlanPage() {
                     <ClipboardList className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
                     <h2 className="text-2xl font-semibold mb-2 text-foreground">No Plan Yet</h2>
                     <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                      Your trainer hasn't created your personalized training plan yet. 
-                      They'll set up your vision, goals, and protocols soon!
+                      Your trainer hasn&apos;t created your personalized training plan yet. 
+                      They&apos;ll set up your vision, goals, and protocols soon!
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Check back later or reach out to your trainer for updates.
@@ -251,9 +222,7 @@ export default function PlanPage() {
                 </CardContent>
               </Card>
             )}
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
 import { Loader2, Camera, Upload, CheckCircle, XCircle, Info } from 'lucide-react';
@@ -110,18 +109,6 @@ export default function MonthlyPhotosPage() {
     }
   };
 
-  const handleLogout = async () => {
-    const { signOutUser } = await import('@/lib/firebase');
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   // Tier gating: in-person clients don't have progress photos.
   if (userData && !getClientFeatureAccess(userData.tier).logging) {
     return <FeatureLockedShell feature="logging" />;
@@ -137,16 +124,8 @@ export default function MonthlyPhotosPage() {
 
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData.name}
-        userTier={userData.tier}
-        userProfilePhoto={userData.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-6xl mx-auto space-y-6">
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Monthly Progress Photos</h1>
@@ -389,9 +368,7 @@ export default function MonthlyPhotosPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </SidebarInset>
+      </div>
 
       {/* Photo Lightbox */}
       {selectedPhoto && (
@@ -405,6 +382,6 @@ export default function MonthlyPhotosPage() {
           onDelete={handleDeletePhoto}
         />
       )}
-    </SidebarProvider>
+    </ClientPageShell>
   );
 }

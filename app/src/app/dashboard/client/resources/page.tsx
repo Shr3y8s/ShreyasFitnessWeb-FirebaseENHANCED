@@ -1,11 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser } from '@/lib/firebase';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Accordion,
@@ -37,29 +34,9 @@ const ICONS: Record<ResourceSection['icon'], React.ComponentType<{ className?: s
 };
 
 export default function ClientResourcesPage() {
-  const router = useRouter();
-  const { userData } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-6xl mx-auto space-y-6">
             {/* Header */}
             <div>
               <h1 className="text-3xl font-bold mb-2">Resources</h1>
@@ -161,9 +138,7 @@ export default function ClientResourcesPage() {
                 </Accordion>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

@@ -4,10 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser } from '@/lib/firebase';
 import { CALENDLY_URLS, getClientFeatureAccess } from '@/lib/constants';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,17 +49,6 @@ export default function WeeklyCheckinsPage() {
   const [currentWeekId, setCurrentWeekId] = useState('');
   const [isEligible, setIsEligible] = useState(false);
   const [showWidget, setShowWidget] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   useEffect(() => {
     if (!user || !userData) {
@@ -202,27 +189,17 @@ export default function WeeklyCheckinsPage() {
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
       />
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="client-surface p-4 sm:p-6 lg:p-8">
-            <div className="max-w-6xl mx-auto space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Weekly Check-ins</h1>
-                <p className="text-muted-foreground">Loading your check-in schedule...</p>
-              </div>
-
-              <Skeleton className="h-64" />
-              <Skeleton className="h-96" />
+      <ClientPageShell>
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Weekly Check-ins</h1>
+            <p className="text-muted-foreground">Loading your check-in schedule...</p>
           </div>
+
+          <Skeleton className="h-64" />
+          <Skeleton className="h-96" />
         </div>
-      </SidebarInset>
-      </SidebarProvider>
+      </ClientPageShell>
     </>
   );
 }
@@ -234,16 +211,8 @@ export default function WeeklyCheckinsPage() {
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
       />
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
+      <ClientPageShell>
+        <div className="max-w-6xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">Weekly Check-ins</h1>
           <p className="text-muted-foreground">
@@ -302,10 +271,8 @@ export default function WeeklyCheckinsPage() {
             </Button>
           </CardContent>
         </Card>
-          </div>
         </div>
-      </SidebarInset>
-      </SidebarProvider>
+      </ClientPageShell>
     </>
   );
 }
@@ -316,16 +283,8 @@ export default function WeeklyCheckinsPage() {
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
       />
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userProfilePhoto={userData?.profilePhotoSmall ?? undefined}
-          onLogout={handleLogout}
-        />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto space-y-6">
+      <ClientPageShell>
+        <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold mb-2">Weekly Check-ins</h1>
@@ -574,10 +533,8 @@ export default function WeeklyCheckinsPage() {
           </div>
         </CardContent>
       </Card>
-          </div>
         </div>
-      </SidebarInset>
-      </SidebarProvider>
+      </ClientPageShell>
     </>
   );
 }

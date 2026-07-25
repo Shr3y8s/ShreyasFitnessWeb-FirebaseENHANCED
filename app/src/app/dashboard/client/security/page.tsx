@@ -8,10 +8,9 @@ import { Shield, Key, Mail, Smartphone, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Breadcrumb } from '@/components/Breadcrumb';
 import { LoginHistoryCard } from '@/components/security/LoginHistoryCard';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { useAuth } from '@/lib/auth-context';
-import { signOutUser, auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
 export default function SecurityPage() {
@@ -71,17 +70,6 @@ export default function SecurityPage() {
 
     setLoading(false);
   }, [userData, authLoading, router]);
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
 
   const handleStartPasswordChange = () => {
     setCurrentPassword('');
@@ -392,17 +380,8 @@ export default function SecurityPage() {
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userTierName={userData?.tierName}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
       <Breadcrumb items={breadcrumbItems} />
       
             <div className="flex items-center gap-3">
@@ -799,9 +778,7 @@ export default function SecurityPage() {
                 </li>
               </ul>
             </div>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

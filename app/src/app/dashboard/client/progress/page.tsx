@@ -5,11 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constants';
 
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
-import { signOutUser } from '@/lib/firebase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,17 +49,6 @@ export default function ProgressPage() {
     setLoading(false);
   }, [userData, authLoading, router]);
 
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   // Tier gating: in-person clients don't have progress tracking.
   if (!authLoading && userData && !getClientFeatureAccess(userData.tier).progress) {
     return <FeatureLockedShell feature="progress" />;
@@ -77,16 +64,8 @@ export default function ProgressPage() {
 
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-
-          <div className="max-w-7xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
               <div>
@@ -151,7 +130,7 @@ export default function ProgressPage() {
               <TabsContent value="wellbeing">
                 <div className="mb-4">
                   <p className="text-sm text-muted-foreground">
-                    How you're feeling week-over-week
+                    How you&apos;re feeling week-over-week
                   </p>
                 </div>
                 <div className="max-w-4xl mx-auto">
@@ -163,9 +142,7 @@ export default function ProgressPage() {
                 <ActivityWellnessTab timeRange={'30D' as TimeRange} />
               </TabsContent>
             </Tabs>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }

@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -141,18 +140,6 @@ export default function YourTrainerPage() {
     fetchTrainer();
   }, [user, userData, authLoading, router]);
 
-  const handleLogout = async () => {
-    try {
-      const { signOutUser } = await import('@/lib/firebase');
-      const result = await signOutUser();
-      if (result.success) {
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
   // Helper function to render certification badges
   const renderCertificationBadges = (
     certificationsText: string,
@@ -213,44 +200,24 @@ export default function YourTrainerPage() {
 
   if (!trainerData) {
     return (
-      <SidebarProvider>
-        <ClientSidebar
-          userName={userData?.name}
-          userTier={userData?.tier}
-          userTierName={userData?.tierName}
-          userProfilePhoto={userData?.profilePhotoSmall || undefined}
-          onLogout={handleLogout}
-        />
-        <SidebarInset>
-          <div className="client-surface p-8">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center py-12">
-                <User className="h-16 w-16 text-gray-400 mb-4 mx-auto" />
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Trainer Assigned</h3>
-                <p className="text-gray-600 mb-4">You don't have a trainer assigned yet.</p>
-                <Button onClick={() => router.push('/dashboard/client')}>
-                  Back to Dashboard
-                </Button>
-              </div>
-            </div>
+      <ClientPageShell>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center py-12">
+            <User className="h-16 w-16 text-gray-400 mb-4 mx-auto" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Trainer Assigned</h3>
+            <p className="text-gray-600 mb-4">You don&apos;t have a trainer assigned yet.</p>
+            <Button onClick={() => router.push('/dashboard/client')}>
+              Back to Dashboard
+            </Button>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </div>
+      </ClientPageShell>
     );
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userTier={userData?.tier}
-        userTierName={userData?.tierName}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
+    <ClientPageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
             {/* Page Header */}
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-foreground">Your Trainer</h1>
@@ -526,9 +493,7 @@ export default function YourTrainerPage() {
               </CardContent>
             </Card>
 
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </ClientPageShell>
   );
 }
