@@ -102,38 +102,40 @@ export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm bg-primary/5 flex flex-col h-full transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
 
-      <div className="flex flex-col space-y-1.5 p-6">
-        <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+      <div className="flex flex-col space-y-1.5 p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <User className="h-5 w-5 text-primary" />
           Account Summary
         </h3>
       </div>
-      <div className="p-6 pt-0 flex-1 flex items-center justify-around">
+      <div className="p-4 sm:p-6 pt-0 flex-1 flex items-center justify-around">
+
         {loading ? (
           <div className="flex items-center justify-center w-full py-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4 text-center w-full">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center w-full">
             <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
               <div className="text-primary">
                 <CircleCheckBig className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-bold text-2xl">{sessionsCompleted}</p>
+              <p className="font-bold text-xl sm:text-2xl">{sessionsCompleted}</p>
               <p className="text-xs text-muted-foreground">Sessions Completed</p>
             </div>
             <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
               <div className="text-primary">
                 <Calendar className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-bold text-2xl">{weeksActive}</p>
+              <p className="font-bold text-xl sm:text-2xl">{weeksActive}</p>
               <p className="text-xs text-muted-foreground">Weeks Active</p>
             </div>
             <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
               <div className="text-primary">
                 <CreditCard className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-bold text-2xl">{nextPayment}</p>
+              <p className="font-bold text-xl sm:text-2xl">{nextPayment}</p>
+
               <p className="text-xs text-muted-foreground">Next Payment</p>
             </div>
           </div>

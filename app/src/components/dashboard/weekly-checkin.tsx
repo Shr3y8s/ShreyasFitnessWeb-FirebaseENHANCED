@@ -14,8 +14,8 @@ export function WeeklyCheckin() {
   return (
     <div className="dashboard-card rounded-xl text-card-foreground">
 
-      <div className="flex flex-col space-y-1.5 p-6">
-        <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+      <div className="flex flex-col space-y-1.5 p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <CalendarCheck className="text-primary" />
           Weekly Check-in
         </h3>
@@ -23,7 +23,8 @@ export function WeeklyCheckin() {
           Discuss progress and adjust your plan.
         </p>
       </div>
-      <div className="flex items-center p-6 pt-0">
+      <div className="flex items-center p-4 sm:p-6 pt-0">
+
         <Button
           onClick={handleSchedule}
           className="w-full transition-transform hover:-translate-y-1 hover:shadow-lg cursor-pointer"

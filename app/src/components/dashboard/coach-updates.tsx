@@ -48,7 +48,12 @@ const notifIcons: Record<ClientNotificationType, React.ReactElement> = {
   new_message:         <MessageSquare className="h-4 w-4" />,
 };
 
-export function CoachUpdates() {
+interface CoachUpdatesProps {
+  /** Dashboard theme — forest needs a dark-green popout instead of white. */
+  theme?: 'default' | 'dark' | 'forest';
+}
+
+export function CoachUpdates({ theme = 'default' }: CoachUpdatesProps) {
   const {
     notifications,
     unreadCount,
@@ -58,7 +63,9 @@ export function CoachUpdates() {
   } = useClientNotifications();
   const router = useRouter();
 
+  const isForest = theme === 'forest';
   const hasNotifications = notifications.length > 0;
+
 
   const handleView = (type: ClientNotificationType, actionUrl?: string) => {
     const url = actionUrl || CLIENT_NOTIFICATION_CONFIG[type].defaultActionUrl;
@@ -72,7 +79,10 @@ export function CoachUpdates() {
           variant="outline"
           size="icon"
           className={cn(
-            'relative text-primary hover:bg-primary/10 hover:text-primary border-primary/50 cursor-pointer',
+            'relative cursor-pointer size-10 sm:size-9',
+            isForest
+              ? 'text-white hover:bg-white/10 hover:text-white border-white/30 bg-white/5'
+              : 'text-primary hover:bg-primary/10 hover:text-primary border-primary/50',
             unreadCount > 0 && 'animate-pulse-green'
           )}
           aria-label={`Notifications — ${unreadCount} unread`}
@@ -81,7 +91,7 @@ export function CoachUpdates() {
           {unreadCount > 0 && (
             <Badge
               variant="default"
-              className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs bg-green-500 hover:bg-green-500"
+              className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] leading-none bg-green-500 hover:bg-green-500"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -90,17 +100,24 @@ export function CoachUpdates() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent
+        className={cn(
+          'w-80 max-w-[calc(100vw-1rem)] p-0',
+          isForest && 'bg-[#0d3d20]/95 backdrop-blur-xl border-white/15 text-white'
+        )}
+        align="end"
+      >
         {/* Header */}
         <div className="p-4">
           <h3 className="font-semibold">Notifications</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className={cn('text-sm', isForest ? 'text-white/60' : 'text-muted-foreground')}>
             {unreadCount > 0
               ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}.`
               : 'All notifications'}
           </p>
         </div>
-        <Separator />
+        <Separator className={cn(isForest && 'bg-white/15')} />
+
 
         {/* List */}
         {hasNotifications ? (
@@ -112,11 +129,12 @@ export function CoachUpdates() {
                 <div
                   key={notif.id}
                   className={cn(
-                    'grid grid-cols-[25px_1fr] items-start p-3 rounded-md transition-all duration-200 hover:bg-accent hover:scale-[1.02] hover:shadow-sm',
-                    !notif.read && 'bg-primary/5'
+                    'grid grid-cols-[25px_1fr] items-start p-3 rounded-md transition-all duration-200 hover:scale-[1.02] hover:shadow-sm',
+                    isForest ? 'hover:bg-white/10' : 'hover:bg-accent',
+                    !notif.read && (isForest ? 'bg-white/10' : 'bg-primary/5')
                   )}
                 >
-                  <span className="mt-1 text-primary">{icon}</span>
+                  <span className={cn('mt-1', isForest ? 'text-green-300' : 'text-primary')}>{icon}</span>
                   <div className="grid gap-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-semibold text-sm leading-none">{config.title}</p>
@@ -124,8 +142,9 @@ export function CoachUpdates() {
                         <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground/70 mt-0.5">
+                    <p className={cn('text-sm', isForest ? 'text-white/70' : 'text-muted-foreground')}>{notif.message}</p>
+                    <p className={cn('text-xs mt-0.5', isForest ? 'text-white/50' : 'text-muted-foreground/70')}>
+
                       {formatTimeAgo(notif.timestamp)}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
@@ -160,21 +179,22 @@ export function CoachUpdates() {
           </div>
         ) : (
           <div className="p-8 text-center">
-            <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-primary/50" />
-            <p className="text-sm font-medium text-foreground">You&apos;re all caught up!</p>
-            <p className="text-xs text-muted-foreground mt-1">No new notifications at this time.</p>
+            <CheckCircle2 className={cn('h-12 w-12 mx-auto mb-3', isForest ? 'text-green-300/60' : 'text-primary/50')} />
+            <p className={cn('text-sm font-medium', isForest ? 'text-white' : 'text-foreground')}>You&apos;re all caught up!</p>
+            <p className={cn('text-xs mt-1', isForest ? 'text-white/50' : 'text-muted-foreground')}>No new notifications at this time.</p>
           </div>
+
         )}
 
         {/* Footer */}
         {hasNotifications && (
           <>
-            <Separator />
+            <Separator className={cn(isForest && 'bg-white/15')} />
             <div className="p-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full cursor-pointer"
+                className={cn('w-full cursor-pointer', isForest && 'text-white hover:bg-white/10 hover:text-white')}
                 onClick={() => handleDismissAll()}
               >
                 Dismiss all
@@ -182,6 +202,7 @@ export function CoachUpdates() {
             </div>
           </>
         )}
+
       </PopoverContent>
     </Popover>
   );

@@ -193,7 +193,7 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                     </div>
                     <Button
                       size="sm"
-                      className="h-6 px-2 text-xs shrink-0 gap-1"
+                      className="h-8 sm:h-6 px-3 sm:px-2 text-xs shrink-0 gap-1"
                       variant={isOverdue ? 'destructive' : 'default'}
                       disabled={completingId === task.id}
                       onClick={() => handleMarkDone(task)}

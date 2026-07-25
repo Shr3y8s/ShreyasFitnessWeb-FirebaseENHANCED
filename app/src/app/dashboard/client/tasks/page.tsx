@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { db, signOutUser } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { cn, formatTimeAgo } from '@/lib/utils';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 import { getClientFeatureAccess } from '@/lib/constants';
 
@@ -55,19 +53,11 @@ function formatDueDate(date: Date): string {
 }
 
 export default function ClientTasksPage() {
-  const router = useRouter();
   const { user, userData } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<ClientTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState<string | null>(null);
-
-  const handleLogout = async () => {
-    try {
-      const result = await signOutUser();
-      if (result.success) router.push('/login');
-    } catch { /* silent */ }
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -136,14 +126,14 @@ export default function ClientTasksPage() {
 
   const TaskCard = ({ task }: { task: ClientTask }) => (
     <div className={cn(
-      'p-4 rounded-lg border transition-colors',
+      'p-3 sm:p-4 rounded-lg border transition-colors',
       task.status === 'overdue' ? 'border-red-200 bg-red-50/50' :
       task.priority === 'urgent' ? 'border-orange-200 bg-orange-50/50' :
       task.status === 'completed' ? 'border-green-200 bg-green-50/30 opacity-75' :
       'border-border bg-card'
     )}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5">
+        <div className="mt-0.5 shrink-0">
           {task.status === 'completed'
             ? <CheckCircle2 className="h-5 w-5 text-green-500" />
             : task.status === 'overdue'
@@ -181,7 +171,7 @@ export default function ClientTasksPage() {
           <Button
             size="sm"
             variant={task.status === 'overdue' ? 'destructive' : 'default'}
-            className="shrink-0 gap-1"
+            className="shrink-0 gap-1 h-8"
             disabled={completingId === task.id}
             onClick={() => handleMarkComplete(task)}
           >
@@ -199,69 +189,58 @@ export default function ClientTasksPage() {
   }
 
   return (
-    <SidebarProvider>
-      <ClientSidebar
-        userName={userData?.name}
-        userProfilePhoto={userData?.profilePhotoSmall || undefined}
-        onLogout={handleLogout}
-      />
-      <SidebarInset>
-        <div className="client-surface p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold">My Tasks</h1>
-
-            <p className="text-muted-foreground text-sm mt-1">Tasks assigned by your coach</p>
-          </div>
-
-          <Tabs defaultValue="pending">
-            <TabsList>
-              <TabsTrigger value="pending" className="gap-2">
-                Pending
-                {pendingTasks.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">{pendingTasks.length}</Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="gap-2">
-                Completed
-                {completedTasks.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">{completedTasks.length}</Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="pending" className="mt-4 space-y-3">
-              {loading ? (
-                <Card><CardContent className="py-8 text-center text-muted-foreground">Loading…</CardContent></Card>
-              ) : pendingTasks.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-400" />
-                    <p className="font-medium text-muted-foreground">All caught up!</p>
-                    <p className="text-sm text-muted-foreground mt-1">No pending tasks right now.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                pendingTasks.map(task => <TaskCard key={task.id} task={task} />)
-              )}
-            </TabsContent>
-
-            <TabsContent value="completed" className="mt-4 space-y-3">
-              {completedTasks.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    No completed tasks yet.
-                  </CardContent>
-                </Card>
-              ) : (
-                completedTasks.map(task => <TaskCard key={task.id} task={task} />)
-              )}
-            </TabsContent>
-          </Tabs>
-          </div>
+    <ClientPageShell>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">My Tasks</h1>
+          <p className="text-muted-foreground text-sm mt-1">Tasks assigned by your coach</p>
         </div>
-      </SidebarInset>
 
-    </SidebarProvider>
+        <Tabs defaultValue="pending">
+          <TabsList>
+            <TabsTrigger value="pending" className="gap-2">
+              Pending
+              {pendingTasks.length > 0 && (
+                <Badge variant="secondary" className="text-xs">{pendingTasks.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="gap-2">
+              Completed
+              {completedTasks.length > 0 && (
+                <Badge variant="secondary" className="text-xs">{completedTasks.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending" className="mt-4 space-y-3">
+            {loading ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Loading…</CardContent></Card>
+            ) : pendingTasks.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-400" />
+                  <p className="font-medium text-muted-foreground">All caught up!</p>
+                  <p className="text-sm text-muted-foreground mt-1">No pending tasks right now.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingTasks.map(task => <TaskCard key={task.id} task={task} />)
+            )}
+          </TabsContent>
+
+          <TabsContent value="completed" className="mt-4 space-y-3">
+            {completedTasks.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  No completed tasks yet.
+                </CardContent>
+              </Card>
+            ) : (
+              completedTasks.map(task => <TaskCard key={task.id} task={task} />)
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </ClientPageShell>
   );
 }

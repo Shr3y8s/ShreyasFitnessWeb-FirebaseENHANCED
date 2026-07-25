@@ -253,9 +253,10 @@ export function ProgressCharts() {
 
   return (
     <Card className="bg-primary/5 border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-col sm:flex-row items-start justify-between gap-3 space-y-0 pb-2">
         <div className="space-y-1">
           <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+
             <Activity className="h-5 w-5 text-primary" />
             Progress Overview
             <Button
@@ -275,6 +276,7 @@ export function ProgressCharts() {
         {/* Callout Boxes - Side by Side */}
         {totalChange && recentChange && (
           <div className="flex gap-2">
+
             {/* From Start */}
             <div className={`${
               totalChange.diff < 0 
@@ -282,9 +284,10 @@ export function ProgressCharts() {
                 : totalChange.diff > 0 
                 ? 'bg-amber-50 dark:bg-amber-950/20'
                 : 'bg-gray-50 dark:bg-gray-950/20'
-            } rounded-lg p-2.5 shadow-lg border border-border/50 min-w-[110px]`}>
-              <p className={`text-lg font-bold ${
+            } rounded-lg p-2 sm:p-2.5 shadow-lg border border-border/50 min-w-0 sm:min-w-[110px]`}>
+              <p className={`text-base sm:text-lg font-bold ${
                 totalChange.diff < 0 
+
                   ? 'text-green-600 dark:text-green-500' 
                   : totalChange.diff > 0 
                   ? 'text-amber-600 dark:text-amber-500'
@@ -311,10 +314,11 @@ export function ProgressCharts() {
                 : recentChange.diff > 0 
                 ? 'bg-amber-50 dark:bg-amber-950/20'
                 : 'bg-gray-50 dark:bg-gray-950/20'
-            } rounded-lg p-2.5 shadow-lg border border-border/50 min-w-[110px]`}>
-              <p className={`text-lg font-bold ${
+            } rounded-lg p-2 sm:p-2.5 shadow-lg border border-border/50 min-w-0 sm:min-w-[110px]`}>
+              <p className={`text-base sm:text-lg font-bold ${
                 recentChange.diff < 0 
                   ? 'text-green-600 dark:text-green-500' 
+
                   : recentChange.diff > 0 
                   ? 'text-amber-600 dark:text-amber-500'
                   : 'text-gray-600 dark:text-gray-500'
@@ -341,8 +345,8 @@ export function ProgressCharts() {
             accessibilityLayer
             data={chartData}
             margin={{
-              left: 10,
-              right: 10,
+              left: 4,
+              right: 24,
               bottom: 5
             }}
           >
@@ -363,6 +367,7 @@ export function ProgressCharts() {
               tickLine={false}
               axisLine={false}
               tickMargin={10}
+              minTickGap={24}
               tickFormatter={(value) => {
                 // Format YYYY-MM-DD to "MMM DD"
                 const [year, month, day] = value.split('-');
@@ -370,18 +375,19 @@ export function ProgressCharts() {
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                 return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}`;
               }}
-              tick={{ fontSize: 12, fontWeight: 600 }}
+              tick={{ fontSize: 11, fontWeight: 600 }}
             />
             <YAxis
               yAxisId="left"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
+              width={44}
               tickCount={5}
               domain={[yMin, yMax]}
               tickFormatter={(value) => `${value} lbs`}
               stroke="oklch(65% 0.16 151)"
-              tick={{ fontSize: 12, fontWeight: 600 }}
+              tick={{ fontSize: 11, fontWeight: 600 }}
             />
             <Tooltip
               cursor={false}

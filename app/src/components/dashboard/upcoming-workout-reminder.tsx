@@ -60,12 +60,12 @@ export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProp
   
   return (
     <>
-      <div className="flex p-6 flex-row gap-4 items-center">
-        <div className={`p-3 ${config.iconBg} rounded-full`}>
-          <IconComponent className={`${config.iconColor} w-6 h-6`} />
+      <div className="flex p-4 sm:p-6 flex-row gap-3 sm:gap-4 items-center">
+        <div className={`p-2.5 sm:p-3 ${config.iconBg} rounded-full shrink-0`}>
+          <IconComponent className={`${config.iconColor} w-5 h-5 sm:w-6 sm:h-6`} />
         </div>
         <div>
-          <h3 className="text-xl font-semibold leading-none tracking-tight">
+          <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight">
             {config.title}
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
@@ -73,7 +73,8 @@ export function UpcomingWorkoutReminder({ workout }: UpcomingWorkoutReminderProp
           </p>
         </div>
       </div>
-      <div className="p-6 pt-0 space-y-4 pl-20 pb-4 flex-1 flex flex-col justify-center">
+      <div className="p-4 sm:p-6 pt-0 space-y-4 pl-4 sm:pl-20 pb-4 flex-1 flex flex-col justify-center">
+
         <div className="space-y-2">
           <div className="flex items-center gap-3 text-muted-foreground">
             <Calendar className="h-4 w-4" />

@@ -85,28 +85,29 @@ export function WelcomeHeader({ name, theme, onCycleTheme, isDarkMode = false, o
               <span className="sr-only">Cycle theme</span>
             </Button>
           )}
-          <CoachUpdates />
+          <CoachUpdates theme={activeTheme} />
         </div>
       </div>
     );
   }
 
+
   return (
-    <div className="flex justify-between items-center">
-      <div className="flex items-center gap-4">
-        <div>
-          <h1 className="dashboard-greeting text-3xl md:text-4xl font-bold text-foreground">
+    <div className="flex justify-between items-start sm:items-center gap-3">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="min-w-0">
+          <h1 className="dashboard-greeting text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
             {greeting},{' '}
             <span className="text-primary transition-all duration-300 hover:drop-shadow-[0_0_8px_hsl(var(--primary))] hover:-translate-y-1 inline-block">
               {firstName}
             </span>
           </h1>
-          <p className="dashboard-subtext text-muted-foreground mt-2">
+          <p className="dashboard-subtext text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
             {subtext}
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {handleThemeClick && (
           <Button
             variant="outline"
@@ -119,8 +120,10 @@ export function WelcomeHeader({ name, theme, onCycleTheme, isDarkMode = false, o
             <span className="sr-only">{themeLabel}</span>
           </Button>
         )}
-        <CoachUpdates />
+        <CoachUpdates theme={activeTheme} />
       </div>
     </div>
   );
 }
+
+

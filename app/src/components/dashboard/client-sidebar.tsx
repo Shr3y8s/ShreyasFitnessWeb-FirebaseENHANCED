@@ -244,7 +244,12 @@ export function ClientSidebar({ userName, userTierName, userProfilePhoto, onLogo
           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
             SF
           </div>
-          <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+          <div className="flex flex-col leading-none">
+            <span className="font-bold text-lg text-sidebar-foreground">SHREY.FIT</span>
+            <span className="text-[0.65rem] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+              Client Portal
+            </span>
+          </div>
         </Link>
       </SidebarHeader>
 

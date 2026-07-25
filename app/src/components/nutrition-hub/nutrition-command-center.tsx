@@ -69,10 +69,10 @@ export function NutritionCommandCenter({
 
   return (
     <Card className="border-green-200 dark:border-green-900/40 bg-gradient-to-br from-green-50 via-green-50/50 to-green-100/30 dark:from-green-950/30 dark:via-green-950/20 dark:to-green-900/20 shadow-lg transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
-      <CardContent className="p-6">
-        <div className="space-y-6">
+      <CardContent className="p-4 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Main Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {/* Calories */}
             <div className="flex flex-col items-center space-y-2">
               <p className="text-sm font-bold text-foreground">Calories</p>

@@ -65,8 +65,8 @@ export function PersonalRecords() {
   return (
     <div className="rounded-xl border bg-primary/5 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
 
-      <div className="flex flex-col space-y-1.5 p-6">
-        <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
+      <div className="flex flex-col space-y-1.5 p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
           <Trophy className="text-primary" />
           Personal Records
         </h3>
@@ -74,7 +74,8 @@ export function PersonalRecords() {
           Celebrating your recent achievements and milestones.
         </p>
       </div>
-      <div className="p-6 pt-0">
+      <div className="p-4 sm:p-6 pt-0">
+
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />

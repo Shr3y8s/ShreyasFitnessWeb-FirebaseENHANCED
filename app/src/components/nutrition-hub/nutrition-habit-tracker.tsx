@@ -322,7 +322,7 @@ export function NutritionHabitTracker({ selectedDate, compact = false, cardTitle
               <div
                 key={habit.id}
                 className={cn(
-                  "flex items-start gap-3 p-4 rounded-lg border transition-all duration-300",
+                  "flex items-start gap-3 p-3 sm:p-4 rounded-lg border transition-all duration-300",
                   isCompleted
                     ? "bg-background/50 border-muted opacity-75"
                     : "bg-secondary/50 border-secondary hover:bg-secondary hover:shadow-sm"
@@ -330,6 +330,7 @@ export function NutritionHabitTracker({ selectedDate, compact = false, cardTitle
               >
                 <Checkbox
                   id={`compact-${habit.id}`}
+
                   checked={isCompleted}
                   onCheckedChange={(checked) => handleHabitToggle(habit.id, !!checked)}
                   className="mt-0.5 transition-transform duration-200 data-[state=checked]:scale-110"

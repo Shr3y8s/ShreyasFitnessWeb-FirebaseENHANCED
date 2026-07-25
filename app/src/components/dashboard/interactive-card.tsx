@@ -15,6 +15,13 @@ export function InteractiveCard({ children, className }: InteractiveCardProps) {
     const card = cardRef.current;
     if (!card) return;
 
+    // Skip the 3D tilt on touch / coarse-pointer devices (phones, tablets):
+    // it does nothing useful without a hovering cursor and only adds a
+    // transform layer that can make taps feel less crisp.
+    if (typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches) {
+      return;
+    }
+
     const { left, top, width, height } = card.getBoundingClientRect();
     const x = e.clientX - left - width / 2;
     const y = e.clientY - top - height / 2;

@@ -53,10 +53,11 @@ export function WorkoutCalendar({ upcomingSessions, completedSessions }: Workout
   return (
     <div className="rounded-xl border bg-primary/5 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
 
-      <div className="flex flex-col space-y-1.5 p-6">
-        <h3 className="text-xl font-semibold leading-none tracking-tight">Workout Calendar</h3>
+      <div className="flex flex-col space-y-1.5 p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight">Workout Calendar</h3>
       </div>
-      <div className="p-6 pt-0">
+      <div className="p-4 sm:p-6 pt-0">
+
         {/* Tab Navigation */}
         <div className="grid grid-cols-2 h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
           <button

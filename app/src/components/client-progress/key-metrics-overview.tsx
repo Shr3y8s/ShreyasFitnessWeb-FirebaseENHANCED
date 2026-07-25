@@ -204,7 +204,7 @@ const HabitConsistencyCard = ({ index, score, loading }: { index?: number, score
         <Tooltip>
             <TooltipTrigger asChild>
                 <Card className={cn(
-                    "group p-2 card-hover-lift border-primary/20 cursor-pointer gradient-accent-green col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden text-center",
+                    "group p-3 sm:p-2 card-hover-lift border-primary/20 cursor-pointer gradient-accent-green col-span-1 md:col-span-2 lg:col-span-1 overflow-hidden text-center",
                     "animate-fade-in-up",
                     index !== undefined && `stagger-${Math.min(index + 1, 6)}`
                 )}>
@@ -247,7 +247,7 @@ const MetricCard = ({ metric, className, index }: { metric: Metric, onEdit?: (me
         <Tooltip>
             <TooltipTrigger asChild>
                 <Card className={cn(
-                    "group p-2 card-hover-lift border-primary/20 cursor-pointer overflow-hidden text-center gradient-accent-green",
+                    "group p-3 sm:p-2 card-hover-lift border-primary/20 cursor-pointer overflow-hidden text-center gradient-accent-green",
                     "animate-fade-in-up",
                     index !== undefined && `stagger-${Math.min(index + 1, 6)}`,
                     className
@@ -657,7 +657,7 @@ export function KeyMetricsOverview() {
                 </Collapsible>
                 
                 <CardContent className="space-y-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-2">
                         {metrics.map((metric, index) => (
                             <MetricCard key={metric.id} metric={metric} onEdit={handleEdit} className="lg:col-span-1" index={index}/>
                         ))}

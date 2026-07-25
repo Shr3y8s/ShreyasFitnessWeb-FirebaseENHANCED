@@ -7,7 +7,7 @@ import { signOutUser, db } from '@/lib/firebase';
 import { doc, collection, query, where, orderBy, limit, onSnapshot, getDoc, Timestamp } from 'firebase/firestore';
 import { Session, TrainingSession } from '@/types/session';
 import { TrainingLocation } from '@/types/location';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { InteractiveCard } from '@/components/dashboard/interactive-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { WelcomeHeader } from '@/components/dashboard/welcome-header';
@@ -27,6 +27,7 @@ import { ActivityAlerts } from '@/components/dashboard/activity-alerts';
 import { WeeklyCheckin } from '@/components/dashboard/weekly-checkin';
 import { DailyHabitsChecklist } from '@/components/activity/DailyHabitsChecklist';
 import { ClientSidebar } from '@/components/dashboard/client-sidebar';
+import { MobileTabBar } from '@/components/dashboard/mobile-tab-bar';
 import { getClientPlan } from '@/lib/plan-api';
 import { getDailyActivity, toggleHabit } from '@/lib/activity-api';
 import { getTodayLocal } from '@/lib/date-utils';
@@ -565,8 +566,22 @@ export default function ClientDashboardPage() {
           theme={theme}
         />
         <SidebarInset>
-          <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'client-surface text-foreground'} p-4 sm:p-6 lg:p-8`}>
-            <div className="max-w-5xl mx-auto space-y-6">
+          {/* Mobile top bar — hamburger is the only way to reach nav on phones. */}
+          <div className={`md:hidden sticky top-0 z-30 flex items-center gap-3 border-b px-4 py-3 backdrop-blur-md ${theme === 'forest' ? 'border-white/15 bg-[#0d3d20]/85' : 'border-border/50 bg-background/80'}`}>
+            <SidebarTrigger className={theme === 'forest' ? 'size-9 text-white' : 'size-9 text-foreground'} />
+            <div className="flex flex-col leading-none">
+              <span className={`font-bold text-base tracking-wide ${theme === 'forest' ? 'text-white' : ''}`}>
+                SHREY<span className="text-primary">.</span>FIT
+              </span>
+              <span className={`text-[0.65rem] font-medium uppercase tracking-wider mt-0.5 ${theme === 'forest' ? 'text-white/60' : 'text-muted-foreground'}`}>
+                Client Portal
+              </span>
+            </div>
+          </div>
+
+          <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'client-surface text-foreground'} p-4 sm:p-6 lg:p-8 pb-28 md:pb-8`}>
+
+            <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
 
               {/* Header */}
               <WelcomeHeader
@@ -674,10 +689,13 @@ export default function ClientDashboardPage() {
               </div>
             </div>
           </div>
+          {/* App-like bottom tab bar (mobile only) */}
+          <MobileTabBar theme={theme} />
         </SidebarInset>
       </SidebarProvider>
     );
   }
+
 
   return (
 
@@ -690,8 +708,25 @@ export default function ClientDashboardPage() {
         theme={theme}
       />
       <SidebarInset>
-        <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'client-surface'} p-4 sm:p-6 lg:p-8`}>
-          <div className="max-w-7xl mx-auto space-y-6">
+        {/* Mobile top bar — the floating sidebar collapses to an off-canvas
+            drawer on phones, so this hamburger is the ONLY way to reach nav
+            (Plan, Workouts, Nutrition, etc.) on mobile. Hidden on md+ where the
+            sidebar is always visible. */}
+        <div className={`md:hidden sticky top-0 z-30 flex items-center gap-3 border-b px-4 py-3 backdrop-blur-md ${theme === 'forest' ? 'border-white/15 bg-[#0d3d20]/85' : 'border-border/50 bg-background/80'}`}>
+          <SidebarTrigger className={theme === 'forest' ? 'size-9 text-white' : 'size-9 text-foreground'} />
+          <div className="flex flex-col leading-none">
+            <span className={`font-bold text-base tracking-wide ${theme === 'forest' ? 'text-white' : ''}`}>
+              SHREY<span className="text-primary">.</span>FIT
+            </span>
+            <span className={`text-[0.65rem] font-medium uppercase tracking-wider mt-0.5 ${theme === 'forest' ? 'text-white/60' : 'text-muted-foreground'}`}>
+              Client Portal
+            </span>
+          </div>
+        </div>
+
+        <div className={`${theme === 'forest' ? 'client-dashboard' : theme === 'dark' ? 'min-h-screen bg-background text-foreground' : 'client-surface'} p-4 sm:p-6 lg:p-8 pb-28 md:pb-8`}>
+          <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+
 
             {/* Header */}
             <WelcomeHeader
@@ -737,10 +772,15 @@ export default function ClientDashboardPage() {
                   )}
                 </Card>
               </InteractiveCard>
-              <InteractiveCard>
-                <WeeklyCheckin />
-              </InteractiveCard>
+              {/* Weekly Check-in — desktop stays under Session; on mobile it is
+                  re-rendered near the bottom (see Row 2) for better priority. */}
+              <div className="hidden lg:block">
+                <InteractiveCard>
+                  <WeeklyCheckin />
+                </InteractiveCard>
               </div>
+              </div>
+
               {/* Column 2: Tasks + Coach Note (always renders since note is always present) */}
               <CoachOutreach
                 coachName={coachNote.coachName}
@@ -772,41 +812,59 @@ export default function ClientDashboardPage() {
               )}
             </div>
 
-            {/* Main Dashboard Grid */}
+            {/* Main Dashboard Grid.
+                On mobile the two column wrappers use `display:contents` so every
+                card becomes a direct grid item in a single stack — that lets the
+                `order-*` utilities below produce the exact mobile priority order.
+                On lg+ the wrappers revert to real 2-col / 1-col blocks, so the
+                desktop layout is completely unchanged. */}
             <div
               className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
               style={{ perspective: '1000px' }}
             >
               {/* Left Column - Main Content */}
-              <div className="lg:col-span-2 space-y-6">
-                <InteractiveCard>
+              <div className="contents lg:block lg:col-span-2 lg:space-y-6">
+                <InteractiveCard className="order-6 lg:order-none">
                   <KeyMetricsOverview />
                 </InteractiveCard>
-                <InteractiveCard>
+                <InteractiveCard className="order-7 lg:order-none">
                   <NutritionSummary />
                 </InteractiveCard>
-                <InteractiveCard>
+                <InteractiveCard className="order-8 lg:order-none">
                   <CurrentPlan trainingProtocol={planData?.trainingProtocol} />
                 </InteractiveCard>
-                <InteractiveCard>
+                <InteractiveCard className="order-9 lg:order-none">
                   <ProgressCharts />
                 </InteractiveCard>
               </div>
 
               {/* Right Column - Sidebar */}
-              <div className="lg:col-span-1 space-y-6">
-                <CoachReminders />
-                <ActivityAlerts />
-                <InteractiveCard>
+              <div className="contents lg:block lg:col-span-1 lg:space-y-6">
+                {/* Activity Alerts + Coach Announcements lead on mobile (order 4-5) */}
+                <div className="order-4 lg:order-none">
+                  <ActivityAlerts />
+                </div>
+                <div className="order-5 lg:order-none">
+                  <CoachReminders />
+                </div>
+                <InteractiveCard className="order-10 lg:order-none">
                   <WorkoutCalendar
                     upcomingSessions={upcomingWorkouts}
                     completedSessions={completedWorkouts}
                   />
                 </InteractiveCard>
-                <InteractiveCard>
+                <InteractiveCard className="order-11 lg:order-none">
                   <PersonalRecords />
                 </InteractiveCard>
-                <InteractiveCard>
+                {/* Weekly Check-in — mobile-only placement near the bottom.
+                    Stateless (no listeners), so rendering a second instance here
+                    is safe. Hidden on lg+ where it lives under Session instead. */}
+                <div className="order-12 lg:hidden">
+                  <InteractiveCard>
+                    <WeeklyCheckin />
+                  </InteractiveCard>
+                </div>
+                <InteractiveCard className="order-[13] lg:order-none">
                   <AccountSummary 
                     userId={user?.uid || ''}
                     accountCreatedAt={userDataFromAuth?.createdAt}
@@ -814,10 +872,14 @@ export default function ClientDashboardPage() {
                 </InteractiveCard>
               </div>
             </div>
+
           </div>
         </div>
+        {/* App-like bottom tab bar (mobile only) */}
+        <MobileTabBar theme={theme} />
       </SidebarInset>
     </SidebarProvider>
   );
 }
+
 

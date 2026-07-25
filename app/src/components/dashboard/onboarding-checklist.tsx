@@ -83,12 +83,13 @@ export function OnboardingChecklist({ onDismiss }: OnboardingChecklistProps) {
   };
   return (
     <div className="rounded-xl border text-card-foreground shadow-sm relative bg-primary/10 border-primary/50 hover:shadow-glow">
-      <div className="flex p-6 flex-row gap-4 items-start pb-4">
-        <div className="bg-primary/10 p-3 rounded-full mt-1">
-          <ClipboardList className="w-6 h-6 text-primary" />
+      <div className="flex p-4 sm:p-6 flex-row gap-3 sm:gap-4 items-start pb-4">
+        <div className="bg-primary/10 p-2.5 sm:p-3 rounded-full mt-1 shrink-0">
+          <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
         </div>
         <div>
-          <h3 className="text-xl font-semibold leading-none tracking-tight">
+          <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight">
+
             Welcome to Your Fitness Journey!
           </h3>
           <p className="text-sm text-muted-foreground mt-1">

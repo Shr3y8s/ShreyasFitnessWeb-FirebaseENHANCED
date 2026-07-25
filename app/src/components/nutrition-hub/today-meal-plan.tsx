@@ -229,8 +229,9 @@ export function TodayMealPlan({ weeklyMealPlan, selectedDate, compact = false, c
               <div 
                 key={meal.name} 
                 className={cn(
-                  "p-4 rounded-lg border transition-all duration-300",
-                  isMealChecked 
+                  "p-3 sm:p-4 rounded-lg border transition-all duration-300",
+                  isMealChecked
+
                     ? "bg-background/50 border-muted scale-[0.98] opacity-75" 
                     : "bg-secondary/50 border-secondary hover:bg-secondary hover:shadow-sm"
                 )}

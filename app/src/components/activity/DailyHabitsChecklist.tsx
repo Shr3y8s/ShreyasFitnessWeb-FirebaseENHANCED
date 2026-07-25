@@ -124,17 +124,18 @@ export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: Dail
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Progress Ring with Stats */}
-        <div className="flex items-center gap-4 pb-3 border-b">
+        <div className="flex items-center gap-3 sm:gap-4 pb-3 border-b">
           {/* Circular Progress Ring */}
           <CircularProgress 
             percentage={percentage} 
-            size={80}
+            size={72}
             strokeWidth={8}
           />
           
           {/* Stats */}
-          <div className="flex-1">
-            <p className="text-xl font-bold text-foreground">
+          <div className="flex-1 min-w-0">
+            <p className="text-lg sm:text-xl font-bold text-foreground">
+
               {completedCount} of {habits.length}
             </p>
             <p className="text-sm text-muted-foreground">

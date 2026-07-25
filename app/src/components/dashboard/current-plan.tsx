@@ -55,18 +55,19 @@ export function CurrentPlan({ trainingProtocol }: CurrentPlanProps) {
   return (
     <div className="rounded-xl border bg-primary/5 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
 
-      <div className="flex flex-col space-y-1.5 p-6">
+      <div className="flex flex-col space-y-1.5 p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <Goal className="w-6 h-6 text-primary" />
-          <h3 className="text-xl font-semibold leading-none tracking-tight">
+          <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight">
             {title}
           </h3>
         </div>
       </div>
 
-      <div className="p-6 pt-0 space-y-4">
+      <div className="p-4 sm:p-6 pt-0 space-y-4">
         {/* 3-column stat grid */}
-        <div className="grid grid-cols-3 gap-3 text-center p-4 bg-secondary/50 rounded-lg border border-primary/50">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center p-3 sm:p-4 bg-secondary/50 rounded-lg border border-primary/50">
+
           {/* Focus */}
           <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
             <div className="text-primary">
