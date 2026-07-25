@@ -137,18 +137,18 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         {/* Weekly Workouts */}
         {assignments.length > 0 ? (
           <div>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
               <h3 className="font-bold">Scheduled Workouts:</h3>
               <span className="text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1.5">
                 <Calendar className="h-3 w-3" />
                 {formatWeekRange(new Date(getCurrentWeekISO()))}
               </span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {assignments.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="p-4 bg-primary/5 rounded-lg border border-primary/20 hover:bg-primary/10 transition-colors"
+                  className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20 hover:bg-primary/10 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0 mr-2">

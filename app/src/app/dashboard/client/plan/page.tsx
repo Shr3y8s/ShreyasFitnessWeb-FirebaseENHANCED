@@ -85,11 +85,11 @@ export default function PlanPage() {
 
   return (
     <ClientPageShell>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
             {/* Header */}
             <div>
-              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3 text-foreground">
-                <ClipboardList className="h-8 w-8 text-primary" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-3 text-foreground">
+                <ClipboardList className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                 My Training Plan
               </h1>
               <p className="text-muted-foreground mt-1">
@@ -114,7 +114,7 @@ export default function PlanPage() {
                 </div>
 
                 {/* 2-Column Grid Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                   {/* Left Column: Main content (2/3 width) */}
                   <div className="lg:col-span-2 space-y-6">
                     {/* Weekly Focus / Plan Summary */}
@@ -137,7 +137,7 @@ export default function PlanPage() {
                       {/* Training Section Header */}
                       <div className="flex items-center gap-3 pt-2">
                         <Dumbbell className="h-6 w-6 text-primary" />
-                        <h2 className="text-2xl font-bold text-foreground">Training</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold text-foreground">Training</h2>
                         <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
                       </div>
                       
@@ -155,7 +155,7 @@ export default function PlanPage() {
                         {/* Nutrition Section Header */}
                         <div className="flex items-center gap-3 pt-2">
                           <Apple className="h-6 w-6 text-primary" />
-                          <h2 className="text-2xl font-bold text-foreground">Nutrition</h2>
+                          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Nutrition</h2>
                           <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
                         </div>
                         

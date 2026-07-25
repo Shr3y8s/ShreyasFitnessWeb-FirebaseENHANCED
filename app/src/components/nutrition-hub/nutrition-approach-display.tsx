@@ -160,19 +160,19 @@ export function NutritionApproachDisplay({
   return (
     <>
       {/* Hero Card - Assigned Approach */}
-      <Card className={`p-6 ${assignedApproachData.colorTheme} border-2 border-primary/30 transition-all duration-300 hover:shadow-glow hover:-translate-y-1`}>
+      <Card className={`p-4 sm:p-6 ${assignedApproachData.colorTheme} border-2 border-primary/30 transition-all duration-300 hover:shadow-glow hover:-translate-y-1`}>
         <div className="space-y-4">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-3">
-              <Icon className="h-12 w-12 text-primary" />
+              <Icon className="h-10 w-10 sm:h-12 sm:w-12 text-primary shrink-0" />
               <div>
-                <h2 className="text-2xl font-bold">{assignedApproachData.title}</h2>
+                <h2 className="text-lg sm:text-2xl font-bold">{assignedApproachData.title}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Set by {trainerName} on {formatDate(assignedDate)}
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="bg-primary text-primary-foreground">
+            <Badge variant="outline" className="bg-primary text-primary-foreground shrink-0">
               Your Approach
             </Badge>
           </div>
@@ -190,11 +190,11 @@ export function NutritionApproachDisplay({
             </p>
           </div>
           
-          <div className="flex justify-between items-center pt-2 border-t">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-2 border-t">
             <Button
               variant="ghost"
               size="sm"
-              className="text-foreground hover:text-foreground/80"
+              className="w-full sm:w-auto justify-center text-foreground hover:text-foreground/80"
               onClick={() => handleMoreInfo(assignedApproachData)}
             >
               Learn More About This Approach <Info className="ml-2 h-4 w-4" />
@@ -204,7 +204,7 @@ export function NutritionApproachDisplay({
               variant="outline"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="gap-2"
+              className="w-full sm:w-auto justify-center gap-2"
             >
               {isExpanded ? (
                 <>Hide Other Approaches <ChevronUp className="h-4 w-4" /></>
@@ -223,7 +223,7 @@ export function NutritionApproachDisplay({
             <div>
               <h3 className="text-xl font-bold mb-2">All Nutrition Approaches</h3>
               <p className="text-sm text-muted-foreground">
-                Your coach chose the best approach for you, but here's information about all available methods.
+                Your coach chose the best approach for you, but here&apos;s information about all available methods.
               </p>
             </div>
             
@@ -236,7 +236,7 @@ export function NutritionApproachDisplay({
                   return (
                     <Card 
                       key={approach.id}
-                      className={`p-6 ${approach.colorTheme} ${isActive ? 'border-2 border-primary' : 'border-0'} relative`}
+                      className={`p-4 sm:p-6 ${approach.colorTheme} ${isActive ? 'border-2 border-primary' : 'border-0'} relative`}
                     >
                       {isActive && (
                         <div className="absolute top-4 right-4">

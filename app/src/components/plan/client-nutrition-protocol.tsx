@@ -308,7 +308,7 @@ export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutriti
 
         {/* CTA Button */}
         <div className="pt-4 border-t">
-          <Link href="/nutrition" className="block">
+          <Link href="/dashboard/client/nutrition" className="block">
             <Button size="lg" className="w-full gap-2">
               Go to Nutrition Hub
               <ArrowRight className="h-4 w-4" />
