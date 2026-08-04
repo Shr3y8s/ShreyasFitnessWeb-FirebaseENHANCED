@@ -97,7 +97,7 @@ export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: Dail
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Target className="h-5 w-5 text-green-500" />
             Daily Habits
@@ -107,8 +107,7 @@ export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: Dail
             <Button
               onClick={handleCompleteAll}
               disabled={completingAll}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="min-h-11 shrink-0 bg-green-600 hover:bg-green-700 text-white transition-transform active:scale-95"
             >
               {completingAll ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -157,11 +156,12 @@ export function DailyHabitsChecklist({ habits, completedHabits, onToggle }: Dail
                   key={habit.id}
                   onClick={() => handleToggle(habit.id)}
                   disabled={saving || completingAll}
-                  className={`w-full flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                  className={`w-full min-h-14 flex items-start gap-3 p-3.5 rounded-lg border text-left transition-all active:scale-[0.99] ${
                     completed
                       ? 'bg-green-50 border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800'
                       : 'bg-background hover:bg-accent border-border'
                   } ${(saving || completingAll) ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+                  aria-pressed={completed}
                 >
                   <div className="flex-shrink-0 mt-0.5">
                     {saving ? (

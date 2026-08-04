@@ -36,22 +36,23 @@ export function LissCardioTracker({
   const isComplete = weeklyCount >= weeklyTarget;
 
   return (
-    <Card className="transition-all duration-300 hover:shadow-md">
+    <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base font-semibold">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <HeartPulse className="w-5 h-5 text-red-500" />
             Cardio
           </CardTitle>
-          {/* Weekly progress badge */}
+          {/* Weekly progress badge — abbreviated on phones, spelled out from sm+ */}
           <span
-            className={`text-sm font-bold px-2.5 py-0.5 rounded-full ${
+            className={`shrink-0 text-sm font-bold px-2.5 py-1 rounded-full tabular-nums ${
               isComplete
-                ? 'bg-green-100 text-green-700'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                 : 'bg-primary/10 text-primary'
             }`}
           >
-            {weeklyCount} / {weeklyTarget} this week
+            {weeklyCount}/{weeklyTarget}
+            <span className="hidden sm:inline"> this week</span>
           </span>
         </div>
       </CardHeader>
@@ -75,25 +76,27 @@ export function LissCardioTracker({
           </p>
         </div>
 
-        {/* Today log/unlog button */}
+        {/* Today log/unlog button — labels shorten on narrow screens */}
         {loggedToday ? (
           <Button
             variant="outline"
-            className="w-full border-green-500 text-green-700 hover:bg-green-50"
+            className="w-full min-h-11 border-green-500 text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 transition-transform active:scale-95"
             onClick={() => onToggle(false)}
             disabled={isLoading}
           >
-            <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
-            Session Logged Today — Undo
+            <CheckCircle2 className="w-4 h-4 mr-2 shrink-0 text-green-600" />
+            <span className="sm:hidden">Logged Today — Undo</span>
+            <span className="hidden sm:inline">Session Logged Today — Undo</span>
           </Button>
         ) : (
           <Button
-            className="w-full"
+            className="w-full min-h-11 transition-transform active:scale-95"
             onClick={() => onToggle(true)}
             disabled={isLoading}
           >
-            <HeartPulse className="w-4 h-4 mr-2" />
-            Log Cardio Session for Today
+            <HeartPulse className="w-4 h-4 mr-2 shrink-0" />
+            <span className="sm:hidden">Log Session for Today</span>
+            <span className="hidden sm:inline">Log Cardio Session for Today</span>
           </Button>
         )}
       </CardContent>

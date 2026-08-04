@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Scale, Save, Loader2, TrendingDown, TrendingUp, Info } from 'lucide-react';
+import { Scale, Save, Loader2, TrendingDown, TrendingUp, Info, ChevronDown } from 'lucide-react';
 import { WeightLog } from '@/types/activity';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface WeightLoggerProps {
   currentLog?: WeightLog;
@@ -21,6 +23,32 @@ interface WeightLoggerProps {
   ) => Promise<void>;
 }
 
+/**
+ * Tap-friendly replacement for a hover-only tooltip.
+ *
+ * The old implementation put helper text behind a hover Tooltip on a 12px Info
+ * icon — unreachable on a touch device. A Popover works for both mouse hover
+ * users (click) and touch users (tap), and the trigger is a real 32px button.
+ */
+function FieldHelp({ children, label }: { children: React.ReactNode; label: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label={`More information about ${label}`}
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="max-w-[16rem] text-sm" side="top">
+        {children}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerProps) {
   const { toast } = useToast();
   const [weight, setWeight] = useState<string>(currentLog?.weight.toString() || '');
@@ -32,6 +60,13 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Progressive disclosure: body fat / height / notes are optional or set-once,
+  // so they're collapsed by default to keep the daily action (weight + save) at
+  // the top on a phone. Auto-expanded for clients who already use those fields.
+  const [detailsOpen, setDetailsOpen] = useState(
+    !!(currentLog?.bodyFat || currentLog?.height || currentLog?.notes)
+  );
+
   useEffect(() => {
     if (currentLog) {
       setWeight(currentLog.weight.toString());
@@ -41,6 +76,9 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
       setHeightUnit(currentLog.heightUnit || 'in');
       setNotes(currentLog.notes || '');
       setHasChanges(false);
+      if (currentLog.bodyFat || currentLog.height || currentLog.notes) {
+        setDetailsOpen(true);
+      }
     }
   }, [currentLog]);
 
@@ -54,8 +92,8 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
     }
 
     // Convert to kg and meters
-    let weightKg = unit === 'lbs' ? weightValue * 0.453592 : weightValue;
-    let heightM = heightUnit === 'in' ? heightValue * 0.0254 : heightValue / 100;
+    const weightKg = unit === 'lbs' ? weightValue * 0.453592 : weightValue;
+    const heightM = heightUnit === 'in' ? heightValue * 0.0254 : heightValue / 100;
 
     return weightKg / (heightM * heightM);
   };
@@ -137,6 +175,7 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
         description: "Body fat percentage should be between 1% and 60%",
         variant: "destructive",
       });
+      setDetailsOpen(true); // reveal the offending field
       return;
     }
 
@@ -151,6 +190,7 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
           description: `Please enter a height between ${minHeight} and ${maxHeight} ${heightUnit}`,
           variant: "destructive",
         });
+        setDetailsOpen(true); // reveal the offending field
         return;
       }
     }
@@ -211,6 +251,11 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
 
   const trend = getTrend();
 
+  // Shared input styling — min-h-11 for a comfortable touch target and text-base
+  // (16px) so iOS Safari doesn't zoom the page when the field receives focus.
+  const inputClass =
+    'flex-1 min-w-0 min-h-11 px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-primary focus:border-transparent';
+
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
       <CardHeader>
@@ -222,83 +267,93 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
       <CardContent className="space-y-4">
         {/* Current Stats Display */}
         {currentLog && (
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Stats</p>
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <p className="text-2xl font-bold text-primary">
-                      {currentLog.weight} <span className="text-lg">{currentLog.unit}</span>
-                    </p>
-                    {currentLog.bodyFat && (
-                      <>
-                        <span className="text-muted-foreground">|</span>
-                        <p className="text-lg font-semibold text-primary">
-                          Body Fat: {currentLog.bodyFat}%
-                        </p>
-                      </>
-                    )}
-                    {currentLog.bmi && (
-                      <>
-                        <span className="text-muted-foreground">|</span>
-                        <p className="text-lg font-semibold text-primary">
-                          BMI: {currentLog.bmi.toFixed(1)}
-                        </p>
-                      </>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Logged {new Date(currentLog.date).toLocaleDateString()}
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 sm:p-4">
+            <p className="text-sm text-muted-foreground">Current Stats</p>
+
+            {/* Metrics wrap freely; the trend badge drops to its own line on
+                narrow screens instead of squeezing the numbers. */}
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <p className="text-2xl font-bold text-primary tabular-nums">
+                {currentLog.weight} <span className="text-lg">{currentLog.unit}</span>
+              </p>
+              {currentLog.bodyFat && (
+                <>
+                  <span className="text-muted-foreground" aria-hidden="true">|</span>
+                  <p className="text-base sm:text-lg font-semibold text-primary tabular-nums">
+                    BF: {currentLog.bodyFat}%
                   </p>
+                </>
+              )}
+              {currentLog.bmi && (
+                <>
+                  <span className="text-muted-foreground" aria-hidden="true">|</span>
+                  <p className="text-base sm:text-lg font-semibold text-primary tabular-nums">
+                    BMI: {currentLog.bmi.toFixed(1)}
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Logged {new Date(currentLog.date).toLocaleDateString()}
+              </p>
+              {trend && (
+                <div
+                  className={cn(
+                    'flex items-center gap-1',
+                    trend.direction === 'down'
+                      ? 'text-green-600'
+                      : trend.direction === 'up'
+                        ? 'text-orange-600'
+                        : 'text-muted-foreground'
+                  )}
+                >
+                  {trend.direction === 'down' && <TrendingDown className="h-4 w-4" />}
+                  {trend.direction === 'up' && <TrendingUp className="h-4 w-4" />}
+                  <span className="text-sm font-medium tabular-nums">
+                    {trend.direction === 'same' ? 'No change' : `${trend.amount.toFixed(1)} ${trend.unit}`}
+                  </span>
                 </div>
-                {trend && (
-                  <div className={`flex items-center gap-1 ${
-                    trend.direction === 'down' ? 'text-green-600' : 
-                    trend.direction === 'up' ? 'text-orange-600' : 
-                    'text-gray-600'
-                  }`}>
-                    {trend.direction === 'down' && <TrendingDown className="h-5 w-5" />}
-                    {trend.direction === 'up' && <TrendingUp className="h-5 w-5" />}
-                    <span className="text-sm font-medium">
-                      {trend.direction === 'same' ? 'No change' : `${trend.amount.toFixed(1)} ${trend.unit}`}
-                    </span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Weight Input Section */}
+        {/* ---- Primary action: weight + unit + save ----
+            Kept always-visible and near the top so logging a weigh-in on a phone
+            is a two-tap job. Everything optional lives in the collapsible below. */}
         <div className="space-y-4 border-t pt-4">
-          <h4 className="font-medium text-sm">Today&apos;s Measurements</h4>
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="font-medium text-sm">Today&apos;s Weigh-In</h4>
 
-          {/* Unit Selector */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Weight Unit</label>
+            {/* Unit toggle sits inline with the heading to save vertical space */}
             <div className="inline-flex rounded-lg border border-border p-1 bg-muted/50">
               <button
                 type="button"
                 onClick={() => handleUnitChange('lbs')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={cn(
+                  'min-h-9 px-4 text-sm font-medium rounded-md transition-all',
                   unit === 'lbs'
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                )}
                 disabled={saving}
+                aria-pressed={unit === 'lbs'}
               >
                 lbs
               </button>
               <button
                 type="button"
                 onClick={() => handleUnitChange('kg')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={cn(
+                  'min-h-9 px-4 text-sm font-medium rounded-md transition-all',
                   unit === 'kg'
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                )}
                 disabled={saving}
+                aria-pressed={unit === 'kg'}
               >
                 kg
               </button>
@@ -307,142 +362,29 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
 
           {/* Weight Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Weight *</label>
+            <label htmlFor="weight-input" className="text-sm font-medium">Weight *</label>
             <div className="flex gap-2">
               <input
+                id="weight-input"
                 type="text"
                 inputMode="decimal"
                 value={weight}
                 onChange={(e) => handleWeightChange(e.target.value)}
                 placeholder={unit === 'lbs' ? '150.0' : '68.0'}
-                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-lg font-semibold"
+                className={cn(inputClass, 'text-lg font-semibold tabular-nums')}
                 disabled={saving}
               />
-              <span className="flex items-center px-3 py-2 border rounded-lg bg-muted text-muted-foreground font-medium">
+              <span className="flex shrink-0 items-center px-3 border rounded-lg bg-muted text-muted-foreground font-medium">
                 {unit}
               </span>
             </div>
           </div>
 
-          {/* Body Fat Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-1">
-              Body Fat % (optional)
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Requires a body composition scale. Track over time to monitor muscle gain and fat loss.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="decimal"
-                value={bodyFat}
-                onChange={(e) => handleBodyFatChange(e.target.value)}
-                placeholder="18.5"
-                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={saving}
-              />
-              <span className="flex items-center px-3 py-2 border rounded-lg bg-muted text-muted-foreground font-medium">
-                %
-              </span>
-            </div>
-          </div>
-
-          {/* Height Input */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium flex items-center gap-1">
-              Height (for BMI calculation)
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Set once or update anytime. Used to calculate your BMI.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="decimal"
-                value={height}
-                onChange={(e) => handleHeightChange(e.target.value)}
-                placeholder={heightUnit === 'in' ? "70" : "178"}
-                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={saving}
-              />
-              <div className="inline-flex rounded-lg border border-border bg-muted/50">
-                <button
-                  type="button"
-                  onClick={() => handleHeightUnitChange('in')}
-                  className={`px-3 py-2 text-sm font-medium rounded-l-lg transition-all ${
-                    heightUnit === 'in'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  disabled={saving}
-                >
-                  in
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleHeightUnitChange('cm')}
-                  className={`px-3 py-2 text-sm font-medium rounded-r-lg transition-all ${
-                    heightUnit === 'cm'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                  disabled={saving}
-                >
-                  cm
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* BMI Display */}
-          {bmi && (
-            <div className="bg-muted/50 border border-border rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Calculated BMI:</span>
-                <div className="text-right">
-                  <span className="text-xl font-bold">{bmi.toFixed(1)}</span>
-                  <span className={`ml-2 text-sm font-medium ${bmiCategory?.color}`}>
-                    ({bmiCategory?.label})
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Notes (optional)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => { setNotes(e.target.value); setHasChanges(true); }}
-              placeholder="Any observations about your progress..."
-              rows={2}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm resize-none"
-              disabled={saving}
-            />
-          </div>
-
-          {/* Save Button */}
+          {/* Save Button — right under the weight field, the only required input */}
           <Button
             onClick={handleSave}
             disabled={saving || !weight || parseFloat(weight) <= 0}
-            size="default"
-            className="w-full"
+            className="w-full min-h-11 transition-transform active:scale-95"
           >
             {saving ? (
               <>
@@ -456,6 +398,138 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
               </>
             )}
           </Button>
+
+          {/* ---- Optional details, collapsed by default ---- */}
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full min-h-11 items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              >
+                <ChevronDown
+                  className={cn('h-4 w-4 transition-transform duration-200', detailsOpen && 'rotate-180')}
+                />
+                {detailsOpen ? 'Hide extra details' : 'Add body fat, height & notes'}
+              </button>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="space-y-4 pt-4">
+              {/* Body Fat Input */}
+              <div className="space-y-2">
+                <label htmlFor="bodyfat-input" className="flex items-center gap-1 text-sm font-medium">
+                  Body Fat % (optional)
+                  <FieldHelp label="body fat percentage">
+                    Requires a body composition scale. Track over time to monitor muscle gain and fat loss.
+                  </FieldHelp>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="bodyfat-input"
+                    type="text"
+                    inputMode="decimal"
+                    value={bodyFat}
+                    onChange={(e) => handleBodyFatChange(e.target.value)}
+                    placeholder="18.5"
+                    className={cn(inputClass, 'tabular-nums')}
+                    disabled={saving}
+                  />
+                  <span className="flex shrink-0 items-center px-3 border rounded-lg bg-muted text-muted-foreground font-medium">
+                    %
+                  </span>
+                </div>
+              </div>
+
+              {/* Height Input */}
+              <div className="space-y-2">
+                <label htmlFor="height-input" className="flex items-center gap-1 text-sm font-medium">
+                  Height
+                  <FieldHelp label="height">
+                    Set this once and it&apos;s remembered — it&apos;s only used to calculate your BMI.
+                  </FieldHelp>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="height-input"
+                    type="text"
+                    inputMode="decimal"
+                    value={height}
+                    onChange={(e) => handleHeightChange(e.target.value)}
+                    placeholder={heightUnit === 'in' ? '70' : '178'}
+                    className={cn(inputClass, 'tabular-nums')}
+                    disabled={saving}
+                  />
+                  <div className="inline-flex shrink-0 rounded-lg border border-border bg-muted/50 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => handleHeightUnitChange('in')}
+                      className={cn(
+                        'min-h-11 px-3 text-sm font-medium transition-all',
+                        heightUnit === 'in'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      disabled={saving}
+                      aria-pressed={heightUnit === 'in'}
+                    >
+                      in
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleHeightUnitChange('cm')}
+                      className={cn(
+                        'min-h-11 px-3 text-sm font-medium transition-all',
+                        heightUnit === 'cm'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                      disabled={saving}
+                      aria-pressed={heightUnit === 'cm'}
+                    >
+                      cm
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* BMI Display */}
+              {bmi && (
+                <div className="bg-muted/50 border border-border rounded-lg p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium">Calculated BMI:</span>
+                    <div className="text-right">
+                      <span className="text-xl font-bold tabular-nums">{bmi.toFixed(1)}</span>
+                      <span className={cn('ml-2 text-sm font-medium', bmiCategory?.color)}>
+                        ({bmiCategory?.label})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <label htmlFor="weight-notes" className="text-sm font-medium">Notes (optional)</label>
+                <textarea
+                  id="weight-notes"
+                  value={notes}
+                  onChange={(e) => { setNotes(e.target.value); setHasChanges(true); }}
+                  placeholder="Any observations about your progress..."
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                  disabled={saving}
+                />
+              </div>
+
+              {/* Unsaved-changes nudge, since Save lives above this section */}
+              {hasChanges && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Tap <span className="font-medium text-foreground">
+                    {currentLog ? 'Update Weigh-In' : 'Log Weigh-In'}
+                  </span> above to save these details.
+                </p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Recent History */}
@@ -464,24 +538,28 @@ export function WeightLogger({ currentLog, recentLogs, onSave }: WeightLoggerPro
             <h4 className="text-sm font-medium mb-2">Recent Weigh-Ins</h4>
             <div className="space-y-1">
               {recentLogs.slice(0, 5).map((log) => (
-                <div key={log.date} className="flex justify-between items-center text-sm py-1.5 border-b last:border-0">
+                <div
+                  key={log.date}
+                  className="flex flex-wrap justify-between items-center gap-x-2 gap-y-0.5 text-sm py-2 border-b last:border-0"
+                >
                   <span className="text-muted-foreground">
                     {new Date(log.date).toLocaleDateString('en-US', { 
                       month: 'short', 
                       day: 'numeric' 
                     })}
                   </span>
-                  <div className="flex items-center gap-2 text-right">
-                    <span className="font-medium">
+                  {/* Wraps rather than overflowing when BF% and BMI are both set */}
+                  <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5">
+                    <span className="font-medium tabular-nums">
                       {log.weight} {log.unit}
                     </span>
                     {log.bodyFat && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground tabular-nums">
                         {log.bodyFat}% BF
                       </span>
                     )}
                     {log.bmi && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground tabular-nums">
                         BMI {log.bmi.toFixed(1)}
                       </span>
                     )}

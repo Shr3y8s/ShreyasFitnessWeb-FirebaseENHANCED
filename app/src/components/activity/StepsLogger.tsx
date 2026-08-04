@@ -103,18 +103,20 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Progress Ring with Stats and Complete Button */}
-        <div className="flex items-center gap-4">
+        {/* Progress Ring with Stats and Complete Button.
+            flex-wrap + w-full lets the button drop to its own full-width row on
+            phones, while staying inline on sm+ where there's room. */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           {/* Circular Progress Ring */}
           <CircularProgress 
             percentage={percentage} 
-            size={80}
+            size={72}
             strokeWidth={8}
           />
           
           {/* Stats */}
-          <div className="flex-1">
-            <p className="text-2xl font-bold text-foreground">
+          <div className="flex-1 min-w-0">
+            <p className="text-2xl font-bold text-foreground tabular-nums">
               {currentSteps.toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -126,8 +128,7 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
           <Button
             onClick={handleCompleteGoal}
             disabled={saving}
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="w-full sm:w-auto min-h-11 bg-green-600 hover:bg-green-700 text-white transition-transform active:scale-95"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -145,6 +146,7 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
           <label className="text-sm font-medium text-muted-foreground">
             Or Enter Custom Amount
           </label>
+          {/* text-base (16px) on the input prevents iOS Safari auto-zoom on focus */}
           <div className="flex gap-2">
             <input
               type="text"
@@ -152,13 +154,13 @@ export function StepsLogger({ currentLog, goal, onSave }: StepsLoggerProps) {
               value={steps}
               onChange={(e) => handleStepsChange(e.target.value)}
               placeholder="Enter steps"
-              className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="flex-1 min-w-0 min-h-11 px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={saving}
             />
             <Button
               onClick={handleSave}
               disabled={!hasChanges || saving || !steps}
-              size="default"
+              className="min-h-11 shrink-0 transition-transform active:scale-95"
             >
               {saving ? (
                 <>

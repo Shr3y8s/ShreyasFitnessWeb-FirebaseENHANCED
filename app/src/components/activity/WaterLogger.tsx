@@ -120,18 +120,20 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Progress Ring with Stats and Complete Button */}
-        <div className="flex items-center gap-4">
+        {/* Progress Ring with Stats and Complete Button.
+            flex-wrap + w-full lets the button drop to its own full-width row on
+            phones, while staying inline on sm+ where there's room. */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           {/* Circular Progress Ring */}
           <CircularProgress 
             percentage={percentage} 
-            size={80}
+            size={72}
             strokeWidth={8}
           />
           
           {/* Stats */}
-          <div className="flex-1">
-            <p className="text-2xl font-bold text-foreground">
+          <div className="flex-1 min-w-0">
+            <p className="text-2xl font-bold text-foreground tabular-nums">
               {currentAmount}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -143,8 +145,7 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
           <Button
             onClick={handleCompleteGoal}
             disabled={saving}
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="w-full sm:w-auto min-h-11 bg-green-600 hover:bg-green-700 text-white transition-transform active:scale-95"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -165,10 +166,9 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
               <Button
                 key={addAmount}
                 variant="outline"
-                size="sm"
                 onClick={() => handleQuickAdd(addAmount)}
                 disabled={saving}
-                className="text-sm"
+                className="min-h-11 text-sm transition-transform active:scale-95"
               >
                 <Plus className="h-3 w-3 mr-1" />
                 {addAmount} {unit}
@@ -182,14 +182,16 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
           <label className="text-sm font-medium text-muted-foreground">
             Or Enter Custom Amount
           </label>
-          <div className="flex gap-2">
-            <div className="flex items-center flex-1 border rounded-lg">
+          {/* Stepper gets its own full-width row on mobile so the −/+ targets stay
+              a comfortable size; Save sits beside it from sm+ upward. */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex items-center flex-1 border rounded-lg overflow-hidden">
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => handleQuickAdd(-quickAddAmounts[0])}
                 disabled={saving || currentAmount <= 0}
-                className="rounded-r-none"
+                className="min-h-11 rounded-none px-4 transition-transform active:scale-95"
+                aria-label={`Decrease by ${quickAddAmounts[0]} ${unit}`}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -199,15 +201,16 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
                 value={amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="0"
-                className="flex-1 px-3 py-2 text-center border-0 focus:ring-0 text-lg font-semibold"
+                className="flex-1 min-w-0 min-h-11 px-2 py-2 text-center border-0 focus:ring-0 text-lg font-semibold tabular-nums"
                 disabled={saving}
+                aria-label={`Water amount in ${unit}`}
               />
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => handleQuickAdd(quickAddAmounts[0])}
                 disabled={saving}
-                className="rounded-l-none"
+                className="min-h-11 rounded-none px-4 transition-transform active:scale-95"
+                aria-label={`Increase by ${quickAddAmounts[0]} ${unit}`}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -215,7 +218,7 @@ export function WaterLogger({ currentLog, goal, unit, onSave }: WaterLoggerProps
             <Button
               onClick={handleSave}
               disabled={!hasChanges || saving}
-              size="default"
+              className="min-h-11 sm:w-auto transition-transform active:scale-95"
             >
               {saving ? (
                 <>

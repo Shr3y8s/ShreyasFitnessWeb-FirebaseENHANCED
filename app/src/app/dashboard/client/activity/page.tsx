@@ -7,8 +7,7 @@ import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constan
 import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getTodayDateString } from '@/types/activity';
+import { Loader2, ChevronLeft, ChevronRight, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   getDailyActivity, 
@@ -26,6 +25,8 @@ import { WaterLogger } from '@/components/activity/WaterLogger';
 import { DailyHabitsChecklist } from '@/components/activity/DailyHabitsChecklist';
 import { WeightLogger } from '@/components/activity/WeightLogger';
 import { LissCardioTracker } from '@/components/activity/LissCardioTracker';
+import { TodaysProgressHero, ACTIVITY_SECTION_IDS } from '@/components/activity/TodaysProgressHero';
+import { useConfetti } from '@/hooks/use-confetti';
 import type { DailyActivityData, WeightLog } from '@/types/activity';
 import type { ClientPlan } from '@/types/plan';
 
@@ -34,7 +35,7 @@ import { getTodayLocal, getDaysAgo } from '@/lib/date-utils';
 // Get today's date in YYYY-MM-DD format
 const getTodayDate = getTodayLocal;
 
-// Format date for display
+// Format date for display (desktop — full, spelled out)
 const formatDateDisplay = (dateStr: string) => {
   const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('en-US', { 
@@ -45,12 +46,29 @@ const formatDateDisplay = (dateStr: string) => {
   });
 };
 
+// Compact variant for phones so the label never wraps to two lines
+const formatDateDisplayShort = (dateStr: string) => {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 // Get 30 days ago
 const getThirtyDaysAgo = () => getDaysAgo(30);
+
+/** Parses "2x per week" → 2. Mirrors LissCardioTracker's own parsing. */
+const parseWeeklyTarget = (frequency: string): number => {
+  const match = frequency.match(/^(\d+)/);
+  return match ? parseInt(match[1], 10) : 1;
+};
 
 export default function DailyActivityPage() {
   const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
+  const { schoolPride } = useConfetti();
   
   const [planData, setPlanData] = useState<ClientPlan | null>(null);
   const [activityData, setActivityData] = useState<DailyActivityData | null>(null);
@@ -330,27 +348,74 @@ export default function DailyActivityPage() {
     );
   }
 
+  /* ---- Derived summary state for TodaysProgressHero ----
+     All values come from data already fetched above — no extra reads. A module
+     counts as "assigned" only if the coach configured it, so the master ring
+     never penalizes a client for a goal they were never given. */
+  const stepsTarget = planData?.stepGoal?.target ?? 0;
+  const stepsLogged = activityData?.steps?.steps ?? 0;
+  const waterTarget = planData?.waterGoal?.target ?? 0;
+  const waterLogged = activityData?.water?.amount ?? 0;
+  const habitList = planData?.dailyHabits?.habits ?? [];
+  const habitsDone = habitList.filter((h) =>
+    activityData?.habits?.some((log) => log.habitId === h.id && log.completed)
+  ).length;
+  const cardioTarget = planData?.lissCardio
+    ? parseWeeklyTarget(planData.lissCardio.frequency)
+    : 0;
+
+  const heroModules = {
+    steps: {
+      assigned: !!planData?.stepGoal,
+      percentage: stepsTarget > 0 ? Math.min(100, (stepsLogged / stepsTarget) * 100) : 0,
+      label: stepsLogged >= stepsTarget && stepsTarget > 0 ? '✓' : `${stepsLogged.toLocaleString()}`,
+    },
+    water: {
+      assigned: !!planData?.waterGoal,
+      percentage: waterTarget > 0 ? Math.min(100, (waterLogged / waterTarget) * 100) : 0,
+      label: waterLogged >= waterTarget && waterTarget > 0 ? '✓' : `${waterLogged}/${waterTarget}`,
+    },
+    habits: {
+      assigned: habitList.length > 0,
+      percentage: habitList.length > 0 ? (habitsDone / habitList.length) * 100 : 0,
+      label: habitsDone === habitList.length && habitList.length > 0 ? '✓' : `${habitsDone}/${habitList.length}`,
+    },
+    cardio: {
+      assigned: !!planData?.lissCardio,
+      percentage: cardioTarget > 0 ? Math.min(100, (weeklyCardioCount / cardioTarget) * 100) : 0,
+      label:
+        weeklyCardioCount >= cardioTarget && cardioTarget > 0
+          ? '✓'
+          : `${weeklyCardioCount}/${cardioTarget}`,
+    },
+  };
+
 
   return (
     <ClientPageShell>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             {/* Header */}
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Log Daily Activities</h1>
-              <p className="text-muted-foreground mt-1">Track your daily progress</p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Log Daily Activities</h1>
+              <p className="text-muted-foreground text-sm mt-1">Track your daily progress</p>
             </div>
 
-            {/* Date Navigation */}
-            <div className="dashboard-card rounded-lg p-4">
-
-              <div className="mb-3 text-center">
-                <p className="text-sm font-semibold text-foreground">
-                  Logging activity data for:{' '}
-                  <span className="text-primary">{formatDateDisplay(selectedDate)}</span>
+            {/* Date Navigation — sticks below the mobile top bar (which is h-[57px])
+                so the day you're logging is always visible while scrolling the
+                stack of logger cards. Static on md+ where the sidebar is shown. */}
+            <div className="dashboard-card rounded-lg p-3 sm:p-4 sticky top-[57px] z-20 md:static md:z-auto backdrop-blur-md">
+              <div className="mb-2 sm:mb-3 text-center">
+                <p className="text-xs sm:text-sm font-semibold text-foreground">
+                  <span className="hidden sm:inline">Logging activity data for: </span>
+                  <span className="text-primary">
+                    <span className="sm:hidden">{formatDateDisplayShort(selectedDate)}</span>
+                    <span className="hidden sm:inline">{formatDateDisplay(selectedDate)}</span>
+                  </span>
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              {/* Single row at every width: [◀] [ date ] [▶] */}
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
                 {/* Previous Day Arrow */}
                 <Button
                   variant="outline"
@@ -364,20 +429,22 @@ export default function DailyActivityPage() {
                     }
                   }}
                   disabled={selectedDate <= getThirtyDaysAgo()}
-                  className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                  className="h-11 w-11 shrink-0 rounded-full transition-transform active:scale-95"
                   title="Previous Day"
+                  aria-label="Previous day"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
 
-                {/* Date Picker */}
+                {/* Date Picker — flexes to fill the space between the arrows */}
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   max={getTodayDate()}
                   min={getThirtyDaysAgo()}
-                  className="px-4 py-2 border-2 border-primary/30 rounded-md bg-background text-foreground text-base font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  aria-label="Select date to log"
+                  className="flex-1 min-w-0 sm:flex-none min-h-11 px-3 sm:px-4 py-2 border-2 border-primary/30 rounded-md bg-background text-foreground text-base font-medium text-center focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 />
 
                 {/* Next Day Arrow */}
@@ -393,71 +460,119 @@ export default function DailyActivityPage() {
                     }
                   }}
                   disabled={selectedDate >= getTodayDate()}
-                  className="h-10 w-10 rounded-full transition-all hover:scale-110"
+                  className="h-11 w-11 shrink-0 rounded-full transition-transform active:scale-95"
                   title="Next Day"
+                  aria-label="Next day"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
 
-                {/* Jump to Today Button - only shown when not on today */}
+                {/* Jump to Today — inline on desktop only */}
                 {selectedDate !== getTodayDate() && (
                   <Button
                     variant="default"
-                    size="sm"
                     onClick={() => setSelectedDate(getTodayDate())}
-                    className="font-semibold px-4"
+                    className="hidden sm:inline-flex min-h-11 font-semibold px-4 transition-transform active:scale-95"
                   >
                     Jump to Today
                   </Button>
                 )}
               </div>
+
+              {/* Jump to Today — full-width row on phones for an easy tap */}
+              {selectedDate !== getTodayDate() && (
+                <Button
+                  variant="default"
+                  onClick={() => setSelectedDate(getTodayDate())}
+                  className="sm:hidden w-full min-h-11 mt-2 font-semibold transition-transform active:scale-95"
+                >
+                  Jump to Today
+                </Button>
+              )}
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              /* Card-shaped skeletons instead of a bare spinner — on a slow mobile
+                 connection a blank page with a spinner reads as "broken", whereas
+                 skeletons communicate the shape of what's arriving. */
+              <div className="space-y-4" aria-busy="true" aria-label="Loading your activity">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="dashboard-card rounded-lg p-4 sm:p-6">
+                    <div className="animate-pulse space-y-4">
+                      <div className="h-5 w-32 rounded bg-muted" />
+                      <div className="flex items-center gap-4">
+                        <div className="h-[72px] w-[72px] shrink-0 rounded-full bg-muted" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-7 w-24 rounded bg-muted" />
+                          <div className="h-4 w-32 rounded bg-muted" />
+                        </div>
+                      </div>
+                      <div className="h-11 w-full rounded-lg bg-muted" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <>
-                {/* Today's Activity Section */}
+                {/* Day-at-a-glance summary — master ring + tap-to-jump chips */}
+                <TodaysProgressHero
+                  steps={heroModules.steps}
+                  water={heroModules.water}
+                  habits={heroModules.habits}
+                  cardio={heroModules.cardio}
+                  isToday={selectedDate === getTodayDate()}
+                  onAllComplete={schoolPride}
+                />
+
+                {/* Today's Activity Section. Each card carries a scroll-target id
+                    so the hero chips can jump straight to it. scroll-mt clears the
+                    sticky date bar on mobile. */}
                 <div className="space-y-4">
                   {/* Steps Logger */}
                   {planData?.stepGoal && (
-                    <StepsLogger
-                      currentLog={activityData?.steps}
-                      goal={planData.stepGoal.target}
-                      onSave={handleSaveSteps}
-                    />
+                    <div id={ACTIVITY_SECTION_IDS.steps} className="scroll-mt-32 md:scroll-mt-6">
+                      <StepsLogger
+                        currentLog={activityData?.steps}
+                        goal={planData.stepGoal.target}
+                        onSave={handleSaveSteps}
+                      />
+                    </div>
                   )}
 
                   {/* Water Logger */}
                   {planData?.waterGoal && (
-                    <WaterLogger
-                      currentLog={activityData?.water}
-                      goal={planData.waterGoal.target}
-                      unit={planData.waterGoal.unit}
-                      onSave={handleSaveWater}
-                    />
+                    <div id={ACTIVITY_SECTION_IDS.water} className="scroll-mt-32 md:scroll-mt-6">
+                      <WaterLogger
+                        currentLog={activityData?.water}
+                        goal={planData.waterGoal.target}
+                        unit={planData.waterGoal.unit}
+                        onSave={handleSaveWater}
+                      />
+                    </div>
                   )}
 
                   {/* Daily Habits Checklist */}
                   {planData?.dailyHabits?.habits && planData.dailyHabits.habits.length > 0 && (
-                    <DailyHabitsChecklist
-                      habits={planData.dailyHabits.habits}
-                      completedHabits={activityData?.habits || []}
-                      onToggle={handleToggleHabit}
-                    />
+                    <div id={ACTIVITY_SECTION_IDS.habits} className="scroll-mt-32 md:scroll-mt-6">
+                      <DailyHabitsChecklist
+                        habits={planData.dailyHabits.habits}
+                        completedHabits={activityData?.habits || []}
+                        onToggle={handleToggleHabit}
+                      />
+                    </div>
                   )}
 
                   {/* LISS Cardio Tracker — only shown when coach has assigned LISS cardio */}
                   {planData?.lissCardio && (
-                    <LissCardioTracker
-                      lissCardio={planData.lissCardio}
-                      weeklyCount={weeklyCardioCount}
-                      loggedToday={cardioLoggedToday}
-                      onToggle={handleToggleCardio}
-                      isLoading={cardioLoading}
-                    />
+                    <div id={ACTIVITY_SECTION_IDS.cardio} className="scroll-mt-32 md:scroll-mt-6">
+                      <LissCardioTracker
+                        lissCardio={planData.lissCardio}
+                        weeklyCount={weeklyCardioCount}
+                        loggedToday={cardioLoggedToday}
+                        onToggle={handleToggleCardio}
+                        isLoading={cardioLoading}
+                      />
+                    </div>
                   )}
                 </div>
 
@@ -470,9 +585,11 @@ export default function DailyActivityPage() {
 
                 {/* Info Message if no goals set */}
                 {!planData?.stepGoal && !planData?.waterGoal && !planData?.dailyHabits && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                    <p className="text-sm text-blue-800">
-                      Your trainer hasn&apos;t set up daily activity goals yet. Once they do, you&apos;ll be able to track your steps, water intake, and daily habits here!
+                  <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
+                    <Target className="mx-auto mb-3 h-10 w-10 text-primary/50" />
+                    <p className="font-medium text-foreground">No daily goals yet</p>
+                    <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                      Your trainer hasn&apos;t set up daily activity goals yet. Once they do, you&apos;ll be able to track your steps, water intake, and daily habits right here.
                     </p>
                   </div>
                 )}
