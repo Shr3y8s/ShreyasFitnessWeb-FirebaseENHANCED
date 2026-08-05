@@ -93,7 +93,7 @@ export function PersonalRecords() {
             {records.map((pr) => (
               <div
                 key={pr.exerciseId}
-                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-secondary/40"
+                className="flex min-h-14 items-center justify-between gap-3 p-3 rounded-lg border border-border bg-secondary/40"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="p-2 rounded-lg bg-amber-400/15 text-amber-600 shrink-0">
@@ -108,7 +108,7 @@ export function PersonalRecords() {
                     )}
                   </div>
                 </div>
-                <p className="text-sm font-bold text-primary whitespace-nowrap">
+                <p className="text-sm font-bold text-primary whitespace-nowrap shrink-0 tabular-nums">
                   {pr.maxWeight} {pr.weightUnit}
                 </p>
               </div>

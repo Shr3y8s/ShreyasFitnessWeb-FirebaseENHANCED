@@ -19,6 +19,7 @@ import {
   NotebookPen,
   Scale,
   MessageSquare,
+  X,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -102,7 +103,9 @@ export function CoachUpdates({ theme = 'default' }: CoachUpdatesProps) {
 
       <PopoverContent
         className={cn(
-          'w-80 max-w-[calc(100vw-1rem)] p-0',
+          // max-w keeps a comfortable gutter on a 360px phone rather than going
+          // nearly edge-to-edge.
+          'w-80 max-w-[calc(100vw-2rem)] p-0',
           isForest && 'bg-[#0d3d20]/95 backdrop-blur-xl border-white/15 text-white'
         )}
         align="end"
@@ -119,9 +122,10 @@ export function CoachUpdates({ theme = 'default' }: CoachUpdatesProps) {
         <Separator className={cn(isForest && 'bg-white/15')} />
 
 
-        {/* List */}
+        {/* List — max-h is viewport-relative so the "Dismiss all" footer can
+            never be pushed off-screen on a short phone / landscape. */}
         {hasNotifications ? (
-          <div className="p-2 space-y-1 max-h-96 overflow-y-auto">
+          <div className="p-2 space-y-1 max-h-[60vh] overflow-y-auto">
             {notifications.map((notif) => {
               const config = CLIENT_NOTIFICATION_CONFIG[notif.type];
               const icon = notifIcons[notif.type];
@@ -129,50 +133,54 @@ export function CoachUpdates({ theme = 'default' }: CoachUpdatesProps) {
                 <div
                   key={notif.id}
                   className={cn(
-                    'grid grid-cols-[25px_1fr] items-start p-3 rounded-md transition-all duration-200 hover:scale-[1.02] hover:shadow-sm',
+                    'flex items-stretch gap-1 rounded-md transition-colors',
                     isForest ? 'hover:bg-white/10' : 'hover:bg-accent',
                     !notif.read && (isForest ? 'bg-white/10' : 'bg-primary/5')
                   )}
                 >
-                  <span className={cn('mt-1', isForest ? 'text-green-300' : 'text-primary')}>{icon}</span>
-                  <div className="grid gap-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-sm leading-none">{config.title}</p>
-                      {!notif.read && (
-                        <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                      )}
+                  {/* The whole row IS "View" — a large, forgiving tap target.
+                      Dismiss is a separate trailing button so a mis-tap can't
+                      permanently delete a coach update. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleMarkAsRead(notif.id);
+                      handleView(notif.type, notif.actionUrl);
+                    }}
+                    className="grid flex-1 grid-cols-[25px_1fr] items-start gap-x-1 p-3 text-left transition-transform active:scale-[0.99]"
+                  >
+                    <span className={cn('mt-1', isForest ? 'text-green-300' : 'text-primary')}>{icon}</span>
+                    <div className="grid gap-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm leading-none">{config.title}</p>
+                        {!notif.read && (
+                          <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                        )}
+                      </div>
+                      <p className={cn('text-sm', isForest ? 'text-white/70' : 'text-muted-foreground')}>{notif.message}</p>
+                      <p className={cn('text-xs mt-0.5', isForest ? 'text-white/50' : 'text-muted-foreground/70')}>
+                        {formatTimeAgo(notif.timestamp)}
+                      </p>
                     </div>
-                    <p className={cn('text-sm', isForest ? 'text-white/70' : 'text-muted-foreground')}>{notif.message}</p>
-                    <p className={cn('text-xs mt-0.5', isForest ? 'text-white/50' : 'text-muted-foreground/70')}>
+                  </button>
 
-                      {formatTimeAgo(notif.timestamp)}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-xs text-green-600 hover:text-green-700 cursor-pointer"
-                        onClick={() => {
-                          handleMarkAsRead(notif.id);
-                          handleView(notif.type, notif.actionUrl);
-                        }}
-                      >
-                        View
-                      </Button>
-                      <span className="text-muted-foreground">&middot;</span>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="h-auto p-0 text-xs text-destructive/80 hover:text-destructive cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDismiss(notif.id);
-                        }}
-                      >
-                        Dismiss
-                      </Button>
-                    </div>
-                  </div>
+                  {/* Dismiss — its own 44px target, visually distinct */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDismiss(notif.id);
+                    }}
+                    aria-label={`Dismiss notification: ${config.title}`}
+                    className={cn(
+                      'flex w-11 shrink-0 items-center justify-center rounded-md transition-colors active:scale-95',
+                      isForest
+                        ? 'text-white/50 hover:bg-white/10 hover:text-white'
+                        : 'text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive'
+                    )}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               );
             })}
@@ -193,8 +201,10 @@ export function CoachUpdates({ theme = 'default' }: CoachUpdatesProps) {
             <div className="p-2">
               <Button
                 variant="ghost"
-                size="sm"
-                className={cn('w-full cursor-pointer', isForest && 'text-white hover:bg-white/10 hover:text-white')}
+                className={cn(
+                  'w-full min-h-11 cursor-pointer transition-transform active:scale-95',
+                  isForest && 'text-white hover:bg-white/10 hover:text-white'
+                )}
                 onClick={() => handleDismissAll()}
               >
                 Dismiss all

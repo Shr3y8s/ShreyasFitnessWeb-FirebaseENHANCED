@@ -56,43 +56,45 @@ export function CurrentPlan({ trainingProtocol }: CurrentPlanProps) {
     <div className="rounded-xl border bg-primary/5 text-card-foreground shadow-sm transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
 
       <div className="flex flex-col space-y-1.5 p-4 sm:p-6">
-        <div className="flex items-center gap-3">
-          <Goal className="w-6 h-6 text-primary" />
-          <h3 className="text-lg sm:text-xl font-semibold leading-none tracking-tight">
+        <div className="flex items-start gap-3">
+          <Goal className="mt-0.5 w-6 h-6 shrink-0 text-primary" />
+          <h3 className="text-lg sm:text-xl font-semibold leading-tight tracking-tight min-w-0">
             {title}
           </h3>
         </div>
       </div>
 
       <div className="p-4 sm:p-6 pt-0 space-y-4">
-        {/* 3-column stat grid */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center p-3 sm:p-4 bg-secondary/50 rounded-lg border border-primary/50">
+        {/* Stat grid — stacks to a single readable column on the narrowest
+            phones (values like "Hypertrophy" / "3×/week" don't fit in a ~100px
+            third of a 360px screen), then goes 3-up from `xs`/sm upward. */}
+        <div className="grid grid-cols-1 min-[400px]:grid-cols-3 gap-2 sm:gap-3 text-center p-3 sm:p-4 bg-secondary/50 rounded-lg border border-primary/50">
 
           {/* Focus */}
-          <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
-            <div className="text-primary">
+          <div className="flex min-[400px]:flex-col items-center justify-center gap-2 min-[400px]:gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
+            <div className="text-primary shrink-0">
               <Dumbbell className="h-5 w-5" />
             </div>
             <p className="text-xs text-muted-foreground">Focus</p>
-            <p className="font-semibold text-sm">
+            <p className="font-semibold text-sm min-w-0">
               {focus ? toTitleCase(focus) : '—'}
             </p>
           </div>
 
           {/* Frequency */}
-          <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
-            <div className="text-primary">
+          <div className="flex min-[400px]:flex-col items-center justify-center gap-2 min-[400px]:gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
+            <div className="text-primary shrink-0">
               <RefreshCw className="h-5 w-5" />
             </div>
             <p className="text-xs text-muted-foreground">Frequency</p>
-            <p className="font-semibold text-sm">
+            <p className="font-semibold text-sm min-w-0 tabular-nums">
               {frequency ? `${frequency}×/week` : '—'}
             </p>
           </div>
 
           {/* Extra Activities */}
-          <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
-            <div className="text-primary">
+          <div className="flex min-[400px]:flex-col items-center justify-center gap-2 min-[400px]:gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10">
+            <div className="text-primary shrink-0">
               {cardioType === 'steps' ? (
                 <Footprints className="h-5 w-5" />
               ) : (
@@ -102,7 +104,7 @@ export function CurrentPlan({ trainingProtocol }: CurrentPlanProps) {
             <p className="text-xs text-muted-foreground">
               {cardioType === 'steps' ? 'Steps' : 'Cardio'}
             </p>
-            <p className="font-semibold text-sm">
+            <p className="font-semibold text-sm min-w-0 tabular-nums">
               {extraActivitiesValue ?? '—'}
             </p>
           </div>
@@ -111,9 +113,9 @@ export function CurrentPlan({ trainingProtocol }: CurrentPlanProps) {
         {/* Progress bar — only shown when assignedDate + planDurationWeeks are set */}
         {progressPercent !== null && elapsedWeeks !== null && planDurationWeeks && (
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between gap-2 text-sm">
               <span className="text-muted-foreground">Progress</span>
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-foreground shrink-0 tabular-nums">
                 {elapsedWeeks} / {planDurationWeeks} weeks
               </span>
             </div>

@@ -20,6 +20,20 @@ export default function ClientWorkoutsPage() {
   const [completedWorkouts, setCompletedWorkouts] = useState<Workout[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Which mobile tab is showing. Supports deep-links like
+  // `/dashboard/client/workouts?tab=completed` (used by the dashboard's
+  // Workout Calendar rows so "Details" lands on the right tab).
+  // Read from window.location rather than useSearchParams so this client page
+  // doesn't need a Suspense boundary during prerender.
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'completed'>('upcoming');
+
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'completed' || tab === 'upcoming') {
+      setActiveTab(tab);
+    }
+  }, []);
+
   // Fetch workout assignments in real-time
   useEffect(() => {
     if (!user) {
@@ -104,7 +118,7 @@ export default function ClientWorkoutsPage() {
       <div className="max-w-7xl mx-auto">
             {/* Mobile: Tabbed Layout */}
             <div className="lg:hidden">
-              <Tabs defaultValue="upcoming">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'upcoming' | 'completed')}>
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-foreground">My Workouts</h1>

@@ -115,28 +115,24 @@ export function AccountSummary({ userId, accountCreatedAt }: AccountSummaryProps
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center w-full">
-            <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
-              <div className="text-primary">
-                <CircleCheckBig className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-bold text-xl sm:text-2xl">{sessionsCompleted}</p>
-              <p className="text-xs text-muted-foreground">Sessions Completed</p>
+          /* 3-up works even on a 360px phone because two of the three values are
+             short integers; the date value steps down to text-lg so "Nov 15"
+             can't overflow its ~100px column. */
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-4 text-center w-full">
+            <div className="flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
+              <CircleCheckBig className="h-5 w-5 shrink-0 text-primary" />
+              <p className="font-bold text-xl sm:text-2xl tabular-nums">{sessionsCompleted}</p>
+              <p className="text-xs leading-tight text-muted-foreground">Sessions Completed</p>
             </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
-              <div className="text-primary">
-                <Calendar className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-bold text-xl sm:text-2xl">{weeksActive}</p>
-              <p className="text-xs text-muted-foreground">Weeks Active</p>
+            <div className="flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
+              <Calendar className="h-5 w-5 shrink-0 text-primary" />
+              <p className="font-bold text-xl sm:text-2xl tabular-nums">{weeksActive}</p>
+              <p className="text-xs leading-tight text-muted-foreground">Weeks Active</p>
             </div>
-            <div className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
-              <div className="text-primary">
-                <CreditCard className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-bold text-xl sm:text-2xl">{nextPayment}</p>
-
-              <p className="text-xs text-muted-foreground">Next Payment</p>
+            <div className="flex flex-col items-center gap-1 p-1.5 sm:p-2 rounded-lg transition-colors hover:bg-primary/10 cursor-default">
+              <CreditCard className="h-5 w-5 shrink-0 text-primary" />
+              <p className="font-bold text-lg sm:text-2xl tabular-nums">{nextPayment}</p>
+              <p className="text-xs leading-tight text-muted-foreground">Next Payment</p>
             </div>
           </div>
         )}

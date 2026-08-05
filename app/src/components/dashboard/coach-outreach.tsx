@@ -152,7 +152,11 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                 Tasks ({tasks.length})
               </p>
               <Link href="/dashboard/client/tasks">
-                <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs text-primary hover:text-primary/80 px-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-11 gap-1 px-2 text-xs text-primary hover:text-primary/80 transition-transform active:scale-95"
+                >
                   View all <ArrowRight className="h-3 w-3" />
                 </Button>
               </Link>
@@ -178,7 +182,7 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 flex-wrap">
-                        <span className="text-xs font-medium">{task.title}</span>
+                        <span className="text-sm font-medium">{task.title}</span>
                         {task.priority === 'urgent' && !isOverdue && (
                           <Badge className="bg-orange-500 text-white text-xs px-1 py-0 h-4">Urgent</Badge>
                         )}
@@ -193,7 +197,7 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                     </div>
                     <Button
                       size="sm"
-                      className="h-8 sm:h-6 px-3 sm:px-2 text-xs shrink-0 gap-1"
+                      className="min-h-11 sm:min-h-8 px-3 sm:px-2 text-xs shrink-0 gap-1 transition-transform active:scale-95"
                       variant={isOverdue ? 'destructive' : 'default'}
                       disabled={completingId === task.id}
                       onClick={() => handleMarkDone(task)}
@@ -245,7 +249,11 @@ export function CoachOutreach({ coachName, coachNote }: CoachOutreachProps) {
                   )}
                 </div>
                 <Link href="/dashboard/client/messages">
-                  <Button variant="ghost" size="sm" className="h-6 gap-1 text-xs text-primary hover:text-primary/80 px-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-11 gap-1 px-2 text-xs text-primary hover:text-primary/80 transition-transform active:scale-95"
+                  >
                     Open chat <ArrowRight className="h-3 w-3" />
                   </Button>
                 </Link>

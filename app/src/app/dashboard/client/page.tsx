@@ -595,9 +595,15 @@ export default function ClientDashboardPage() {
                 <InteractiveCard>
                   <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm hover:shadow-glow transition-shadow">
                     {loadingNextSession ? (
-                      <CardContent className="text-center py-12">
-                        <div className="text-4xl mb-3">⏳</div>
-                        <p className="text-muted-foreground">Loading session...</p>
+                      /* Skeleton rather than a spinner — matches the rest of the app
+                         and reads as "loading" instead of "broken" on slow mobile. */
+                      <CardContent className="py-8" aria-busy="true">
+                        <div className="animate-pulse space-y-3">
+                          <div className="h-5 w-40 rounded bg-muted" />
+                          <div className="h-4 w-56 rounded bg-muted" />
+                          <div className="h-4 w-32 rounded bg-muted" />
+                          <div className="h-11 w-full rounded-lg bg-muted mt-4" />
+                        </div>
                       </CardContent>
                     ) : nextSession ? (
                       <UpcomingWorkoutReminder
@@ -615,7 +621,7 @@ export default function ClientDashboardPage() {
                         <p className="text-muted-foreground mb-4">Schedule your next training session</p>
                         <a
                           href="/dashboard/client/sessions/schedule"
-                          className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                          className="inline-flex min-h-11 items-center justify-center bg-primary text-primary-foreground px-6 rounded-lg font-semibold hover:bg-primary/90 transition-all active:scale-95"
                         >
                           Book Session
                         </a>
@@ -635,13 +641,13 @@ export default function ClientDashboardPage() {
                       <div className="flex flex-col gap-3">
                         <a
                           href="/dashboard/client/sessions/buy"
-                          className="inline-block text-center bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                          className="inline-flex min-h-11 items-center justify-center text-center bg-primary text-primary-foreground px-6 rounded-lg font-semibold hover:bg-primary/90 transition-all active:scale-95"
                         >
                           Buy Sessions
                         </a>
                         <a
                           href="/dashboard/client/sessions/schedule"
-                          className="inline-block text-center border border-primary text-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
+                          className="inline-flex min-h-11 items-center justify-center text-center border border-primary text-primary px-6 rounded-lg font-semibold hover:bg-primary/10 transition-all active:scale-95"
                         >
                           Schedule 1-on-1
                         </a>
@@ -662,13 +668,13 @@ export default function ClientDashboardPage() {
                       <div className="flex flex-col gap-3">
                         <a
                           href="/dashboard/client/messages"
-                          className="inline-block text-center bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                          className="inline-flex min-h-11 items-center justify-center text-center bg-primary text-primary-foreground px-6 rounded-lg font-semibold hover:bg-primary/90 transition-all active:scale-95"
                         >
                           Message Your Coach
                         </a>
                         <a
                           href="/dashboard/client/upgrade"
-                          className="inline-block text-center border border-primary text-primary px-6 py-2 rounded-lg font-semibold hover:bg-primary/10 transition-colors"
+                          className="inline-flex min-h-11 items-center justify-center text-center border border-primary text-primary px-6 rounded-lg font-semibold hover:bg-primary/10 transition-all active:scale-95"
                         >
                           Explore Online Coaching
                         </a>
@@ -744,9 +750,13 @@ export default function ClientDashboardPage() {
                 <InteractiveCard>
                 <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm hover:shadow-glow transition-shadow">
                   {loadingNextSession ? (
-                    <CardContent className="text-center py-12">
-                      <div className="text-4xl mb-3">⏳</div>
-                      <p className="text-muted-foreground">Loading session...</p>
+                    <CardContent className="py-8" aria-busy="true">
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-5 w-40 rounded bg-muted" />
+                        <div className="h-4 w-56 rounded bg-muted" />
+                        <div className="h-4 w-32 rounded bg-muted" />
+                        <div className="h-11 w-full rounded-lg bg-muted mt-4" />
+                      </div>
                     </CardContent>
                   ) : nextSession ? (
                     <UpcomingWorkoutReminder 
@@ -764,7 +774,7 @@ export default function ClientDashboardPage() {
                       <p className="text-muted-foreground mb-4">Schedule your next training session</p>
                       <a 
                         href="/dashboard/client/sessions/schedule"
-                        className="inline-block bg-primary text-primary-foreground px-6 py-2 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+                        className="inline-flex min-h-11 items-center justify-center bg-primary text-primary-foreground px-6 rounded-lg font-semibold hover:bg-primary/90 transition-all active:scale-95"
                       >
                         Book Session
                       </a>
@@ -791,9 +801,16 @@ export default function ClientDashboardPage() {
               {setupGoalLoading ? (
                 <InteractiveCard>
                   <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm">
-                    <CardContent className="text-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                      <p className="text-muted-foreground mt-3 text-sm">Loading...</p>
+                    <CardContent className="py-8" aria-busy="true">
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-5 w-44 rounded bg-muted" />
+                        <div className="h-4 w-full rounded bg-muted" />
+                        <div className="h-4 w-3/4 rounded bg-muted" />
+                        <div className="space-y-2 pt-2">
+                          <div className="h-4 w-full rounded bg-muted" />
+                          <div className="h-4 w-5/6 rounded bg-muted" />
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </InteractiveCard>

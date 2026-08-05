@@ -14,11 +14,18 @@ interface ChartConfig {
 interface ChartContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   config: ChartConfig
   children: React.ReactNode
+  /**
+   * Chart height in px. Defaults to 300 so every existing consumer is unchanged.
+   * Pass a smaller value on mobile — a fixed 300px box minus axis labels and a
+   * Brush leaves a very cramped plot area on a phone.
+   */
+  height?: number
 }
 
 function ChartContainer({
   children,
   className,
+  height = 300,
   ...props
 }: ChartContainerProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -63,8 +70,8 @@ function ChartContainer({
       style={{ 
         ...props.style, 
         width: '100%',
-        height: '300px',
-        minHeight: '300px'
+        height: `${height}px`,
+        minHeight: `${height}px`
       }}
     >
       {dimensions && (

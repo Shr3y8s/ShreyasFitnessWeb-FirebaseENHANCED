@@ -50,6 +50,112 @@ interface CustomTooltipProps {
   label?: string;
 }
 
+/**
+ * Shape recharts passes to custom `dot` / `activeDot` renderers.
+ * `cx`/`cy` are optional in recharts' own types (a point can be unplaceable),
+ * so we mirror that and bail out when they're missing.
+ */
+interface DotRenderProps {
+  cx?: number;
+  cy?: number;
+  payload?: ChartDataPoint;
+}
+
+/**
+ * Renders a weight data point, plus a tappable camera marker when a progress
+ * photo exists for that date.
+ *
+ * The camera marker's *visible* circle stays small so the chart doesn't get
+ * cluttered, but an invisible larger circle sits behind it to provide a ~44px
+ * touch target — a 24px marker is far too small to hit reliably with a finger.
+ */
+function PhotoDot({
+  cx,
+  cy,
+  payload,
+  onPhotoClick,
+  emphasized = false,
+}: DotRenderProps & {
+  onPhotoClick: (photo: ProgressPhotoWithId, date: string) => void;
+  emphasized?: boolean;
+}) {
+  if (cx === undefined || cy === undefined || !payload) return null;
+
+  if (!payload.hasPhoto) {
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={emphasized ? 7 : 5}
+        fill={emphasized ? 'oklch(65% 0.16 151)' : 'oklch(1 0 0)'}
+        stroke={emphasized ? 'oklch(1 0 0)' : 'oklch(65% 0.16 151)'}
+        strokeWidth={2}
+      />
+    );
+  }
+
+  const iconY = cy - 20;
+  const r = emphasized ? 14 : 12;
+  const iconSize = emphasized ? 20 : 18;
+
+  return (
+    <g>
+      {/* Data point dot on the line */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={emphasized ? 5 : 4}
+        fill="oklch(65% 0.16 151)"
+        stroke="oklch(1 0 0)"
+        strokeWidth={emphasized ? 2.5 : 2}
+      />
+      {/* Connector from dot up to the camera marker */}
+      <line
+        x1={cx}
+        y1={cy}
+        x2={cx}
+        y2={iconY + r}
+        stroke="oklch(65% 0.16 151)"
+        strokeWidth={emphasized ? 2 : 1.5}
+        strokeDasharray="2,2"
+      />
+      <g
+        onClick={(e) => {
+          e.stopPropagation();
+          if (payload.photoData) onPhotoClick(payload.photoData, payload.dateKey);
+        }}
+        style={{ cursor: 'pointer' }}
+        role="button"
+        aria-label={`View progress photo from ${payload.date}`}
+      >
+        {/* Invisible 44px touch target */}
+        <circle cx={cx} cy={iconY} r={22} fill="transparent" />
+        <circle
+          cx={cx}
+          cy={iconY}
+          r={r}
+          fill="oklch(65% 0.16 151)"
+          stroke="oklch(1 0 0)"
+          strokeWidth={emphasized ? 3 : 2.5}
+          style={{
+            filter: emphasized
+              ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))'
+              : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+            transition: 'all 0.2s ease',
+          }}
+        />
+        <Camera
+          x={cx - iconSize / 2}
+          y={iconY - iconSize / 2}
+          width={iconSize}
+          height={iconSize}
+          style={{ fill: 'white', pointerEvents: 'none' }}
+        />
+      </g>
+    </g>
+  );
+}
+
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -79,6 +185,22 @@ export function ProgressCharts() {
   const { user } = useAuth();
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  /**
+   * Mobile gets a shorter chart (a fixed 300px box minus axis labels leaves a
+   * cramped plot area) and hides the `Brush` date-range slider entirely — its
+   * ~10px drag handles are not realistically usable with a finger, and dragging
+   * them fights the page's vertical scroll. Range exploration is still available
+   * via the fullscreen view.
+   */
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
   const [totalChange, setTotalChange] = useState<{ diff: number; percent: number } | null>(null);
   const [recentChange, setRecentChange] = useState<{ diff: number; percent: number } | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -87,7 +209,7 @@ export function ProgressCharts() {
     url: string;
     date: string;
     angle: PhotoAngle;
-    metrics?: any;
+    metrics?: ProgressPhotoWithId['associatedMetrics'];
   } | null>(null);
 
   useEffect(() => {
@@ -254,28 +376,32 @@ export function ProgressCharts() {
   return (
     <Card className="bg-primary/5 border-primary/50 transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
       <CardHeader className="flex flex-col sm:flex-row items-start justify-between gap-3 space-y-0 pb-2">
-        <div className="space-y-1">
-          <h3 className="text-xl font-semibold leading-none tracking-tight flex items-center gap-2">
-
-            <Activity className="h-5 w-5 text-primary" />
-            Progress Overview
+        <div className="space-y-1 min-w-0 flex-1">
+          {/* Fullscreen button lives beside the heading (not inside the <h3>) so it
+              doesn't inherit heading layout, and is a proper 44px tap target. */}
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-lg sm:text-xl font-semibold leading-tight tracking-tight flex items-center gap-2 min-w-0">
+              <Activity className="h-5 w-5 shrink-0 text-primary" />
+              Progress Overview
+            </h3>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setFullscreenOpen(true)}
-              className="ml-2 h-8 w-8 p-0"
+              className="size-11 shrink-0 transition-transform active:scale-95"
               title="View Fullscreen"
+              aria-label="View chart fullscreen"
             >
               <Maximize2 className="h-4 w-4" />
             </Button>
-          </h3>
+          </div>
           <CardDescription>
             Your body composition changes over {chartData.length > 30 ? 'the last several months' : 'time'}.
           </CardDescription>
         </div>
         {/* Callout Boxes - Side by Side */}
         {totalChange && recentChange && (
-          <div className="flex gap-2">
+          <div className="flex w-full sm:w-auto gap-2 shrink-0">
 
             {/* From Start */}
             <div className={`${
@@ -284,8 +410,8 @@ export function ProgressCharts() {
                 : totalChange.diff > 0 
                 ? 'bg-amber-50 dark:bg-amber-950/20'
                 : 'bg-gray-50 dark:bg-gray-950/20'
-            } rounded-lg p-2 sm:p-2.5 shadow-lg border border-border/50 min-w-0 sm:min-w-[110px]`}>
-              <p className={`text-base sm:text-lg font-bold ${
+            } rounded-lg p-2 sm:p-2.5 shadow-lg border border-border/50 flex-1 min-w-0 sm:flex-none sm:min-w-[110px]`}>
+              <p className={`text-base sm:text-lg font-bold tabular-nums ${
                 totalChange.diff < 0 
 
                   ? 'text-green-600 dark:text-green-500' 
@@ -314,8 +440,8 @@ export function ProgressCharts() {
                 : recentChange.diff > 0 
                 ? 'bg-amber-50 dark:bg-amber-950/20'
                 : 'bg-gray-50 dark:bg-gray-950/20'
-            } rounded-lg p-2 sm:p-2.5 shadow-lg border border-border/50 min-w-0 sm:min-w-[110px]`}>
-              <p className={`text-base sm:text-lg font-bold ${
+            } rounded-lg p-2 sm:p-2.5 shadow-lg border border-border/50 flex-1 min-w-0 sm:flex-none sm:min-w-[110px]`}>
+              <p className={`text-base sm:text-lg font-bold tabular-nums ${
                 recentChange.diff < 0 
                   ? 'text-green-600 dark:text-green-500' 
 
@@ -340,13 +466,13 @@ export function ProgressCharts() {
         )}
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        <ChartContainer config={chartConfig} height={isMobile ? 240 : 300}>
           <AreaChart
             accessibilityLayer
             data={chartData}
             margin={{
               left: 4,
-              right: 24,
+              right: isMobile ? 12 : 24,
               bottom: 5
             }}
           >
@@ -402,150 +528,15 @@ export function ProgressCharts() {
               stroke="oklch(65% 0.16 151)"
               strokeWidth={2.5}
               name="Weight"
-              dot={(props: any) => {
-                const { cx, cy, payload } = props;
-                
-                if (payload.hasPhoto) {
-                  // Render BOTH: data point on line AND camera icon above
-                  const iconY = cy - 20; // Lift icon 20px above the data point
-                  return (
-                    <g>
-                      {/* Data point dot on the line */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={4}
-                        fill="oklch(65% 0.16 151)"
-                        stroke="oklch(1 0 0)"
-                        strokeWidth={2}
-                      />
-                      {/* Connector line from dot to camera */}
-                      <line
-                        x1={cx}
-                        y1={cy}
-                        x2={cx}
-                        y2={iconY + 12}
-                        stroke="oklch(65% 0.16 151)"
-                        strokeWidth={1.5}
-                        strokeDasharray="2,2"
-                      />
-                      {/* Camera icon above - clickable */}
-                      <g
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePhotoClick(payload.photoData, payload.dateKey);
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <circle
-                          cx={cx}
-                          cy={iconY}
-                          r={12}
-                          fill="oklch(65% 0.16 151)"
-                          stroke="oklch(1 0 0)"
-                          strokeWidth={2.5}
-                          style={{ 
-                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-                            transition: 'all 0.2s ease'
-                          }}
-                        />
-                        <Camera
-                          x={cx - 9}
-                          y={iconY - 9}
-                          width={18}
-                          height={18}
-                          style={{ fill: 'white', pointerEvents: 'none' }}
-                        />
-                      </g>
-                    </g>
-                  );
-                }
-                
-                // Default dot for points without photos
-                return (
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={5}
-                    fill="oklch(1 0 0)"
-                    stroke="oklch(65% 0.16 151)"
-                    strokeWidth={2}
-                  />
-                );
-              }}
-              activeDot={(props: any) => {
-                const { cx, cy, payload } = props;
-                
-                if (payload.hasPhoto) {
-                  // Hover state - even larger camera, enhanced data point
-                  const iconY = cy - 20;
-                  return (
-                    <g>
-                      {/* Enhanced data point dot on hover */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={5}
-                        fill="oklch(65% 0.16 151)"
-                        stroke="oklch(1 0 0)"
-                        strokeWidth={2.5}
-                      />
-                      {/* Connector line */}
-                      <line
-                        x1={cx}
-                        y1={cy}
-                        x2={cx}
-                        y2={iconY + 14}
-                        stroke="oklch(65% 0.16 151)"
-                        strokeWidth={2}
-                        strokeDasharray="2,2"
-                      />
-                      {/* Larger camera on hover */}
-                      <g
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePhotoClick(payload.photoData, payload.dateKey);
-                        }}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        <circle
-                          cx={cx}
-                          cy={iconY}
-                          r={14}
-                          fill="oklch(65% 0.16 151)"
-                          stroke="oklch(1 0 0)"
-                          strokeWidth={3}
-                          style={{ 
-                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
-                            transition: 'all 0.2s ease'
-                          }}
-                        />
-                        <Camera
-                          x={cx - 10}
-                          y={iconY - 10}
-                          width={20}
-                          height={20}
-                          style={{ fill: 'white', pointerEvents: 'none' }}
-                        />
-                      </g>
-                    </g>
-                  );
-                }
-                
-                return (
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={7}
-                    fill="oklch(65% 0.16 151)"
-                    stroke="oklch(1 0 0)"
-                    strokeWidth={2}
-                  />
-                );
-              }}
+              dot={(props: DotRenderProps) => (
+                <PhotoDot {...props} onPhotoClick={handlePhotoClick} />
+              )}
+              activeDot={(props: DotRenderProps) => (
+                <PhotoDot {...props} onPhotoClick={handlePhotoClick} emphasized />
+              )}
             />
-            {/* Brush for zooming into date ranges */}
-            {chartData.length > 7 && (
+            {/* Brush for zooming into date ranges — desktop only (see isMobile note) */}
+            {chartData.length > 7 && !isMobile && (
               <Brush
                 dataKey="dateKey"
                 height={40}
@@ -643,138 +634,12 @@ export function ProgressCharts() {
                   stroke="oklch(65% 0.16 151)"
                   strokeWidth={2.5}
                   name="Weight"
-                  dot={(props: any) => {
-                    const { cx, cy, payload } = props;
-                    
-                    if (payload.hasPhoto) {
-                      const iconY = cy - 20;
-                      return (
-                        <g>
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={4}
-                            fill="oklch(65% 0.16 151)"
-                            stroke="oklch(1 0 0)"
-                            strokeWidth={2}
-                          />
-                          <line
-                            x1={cx}
-                            y1={cy}
-                            x2={cx}
-                            y2={iconY + 12}
-                            stroke="oklch(65% 0.16 151)"
-                            strokeWidth={1.5}
-                            strokeDasharray="2,2"
-                          />
-                          <g
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePhotoClick(payload.photoData, payload.dateKey);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <circle
-                              cx={cx}
-                              cy={iconY}
-                              r={12}
-                              fill="oklch(65% 0.16 151)"
-                              stroke="oklch(1 0 0)"
-                              strokeWidth={2.5}
-                              style={{ 
-                                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-                                transition: 'all 0.2s ease'
-                              }}
-                            />
-                            <Camera
-                              x={cx - 9}
-                              y={iconY - 9}
-                              width={18}
-                              height={18}
-                              style={{ fill: 'white', pointerEvents: 'none' }}
-                            />
-                          </g>
-                        </g>
-                      );
-                    }
-                    
-                    return (
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={5}
-                        fill="oklch(1 0 0)"
-                        stroke="oklch(65% 0.16 151)"
-                        strokeWidth={2}
-                      />
-                    );
-                  }}
-                  activeDot={(props: any) => {
-                    const { cx, cy, payload } = props;
-                    
-                    if (payload.hasPhoto) {
-                      const iconY = cy - 20;
-                      return (
-                        <g>
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={5}
-                            fill="oklch(65% 0.16 151)"
-                            stroke="oklch(1 0 0)"
-                            strokeWidth={2.5}
-                          />
-                          <line
-                            x1={cx}
-                            y1={cy}
-                            x2={cx}
-                            y2={iconY + 14}
-                            stroke="oklch(65% 0.16 151)"
-                            strokeWidth={2}
-                            strokeDasharray="2,2"
-                          />
-                          <g
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePhotoClick(payload.photoData, payload.dateKey);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <circle
-                              cx={cx}
-                              cy={iconY}
-                              r={14}
-                              fill="oklch(65% 0.16 151)"
-                              stroke="oklch(1 0 0)"
-                              strokeWidth={3}
-                              style={{ 
-                                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
-                                transition: 'all 0.2s ease'
-                              }}
-                            />
-                            <Camera
-                              x={cx - 10}
-                              y={iconY - 10}
-                              width={20}
-                              height={20}
-                              style={{ fill: 'white', pointerEvents: 'none' }}
-                            />
-                          </g>
-                        </g>
-                      );
-                    }
-                    
-                    return (
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={7}
-                        fill="oklch(65% 0.16 151)"
-                        stroke="oklch(1 0 0)"
-                        strokeWidth={2}
-                      />
-                    );
-                  }}
+                  dot={(props: DotRenderProps) => (
+                    <PhotoDot {...props} onPhotoClick={handlePhotoClick} />
+                  )}
+                  activeDot={(props: DotRenderProps) => (
+                    <PhotoDot {...props} onPhotoClick={handlePhotoClick} emphasized />
+                  )}
                 />
                 {chartData.length > 7 && (
                   <Brush
