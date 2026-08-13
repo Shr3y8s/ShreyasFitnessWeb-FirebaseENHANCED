@@ -13,15 +13,39 @@ import { Dumbbell, Calendar, Check, Loader2 } from 'lucide-react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Workout } from '@/types/workout';
-import { formatWeekRange, getWeekStartDate, getCurrentWeekISO } from '@/lib/week-utils';
+import { formatWeekRange, getCurrentWeekISO } from '@/lib/week-utils';
 
 interface ClientTrainingProtocolProps {
   clientId: string;
   keyPriorities: string[];
 }
 
+/** Firestore Timestamp-ish value: may already be a Date, or expose `toDate()`. */
+type DateLike = Date | { toDate: () => Date } | string | number | null | undefined;
+
+/**
+ * Firestore `workouts` docs carry a denormalised `progress` summary that isn't
+ * part of the `Workout` type (it's written by Cloud Functions, not the client),
+ * so we widen locally instead of reaching for `any`.
+ */
+type ScheduledWorkout = Workout & {
+  progress?: { completionPercentage?: number };
+};
+
+/** Normalise a Firestore Timestamp / Date / string into a Date, or null. */
+function toDate(value: DateLike): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  if (typeof value === 'string') return new Date(`${value}T00:00:00`);
+  if (typeof value === 'number') return new Date(value);
+  return null;
+}
+
 export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTrainingProtocolProps) {
-  const [assignments, setAssignments] = useState<Workout[]>([]);
+  const [assignments, setAssignments] = useState<ScheduledWorkout[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,13 +64,13 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
         );
         
         const querySnapshot = await getDocs(q);
-        const fetchedAssignments: Workout[] = [];
+        const fetchedAssignments: ScheduledWorkout[] = [];
         
         querySnapshot.forEach((docSnap) => {
           fetchedAssignments.push({
             id: docSnap.id,
             ...docSnap.data()
-          } as any as Workout);
+          } as unknown as ScheduledWorkout);
         });
         
         setAssignments(fetchedAssignments);
@@ -68,16 +92,11 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
     if (assignments.length === 0) return 'Not updated';
     
     // Find the most recent updatedAt date
-    const mostRecent = assignments.reduce((latest, assignment) => {
-      const assignmentDate = assignment.updatedAt;
-      if (!assignmentDate) return latest;
-      
-      const date = assignmentDate instanceof Date ? assignmentDate : 
-                   (assignmentDate as any).toDate ? (assignmentDate as any).toDate() : 
-                   new Date(assignmentDate);
-      
+    const mostRecent = assignments.reduce<Date | null>((latest, assignment) => {
+      const date = toDate(assignment.updatedAt as DateLike);
+      if (!date) return latest;
       return !latest || date > latest ? date : latest;
-    }, null as Date | null);
+    }, null);
 
     if (!mostRecent) return 'Not updated';
     
@@ -85,19 +104,10 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
   };
 
   // Format date to "Mon, Dec 23"
-  const formatDueDate = (dueDate: any) => {
-    // Handle Firestore Timestamp objects
-    let date: Date;
-    if (dueDate?.toDate && typeof dueDate.toDate === 'function') {
-      date = dueDate.toDate();
-    } else if (dueDate instanceof Date) {
-      date = dueDate;
-    } else if (typeof dueDate === 'string') {
-      date = new Date(dueDate + 'T00:00:00');
-    } else {
-      return 'Not scheduled';
-    }
-    
+  const formatDueDate = (dueDate: DateLike) => {
+    const date = toDate(dueDate);
+    if (!date) return 'Not scheduled';
+
     const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
     const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `${dayOfWeek}, ${monthDay}`;
@@ -121,17 +131,22 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
 
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1">
-      <CardHeader className="relative">
-        <CardTitle className="flex items-center gap-3 text-xl">
-          <Dumbbell className="w-6 h-6 text-primary" />
-          <span>Training Protocol</span>
-        </CardTitle>
+      {/* "Last updated" is a normal flex sibling rather than absolutely
+          positioned — as an absolute element it reserved no space and physically
+          overlapped the title on narrow screens. */}
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          <CardTitle className="flex items-center gap-3 text-lg sm:text-xl min-w-0">
+            <Dumbbell className="w-6 h-6 shrink-0 text-primary" />
+            <span>Training Protocol</span>
+          </CardTitle>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {getLastUpdatedDate()}
+          </span>
+        </div>
         <CardDescription>
           Your current workout program and guidelines for this week.
         </CardDescription>
-        <div className="absolute top-4 right-4 text-xs text-muted-foreground">
-          {getLastUpdatedDate()}
-        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Weekly Workouts */}
@@ -144,7 +159,9 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
                 {formatWeekRange(new Date(getCurrentWeekISO()))}
               </span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {/* 1-col on the narrowest phones: a date + truncated name + 44px
+                progress ring does not fit in ~150px. */}
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {assignments.map((assignment) => (
                 <div
                   key={assignment.id}
@@ -153,12 +170,12 @@ export function ClientTrainingProtocol({ clientId, keyPriorities }: ClientTraini
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0 mr-2">
                       <p className="text-sm font-semibold text-primary">
-                        {assignment.dueDate ? formatDueDate(assignment.dueDate) : 'Not scheduled'}
+                        {assignment.dueDate ? formatDueDate(assignment.dueDate as DateLike) : 'Not scheduled'}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1 truncate">{assignment.name}</p>
                     </div>
                     <CircularProgress 
-                      percentage={(assignment as any).progress?.completionPercentage || 0}
+                      percentage={assignment.progress?.completionPercentage ?? 0}
                       size={44}
                       strokeWidth={4}
                     />

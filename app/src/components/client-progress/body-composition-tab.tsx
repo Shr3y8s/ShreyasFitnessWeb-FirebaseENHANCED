@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ChartContainer } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, LineChart, ResponsiveContainer } from 'recharts';
 import { Activity, TrendingDown, Weight, Pencil, CheckCircle2 } from 'lucide-react';
-import { TimeRange } from '@/app/progress/page';
+import { TimeRange } from '@/types/progress';
 import { LogWeightDialog } from './dialogs/log-weight-dialog';
 
 interface BodyCompositionTabProps {

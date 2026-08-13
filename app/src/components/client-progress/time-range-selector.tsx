@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { TimeRange } from '@/app/progress/page';
+import { TimeRange } from '@/types/progress';
 
 interface TimeRangeSelectorProps {
   value: TimeRange;

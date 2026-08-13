@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChartContainer } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, BarChart, ResponsiveContainer } from 'recharts';
 import { Footprints, Flame, Heart, Moon, Watch, Link2, TrendingUp, Activity } from 'lucide-react';
-import { TimeRange } from '@/app/progress/page';
+import { TimeRange } from '@/types/progress';
 
 interface ActivityWellnessTabProps {
   timeRange: TimeRange;

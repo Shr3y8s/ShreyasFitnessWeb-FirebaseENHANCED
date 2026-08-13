@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Target, TrendingUp, Calendar, CheckCircle2, Circle, Plus } from 'lucide-react';
-import { TimeRange } from '@/app/progress/page';
+import { TimeRange } from '@/types/progress';
 
 interface GoalsMilestonesTabProps {
   timeRange: TimeRange;

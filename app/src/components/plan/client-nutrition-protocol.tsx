@@ -11,12 +11,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Flame, ArrowRight, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Target, Calendar, Check } from 'lucide-react';
-import { NutritionApproach, HABIT_CATEGORY_INFO, NutritionHabit } from '@/types/plan';
+import { Flame, ArrowRight, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Target, Calendar, Check, type LucideIcon } from 'lucide-react';
+import { NutritionApproach, NutritionHabit, MacroTrackingData, MealPlanData, PlannedMeal } from '@/types/plan';
 import { NutritionApproachDisplay } from '@/components/nutrition-hub/nutrition-approach-display';
 
 // Icon mapper for dynamic icon rendering
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
   Drumstick,
   Salad,
   Droplet,
@@ -35,8 +35,8 @@ interface ClientNutritionProtocolProps {
   lastUpdated: Date | null;
   nutritionData?: {
     healthyHabits?: { habits: NutritionHabit[] };
-    macroTracking?: any;
-    mealPlan?: any;
+    macroTracking?: MacroTrackingData;
+    mealPlan?: MealPlanData;
   };
 }
 
@@ -84,17 +84,21 @@ export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutriti
 
       {/* Protocol Details Card */}
       <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 bg-primary/5 border-primary/50">
-      <CardHeader className="relative pb-3">
-        <CardTitle className="flex items-center gap-3 text-xl">
-          <Flame className="w-6 h-6 text-primary" />
-          <span>Nutrition Protocol</span>
-        </CardTitle>
+      {/* "Last updated" as a wrapping flex sibling, not absolutely positioned —
+          see the matching note in client-training-protocol.tsx. */}
+      <CardHeader className="pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          <CardTitle className="flex items-center gap-3 text-lg sm:text-xl min-w-0">
+            <Flame className="w-6 h-6 shrink-0 text-primary" />
+            <span>Nutrition Protocol</span>
+          </CardTitle>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {formatLastUpdated()}
+          </span>
+        </div>
         <CardDescription>
           Your personalized nutrition approach and guidelines
         </CardDescription>
-        <div className="absolute top-4 right-4 text-xs text-muted-foreground">
-          {formatLastUpdated()}
-        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Approach Badge */}
@@ -177,37 +181,39 @@ export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutriti
                     <Target className="h-4 w-4 text-primary" />
                     Daily Targets
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* 2-up on phones with tighter padding so 4-digit calorie
+                      values don't crowd their cell; 4-up from md. */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                     {macroTracking.calories && (
-                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                      <div className="p-2.5 sm:p-3 bg-primary/5 rounded-lg text-center border">
                         <p className="text-xs text-muted-foreground">Calories</p>
-                        <p className="text-xl font-bold text-blue-600">{macroTracking.calories}</p>
+                        <p className="text-lg sm:text-xl font-bold text-blue-600 tabular-nums">{macroTracking.calories}</p>
                       </div>
                     )}
                     {macroTracking.protein && (
-                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                      <div className="p-2.5 sm:p-3 bg-primary/5 rounded-lg text-center border">
                         <p className="text-xs text-muted-foreground">Protein</p>
-                        <p className="text-xl font-bold text-rose-600">{macroTracking.protein}g</p>
+                        <p className="text-lg sm:text-xl font-bold text-rose-600 tabular-nums">{macroTracking.protein}g</p>
                         {macroTracking.proteinPercentage && (
-                          <p className="text-xs text-muted-foreground">{macroTracking.proteinPercentage}%</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">{macroTracking.proteinPercentage}%</p>
                         )}
                       </div>
                     )}
                     {macroTracking.carbs && (
-                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                      <div className="p-2.5 sm:p-3 bg-primary/5 rounded-lg text-center border">
                         <p className="text-xs text-muted-foreground">Carbs</p>
-                        <p className="text-xl font-bold text-amber-600">{macroTracking.carbs}g</p>
+                        <p className="text-lg sm:text-xl font-bold text-amber-600 tabular-nums">{macroTracking.carbs}g</p>
                         {macroTracking.carbsPercentage && (
-                          <p className="text-xs text-muted-foreground">{macroTracking.carbsPercentage}%</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">{macroTracking.carbsPercentage}%</p>
                         )}
                       </div>
                     )}
                     {macroTracking.fats && (
-                      <div className="p-3 bg-primary/5 rounded-lg text-center border">
+                      <div className="p-2.5 sm:p-3 bg-primary/5 rounded-lg text-center border">
                         <p className="text-xs text-muted-foreground">Fats</p>
-                        <p className="text-xl font-bold text-purple-600">{macroTracking.fats}g</p>
+                        <p className="text-lg sm:text-xl font-bold text-purple-600 tabular-nums">{macroTracking.fats}g</p>
                         {macroTracking.fatsPercentage && (
-                          <p className="text-xs text-muted-foreground">{macroTracking.fatsPercentage}%</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">{macroTracking.fatsPercentage}%</p>
                         )}
                       </div>
                     )}
@@ -268,14 +274,14 @@ export function ClientNutritionProtocol({ assignedApproach, lastUpdated, nutriti
               <div>
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-primary" />
-                  This Week's Plan Preview
+                  This Week&apos;s Plan Preview
                 </h3>
                 
                 {/* Show first day as example */}
                 <div className="p-4 bg-background/50 rounded-lg border">
                   <p className="font-medium text-sm mb-3">{mealPlan.weeklyPlan[0].day} Example:</p>
                   <div className="space-y-2">
-                    {mealPlan.weeklyPlan[0].meals.slice(0, 3).map((meal: any, index: number) => (
+                    {mealPlan.weeklyPlan[0].meals.slice(0, 3).map((meal: PlannedMeal, index: number) => (
                       <div key={index} className="text-sm">
                         <span className="font-medium">{meal.name}:</span>{' '}
                         <span className="text-muted-foreground">

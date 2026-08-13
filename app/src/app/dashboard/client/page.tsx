@@ -590,7 +590,7 @@ export default function ClientDashboardPage() {
                 onCycleTheme={cycleTheme}
               />
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ perspective: '1000px' }}>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6" style={{ perspective: '1000px' }}>
                 {/* Upcoming session card */}
                 <InteractiveCard>
                   <Card className="rounded-xl border bg-primary/5 border-primary/50 shadow-sm hover:shadow-glow transition-shadow">
@@ -685,7 +685,7 @@ export default function ClientDashboardPage() {
               </div>
 
               {/* Account summary */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 <InteractiveCard>
                   <AccountSummary
                     userId={user?.uid || ''}
@@ -743,7 +743,7 @@ export default function ClientDashboardPage() {
 
             {/* First Row - Upcoming Session | From Your Coach (when active) | Daily Habits / Onboarding */}
             <div
-              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6"
               style={{ perspective: '1000px' }}
             >
               <div className="space-y-6">
@@ -836,7 +836,7 @@ export default function ClientDashboardPage() {
                 On lg+ the wrappers revert to real 2-col / 1-col blocks, so the
                 desktop layout is completely unchanged. */}
             <div
-              className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start"
+              className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start"
               style={{ perspective: '1000px' }}
             >
               {/* Left Column - Main Content */}

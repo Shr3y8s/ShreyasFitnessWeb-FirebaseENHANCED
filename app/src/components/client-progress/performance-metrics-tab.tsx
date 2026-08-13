@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer } from '@/components/ui/chart';
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Pie, PieChart, Cell } from 'recharts';
 import { Target, TrendingUp, Zap, BarChart3 } from 'lucide-react';
-import { TimeRange } from '@/app/progress/page';
+import { TimeRange } from '@/types/progress';
 
 interface PerformanceMetricsTabProps {
   timeRange: TimeRange;

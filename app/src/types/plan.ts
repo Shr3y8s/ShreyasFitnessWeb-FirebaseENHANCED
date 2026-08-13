@@ -290,17 +290,54 @@ export interface HealthyHabitsData {
   preset?: HealthyHabitsPreset;
 }
 
+/**
+ * Coach-set macro targets, as actually written by NutritionProtocolEditor.
+ *
+ * NOTE ON TYPES: the editor's inputs are text fields, so these are saved as
+ * strings ('2400'). Older records may hold numbers, hence `string | number`.
+ * They're only ever displayed, never used in arithmetic — if that changes,
+ * parse at the boundary rather than widening this further.
+ */
 export interface MacroTrackingData {
-  calories?: number;
-  protein?: number;
-  carbs?: number;
-  fats?: number;
+  calories?: string | number;
+  protein?: string | number;
+  /** Share of total calories from protein, e.g. '30' meaning 30%. */
+  proteinPercentage?: string | number;
+  carbs?: string | number;
+  carbsPercentage?: string | number;
+  fats?: string | number;
+  fatsPercentage?: string | number;
+  /** Meal-timing guidance lines. This is the field the editor writes. */
+  timing?: string[];
+  /**
+   * @deprecated Legacy field name. The editor has always saved `timing`, but
+   * this type previously declared only `mealTiming`, so two trainer views read
+   * `mealTiming` and silently rendered nothing. Readers now prefer `timing`
+   * and fall back to this for any older records. Do not write to it.
+   */
   mealTiming?: string[];
+  /** General nutrition guidance lines. */
   guidelines?: string[];
 }
 
+/** A single meal within a day of the weekly plan. */
+export interface PlannedMeal {
+  name: string;
+  items: string[];
+}
+
+/** One day of the weekly meal plan. */
+export interface MealPlanDay {
+  day: string;
+  meals: PlannedMeal[];
+}
+
+/**
+ * Weekly meal plan. Previously an empty placeholder, which forced consumers to
+ * cast with `any`; this now reflects what the editor actually saves.
+ */
 export interface MealPlanData {
-  // Future: meal plan structure
+  weeklyPlan?: MealPlanDay[];
   notes?: string;
 }
 

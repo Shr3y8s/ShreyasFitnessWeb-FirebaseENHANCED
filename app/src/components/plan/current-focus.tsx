@@ -28,7 +28,9 @@ const HabitItem = ({ habit }: { habit: DailyHabit }) => {
     const Icon = ICON_MAP[habit.iconType] || Activity;
     return (
         <div className="flex items-start gap-3 p-3 rounded-lg border border-green-500/50 bg-card hover:bg-accent/50 transition-colors">
-            <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/50 flex-shrink-0">
+            {/* Tighter icon padding on mobile — a decorative 44px circle around a
+                20px icon eats scarce horizontal space next to the habit text. */}
+            <div className="p-2 sm:p-3 rounded-full bg-green-100 dark:bg-green-900/50 flex-shrink-0">
                 <Icon className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1 min-w-0">
@@ -49,12 +51,12 @@ export function DailyHabits({ habits }: DailyHabitsProps) {
   return (
     <Card className="transition-all duration-300 hover:shadow-glow hover:-translate-y-1 border-primary/50">
       <CardHeader>
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary/10 rounded-full">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="p-2.5 sm:p-3 bg-primary/10 rounded-full shrink-0">
             <ListChecks className="w-6 h-6 text-primary" />
           </div>
-          <div>
-            <CardTitle className="text-xl">Daily Habits</CardTitle>
+          <div className="min-w-0">
+            <CardTitle className="text-lg sm:text-xl">Daily Habits</CardTitle>
             <CardDescription>
               Daily habits you&apos;re building consistency with
             </CardDescription>

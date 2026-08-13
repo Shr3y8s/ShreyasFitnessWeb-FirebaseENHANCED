@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Calendar, Clock, Flame, Target, TrendingUp } from 'lucide-react';
-import { TimeRange } from '@/app/progress/page';
+import { TimeRange } from '@/types/progress';
 
 interface WorkoutAnalyticsTabProps {
   timeRange: TimeRange;

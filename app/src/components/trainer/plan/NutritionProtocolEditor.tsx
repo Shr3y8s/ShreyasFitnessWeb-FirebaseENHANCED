@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Flame, Loader2, Plus, X, GripVertical, Sparkles, Utensils, Drumstick, Salad, Droplet, Clock, Leaf, CircleDot, Copy, Calculator, ChevronDown, ChevronUp, Scissors, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { updateNutritionProtocol } from '@/lib/plan-api';
-import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO, HealthyHabitsPreset } from '@/types/plan';
+import { NutritionApproach, NutritionHabit, NUTRITION_HABIT_TEMPLATES, NutritionHabitCategory, HABIT_CATEGORY_INFO, HealthyHabitsPreset, MacroTrackingData, MealPlanDay } from '@/types/plan';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -145,22 +145,9 @@ function SortableHabitItem({
   );
 }
 
-interface MacroTrackingData {
-  calories?: string;
-  protein?: string;
-  proteinPercentage?: string;
-  carbs?: string;
-  carbsPercentage?: string;
-  fats?: string;
-  fatsPercentage?: string;
-  timing?: string[];
-  guidelines?: string[];
-}
-
-interface MealPlanDay {
-  day: string;
-  meals: { name: string; items: string[] }[];
-}
+// MacroTrackingData and MealPlanDay now come from '@/types/plan' — this file
+// previously declared its own copies, which is how the shared type drifted out
+// of sync with what this editor actually saves.
 
 interface NutritionProtocolEditorProps {
   clientId: string;
@@ -510,7 +497,7 @@ export function NutritionProtocolEditor({
       const nutritionData: {
         approach: NutritionApproach;
         healthyHabits?: { habits: NutritionHabit[]; preset?: string };
-        macroTracking?: MacroTrackingData & { proteinPercentage?: string; carbsPercentage?: string; fatsPercentage?: string };
+        macroTracking?: MacroTrackingData;
         mealPlan?: { weeklyPlan: MealPlanDay[] };
       } = {
         approach: activeTab

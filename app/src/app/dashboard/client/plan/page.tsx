@@ -8,7 +8,7 @@ import { redirectToCheckoutForTier, getClientFeatureAccess } from '@/lib/constan
 import { ClientPageShell } from '@/components/dashboard/ClientPageShell';
 import { FeatureLockedShell } from '@/components/dashboard/FeatureLockedShell';
 
-import { ClipboardList, Loader2, Calendar, TrendingUp, Dumbbell, Apple } from 'lucide-react';
+import { ClipboardList, Calendar, TrendingUp, Dumbbell, Apple } from 'lucide-react';
 import { CurrentPlan } from '@/components/dashboard/current-plan';
 import { YourVision } from '@/components/plan/your-vision';
 import { StepGoalCard } from '@/components/plan/step-goal-card';
@@ -69,10 +69,21 @@ export default function PlanPage() {
   if (loading || authLoading) {
     return (
       <ClientPageShell>
-        <div className="flex items-center justify-center py-20">
-          <div className="flex items-center gap-2 text-stone-600">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Loading your plan...
+        {/* Skeleton rather than a spinner, matching the client dashboard. */}
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6" aria-busy="true">
+          <div className="animate-pulse space-y-2">
+            <div className="h-8 w-56 rounded bg-muted" />
+            <div className="h-4 w-72 rounded bg-muted" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+              <div className="animate-pulse h-48 rounded-xl bg-muted" />
+              <div className="animate-pulse h-64 rounded-xl bg-muted" />
+            </div>
+            <div className="space-y-4 sm:space-y-6 lg:col-span-1">
+              <div className="animate-pulse h-40 rounded-xl bg-muted" />
+              <div className="animate-pulse h-40 rounded-xl bg-muted" />
+            </div>
           </div>
         </div>
       </ClientPageShell>
@@ -115,8 +126,10 @@ export default function PlanPage() {
 
                 {/* 2-Column Grid Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {/* Left Column: Main content (2/3 width) */}
-                  <div className="lg:col-span-2 space-y-6">
+                  {/* Left Column: Main content (2/3 width).
+                      space-y matches the page-level rhythm (16px mobile / 24px
+                      desktop) so inner spacing never exceeds outer. */}
+                  <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                     {/* Weekly Focus / Plan Summary */}
                     {plan?.weeklyFocus ? (
                       <PlanSummary weeklyFocus={plan.weeklyFocus} />
@@ -133,10 +146,10 @@ export default function PlanPage() {
                     )}
 
                     {/* Training Section */}
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {/* Training Section Header */}
                       <div className="flex items-center gap-3 pt-2">
-                        <Dumbbell className="h-6 w-6 text-primary" />
+                        <Dumbbell className="h-6 w-6 shrink-0 text-primary" />
                         <h2 className="text-xl sm:text-2xl font-bold text-foreground">Training</h2>
                         <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
                       </div>
@@ -151,10 +164,10 @@ export default function PlanPage() {
 
                     {/* Nutrition Section */}
                     {plan?.nutritionProtocol && (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         {/* Nutrition Section Header */}
                         <div className="flex items-center gap-3 pt-2">
-                          <Apple className="h-6 w-6 text-primary" />
+                          <Apple className="h-6 w-6 shrink-0 text-primary" />
                           <h2 className="text-xl sm:text-2xl font-bold text-foreground">Nutrition</h2>
                           <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent"></div>
                         </div>
@@ -173,7 +186,7 @@ export default function PlanPage() {
                   </div>
 
                   {/* Right Column: Current Phase, Vision, Daily Habits, Step Goal & Cardio (1/3 width) */}
-                  <div className="space-y-6 lg:col-span-1">
+                  <div className="space-y-4 sm:space-y-6 lg:col-span-1">
                     {/* Current Phase Card */}
                     <CurrentPlan trainingProtocol={plan?.trainingProtocol} />
 

@@ -214,7 +214,14 @@ export function ClientNutritionDashboard({ clientId }: ClientNutritionDashboardP
           const lu = pd.nutritionProtocol?.lastUpdated;
           setProtocolLastUpdated(lu?.toDate ? lu.toDate() : lu ? new Date(lu) : null);
           setMacroGuidelines(pd.nutritionProtocol?.macroTracking?.guidelines || []);
-          setMealTimings(pd.nutritionProtocol?.macroTracking?.mealTiming || []);
+          // The editor saves these under `timing`; `mealTiming` is the legacy
+          // field name kept as a fallback for older records. Reading only
+          // `mealTiming` meant this panel always rendered empty.
+          setMealTimings(
+            pd.nutritionProtocol?.macroTracking?.timing ||
+            pd.nutritionProtocol?.macroTracking?.mealTiming ||
+            []
+          );
         }
 
         if (!approachData) { setLoading(false); return; }
